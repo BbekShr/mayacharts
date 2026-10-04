@@ -15,6 +15,20 @@ const TILES = [
   "sunburst",
   "sankey",
   "hexmap",
+  "hbar",
+  "bar-y2",
+  "dumbbell",
+  "table",
+  "parallel",
+  "area",
+  "line-labels",
+  "ridgeline",
+  "radial",
+  "waffle",
+  "marimekko",
+  "chord",
+  "beeswarm",
+  "kpi",
 ];
 
 test("gallery: every tile renders marks, no errors, spec shown as JSON", async ({ page }) => {

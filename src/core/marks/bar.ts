@@ -3,6 +3,8 @@ import { colorVals } from "../shape.ts";
 import { el, hit, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
 
+const MAX_BAR = 72;
+
 interface Item {
   ci: number;
   si: number;
@@ -75,8 +77,13 @@ export const bar: Mark = {
     let hits = "";
     for (const c of items(spec, shaped)) {
       const k = shaped.visible.indexOf(c.si);
-      const pos = cat.at(c.ci) + (spec.stack || spec.type === "waterfall" ? 0 : inner.at(k));
-      const th = spec.stack || spec.type === "waterfall" ? cat.bandwidth : inner.bandwidth;
+      const full = spec.stack || spec.type === "waterfall" ? cat.bandwidth : inner.bandwidth;
+      // ponytail: bars stop growing at MAX_BAR px and sit centred in their slot.
+      const th = Math.min(full, MAX_BAR);
+      const pos =
+        cat.at(c.ci) +
+        (spec.stack || spec.type === "waterfall" ? 0 : inner.at(k)) +
+        (full - th) / 2;
       const [a, b] = [val.of(c.y0), val.of(c.y1)];
       const lo = Math.min(a, b);
       const len = Math.abs(a - b);

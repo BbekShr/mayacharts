@@ -4,6 +4,30 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## 0.3.0 - 2026-10-04
+
+Motion and interaction polish. No spec changes; every existing spec renders as before, with new defaults for look and feel.
+
+### Added
+
+- Entrance animation on the first draw: bars rise in a left-to-right stagger, points pop, lines, areas, sankey, ridgeline and parallel are wiped in left to right, sunburst, chord and radial bloom from the centre, axes and labels fade in, and kpi values count up. Server-rendered charts do not replay it.
+- Updates are staggered by category and run longer on a softer curve. Line and area paths morph to their new shape in Chromium and Firefox and crossfade in Safari. Changed kpi numbers count to the new value.
+- Hover: a soft column marks the hovered category on bar charts, the hovered category stays lit while the rest dims, line and area charts show every series' point at the crosshair, and sunburst and treemap light the whole path from the root.
+- Tooltip: a light card with a blurred backdrop, series swatches and right-aligned values that glides between marks. On line and area charts it sits beside the crosshair instead of over the points. Rows without a series name the measure.
+- Area and kpi sparkline fills fade toward the baseline (`<defs>` gradients in the grid group).
+
+### Changed
+
+- Theme: 3 px bar corners, bars capped at 72 px wide, separated stacked segments, softer grid, 11 px axis labels, pill legend buttons with hollow swatches for hidden series, `--maya-ease` token, rounder segmented control and reset chip. `--maya-tooltip-bg` and `--maya-tooltip-fg` now default to a card in the page colours instead of inverted colours.
+- Size budgets: element 36 KB, global 42 KB, core 25 KB, theme.css 3.25 KB (gzip).
+
+### Fixed
+
+- Hovering a bar no longer dims the other series (the legend hover rule matched marks too).
+- Leaving marks keep their colour while they fade instead of flashing black.
+- A text mark whose number changed (kpi) now shows the new text after an update.
+- The first draw fits a newly inserted title or legend in the same frame, so the chart no longer renders twice on load.
+
 ## 0.2.1 - 2026-10-04
 
 ### Fixed

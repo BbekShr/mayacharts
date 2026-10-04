@@ -149,14 +149,26 @@ function draw(ctx: MarkCtx) {
         cy: py(c.value),
       });
     });
+    // Unbroken sparkline: a soft area under it (render.ts adds the fading gradient).
+    const a = live[0],
+      z = live[live.length - 1];
     marks =
+      (a && z && live.length === cells.length
+        ? el("path", {
+            "data-maya": "area",
+            "data-key": key("a", ""),
+            "data-s": 0,
+            d: `${d}L${px(z.ci)} ${r(bottom)}L${px(a.ci)} ${r(bottom)}Z`,
+          })
+        : "") +
       el("path", {
         "data-maya": "line",
         "data-key": key("l", ""),
         "data-s": 0,
         pathLength: 1,
         d: d || null,
-      }) + marks;
+      }) +
+      marks;
     cats.forEach((_, i) => {
       hits += el("rect", {
         "data-maya": "hit",

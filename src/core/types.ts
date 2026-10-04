@@ -173,7 +173,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Drag to zoom. line, area, scatter. Reset chip, double-click and Escape restore.
    * @example zoom: true */
   zoom?: boolean;
-  /** Animate updates (element only). Default true.
+  /** Animate the first draw and every update (element only; off under reduced motion). Default true.
    * @example animate: false */
   animate?: boolean;
 

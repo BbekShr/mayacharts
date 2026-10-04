@@ -13,7 +13,7 @@
   <body>
     <header class="site">
       <h1>Gallery</h1>
-      <p class="tagline">Fourteen charts, each drawn from the spec printed beneath it.</p>
+      <p class="tagline">Every chart type, each drawn from the spec printed beneath it.</p>
       <nav>
         <a href="./index.html">Home</a>
         <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
@@ -114,6 +114,97 @@
         <p>One hexagon per state, shaded by sales.</p>
         <maya-chart id="hexmap" style="height: 320px"></maya-chart>
         <pre><code id="hexmap-code"></code></pre>
+      </section>
+      <h2 class="group">Comparison</h2>
+      <section>
+        <h2>Sales by product family</h2>
+        <p>Horizontal bars with value labels, longest first.</p>
+        <maya-chart id="hbar" style="height: 320px"></maya-chart>
+        <pre><code id="hbar-code"></code></pre>
+      </section>
+      <section>
+        <h2>Sales and units by family</h2>
+        <p>Bars read against the left axis and units against the right axis.</p>
+        <maya-chart id="bar-y2" style="height: 320px"></maya-chart>
+        <pre><code id="bar-y2-code"></code></pre>
+      </section>
+      <section>
+        <h2>Sales by state, first half to second half</h2>
+        <p>Each connector runs from the first half to the second half of the year.</p>
+        <maya-chart id="dumbbell" style="height: 320px"></maya-chart>
+        <pre><code id="dumbbell-code"></code></pre>
+      </section>
+      <section>
+        <h2>Item scorecard</h2>
+        <p>A sortable table with an in-cell bar for each measure. Click a header to sort.</p>
+        <maya-chart id="table" style="height: 320px"></maya-chart>
+        <pre><code id="table-code"></code></pre>
+      </section>
+      <section>
+        <h2>Regions across three measures</h2>
+        <p>One line per region, one axis per measure.</p>
+        <maya-chart id="parallel" style="height: 320px"></maya-chart>
+        <pre><code id="parallel-code"></code></pre>
+      </section>
+      <h2 class="group">Trend</h2>
+      <section>
+        <h2>Monthly sales</h2>
+        <p>A single series area gets a soft gradient fill.</p>
+        <maya-chart id="area" style="height: 320px"></maya-chart>
+        <pre><code id="area-code"></code></pre>
+      </section>
+      <section>
+        <h2>Monthly units</h2>
+        <p>Value labels on a line, thinned so they do not collide.</p>
+        <maya-chart id="line-labels" style="height: 320px"></maya-chart>
+        <pre><code id="line-labels-code"></code></pre>
+      </section>
+      <section>
+        <h2>Monthly sales profile by region</h2>
+        <p>One stacked ridge per region on a shared time axis.</p>
+        <maya-chart id="ridgeline" style="height: 320px"></maya-chart>
+        <pre><code id="ridgeline-code"></code></pre>
+      </section>
+      <section>
+        <h2>Sales by month and region</h2>
+        <p>Bars around a circle, stacked outward by region.</p>
+        <maya-chart id="radial" style="height: 320px"></maya-chart>
+        <pre><code id="radial-code"></code></pre>
+      </section>
+      <h2 class="group">Part to whole</h2>
+      <section>
+        <h2>Share of sales by family</h2>
+        <p>One hundred cells, one per percent of sales.</p>
+        <maya-chart id="waffle" style="height: 320px"></maya-chart>
+        <pre><code id="waffle-code"></code></pre>
+      </section>
+      <section>
+        <h2>Region size and family mix</h2>
+        <p>Column width is the region total, segments show the family mix.</p>
+        <maya-chart id="marimekko" style="height: 320px"></maya-chart>
+        <pre><code id="marimekko-code"></code></pre>
+      </section>
+      <h2 class="group">Flow</h2>
+      <section>
+        <h2>Region to product family</h2>
+        <p>Ribbons show how each region's sales split across families.</p>
+        <maya-chart id="chord" style="height: 320px"></maya-chart>
+        <pre><code id="chord-code"></code></pre>
+      </section>
+      <h2 class="group">Distribution and KPI</h2>
+      <section>
+        <h2>Item margin by product family</h2>
+        <p>Every item as a dot, so spread and outliers stay visible.</p>
+        <maya-chart id="beeswarm" style="height: 320px"></maya-chart>
+        <pre><code id="beeswarm-code"></code></pre>
+      </section>
+      <section>
+        <h2>December sales against goal</h2>
+        <p>
+          The latest month as the headline, the change from November, and a bullet bar to the goal.
+        </p>
+        <maya-chart id="kpi" style="height: 320px"></maya-chart>
+        <pre><code id="kpi-code"></code></pre>
       </section>
     </main>
     <script type="module" src="./gallery.ts"></script>

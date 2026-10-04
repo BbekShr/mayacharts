@@ -2,6 +2,7 @@ import "mayacharts/element";
 import "mayacharts/hierarchy";
 import "mayacharts/flow";
 import "mayacharts/geo";
+import "mayacharts/radial";
 import type { ChartSpec, Row } from "../src/index.ts";
 import { DAILY, FACTS, mean, mulberry32, rollup, sum } from "./data.ts";
 
@@ -232,6 +233,175 @@ show("hexmap", {
   y: "sales",
   format: "compact",
   data: rollup(FACTS, ["state"], { sales: sum("sales") }) as Row[],
+});
+
+// 15. KPI with a target bullet: December sales against a goal.
+const monthTotals = rollup(FACTS, ["monthMs"], { sales: sum("sales") }) as {
+  monthMs: number;
+  sales: number;
+}[];
+show("kpi", {
+  type: "kpi",
+  title: "December sales",
+  x: "month",
+  y: "sales",
+  colorBy: { target: Math.round((monthTotals[11]!.sales * 1.05) / 1e5) * 1e5 },
+  format: { sales: "compact" },
+  titles: { sales: "Sales ($)" },
+  data: monthTotals.map((m) => ({ month: mon(m.monthMs), sales: m.sales })),
+});
+
+// 16. Dumbbell: first half against second half by region and family.
+const half = FACTS.map((r) => ({ ...r, half: r.monthMs < Date.UTC(2025, 6, 1) ? "H1" : "H2" }));
+show("dumbbell", {
+  type: "dumbbell",
+  title: "Sales by state, first half to second half",
+  x: "state",
+  y: "sales",
+  series: "half",
+  format: "compact",
+  data: (rollup(half, ["state", "half"], { sales: sum("sales") }) as Row[]).filter((r) =>
+    ["CA", "TX", "NY", "FL", "IL", "WA", "OH", "GA"].includes(String(r.state)),
+  ),
+});
+
+// 17. Ridgeline: monthly sales profile for each region.
+show("ridgeline", {
+  type: "ridgeline",
+  title: "Monthly sales profile by region",
+  x: "monthMs",
+  y: "sales",
+  series: "region",
+  format: { monthMs: "month", sales: "compact" },
+  data: byRegionMonth as Row[],
+});
+
+// 18. Beeswarm: every item's margin, grouped by family.
+show("beeswarm", {
+  type: "beeswarm",
+  title: "Item margin by product family",
+  x: "family",
+  y: "margin",
+  name: "item",
+  format: { margin: "percent" },
+  data: rollup(FACTS, ["item", "family"], { margin: mean("margin") }) as Row[],
+});
+
+// 19. Parallel coordinates: one line per region across three measures.
+show("parallel", {
+  type: "parallel",
+  title: "Regions across sales, units and margin",
+  x: "region",
+  y: ["sales", "units", "margin"],
+  format: { sales: "compact", units: "compact", margin: "percent" },
+  data: rollup(FACTS, ["region"], {
+    sales: sum("sales"),
+    units: sum("units"),
+    margin: mean("margin"),
+  }) as Row[],
+});
+
+// 20. Table with in-cell bars.
+show("table", {
+  type: "table",
+  title: "Item scorecard",
+  x: "item",
+  y: ["sales", "units", "margin"],
+  format: { sales: "compact", units: "compact", margin: "percent" },
+  titles: { sales: "Sales", units: "Units", margin: "Margin" },
+  data: rollup(FACTS, ["item"], {
+    sales: sum("sales"),
+    units: sum("units"),
+    margin: mean("margin"),
+  }) as Row[],
+});
+
+// 21. Chord: region to family.
+show("chord", {
+  type: "chord",
+  title: "Region to product family",
+  path: ["region", "family"],
+  y: "sales",
+  format: "compact",
+  data: rollup(FACTS, ["region", "family"], { sales: sum("sales") }) as Row[],
+});
+
+// 22. Marimekko: column width is the region total, segments are families.
+show("marimekko", {
+  type: "marimekko",
+  title: "Region size and family mix",
+  x: "region",
+  y: "sales",
+  series: "family",
+  format: "compact",
+  data: rollup(FACTS, ["region", "family"], { sales: sum("sales") }) as Row[],
+});
+
+// 23. Waffle: one hundred cells, one per percent of sales.
+show("waffle", {
+  type: "waffle",
+  title: "Share of sales by family",
+  x: "family",
+  y: "sales",
+  format: "compact",
+  data: rollup(FACTS, ["family"], { sales: sum("sales") }) as Row[],
+});
+
+// 24. Radial bars: sales by month, stacked by region.
+show("radial", {
+  type: "radial",
+  title: "Sales by month and region",
+  x: "monthMs",
+  y: "sales",
+  series: "region",
+  format: { monthMs: "month", sales: "compact" },
+  data: byRegionMonth as Row[],
+});
+
+// 25. Bar with a second axis: sales as bars, units as the right axis.
+show("bar-y2", {
+  type: "bar",
+  title: "Sales and units by family",
+  x: "family",
+  y: "sales",
+  y2: "units",
+  format: { sales: "compact", units: "compact" },
+  titles: { sales: "Sales ($)", units: "Units" },
+  data: rollup(FACTS, ["family"], { sales: sum("sales"), units: sum("units") }) as Row[],
+});
+
+// 26. Horizontal bars with value labels.
+show("hbar", {
+  type: "bar",
+  title: "Sales by product family",
+  horizontal: true,
+  x: "family",
+  y: "sales",
+  sort: "desc",
+  labels: true,
+  format: "compact",
+  data: rollup(FACTS, ["family"], { sales: sum("sales") }) as Row[],
+});
+
+// 27. Single-series area, which gets the gradient fill.
+show("area", {
+  type: "area",
+  title: "Monthly sales",
+  x: "monthMs",
+  y: "sales",
+  format: { monthMs: "month", sales: "compact" },
+  data: monthTotals as Row[],
+});
+
+// 28. Line with value labels.
+show("line-labels", {
+  type: "line",
+  title: "Monthly units",
+  x: "monthMs",
+  y: "units",
+  labels: true,
+  format: { monthMs: "month", units: "compact" },
+  data: rollup(FACTS, ["monthMs"], { units: sum("units") }) as Row[],
 });
 
 // Theme toggle: auto -> light -> dark.
