@@ -9,7 +9,7 @@ Global: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js
 Modules: import "mayacharts/hierarchy" (treemap, sunburst); "mayacharts/flow" (sankey); "mayacharts/geo" (hexmap).
 
 SPEC FIELDS:
-type: enum = required. bar line area scatter heatmap waterfall treemap sunburst sankey hexmap
+type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell treemap sunburst sankey hexmap
 data: Row[] = required. Row objects with field values.
 y: field | field[] = required. Value field; array adds measure toggle.
 x: field = "". Category field (scatter: numeric x; hexmap: state).
@@ -22,7 +22,8 @@ size: field = null. Bubble area (sqrt scale). scatter only.
 name: field = null. Point identity and tooltip title. scatter only.
 totals: string[] = []. x values drawn as running-total bars. waterfall only.
 stack: boolean = false. Stack series instead of grouping. bar area only.
-horizontal: boolean = false. Categories on left axis. bar only.
+horizontal: boolean = false. Categories on left axis. bar dumbbell.
+y2: field = null. Second value field drawn as line on right axis. bar only.
 format: preset|{[field]: preset|Intl} = auto. Per field or one string for all measures.
 titles: {[field]: string} = {}. Display names everywhere (axis, tooltip, legend, table).
 labels: boolean = null. Formatted value on marks. heatmap: true at ≥24 px.
@@ -59,6 +60,9 @@ EXAMPLES:
 8. Bubble scatter with select: {type: "scatter", x: "population", y: "gdp", size: "area", name: "country", select: "multi", data: [{country: "USA", population: 331, gdp: 23, area: 9.8}]}
 9. Heatmap count: {type: "heatmap", x: "hour", y: "traffic", aggregate: "count", data: [{hour: "09", traffic: "high"}]}
 10. Treemap drill: {type: "treemap", path: ["region", "state", "product"], y: "revenue", drill: true, data: [{region: "West", state: "CA", product: "A", revenue: 5000}]}
+11. KPI with delta and sparkline: {type: "kpi", x: "month", y: "sales", format: "currency", data: [{month: "Mar", sales: 45000}, {month: "Apr", sales: 50700}, {month: "May", sales: 54500}]}
+12. Dumbbell horizontal: {type: "dumbbell", x: "region", y: "revenue", series: "year", horizontal: true, format: "currency", data: [{region: "North", year: "2024", revenue: 45000}, {region: "North", year: "2025", revenue: 52000}]}
+13. Bar with dual axis: {type: "bar", x: "month", y: "revenue", y2: "customers", format: {revenue: "currency", customers: "integer"}, data: [{month: "Jan", revenue: 10500, customers: 120}, {month: "Feb", revenue: 12000, customers: 145}]}
 
 ERROR CODES:
 spec-not-object: spec must be a plain object

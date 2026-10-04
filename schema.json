@@ -19,6 +19,8 @@
         "scatter",
         "heatmap",
         "waterfall",
+        "kpi",
+        "dumbbell",
         "treemap",
         "sunburst",
         "sankey",
@@ -69,9 +71,13 @@
         }
       ]
     },
+    "y2": {
+      "type": "string",
+      "description": "Second value field, drawn as a line on a right axis over the bars. Vertical bar only."
+    },
     "series": {
       "type": "string",
-      "description": "Splits rows into series (heatmap: the row category). bar line area scatter heatmap."
+      "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to). bar line area scatter heatmap dumbbell."
     },
     "path": {
       "type": "array",
@@ -102,7 +108,7 @@
     },
     "horizontal": {
       "type": "boolean",
-      "description": "Categories on the left axis. bar only."
+      "description": "Categories on the left axis. bar and dumbbell."
     },
     "format": {
       "oneOf": [
@@ -197,7 +203,9 @@
           "positive",
           "negative",
           "above",
-          "below"
+          "below",
+          "vs",
+          "ofTarget"
         ]
       }
     },

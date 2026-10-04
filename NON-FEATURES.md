@@ -33,6 +33,10 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Colour slots by first appearance**: a series keeps its palette slot while row order is stable; reordering rows can move colours (use `colors: { value: color }` to pin them). Nine or more series wrap the 8 slots.
 - **Animation cap**: updates with more than 1500 marks are drawn without animation.
 - **Measure toggle up to 4 options**: a `y` array works with more measures, but the sliding indicator is styled for 2 to 4.
+- **kpi in a short box**: the sparkline needs about 28 px of free height; with a target bullet and too little room, the bullet stays and the sparkline is dropped.
+- **kpi delta is against the previous period only**: compare with a year earlier by passing two rows (for example "2025 YTD" and "2026 YTD") as the x periods.
+- **One y2 line**: `y2` takes one field, aggregated per category across every series, on a 0-anchored right axis.
+- **Dumbbell sort**: `sort` orders categories by the total of both values, not by the gap between them.
 
 ## What you can do instead
 

@@ -12,6 +12,8 @@ export type ChartType =
   | "scatter"
   | "heatmap"
   | "waterfall"
+  | "kpi"
+  | "dumbbell"
   | "treemap"
   | "sunburst"
   | "sankey"
@@ -86,13 +88,13 @@ export interface ChartSpec<R extends object = Row> {
    * @example limit: 10 */
   limit?: number;
 
-  /** Category field (scatter: numeric x; hexmap: US state). Not used by path types.
+  /** Category field (scatter: numeric x; hexmap: US state; kpi: optional period, last one is the headline). Not used by path types.
    * @example x: "month" */
   x?: Field<R>;
   /** Value field; an array adds a measure toggle, first one active.
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
-  /** Splits rows into series (heatmap: the row category). bar line area scatter heatmap.
+  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to). bar line area scatter heatmap dumbbell.
    * @example series: "region" */
   series?: Field<R>;
   /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area with `drill` (replaces `x`).
@@ -110,9 +112,12 @@ export interface ChartSpec<R extends object = Row> {
   /** Stack series instead of grouping them. bar and area only.
    * @example stack: true */
   stack?: boolean;
-  /** Categories on the left axis. bar only.
+  /** Categories on the left axis. bar and dumbbell.
    * @example horizontal: true */
   horizontal?: boolean;
+  /** Second value field, drawn as a line on a right axis over the bars. Vertical bar only.
+   * @example y2: "units" */
+  y2?: Field<R>;
 
   /** A preset for every `y`, or a preset / Intl options per field. Display only.
    * @example format: { revenue: "currency", month: "month", margin: { style: "percent", suffix: " gm" } } */
@@ -167,7 +172,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Palette in series order (max 8), or colours by series value.
    * @example colors: { North: "#0b6", South: "oklch(.6 .17 30)" } */
   colors?: readonly string[] | Readonly<Record<string, string>>;
-  /** Tone by sign of y, by a target, or a ramp by a numeric field. Not with `series`.
+  /** Tone by sign of y, by a target, or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi: target only, drawn as a bullet bar).
    * @example colorBy: { target: 100 } */
   colorBy?: "sign" | { readonly target: number } | Field<R>;
   /** Theme token overrides (CSS values, allowlisted).
@@ -268,6 +273,8 @@ export interface ResolvedSpec {
   /** Index of `y` in `measures`. */
   measure: number;
   series: string | null;
+  /** Right-axis line measure (bar only); null when unset. */
+  y2: string | null;
   /** Remaining path levels below the drilled branch ([] when no path). */
   path: string[];
   /** Applied drill values, outer first ([] at the root). */
@@ -335,6 +342,8 @@ export interface Shaped {
   cells: Cell[];
   /** Min/max over all cell spans (includes 0 for bars). [0, 0] when empty. */
   extent: [number, number];
+  /** spec.y2 aggregated per category (parallel to `categories`); [] without y2. */
+  y2: (number | null)[];
 }
 
 export interface BandScale {
@@ -401,6 +410,8 @@ export interface MarkCtx {
   x: Scale | null;
   /** Scale of the left (vertical) axis; null when the mark has none. */
   y: Scale | null;
+  /** Scale of the right axis (bar with y2); null otherwise. */
+  y2: LinearScale | null;
   /** Display text for a raw value of `field` (step = tick step for number decimals). */
   fmt(field: string, v: unknown, step?: number): string;
   /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. */
@@ -429,8 +440,8 @@ export interface MarkOut {
 export interface Mark {
   /** Noun for the auto description ("Bar" -> "Bar chart of …"). */
   noun: string;
-  /** Bottom and left axes. Absent: no axes (path types). */
-  axes?(spec: ResolvedSpec, shaped: Shaped): [bottom: Axis, left: Axis];
+  /** Bottom and left axes, plus an optional right linear axis (bar with y2). Absent: no axes (path types, kpi). */
+  axes?(spec: ResolvedSpec, shaped: Shaped): [bottom: Axis, left: Axis, right?: Axis];
   /** Extra validation after the core checks (e.g. hexmap `unknown-state`). */
   check?(spec: ChartSpec, fail: Fail): void;
   draw(ctx: MarkCtx): MarkOut;

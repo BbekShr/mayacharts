@@ -86,7 +86,7 @@ describe("one snapshot per error code", () => {
     expect([e.code, e.path]).toEqual(["unknown-type", "type"]);
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.type = "lin" is not a chart type.
-        Valid types: bar, line, area, scatter, heatmap, waterfall, treemap, sunburst.
+        Valid types: bar, line, area, scatter, heatmap, waterfall, kpi, dumbbell, treemap, sunburst.
         Did you mean "line"?
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-type"
     `);
@@ -153,7 +153,7 @@ describe("one snapshot per error code", () => {
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.stacked is not a known option.
         Did you mean "stack"?
-        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, select, colors, colorBy, theme, $schema, x, series, size, name, title, description, locale, currency, stack, horizontal, labels, legend, tooltip, drill, zoom, grid, xAxis, yAxis, table, animate.
+        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, select, colors, colorBy, theme, $schema, x, y2, series, size, name, title, description, locale, currency, stack, horizontal, labels, legend, tooltip, drill, zoom, grid, xAxis, yAxis, table, animate.
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-option"
     `);
   });

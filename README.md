@@ -52,28 +52,29 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Data
 
-| Field       | Type                           | Applies to            | Default    | Meaning                                                                  |
-| ----------- | ------------------------------ | --------------------- | ---------- | ------------------------------------------------------------------------ |
-| `$schema`   | string                         | all                   | -          | Ignored; for editors and LLMs                                            |
-| `type`      | enum                           | all                   | required   | `bar line area scatter heatmap waterfall treemap sunburst sankey hexmap` |
-| `data`      | Row[]                          | all                   | required   | Row objects                                                              |
-| `aggregate` | sum / mean / count / min / max | all                   | sum        | How rows sharing a (category, series) combine; `count` counts non-null y |
-| `sort`      | asc / desc                     | bar line area heatmap | data order | Categories by total across all series                                    |
-| `limit`     | positive integer               | bar line area heatmap | -          | Keep top N categories; rest roll up into "Other"                         |
+| Field       | Type                           | Applies to            | Default    | Meaning                                                                               |
+| ----------- | ------------------------------ | --------------------- | ---------- | ------------------------------------------------------------------------------------- |
+| `$schema`   | string                         | all                   | -          | Ignored; for editors and LLMs                                                         |
+| `type`      | enum                           | all                   | required   | `bar line area scatter heatmap waterfall kpi dumbbell treemap sunburst sankey hexmap` |
+| `data`      | Row[]                          | all                   | required   | Row objects                                                                           |
+| `aggregate` | sum / mean / count / min / max | all                   | sum        | How rows sharing a (category, series) combine; `count` counts non-null y              |
+| `sort`      | asc / desc                     | bar line area heatmap | data order | Categories by total across all series                                                 |
+| `limit`     | positive integer               | bar line area heatmap | -          | Keep top N categories; rest roll up into "Other"                                      |
 
 ### Encoding
 
-| Field        | Type             | Applies to                                        | Meaning                                   |
-| ------------ | ---------------- | ------------------------------------------------- | ----------------------------------------- |
-| `x`          | field            | all but path types                                | Category; scatter numeric x; hexmap state |
-| `y`          | field or field[] | all                                               | Value; array adds measure toggle          |
-| `series`     | field            | bar line area scatter heatmap                     | Split into series; heatmap row category   |
-| `path`       | field[]          | treemap sunburst sankey; bar/line/area with drill | Hierarchy outer to inner; replaces `x`    |
-| `size`       | field            | scatter                                           | Bubble area (sqrt scale)                  |
-| `name`       | field            | scatter                                           | Point identity and tooltip title          |
-| `totals`     | string[]         | waterfall                                         | x values drawn as running-total bars      |
-| `stack`      | boolean          | bar area                                          | Stack series instead of grouping          |
-| `horizontal` | boolean          | bar                                               | Categories on the left axis               |
+| Field        | Type             | Applies to                                        | Meaning                                                                  |
+| ------------ | ---------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
+| `x`          | field            | all but path types                                | Category; scatter numeric x; hexmap state                                |
+| `y`          | field or field[] | all                                               | Value; array adds measure toggle                                         |
+| `series`     | field            | bar line area scatter heatmap dumbbell            | Split into series; heatmap row category; dumbbell exactly two (from, to) |
+| `path`       | field[]          | treemap sunburst sankey; bar/line/area with drill | Hierarchy outer to inner; replaces `x`                                   |
+| `size`       | field            | scatter                                           | Bubble area (sqrt scale)                                                 |
+| `name`       | field            | scatter                                           | Point identity and tooltip title                                         |
+| `totals`     | string[]         | waterfall                                         | x values drawn as running-total bars                                     |
+| `stack`      | boolean          | bar area                                          | Stack series instead of grouping                                         |
+| `horizontal` | boolean          | bar dumbbell                                      | Categories on the left axis                                              |
+| `y2`         | field            | bar                                               | Second value field as a line on right axis (vertical bars only)          |
 
 ### Formatting
 
@@ -241,6 +242,55 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
   "y": "revenue",
   "drill": true,
   "data": [{ "region": "West", "state": "CA", "product": "A", "revenue": 5000 }]
+}
+```
+
+**KPI with monthly delta and sparkline**
+
+```json
+{
+  "type": "kpi",
+  "x": "month",
+  "y": "sales",
+  "format": "currency",
+  "data": [
+    { "month": "Mar", "sales": 45000 },
+    { "month": "Apr", "sales": 50700 },
+    { "month": "May", "sales": 54500 }
+  ]
+}
+```
+
+**Dumbbell horizontal**
+
+```json
+{
+  "type": "dumbbell",
+  "x": "region",
+  "y": "revenue",
+  "series": "year",
+  "horizontal": true,
+  "format": "currency",
+  "data": [
+    { "region": "North", "year": "2024", "revenue": 45000 },
+    { "region": "North", "year": "2025", "revenue": 52000 }
+  ]
+}
+```
+
+**Bar with dual axis (line overlay)**
+
+```json
+{
+  "type": "bar",
+  "x": "month",
+  "y": "revenue",
+  "y2": "customers",
+  "format": { "revenue": "currency", "customers": "integer" },
+  "data": [
+    { "month": "Jan", "revenue": 10500, "customers": 120 },
+    { "month": "Feb", "revenue": 12000, "customers": 145 }
+  ]
 }
 ```
 
@@ -566,4 +616,4 @@ mayaCharts follows semantic versioning. Public API: spec keys and semantics, sch
 
 ## License
 
-MIT.
+MIT, and the core library will stay MIT. Any paid offerings will be things outside the core, such as support contracts, hosted services and separate add-ons. Nothing in the library will move behind a paywall. See [LICENSE](LICENSE).

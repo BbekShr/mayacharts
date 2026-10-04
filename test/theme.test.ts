@@ -137,7 +137,7 @@ describe("theme css", () => {
       "[data-depth]",
       "[data-selected]",
       "[data-maya=labels],[data-maya=cross]{pointer-events:none}",
-      "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active])",
+      "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],text)",
       "@media (forced-colors:active)",
       "@media (prefers-contrast:more)",
       "@media (prefers-reduced-motion:reduce){*{transition:none!important}}",
@@ -149,7 +149,7 @@ describe("theme css", () => {
       expect(css, h).toContain(h);
     expect(css).not.toContain("style=");
   });
-  it("gzips under 2400 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(2400);
+  it("gzips under 2450 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(2450);
   });
 });
