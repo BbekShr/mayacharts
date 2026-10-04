@@ -347,14 +347,13 @@ export class MayaChart extends HTMLElement {
       if (!parts.vars.some(([n]) => n === k)) maya.style.removeProperty(k);
     this.#vars = new Set(parts.vars.map(([k]) => k));
     // Nothing animates on resize: geometry must track the container immediately.
-    const still =
-      this.#resized ||
-      spec.animate === false ||
-      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const resized = this.#resized;
     this.#resized = false;
     patch(box, parts.svg, this.#drawn && !still, {
       origin: this.#origin,
       after: () => this.#tip?.refresh(),
+      instant: resized,
     });
     this.#origin = undefined;
     this.#drawn = true;

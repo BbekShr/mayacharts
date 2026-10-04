@@ -7,7 +7,11 @@ export interface PatchOptions {
   origin?: Box | undefined;
   /** Post-patch hook, called with the live svg after every patch (animated or not). */
   after?: (svg: Element) => void;
+  /** Diff and reuse nodes, but apply every change immediately (resize). */
+  instant?: boolean;
 }
+
+let instant = false;
 
 const EASE = "cubic-bezier(.2,.8,.2,1)";
 const DATA: KeyframeAnimationOptions = { duration: 280, easing: EASE };
@@ -36,7 +40,7 @@ const tf = (g: Box, b: Box) =>
   `translate(${b[0] - g[0]}px,${b[1] - g[1]}px) scale(${Math.max(b[2], Z) / Math.max(g[2], Z)},${Math.max(b[3], Z) / Math.max(g[3], Z)})`;
 
 const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () => void) => {
-  const a = e.animate?.(k, o);
+  const a = instant ? undefined : e.animate?.(k, o);
   if (!then) return;
   if (!a) return then();
   let done = false;
@@ -201,10 +205,12 @@ export function patch(
   if (!animate || !o || !om || !wm || wm.childElementCount > MAX || om.childElementCount > MAX)
     box.replaceChildren(w);
   else {
+    instant = !!opts.instant;
     sync(o, w);
     sync(om, wm);
     marks(om, wm, opts.origin);
     ui(o, w, om, wm);
+    instant = false;
   }
   opts.after?.(box.firstElementChild!);
 }
