@@ -20,6 +20,7 @@ export const heatmap: Mark = {
       hi > lo ? Math.min(9, Math.max(0, Math.floor(((v - lo) / (hi - lo)) * 10))) : 9;
     let marks = "";
     let hits = "";
+    let labels = "";
     for (const [n, c] of cells.entries()) {
       const v = c.value!;
       const row = shaped.visible.indexOf(c.si);
@@ -47,13 +48,26 @@ export const heatmap: Mark = {
         height: r(h),
       });
       hits += hit(d, x, y, w, h);
-      if (spec.labels !== false && w >= 24 && h >= 24)
-        ctx.label(x + w / 2, y + h / 2, ctx.fmt(spec.y, v), "center");
+      // Drawn here (not ctx.label) so labels on the dark ramp steps can carry data-dark.
+      const text = ctx.fmt(spec.y, v);
+      if (spec.labels !== false && w >= 24 && h >= 24 && text.length * 7.2 + 4 <= w)
+        labels += el(
+          "text",
+          {
+            x: r(x + w / 2),
+            y: r(y + h / 2),
+            "text-anchor": "middle",
+            "dominant-baseline": "middle",
+            "data-in": true,
+            "data-dark": d["data-q"] >= 6,
+          },
+          esc(text),
+        );
     }
     const legend =
       cells.length > 0
         ? `<div class="maya-legend" data-maya="ramp"><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
         : "";
-    return { marks, hits, grid: "", legend };
+    return { marks, hits, labels, grid: "", legend };
   },
 };
