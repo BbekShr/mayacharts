@@ -40,7 +40,7 @@ export const css =
   "[data-maya=ramp] i{width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 20%,var(--b)),var(--maya-accent))}" +
   // Ramp floor: the background, lifted toward the accent in dark mode so low steps stay visible.
   "[data-q],[data-maya=ramp] i{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
-  "[data-maya=tone] span{display:inline-flex;align-items:center;gap:6px}" +
+  ".maya-legend span{display:inline-flex;align-items:center;gap:6px}" +
   ".maya-reset{position:absolute;top:4px;right:4px;border:1px solid var(--maya-grid);border-radius:99px;padding:2px 10px;background:var(--maya-bg)}" +
   ".maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;align-self:flex-start;margin:0 0 8px;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
   ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);transition:transform .2s}" +
@@ -63,12 +63,17 @@ export const css =
   "[data-maya=mark],[data-maya=link]{transition:opacity .2s}" +
   "[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)),var(--maya-fg) 18%)}" +
   ":where([data-xd] circle[data-maya=mark]){stroke:var(--maya-bg);stroke-width:1}" +
-  "[data-n] circle[data-maya=mark]:not([data-active],[data-selected]){fill-opacity:0}" +
+  "[data-maya=line]~circle[data-maya=mark]:not([data-active],[data-selected],[data-last]){fill-opacity:0}" +
   "[data-maya=line]{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round}" +
   "[data-maya=area]{fill:color-mix(in oklab,var(--c) 18%,transparent);stroke:none}" +
   "[data-maya=link]{fill:var(--c);opacity:.3}[data-maya=link][data-active]{opacity:.6}" +
+  // Dumbbell connector, kpi parts, y2 legend swatch.
+  "line[data-maya=link]{stroke:var(--c,var(--maya-fg-muted));opacity:1}" +
+  "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
+  "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of]){fill:var(--maya-fg-muted)}" +
+  "[data-line] i{height:2px;border-radius:1px}" +
   "[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
-  "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active]){opacity:.55}" +
+  "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],text){opacity:.55}" +
   "[data-maya=marks]:has([data-selected]) [data-maya=mark]:not([data-selected]){opacity:.35}" +
   "[data-selected]{stroke:var(--maya-fg);stroke-width:2}" +
   H +
@@ -80,10 +85,10 @@ export const css =
   ".maya-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}" +
   ".maya-probe{position:absolute;width:0;height:0;pointer-events:none;anchor-name:--maya-probe}" +
   ".maya-tip{margin:0;inset:auto;border:0;padding:6px 8px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:6px;box-shadow:0 2px 8px #0003;font:var(--maya-font-size) var(--maya-font);pointer-events:none}" +
-  "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,flip-inline;margin:8px}}" +
+  "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}}" +
   ".maya-tip{opacity:0;transition:opacity .12s}.maya-tip.maya-open{opacity:1}" +
   ".maya-tip b{display:block}" +
-  ".maya-tip div{display:flex;align-items:center;gap:6px}" +
+  ".maya-tip div{display:flex;align-items:center;gap:6px}.maya-tip i{outline:1px solid}" +
   ".maya-tip [data-on]{font-weight:600}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
   "@container (max-width:320px){.maya-legend{display:none}.maya-title{font-size:12px}}" +

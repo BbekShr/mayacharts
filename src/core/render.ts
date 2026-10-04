@@ -69,6 +69,9 @@
  *                       none), data-f (formatted value). data-neg when value < 0.
  *                       Optional: data-tone="good|bad", data-q (ramp step), data-other
  *                       (limit roll-up), data-depth, data-selected.
+ *                       bar + y2: one `path[data-maya=line]` plus a point circle mark per
+ *                       non-null category, data-s = series count % 8, data-series = the
+ *                       y2 title; hits are 24px squares round each point.
  *                       Line: point circles are marks (hidden until active) plus one
  *                       keyless full-height band hit per category.
  *   [data-maya="hit"]   same payload as its mark (incl. data-key). Emitted only when the
@@ -78,11 +81,14 @@
  *   [data-maya="live"]  the static polite live region; written via textContent only.
  *   [data-maya="legend"] buttons: <button type="button" data-si="i" data-s="i%8"
  *                       data-key="KEY" aria-pressed="true|false"><i></i>KEY</button>
+ *                       With y2 the legend also holds non-button <span data-s data-line>
+ *                       entries (the line; the bar measure too when there is no series).
  *                       Ramp/tone legends are non-button <div data-maya="ramp|tone">.
  *   The tooltip reads its content from these attributes; the element never sees rows.
  *
  * Key grammar (svg.ts key(...parts)): each part encodeURIComponent'ed with `~` -> %7E,
  *   joined by `~`. Band `S~C`; line/area `l~S`/`a~S`; scatter `S~name(#n)` or index;
+ *   bar y2 line `l~\u0000y2`, its points `\u0000y2~C` (NUL cannot be a series key prefix);
  *   hierarchy `h~p0~p1…`; sankey node `n~depth~name`, link `k~depth~src~dst`; hexmap
  *   `g~CODE`; limit roll-up category is the sentinel OTHER ("\u0000other").
  *   The element diffs marks by data-key (and tagName), never by index.
@@ -127,7 +133,9 @@ import { dataTable, describe, titleText } from "./a11y.ts";
 import { formatter } from "./format.ts";
 import { frame } from "./layout.ts";
 import { bar } from "./marks/bar.ts";
+import { dumbbell } from "./marks/dumbbell.ts";
 import { heatmap } from "./marks/heatmap.ts";
+import { kpi } from "./marks/kpi.ts";
 import { area, line } from "./marks/line.ts";
 import { scatter } from "./marks/scatter.ts";
 import { MODULES } from "./registry.ts";
@@ -154,6 +162,8 @@ const CORE: Readonly<Record<string, Mark>> = {
   area,
   scatter,
   heatmap,
+  kpi,
+  dumbbell,
 };
 
 const kebab = (s: string) => s.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase());
@@ -263,6 +273,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     plot,
     x: f?.x ?? null,
     y: f?.y ?? null,
+    y2: f?.y2 ?? null,
     fmt,
     label,
     tone,
@@ -349,10 +360,13 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let legend = "";
   if (markLegend !== null && s.legend) legend = markLegend;
-  else if (s.series !== null && s.legend)
+  else if ((s.series !== null || s.y2 !== null) && s.legend)
     legend =
       `<div class="maya-legend" data-maya="legend">` +
-      shaped.series
+      (s.series === null && s.y2 !== null
+        ? `<span data-s="0"><i></i>${esc(s.titles.get(s.y) ?? s.y)}</span>`
+        : "") +
+      (s.series === null ? [] : shaped.series)
         .map((k, i) =>
           el(
             "button",
@@ -367,8 +381,11 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           ),
         )
         .join("") +
+      (s.y2 === null
+        ? ""
+        : `<span data-s="${shaped.series.length % 8}" data-line><i></i>${esc(s.titles.get(s.y2) ?? s.y2)}</span>`) +
       `</div>`;
-  else if (spec.legend !== false && cb !== null && s.series === null)
+  else if (spec.legend !== false && cb !== null && s.series === null && s.type !== "kpi")
     legend =
       cb === "sign" || typeof cb === "object"
         ? `<div class="maya-legend" data-maya="tone">` +
@@ -451,6 +468,7 @@ function project(spec: ChartSpec): ChartSpec {
     spec.x,
     ...(typeof spec.y === "string" ? [spec.y] : spec.y),
     spec.series,
+    spec.y2,
     spec.size,
     spec.name,
     ...(spec.path ?? []),

@@ -20,7 +20,7 @@ const D = (c: unknown, s: unknown, n: unknown) => [
   { c: typeof c === "number" ? c + 2 : "C", s, v: 2, n: typeof n === "string" ? n + "3" : n },
 ];
 const BASE: Record<string, (c: unknown, s: unknown, n: unknown) => S> = {
-  bar: (c, s, n) => ({ type: "bar", x: "c", y: "v", series: "s", data: D(c, s, n) }),
+  bar: (c, s, n) => ({ type: "bar", x: "c", y: "v", y2: "v", series: "s", data: D(c, s, n) }),
   waterfall: (c, s, n) => ({ type: "waterfall", x: "c", y: "v", totals: ["C"], data: D(c, s, n) }),
   line: (c, s, n) => ({ type: "line", x: "c", y: "v", series: "s", data: D(c, s, n) }),
   area: (c, s, n) => ({ type: "area", x: "c", y: "v", series: "s", data: D(c, s, n) }),
@@ -33,6 +33,8 @@ const BASE: Record<string, (c: unknown, s: unknown, n: unknown) => S> = {
     data: D(c, s, n),
   }),
   heatmap: (c, s, n) => ({ type: "heatmap", x: "c", y: "v", series: "s", data: D(c, s, n) }),
+  kpi: (c, s, n) => ({ type: "kpi", x: "c", y: "v", colorBy: { target: 4 }, data: D(c, s, n) }),
+  dumbbell: (c, s, n) => ({ type: "dumbbell", x: "c", y: "v", series: "s", data: D(c, s, n) }),
   treemap: (c, s, n) => ({ type: "treemap", path: ["c", "s"], y: "v", data: D(c, s, n) }),
   sunburst: (c, s, n) => ({ type: "sunburst", path: ["c", "s"], y: "v", data: D(c, s, n) }),
   sankey: (c, s, n) => ({ type: "sankey", path: ["c", "s"], y: "v", data: D(c, s, n) }),

@@ -29,6 +29,10 @@ export const TEXT = {
   negative: "negative",
   above: "above target",
   below: "below target",
+  /** kpi delta: {0} = signed change, {1} = previous period. */
+  vs: "{0} vs {1}",
+  /** kpi bullet: {0} = share of target, {1} = target. */
+  ofTarget: "{0} of target {1}",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

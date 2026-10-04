@@ -55,6 +55,8 @@ const TYPES = [
   "scatter",
   "heatmap",
   "waterfall",
+  "kpi",
+  "dumbbell",
   "treemap",
   "sunburst",
   "sankey",
@@ -167,7 +169,7 @@ describe("fuzz: validateSpec and renderParts", () => {
 
   it("mutations of valid specs (higher validity rate) only throw MayaSpecError", () => {
     const base = () => ({
-      type: pick(["bar", "line", "area", "scatter", "heatmap", "waterfall"]),
+      type: pick(["bar", "line", "area", "scatter", "heatmap", "waterfall", "kpi", "dumbbell"]),
       x: "c",
       y: "v",
       data: Array.from({ length: 6 }, (_, i) => ({
@@ -194,7 +196,7 @@ describe("fuzz: validateSpec and renderParts", () => {
   });
 
   it("__proto__/constructor/toString as category and series values render safely", () => {
-    for (const type of ["bar", "line", "area", "waterfall", "heatmap"]) {
+    for (const type of ["bar", "line", "area", "waterfall", "heatmap", "kpi", "dumbbell"]) {
       const data = ["__proto__", "constructor", "toString", "hasOwnProperty"].flatMap((c) =>
         ["__proto__", "toString"].map((s) => ({ c, s, v: 1 })),
       );

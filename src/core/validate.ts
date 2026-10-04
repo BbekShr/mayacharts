@@ -57,7 +57,7 @@ export const MAX_MARKS = 5000;
 
 const w = (s: string) => s.split(" ");
 const S: Record<string, "string" | "boolean"> = Object.fromEntries([
-  ...w("$schema x series size name title description locale currency").map((k) => [k, "string"]),
+  ...w("$schema x y2 series size name title description locale currency").map((k) => [k, "string"]),
   ...w("stack horizontal labels legend tooltip drill zoom grid xAxis yAxis table animate").map(
     (k) => [k, "boolean"],
   ),
@@ -75,7 +75,7 @@ const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar size:scatter name:scatter path:${CPA},${PTH} totals:waterfall series:${CPA},scatter,heatmap sort:${CPA},heatmap limit:${CPA},heatmap stack:bar,area colorBy:${CPA},waterfall,scatter,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},${PTH} select:${CPA},waterfall,scatter,heatmap,treemap,sunburst,hexmap zoom:line,area,scatter`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter path:${CPA},${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell sort:${CPA},heatmap,dumbbell limit:${CPA},heatmap,dumbbell stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,treemap,sunburst,hexmap zoom:line,area,scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -94,6 +94,7 @@ const TOKENS = [
 const USE: Record<string, string> = {
   x: "the category axis",
   y: "the plotted numbers",
+  y2: "the right-axis line",
   series: "splitting rows into series",
   size: "bubble area",
   name: "point identity",
@@ -340,9 +341,14 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         `Received: ${show(r)}`,
       );
   });
-  if (s[need] === undefined && !(need === "x" && CART.includes(t) && s.path !== undefined))
+  if (
+    s[need] === undefined &&
+    t !== "kpi" &&
+    !(need === "x" && CART.includes(t) && s.path !== undefined)
+  )
     missing(need);
   if (s.y === undefined) missing("y");
+  if (t === "dumbbell" && s.series === undefined) missing("series");
 
   for (const k in S) if (s[k] !== undefined && typeof s[k] !== S[k]) bad(k, s[k], `a ${S[k]}`);
   for (const [k, want, ok] of CHECKS) if (s[k] !== undefined && !ok(s[k])) bad(k, s[k], want);
@@ -462,7 +468,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   const cart = CART.includes(t);
   const pairs: [boolean, string, string, string][] = [
     [
-      colorBy !== undefined && s.series !== undefined,
+      colorBy !== undefined && s.series !== undefined && t !== "dumbbell",
       "colorBy",
       "spec.colorBy cannot be combined with spec.series.",
       "Series already set the colours; remove one of them.",
@@ -484,6 +490,18 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       "x",
       "spec.x cannot be combined with spec.path.",
       "With path, the current drill level is the category; remove x.",
+    ],
+    [
+      s.y2 !== undefined && s.horizontal === true,
+      "y2",
+      "spec.y2 cannot be combined with spec.horizontal.",
+      "The y2 line needs a right value axis; draw vertical bars.",
+    ],
+    [
+      t === "kpi" && colorBy !== undefined && !isObj(colorBy),
+      "colorBy",
+      'spec.colorBy on "kpi" must be { target: number }.',
+      "A kpi compares its headline with one target, drawn as a bullet bar.",
     ],
     [
       cart && s.drill === true && path === undefined,
@@ -512,6 +530,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       ["x", s.x],
       ...(typeof y === "string" ? [["y", y] as [string, string]] : arr("y", ys)),
       ["series", s.series],
+      ["y2", s.y2],
       ["size", s.size],
       ["name", s.name],
       ...arr("path", (path as string[] | undefined) ?? []),
@@ -561,6 +580,17 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       });
     for (const f of ys) numeric(f, "non-numeric-y", "y");
     if (typeof s.size === "string") numeric(s.size, "non-numeric-field", "size");
+    if (typeof s.y2 === "string") numeric(s.y2, "non-numeric-field", "y2");
+    if (t === "dumbbell" && typeof s.series === "string") {
+      const n = new Set(rows.map((r) => String(r[s.series as string]))).size;
+      if (n !== 2)
+        fail(
+          "invalid-option",
+          "series",
+          `spec.series on "dumbbell" needs exactly 2 values, found ${n}.`,
+          "The first value seen is the start of each bar, the second the end, e.g. last year and this year.",
+        );
+    }
     if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
     if (typeof colorBy === "string" && colorBy !== "sign")
       numeric(colorBy, "non-numeric-field", "colorBy");
@@ -658,6 +688,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     measures,
     measure,
     series: spec.series ?? null,
+    y2: spec.y2 ?? null,
     path,
     drilled,
     window: view.window && view.window.length === 4 ? view.window : null,
@@ -675,7 +706,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     text: { ...spec.text },
     title: spec.title ?? null,
     description: spec.description ?? null,
-    legend: spec.legend ?? spec.series !== undefined,
+    legend: spec.legend ?? (spec.series !== undefined || spec.y2 !== undefined),
     tooltip: spec.tooltip ?? true,
     drill: spec.drill ?? false,
     select: spec.select ?? false,

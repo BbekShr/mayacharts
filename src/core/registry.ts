@@ -8,7 +8,7 @@
 import type { Mark } from "./types.ts";
 
 // ponytail: kept in sync with package.json by hand (one line, checked at release).
-export const VERSION = "0.0.1";
+export const VERSION = "0.1.0";
 // ponytail: keyed by major; pre-1.0 Mark-contract breaks must bump this by hand.
 export const MAJOR = "0";
 
@@ -20,7 +20,16 @@ if (!Object.hasOwn(globalThis, KEY))
 export const MODULES = (globalThis as unknown as Record<symbol, Map<string, Mark>>)[KEY]!;
 
 /** Types that ship in core (static CORE map in render.ts). */
-export const CORE_TYPES = ["bar", "line", "area", "scatter", "heatmap", "waterfall"] as const;
+export const CORE_TYPES = [
+  "bar",
+  "line",
+  "area",
+  "scatter",
+  "heatmap",
+  "waterfall",
+  "kpi",
+  "dumbbell",
+] as const;
 
 /** Module types and the import that provides them (for the unknown-type hint). */
 export const MODULE_OF: Readonly<Record<string, string>> = {

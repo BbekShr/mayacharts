@@ -21,11 +21,12 @@ export function agg(kind: Aggregate): { add(v: number): void; value(): number | 
   };
 }
 
-type R = readonly [si: number, v: unknown];
+type R = readonly [si: number, v: unknown, v2?: unknown];
 interface Cat {
   label: string;
   rows: R[];
   vals: (number | null)[];
+  y2?: number | null;
 }
 
 interface Opts {
@@ -45,7 +46,7 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
     if (j === undefined) si.set(sk, (j = series.push(sk) - 1));
     let cat = ci.get(c);
     if (!cat) ci.set(c, (cat = { label: c, rows: [], vals: [] }));
-    cat.rows.push([j, row[s.y]]);
+    cat.rows.push([j, row[s.y], s.y2 === null ? undefined : row[s.y2]]);
   }
   // aggregate: one reducer per (category, series); pairs with no row stay null.
   const reduce = (rows: readonly R[]) => {
@@ -57,8 +58,17 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
     }
     return series.map((_, j) => rs.get(j)?.value() ?? null);
   };
+  // y2: one reducer over every row of the category, whatever the series.
+  const reduce2 = (c: Cat) => {
+    const a = agg(s.aggregate);
+    for (const [, , v] of c.rows) if (typeof v === "number") a.add(v);
+    c.y2 = a.value();
+  };
   let cats = [...ci.values()];
-  for (const c of cats) c.vals = reduce(c.rows);
+  for (const c of cats) {
+    c.vals = reduce(c.rows);
+    reduce2(c);
+  }
   const total = (c: Cat) => c.vals.reduce<number>((a, v) => a + (v ?? 0), 0);
 
   if (s.sort) {
@@ -83,6 +93,7 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
       vals: [],
     };
     other.vals = reduce(other.rows);
+    reduce2(other);
     cats = [...cats.filter((c) => top.has(c)), other];
   }
 
@@ -130,6 +141,7 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
     visible,
     cells,
     extent: [lo, hi],
+    y2: s.y2 === null ? [] : cats.map((c) => c.y2 ?? null),
   };
 }
 

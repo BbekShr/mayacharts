@@ -4,6 +4,14 @@ Zero-dependency SVG chart library: a pure `render(spec) -> SVG string` core plus
 
 Owner: Bibek Shrestha (GitHub BbekShr). MIT, forever. See STABILITY.md for what is public API.
 
+## Licensing and commercial policy
+
+- The core library stays MIT. Never relicense it, add a source-available or copyleft tier, or move existing features behind a paywall.
+- Any revenue comes from things that are not part of the MIT core: support and SLA contracts, hosted services, and separately licensed add-ons. State this plan publicly before acting on it.
+- Keep all work on personal equipment, accounts and time. Never use employer code, data, designs or confidential knowledge.
+- Do not sell or announce paid offerings until a signed written release from the employer covers open-source and commercial use. A sale to the employer needs disclosure, independent approval and market pricing.
+- Accept outside contributions only under a contributor agreement, so ownership stays clear for enterprise buyers.
+
 ## Commands
 
 - `npm test` - Vitest (node + one happy-dom file). ~440 tests incl. fuzz, hostile-string, property, perf and leak suites.
@@ -24,7 +32,7 @@ Screenshot baselines live in `e2e/__screenshots__/{darwin,linux}/<browser>/`. CI
 - `src/core/marks/*.ts` - bar (also waterfall), line (also area), scatter, heatmap. Each is a `Mark { noun, axes?, check?, draw }` using only `MarkCtx` closures (`fmt label tone q agg fail t`).
 - `src/hierarchy.ts`, `flow.ts`, `geo.ts` - optional modules (treemap/sunburst, sankey, US hexmap). They may import only `registry.ts`, `svg.ts`, `scale.ts`, `ticks.ts` and types; never render/validate/shape/format (they are bundled separately).
 - `src/element/` - `maya-chart.ts` (element, events, `view`/`selected`, keydown dispatcher), `animate.ts` (key diff, transform-only WAAPI), `tooltip.ts`, `html.ts` (Trusted Types policy `mayacharts`), and the interactions `measure.ts`, `drill.ts`, `select.ts`, `zoom.ts` as pure reducers plus `mount(host)` handlers.
-- `src/styles/theme.ts` - the whole stylesheet as one string (budget 2.4 KB gzip). Tokens `--maya-*`.
+- `src/styles/theme.ts` - the whole stylesheet as one string (budget 2.45 KB gzip). Tokens `--maya-*`.
 - `site/` - demo and gallery (synthetic data in `site/data.ts`; never copy data from elsewhere). `docs/spec.html`, `site/errors.html` (one anchor per error code; error messages link here).
 - `schema.json`, `llms.txt` - kept in sync with `types.ts` by `test/schema.test.ts`.
 

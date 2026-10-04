@@ -75,7 +75,10 @@
               <td>enum</td>
               <td>required</td>
               <td>
-                <code>bar line area scatter heatmap waterfall treemap sunburst sankey hexmap</code>
+                <code
+                  >bar line area scatter heatmap waterfall kpi dumbbell treemap sunburst sankey
+                  hexmap</code
+                >
               </td>
             </tr>
             <tr>
@@ -138,10 +141,16 @@
               <td>Value; array adds measure toggle, first active</td>
             </tr>
             <tr>
+              <td><a class="spec-anchor" id="y2"></a><code>y2</code></td>
+              <td>field</td>
+              <td>bar</td>
+              <td>Second value field, drawn as a line on a right axis. Vertical bars only</td>
+            </tr>
+            <tr>
               <td><a class="spec-anchor" id="series"></a><code>series</code></td>
               <td>field</td>
-              <td>bar line area scatter heatmap</td>
-              <td>Split into series; heatmap row category</td>
+              <td>bar line area scatter heatmap dumbbell</td>
+              <td>Split into series; heatmap row category; dumbbell exactly two (from, to)</td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="path"></a><code>path</code></td>
@@ -176,7 +185,7 @@
             <tr>
               <td><a class="spec-anchor" id="horizontal"></a><code>horizontal</code></td>
               <td>boolean</td>
-              <td>bar</td>
+              <td>bar dumbbell</td>
               <td>Categories on the left axis</td>
             </tr>
           </tbody>

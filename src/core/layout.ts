@@ -1,7 +1,7 @@
 import { bandScale, linearScale } from "./scale.ts";
 import { el, esc, r } from "./svg.ts";
 import { niceTicks } from "./ticks.ts";
-import type { Axis, Box, ResolvedSpec, Scale } from "./types.ts";
+import type { Axis, Box, LinearScale, ResolvedSpec, Scale } from "./types.ts";
 
 const wide = (c: number) =>
   (c >= 0x1100 && c <= 0x115f) ||
@@ -40,6 +40,8 @@ export interface Frame {
   /** Bottom and left scales; null when the mark has no such axis. */
   x: Scale | null;
   y: Scale | null;
+  /** Right linear scale (third axis); null when the mark asks for none. */
+  y2: LinearScale | null;
   grid: string;
   /** Inner markup of the axis-y and axis-x groups. */
   ay: string;
@@ -66,7 +68,7 @@ function ticks(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "linear
 /** Axes, grid, plot box and scales for the two axes a mark asks for. */
 export function frame(
   spec: ResolvedSpec,
-  [bx, ly]: [Axis, Axis],
+  [bx, ly, ry]: [Axis, Axis, Axis?],
   size: { width: number; height: number },
   fmt: Fmt,
 ): Frame {
@@ -77,6 +79,8 @@ export function frame(
   const bLab = bx && !bt ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c)) : [];
   const lFull = ly && !lt ? (ly.domain as readonly string[]).map((c) => fmt(ly.field, c)) : [];
   const lLab = lt ? lt.labels : lFull.map((c) => clip(c, W * 0.4 - 8));
+  const rt = ry && ry.kind === "linear" ? ticks(spec, ry, fmt) : null;
+  const rTitle = rt && ry && spec.titles.get(ry.field);
   const yTitle = ly && spec.titles.get(ly.field);
   const xTitle = bx && spec.titles.get(bx.field);
   const left = (spec.yAxis && ly ? maxW(lLab) + 10 : 8) + (yTitle ? 18 : 0);
@@ -85,7 +89,14 @@ export function frame(
     x: left,
     y: 10,
     // Room for half of the last bottom tick label, which is centred on the plot's right edge.
-    w: Math.max(1, W - left - Math.max(12, bt ? tw(bt.labels.at(-1) ?? "") / 2 + 2 : 0)),
+    w: Math.max(
+      1,
+      W -
+        left -
+        (rt
+          ? (spec.yAxis ? maxW(rt.labels) + 4 : 8) + (rTitle ? 18 : 0)
+          : Math.max(12, bt ? tw(bt.labels.at(-1) ?? "") / 2 + 2 : 0)),
+    ),
     h: Math.max(1, H - 10 - bottom),
   };
   const x: Scale | null = bx
@@ -98,6 +109,8 @@ export function frame(
       ? bandScale(ly.domain, [plot.y, plot.y + plot.h])
       : linearScale(lt!.domain, [plot.y + plot.h, plot.y])
     : null;
+
+  const y2 = rt ? linearScale(rt.domain, [plot.y + plot.h, plot.y]) : null;
 
   // Grid is perpendicular to each linear axis: one linear = value axis; two = both; none = none.
   let grid = "";
@@ -158,18 +171,48 @@ export function frame(
     );
   }
 
+  if (rt && y2) {
+    if (spec.yAxis)
+      rt.values.forEach((v, i) => {
+        ay += el(
+          "text",
+          {
+            x: r(plot.x + plot.w + 6),
+            y: r(y2.of(v)),
+            "text-anchor": "start",
+            "dominant-baseline": "middle",
+          },
+          esc(rt.labels[i]!),
+        );
+      });
+    if (rTitle) {
+      const [tx, cy] = [W - 9, r(plot.y + plot.h / 2)];
+      ay += el(
+        "text",
+        { x: tx, y: cy, "text-anchor": "middle", transform: `rotate(90 ${tx} ${cy})` },
+        esc(rTitle),
+      );
+    }
+  }
+
   let ax = "";
   if (spec.xAxis && bx) {
     const ty = r(plot.y + plot.h + 16);
-    if (bt)
+    if (bt) {
+      // Linear ticks are thinned like band labels when they would overlap.
+      const every = Math.max(
+        1,
+        Math.ceil(maxW(bt.labels) / (plot.w / Math.max(1, bt.values.length - 1))),
+      );
       bt.values.forEach((v, i) => {
+        if (i % every) return;
         ax += el(
           "text",
           { x: r((x as { of(v: number): number }).of(v)), y: ty, "text-anchor": "middle" },
           esc(bt.labels[i]!),
         );
       });
-    else {
+    } else {
       const b = x as { at(i: number): number; bandwidth: number };
       const every = Math.max(1, Math.ceil(maxW(bLab) / (plot.w / Math.max(1, bLab.length))));
       bLab.forEach((c, i) => {
@@ -191,6 +234,7 @@ export function frame(
     plot,
     x,
     y,
+    y2,
     grid,
     ay,
     ax,

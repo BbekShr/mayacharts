@@ -52,6 +52,15 @@ export const bar: Mark = {
     }
     const cat: Axis = { kind: "band", field: spec.x, domain: shaped.categories };
     const val: Axis = { kind: "linear", field: spec.y, domain: [lo, hi] };
+    if (spec.y2 !== null) {
+      const v2 = shaped.y2.filter((v): v is number => v !== null);
+      const right: Axis = {
+        kind: "linear",
+        field: spec.y2,
+        domain: [Math.min(0, ...v2), Math.max(0, ...v2)],
+      };
+      return [cat, val, right];
+    }
     return spec.horizontal ? [val, cat] : [cat, val];
   },
   draw(ctx) {
@@ -113,6 +122,47 @@ export const bar: Mark = {
             ? ctx.label(cx, cy, text, "center")
             : ctx.label(cx, neg ? y + h : y, text, neg ? "below" : "above");
       }
+    }
+    if (ctx.y2 && spec.y2 !== null && shaped.y2.length) {
+      // y2 line over the bars: unique keys (key("l", NUL+"y2") / key(NUL+"y2", category)).
+      const f2 = spec.y2;
+      const slot = shaped.series.length % 8;
+      const name = spec.titles.get(f2) ?? f2;
+      let d = "";
+      let gap = true;
+      let dots = "";
+      shaped.y2.forEach((v, ci) => {
+        if (v === null) {
+          gap = true;
+          return;
+        }
+        const px = r(cat.at(ci) + cat.bandwidth / 2);
+        const py = r(ctx.y2!.of(v));
+        d += `${gap ? "M" : "L"}${px} ${py}`;
+        gap = false;
+        const cname = shaped.categories[ci]!;
+        const p = {
+          "data-key": key("\u0000y2", cname),
+          "data-c": ci,
+          "data-s": slot,
+          "data-x": ctx.fmt(spec.x, cname),
+          "data-series": name,
+          "data-f": ctx.fmt(f2, v),
+          "data-y": v,
+          "data-neg": v < 0,
+        };
+        dots += el("circle", { "data-maya": "mark", ...p, r: 3, cx: px, cy: py });
+        hits += hit(p, +px - 3, +py - 3, 6, 6);
+        if (spec.labels) ctx.label(+px, +py, ctx.fmt(f2, v), "above");
+      });
+      marks +=
+        el("path", {
+          "data-maya": "line",
+          "data-key": key("l", "\u0000y2"),
+          "data-s": slot,
+          pathLength: 1,
+          d: d || null,
+        }) + dots;
     }
     return { marks, hits };
   },
