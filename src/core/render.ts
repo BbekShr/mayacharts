@@ -274,6 +274,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   };
   mark.check?.(spec, fail);
 
+  let markLegend: string | null = null;
   let body = "";
   if (s.data.length === 0) {
     body = el(
@@ -290,6 +291,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
     const m = mark.draw(ctx);
+    markLegend = m.legend ?? null;
     body =
       g("grid", m.grid ?? f?.grid ?? "") +
       g("axis-y", f?.ay ?? "") +
@@ -341,7 +343,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   );
 
   let legend = "";
-  if (s.series !== null && s.legend)
+  if (markLegend !== null && s.legend) legend = markLegend;
+  else if (s.series !== null && s.legend)
     legend =
       `<div class="maya-legend" data-maya="legend">` +
       shaped.series

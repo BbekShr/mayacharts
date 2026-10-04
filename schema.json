@@ -1,0 +1,324 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bbekshr.github.io/mayacharts/schema.json",
+  "title": "mayaCharts spec",
+  "type": "object",
+  "required": ["type", "data", "y"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Ignored; lets editors and LLMs find the JSON schema."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "bar",
+        "line",
+        "area",
+        "scatter",
+        "heatmap",
+        "waterfall",
+        "treemap",
+        "sunburst",
+        "sankey",
+        "hexmap"
+      ],
+      "description": "Chart type. treemap/sunburst need `mayacharts/hierarchy`, sankey `flow`, hexmap `geo`."
+    },
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Row objects."
+    },
+    "aggregate": {
+      "type": "string",
+      "enum": ["sum", "mean", "count", "min", "max"],
+      "default": "sum",
+      "description": "How rows sharing a (category, series) combine. `count` counts non-null y."
+    },
+    "sort": {
+      "type": "string",
+      "enum": ["asc", "desc"],
+      "description": "Order categories by total across all series (hidden ones too)."
+    },
+    "limit": {
+      "type": "number",
+      "description": "Keep the top N categories by total; the rest roll up into a final \"Other\"."
+    },
+    "x": {
+      "type": "string",
+      "description": "Category field (scatter: numeric x; hexmap: US state). Not used by path types."
+    },
+    "y": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Value field."
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "An array adds a measure toggle, first one active."
+        }
+      ]
+    },
+    "series": {
+      "type": "string",
+      "description": "Splits rows into series (heatmap: the row category). bar line area heatmap."
+    },
+    "path": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area with `drill` (replaces `x`)."
+    },
+    "size": {
+      "type": "string",
+      "description": "Bubble area field (sqrt scale). scatter only."
+    },
+    "name": {
+      "type": "string",
+      "description": "Point identity and tooltip title. scatter only."
+    },
+    "totals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "x values drawn as running-total bars. waterfall only."
+    },
+    "stack": {
+      "type": "boolean",
+      "description": "Stack series instead of grouping them. bar and area only."
+    },
+    "horizontal": {
+      "type": "boolean",
+      "description": "Categories on the left axis. bar only."
+    },
+    "format": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "auto",
+            "integer",
+            "decimal",
+            "compact",
+            "percent",
+            "currency",
+            "date",
+            "month",
+            "year",
+            "time",
+            "datetime"
+          ],
+          "description": "A preset for every `y`."
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "integer",
+                  "decimal",
+                  "compact",
+                  "percent",
+                  "currency",
+                  "date",
+                  "month",
+                  "year",
+                  "time",
+                  "datetime"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "prefix": {
+                    "type": "string"
+                  },
+                  "suffix": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            ]
+          },
+          "description": "A preset / Intl options per field. Display only."
+        }
+      ],
+      "description": "Display format for values."
+    },
+    "titles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Display names by field: axis titles (shown only when set), tooltip, legend, table."
+    },
+    "labels": {
+      "type": "boolean",
+      "description": "Formatted values on marks. Default false (heatmap: true when cells are ≥ 24 px)."
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Localised UI strings with `{0}` placeholders."
+    },
+    "locale": {
+      "type": "string",
+      "default": "en-US",
+      "description": "BCP 47 locale for formatting."
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD",
+      "description": "ISO 4217 code for the \"currency\" preset."
+    },
+    "title": {
+      "type": "string",
+      "description": "Visible heading, also the accessible name."
+    },
+    "description": {
+      "type": "string",
+      "description": "Accessible description; auto-generated when omitted."
+    },
+    "yDomain": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Fixed value-axis domain. Not allowed with a `y` array."
+    },
+    "xDomain": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Fixed x domain. scatter only."
+    },
+    "tooltip": {
+      "type": "boolean",
+      "default": true,
+      "description": "Hover/keyboard tooltip."
+    },
+    "legend": {
+      "type": "boolean",
+      "description": "Legend; clicking toggles series. Default: true when `series` is set."
+    },
+    "drill": {
+      "type": "boolean",
+      "description": "Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop."
+    },
+    "select": {
+      "oneOf": [
+        {
+          "type": "boolean",
+          "enum": [true]
+        },
+        {
+          "type": "string",
+          "enum": ["multi"]
+        }
+      ],
+      "description": "Click/Enter/legend selects marks, others dim; Escape clears. Not with `drill`."
+    },
+    "zoom": {
+      "type": "boolean",
+      "description": "Drag to zoom. line, area, scatter. Reset chip, double-click and Escape restore."
+    },
+    "animate": {
+      "type": "boolean",
+      "default": true,
+      "description": "Animate updates (element only)."
+    },
+    "colors": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "description": "Palette in series order (max 8)."
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Colours by series value."
+        }
+      ],
+      "description": "Palette or colours by series value."
+    },
+    "colorBy": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["sign"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "target": {
+              "type": "number"
+            }
+          },
+          "required": ["target"],
+          "additionalProperties": false
+        },
+        {
+          "type": "string",
+          "description": "A numeric field."
+        }
+      ],
+      "description": "Tone by sign of y, by a target, or a ramp by a numeric field. Not with `series`."
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Theme token overrides (CSS values, allowlisted)."
+    },
+    "grid": {
+      "type": "boolean",
+      "default": true,
+      "description": "Grid lines perpendicular to the value axis."
+    },
+    "xAxis": {
+      "type": "boolean",
+      "default": true,
+      "description": "Bottom axis."
+    },
+    "yAxis": {
+      "type": "boolean",
+      "default": true,
+      "description": "Left axis."
+    },
+    "table": {
+      "type": "boolean",
+      "default": true,
+      "description": "Visually hidden data table for screen readers."
+    }
+  }
+}

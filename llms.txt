@@ -1,0 +1,98 @@
+mayaCharts: Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.
+Uses modern platform: Custom Elements, Web Animations API, CSS Anchor Positioning + Popover, CSS custom properties.
+
+USAGE:
+HTML: <maya-chart><script type="application/json">{spec}</script></maya-chart>
+JavaScript: chart.spec = {type: "bar", data, x: "month", y: "revenue"}; chart.data = newRows;
+SSR: import {render, renderShell} from "mayacharts"; render(spec, {width, height});
+Global: <script src="cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script>
+Modules: import "mayacharts/hierarchy" (treemap, sunburst); "mayacharts/flow" (sankey); "mayacharts/geo" (hexmap).
+
+SPEC FIELDS:
+type: enum = required. bar line area scatter heatmap waterfall treemap sunburst sankey hexmap
+data: Row[] = required. Row objects with field values.
+y: field | field[] = required. Value field; array adds measure toggle.
+x: field = "". Category field (scatter: numeric x; hexmap: state).
+aggregate: sum|mean|count|min|max = sum. How rows sharing (category, series) combine.
+sort: asc|desc = data order. Order categories by total across all series.
+limit: number = -. Keep top N categories; rest roll up into "Other".
+series: field = null. Split into series (heatmap: row category). bar line area heatmap.
+path: field[] = []. Hierarchy outer to inner. treemap sunburst sankey; bar/line/area with drill.
+size: field = null. Bubble area (sqrt scale). scatter only.
+name: field = null. Point identity and tooltip title. scatter only.
+totals: string[] = []. x values drawn as running-total bars. waterfall only.
+stack: boolean = false. Stack series instead of grouping. bar area only.
+horizontal: boolean = false. Categories on left axis. bar only.
+format: preset|{[field]: preset|Intl} = auto. Per field or one string for all measures.
+titles: {[field]: string} = {}. Display names everywhere (axis, tooltip, legend, table).
+labels: boolean = null. Formatted value on marks. heatmap: true at ≥24 px.
+text: {[key]: string} = {}. Localised UI strings with {0} placeholders.
+locale: BCP47 = en-US. Formatting locale.
+currency: ISO4217 = USD. Currency for "currency" preset.
+title: string = "". Visible heading and accessible name.
+description: string = "". Accessible description; auto-generated when omitted.
+yDomain: [min, max] = null. Fixed value-axis domain. Not with y array.
+xDomain: [min, max] = null. Fixed x domain. scatter only.
+tooltip: boolean = true. Hover/keyboard tooltip.
+legend: boolean = true if series. Legend; clicking toggles series.
+drill: boolean = false. Click/Enter zooms into branch of path; breadcrumb, Back, Escape pop.
+select: true|"multi" = false. Click/Enter/legend selects marks; Escape clears. Not with drill.
+zoom: boolean = false. Drag to zoom. line area scatter. Reset, double-click, Escape restore.
+animate: boolean = true. Animate updates (element only).
+colors: string[]|{[series]: color} = null. Max 8; slot assignment stable across updates.
+colorBy: "sign"|{target: n}|field = null. Tone by sign or target, or ramp by numeric field. Not with series.
+theme: {[token]: css} = {}. Theme token overrides (CSS values, allowlisted).
+grid: boolean = true. Grid lines perpendicular to value axis.
+xAxis: boolean = true. Bottom axis.
+yAxis: boolean = true. Left axis.
+table: boolean = true. Visually hidden data table for screen readers.
+$schema: string = "". Ignored; for editors and LLMs.
+
+EXAMPLES:
+1. Currency bar: {type: "bar", x: "month", y: "revenue", format: "currency", data: [{month: "Jan", revenue: 10500}]}
+2. Stacked bar: {type: "bar", x: "state", y: "units", series: "region", stack: true, data: [{state: "CA", region: "West", units: 120}]}
+3. Horizontal sorted limited labelled bar: {type: "bar", horizontal: true, x: "product", y: "margin", sort: "desc", limit: 5, labels: true, data: [{product: "A", margin: 22}]}
+4. Sign-coloured percent bar: {type: "bar", x: "metric", y: "variance", format: "percent", colorBy: "sign", data: [{metric: "revenue", variance: 0.15}]}
+5. Multi-measure line with date format and zoom: {type: "line", x: "date", y: ["revenue", "units"], zoom: true, format: {date: "date", revenue: "currency"}, data: [{date: "2024-01-01", revenue: 10000, units: 50}]}
+6. Stacked area: {type: "area", x: "month", y: "sales", series: "region", stack: true, data: [{month: "Jan", region: "North", sales: 1500}]}
+7. Waterfall with totals: {type: "waterfall", x: "stage", y: "amount", totals: ["Q1", "FY"], data: [{stage: "Q1", amount: 100}]}
+8. Bubble scatter with select: {type: "scatter", x: "population", y: "gdp", size: "area", name: "country", select: "multi", data: [{country: "USA", population: 331, gdp: 23, area: 9.8}]}
+9. Heatmap count: {type: "heatmap", x: "hour", y: "traffic", aggregate: "count", data: [{hour: "09", traffic: "high"}]}
+10. Treemap drill: {type: "treemap", path: ["region", "state", "product"], y: "revenue", drill: true, data: [{region: "West", state: "CA", product: "A", revenue: 5000}]}
+
+ERROR CODES:
+spec-not-object: spec must be a plain object
+missing-field: type/data/x (or path)/y is required but missing
+unknown-type: chart type not recognized (with module hint if needed)
+data-not-array: data must be an array of row objects
+row-not-object: data[i] must be a plain object
+unknown-field: field-valued option names no field in data
+non-numeric-y: y field value not a finite number (null allowed)
+non-numeric-field: size/scatter x/colorBy field value not a finite number
+non-positive-value: treemap/sunburst/sankey y value must be positive
+unknown-option: top-level spec key not recognized
+invalid-option: option value wrong type or invalid value
+option-unsupported: option not valid for this chart type or incompatible with another option
+stack-unsupported: stack: true not allowed with type "line" (use "area" instead)
+invalid-domain: yDomain/xDomain not [min, max] with min < max
+invalid-format: format preset unknown, bad Intl options, or unsupported locale/currency
+invalid-theme: theme token not recognized
+unsafe-css-value: colors/theme CSS value blocked by allowlist (no url(), expression(), injection)
+invalid-size: RenderOptions width/height not a finite number > 0
+unknown-state: hexmap x field value not a US state abbreviation
+too-many-marks: more than 5000 marks (suggest limit or aggregate)
+
+EVENTS AND STATE:
+Events (bubbles: true, composed: true):
+  maya-select {selected: Sel[], target: (Sel & {value}) | null}
+  maya-view {measure, drill, window, hidden}
+  maya-error {code, path, message} (cancelable with preventDefault())
+  maya-render {} (signals host that render is complete)
+Two-way sync properties:
+  el.view: {measure?, drill?, window?, hidden?} - getter/setter
+  el.selected: Sel[] - getter/setter (no events on set)
+
+RULES FOR AGENTS:
+1. Never put functions in spec: the spec is JSON, serializable, diffable, and hashable. No callbacks, formatters, or data transforms.
+2. Unknown types need imports: if type "treemap", "sunburst", "sankey", or "hexmap" fails with unknown-type, add import "mayacharts/<module>".
+3. Read errors.html when MayaSpecError thrown: every error links https://bbekshr.github.io/mayacharts/errors.html#<code> with cause and fixed example.

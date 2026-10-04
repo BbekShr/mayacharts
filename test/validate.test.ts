@@ -327,7 +327,7 @@ describe("option-unsupported: ONLY table and pairs", () => {
     [{ ...base, type: "waterfall", sort: "asc" }, "sort"],
     [{ ...base, type: "waterfall", limit: 3 }, "limit"],
     [{ ...base, type: "heatmap", stack: true }, "stack"],
-    [{ ...base, type: "line", colorBy: "sign" }, "colorBy"],
+    [{ ...base, type: "heatmap", colorBy: "sign" }, "colorBy"],
     [{ ...base, xDomain: [0, 1] }, "xDomain"],
     [{ ...base, type: "heatmap", drill: true }, "drill"],
     [{ ...base, type: "bar", zoom: true }, "zoom"],

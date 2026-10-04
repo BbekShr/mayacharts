@@ -272,6 +272,8 @@ export interface ResolvedSpec {
   path: string[];
   /** Applied drill values, outer first ([] at the root). */
   drilled: string[];
+  /** Scatter zoom box [x0, x1, y0, y1] from view.window; null otherwise. */
+  window: readonly [number, number, number, number] | null;
   size: string | null;
   name: string | null;
   totals: string[];

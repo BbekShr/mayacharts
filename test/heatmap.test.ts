@@ -1,0 +1,66 @@
+import { describe, expect, it } from "vitest";
+import { render, renderParts } from "../src/index.ts";
+import type { ChartSpec } from "../src/core/types.ts";
+
+const cols = ["a", "b", "c", "d"];
+const rows = ["r1", "r2", "r3"];
+const data = rows.flatMap((r, j) =>
+  cols.flatMap((x, i) => (r === "r2" && x === "b" ? [] : [{ x, r, v: j * 4 + i }])),
+);
+const spec: ChartSpec = { type: "heatmap", x: "x", y: "v", series: "r", data };
+const marks = (svg: string) => svg.match(/<rect data-maya="mark"[^>]*>/g) ?? [];
+
+describe("heatmap", () => {
+  it("draws one rect per non-null cell, none for missing", () => {
+    const m = marks(render(spec));
+    expect(m).toHaveLength(11);
+    expect(m.some((t) => t.includes('data-series="r2"') && t.includes('data-x="b"'))).toBe(false);
+    expect(m.every((t) => !t.includes("data-s="))).toBe(true);
+  });
+  it("buckets data-q across 0..9", () => {
+    const qs = marks(render(spec)).map((t) => Number(/data-q="(\d)"/.exec(t)![1]));
+    expect(Math.min(...qs)).toBe(0);
+    expect(Math.max(...qs)).toBe(9);
+  });
+  it("labels on by default at large sizes, off at small, off when false", () => {
+    const big = render(spec, { width: 800, height: 400 });
+    expect(big).toMatch(/data-maya="labels"><text/);
+    expect(render(spec, { width: 100, height: 60 })).toMatch(/data-maya="labels"><\/g>/);
+    expect(render({ ...spec, labels: false }, { width: 800, height: 400 })).toMatch(
+      /data-maya="labels"><\/g>/,
+    );
+  });
+  it("renders a ramp legend with formatted extent", () => {
+    const html = renderParts(spec).legend;
+    expect(html).toContain("data-maya");
+  });
+  it("handles __proto__ as a row name", () => {
+    const s: ChartSpec = {
+      ...spec,
+      data: [
+        { x: "a", r: "__proto__", v: 1 },
+        { x: "b", r: "__proto__", v: 2 },
+      ],
+    };
+    expect(marks(render(s))).toHaveLength(2);
+    expect(render(s)).toContain('data-series="__proto__"');
+  });
+  it("snapshot", () => {
+    const tiny: ChartSpec = {
+      type: "heatmap",
+      x: "x",
+      y: "v",
+      series: "r",
+      data: [
+        { x: "a", r: "r1", v: 1 },
+        { x: "b", r: "r1", v: 3 },
+      ],
+    };
+    expect(marks(render(tiny, { width: 200, height: 100 }))).toMatchInlineSnapshot(`
+      [
+        "<rect data-maya="mark" data-key="r1~a" data-c="0" data-x="a" data-series="r1" data-y="1" data-f="1" data-q="0" x="41.18" y="17.6" width="60.24" height="50.8"/>",
+        "<rect data-maya="mark" data-key="r1~b" data-c="1" data-x="b" data-series="r1" data-y="3" data-f="3" data-q="9" x="118.98" y="17.6" width="60.24" height="50.8"/>",
+      ]
+    `);
+  });
+});

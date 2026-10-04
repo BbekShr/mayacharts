@@ -304,7 +304,7 @@ Touch: show tooltip on pointerup if moved < 4 px.
 Four events, all `bubbles: true, composed: true`:
 
 - `maya-select {selected: Sel[], target: (Sel & {value}) | null}` - mark selected
-- `maya-view {measure, drill, zoom, hidden}` - measure toggled, drilled, or zoomed
+- `maya-view {measure, drill, window, hidden}` - measure toggled, drilled, or zoomed
 - `maya-error {code, path, message}` - spec error (cancelable; preventDefault() hides error box)
 - `maya-render {}` - render complete (ThoughtSpot: call `viz.events.emitRenderCompletedEvent()`)
 

@@ -75,7 +75,7 @@ const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar size:scatter name:scatter path:${CPA},${PTH} totals:waterfall series:${CPA},heatmap sort:${CPA},heatmap limit:${CPA},heatmap stack:bar,area colorBy:bar,waterfall,scatter,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},${PTH} select:${CPA},waterfall,scatter,heatmap,treemap,sunburst,hexmap zoom:line,area,scatter`,
+    `horizontal:bar size:scatter name:scatter path:${CPA},${PTH} totals:waterfall series:${CPA},scatter,heatmap sort:${CPA},heatmap limit:${CPA},heatmap stack:bar,area colorBy:${CPA},waterfall,scatter,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},${PTH} select:${CPA},waterfall,scatter,heatmap,treemap,sunburst,hexmap zoom:line,area,scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -308,6 +308,14 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   const t = type as string;
   const isPath = PATH.includes(t);
   const need = isPath ? "path" : "x";
+  const pth = (spec as Record<string, unknown>)["path"];
+  if (t === "sankey" && Array.isArray(pth) && pth.length < 2)
+    fail(
+      "invalid-option",
+      "path",
+      "spec.path needs at least two levels for a sankey.",
+      'Example: path: ["region", "family"]',
+    );
   const missing = (f: string) =>
     fail(
       "missing-field",
@@ -652,6 +660,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     series: spec.series ?? null,
     path,
     drilled,
+    window: view.window && view.window.length === 4 ? view.window : null,
     size: spec.size ?? null,
     name: spec.name ?? null,
     totals: [...(spec.totals ?? [])],
