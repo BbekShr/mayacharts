@@ -1,0 +1,422 @@
+{
+  "generated": "2026-10-04",
+  "definition": "Tokens count identifiers, keywords, numbers, strings, template literals, JSX text runs and each punctuator once; comments and whitespace are free; lines exclude blank ones.",
+  "libs": {
+    "chartjs": {
+      "area": {
+        "tokens": 236,
+        "lines": 27
+      },
+      "bar": {
+        "tokens": 166,
+        "lines": 22
+      },
+      "bubble": {
+        "tokens": 247,
+        "lines": 36
+      },
+      "grouped": {
+        "tokens": 220,
+        "lines": 25
+      },
+      "heatmap": null,
+      "horizontal": {
+        "tokens": 170,
+        "lines": 23
+      },
+      "line": {
+        "tokens": 166,
+        "lines": 22
+      },
+      "multiline": {
+        "tokens": 220,
+        "lines": 25
+      },
+      "sankey": null,
+      "scatter": {
+        "tokens": 118,
+        "lines": 17
+      },
+      "stacked": {
+        "tokens": 240,
+        "lines": 26
+      },
+      "treemap": null,
+      "total": {
+        "tokens": 1783,
+        "lines": 223,
+        "charts": 9
+      }
+    },
+    "echarts": {
+      "area": {
+        "tokens": 193,
+        "lines": 21
+      },
+      "bar": {
+        "tokens": 135,
+        "lines": 13
+      },
+      "bubble": {
+        "tokens": 204,
+        "lines": 22
+      },
+      "grouped": {
+        "tokens": 198,
+        "lines": 18
+      },
+      "heatmap": {
+        "tokens": 229,
+        "lines": 23
+      },
+      "horizontal": {
+        "tokens": 135,
+        "lines": 13
+      },
+      "line": {
+        "tokens": 133,
+        "lines": 13
+      },
+      "multiline": {
+        "tokens": 184,
+        "lines": 19
+      },
+      "sankey": {
+        "tokens": 140,
+        "lines": 18
+      },
+      "scatter": {
+        "tokens": 126,
+        "lines": 13
+      },
+      "stacked": {
+        "tokens": 202,
+        "lines": 19
+      },
+      "treemap": {
+        "tokens": 169,
+        "lines": 21
+      },
+      "total": {
+        "tokens": 2048,
+        "lines": 213,
+        "charts": 12
+      }
+    },
+    "maya": {
+      "area": {
+        "tokens": 87,
+        "lines": 15
+      },
+      "bar": {
+        "tokens": 78,
+        "lines": 7
+      },
+      "bubble": {
+        "tokens": 87,
+        "lines": 15
+      },
+      "grouped": {
+        "tokens": 83,
+        "lines": 14
+      },
+      "heatmap": {
+        "tokens": 83,
+        "lines": 14
+      },
+      "horizontal": {
+        "tokens": 83,
+        "lines": 14
+      },
+      "line": {
+        "tokens": 78,
+        "lines": 7
+      },
+      "multiline": {
+        "tokens": 83,
+        "lines": 14
+      },
+      "sankey": {
+        "tokens": 86,
+        "lines": 14
+      },
+      "scatter": {
+        "tokens": 78,
+        "lines": 7
+      },
+      "stacked": {
+        "tokens": 87,
+        "lines": 15
+      },
+      "treemap": {
+        "tokens": 86,
+        "lines": 14
+      },
+      "total": {
+        "tokens": 999,
+        "lines": 150,
+        "charts": 12
+      }
+    },
+    "nivo": {
+      "area": {
+        "tokens": 270,
+        "lines": 35
+      },
+      "bar": {
+        "tokens": 156,
+        "lines": 22
+      },
+      "bubble": {
+        "tokens": 246,
+        "lines": 28
+      },
+      "grouped": {
+        "tokens": 267,
+        "lines": 36
+      },
+      "heatmap": {
+        "tokens": 207,
+        "lines": 23
+      },
+      "horizontal": {
+        "tokens": 159,
+        "lines": 23
+      },
+      "line": {
+        "tokens": 216,
+        "lines": 22
+      },
+      "multiline": {
+        "tokens": 273,
+        "lines": 34
+      },
+      "sankey": {
+        "tokens": 180,
+        "lines": 21
+      },
+      "scatter": {
+        "tokens": 188,
+        "lines": 22
+      },
+      "stacked": {
+        "tokens": 264,
+        "lines": 35
+      },
+      "treemap": {
+        "tokens": 192,
+        "lines": 26
+      },
+      "total": {
+        "tokens": 2618,
+        "lines": 327,
+        "charts": 12
+      }
+    },
+    "plot": {
+      "area": {
+        "tokens": 121,
+        "lines": 14
+      },
+      "bar": {
+        "tokens": 101,
+        "lines": 12
+      },
+      "bubble": {
+        "tokens": 109,
+        "lines": 15
+      },
+      "grouped": {
+        "tokens": 126,
+        "lines": 17
+      },
+      "heatmap": {
+        "tokens": 138,
+        "lines": 15
+      },
+      "horizontal": {
+        "tokens": 105,
+        "lines": 13
+      },
+      "line": {
+        "tokens": 100,
+        "lines": 13
+      },
+      "multiline": {
+        "tokens": 112,
+        "lines": 14
+      },
+      "sankey": null,
+      "scatter": {
+        "tokens": 96,
+        "lines": 13
+      },
+      "stacked": {
+        "tokens": 113,
+        "lines": 13
+      },
+      "treemap": null,
+      "total": {
+        "tokens": 1121,
+        "lines": 139,
+        "charts": 10
+      }
+    },
+    "plotly": {
+      "area": {
+        "tokens": 148,
+        "lines": 15
+      },
+      "bar": {
+        "tokens": 108,
+        "lines": 7
+      },
+      "bubble": {
+        "tokens": 160,
+        "lines": 16
+      },
+      "grouped": {
+        "tokens": 140,
+        "lines": 13
+      },
+      "heatmap": {
+        "tokens": 183,
+        "lines": 14
+      },
+      "horizontal": {
+        "tokens": 113,
+        "lines": 9
+      },
+      "line": {
+        "tokens": 113,
+        "lines": 9
+      },
+      "multiline": {
+        "tokens": 144,
+        "lines": 14
+      },
+      "sankey": {
+        "tokens": 181,
+        "lines": 20
+      },
+      "scatter": {
+        "tokens": 113,
+        "lines": 9
+      },
+      "stacked": {
+        "tokens": 144,
+        "lines": 13
+      },
+      "treemap": {
+        "tokens": 190,
+        "lines": 18
+      },
+      "total": {
+        "tokens": 1737,
+        "lines": 157,
+        "charts": 12
+      }
+    },
+    "recharts": {
+      "area": {
+        "tokens": 301,
+        "lines": 29
+      },
+      "bar": {
+        "tokens": 149,
+        "lines": 18
+      },
+      "bubble": {
+        "tokens": 191,
+        "lines": 19
+      },
+      "grouped": {
+        "tokens": 288,
+        "lines": 29
+      },
+      "heatmap": null,
+      "horizontal": {
+        "tokens": 158,
+        "lines": 18
+      },
+      "line": {
+        "tokens": 149,
+        "lines": 18
+      },
+      "multiline": {
+        "tokens": 288,
+        "lines": 29
+      },
+      "sankey": {
+        "tokens": 320,
+        "lines": 36
+      },
+      "scatter": {
+        "tokens": 155,
+        "lines": 18
+      },
+      "stacked": {
+        "tokens": 291,
+        "lines": 29
+      },
+      "treemap": {
+        "tokens": 198,
+        "lines": 21
+      },
+      "total": {
+        "tokens": 2488,
+        "lines": 264,
+        "charts": 11
+      }
+    },
+    "vegalite": {
+      "area": {
+        "tokens": 114,
+        "lines": 17
+      },
+      "bar": {
+        "tokens": 106,
+        "lines": 16
+      },
+      "bubble": {
+        "tokens": 142,
+        "lines": 18
+      },
+      "grouped": {
+        "tokens": 122,
+        "lines": 18
+      },
+      "heatmap": {
+        "tokens": 122,
+        "lines": 17
+      },
+      "horizontal": {
+        "tokens": 106,
+        "lines": 16
+      },
+      "line": {
+        "tokens": 106,
+        "lines": 16
+      },
+      "multiline": {
+        "tokens": 114,
+        "lines": 17
+      },
+      "sankey": null,
+      "scatter": {
+        "tokens": 106,
+        "lines": 16
+      },
+      "stacked": {
+        "tokens": 114,
+        "lines": 17
+      },
+      "treemap": null,
+      "total": {
+        "tokens": 1152,
+        "lines": 168,
+        "charts": 10
+      }
+    }
+  }
+}
