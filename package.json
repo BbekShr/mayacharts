@@ -90,7 +90,9 @@
     "compare": "npm run build && E2E_NO_SERVER=1 playwright test --project=compare",
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts",
     "tokens": "node scripts/tokens.mjs",
-    "compare:bundle": "node scripts/compare-bundle.mjs"
+    "compare:bundle": "node scripts/compare-bundle.mjs",
+    "compare:size": "node scripts/compare-size.mjs",
+    "compare:ease": "node scripts/compare-ease.mjs"
   },
   "mayaSize": {
     "dist/index.js": 29184,
