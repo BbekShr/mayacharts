@@ -748,15 +748,17 @@ git config core.hooksPath .githooks   # keep the token count below current on ea
 ### Built with Claude
 
 <!-- tokens:start -->
-Tokens spent with Claude Code since the first commit, across 3,143 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 342,467,853 total, 846,083 output
-- claude-sonnet-5-5: 116,714,271 total, 31,945 output
+Tokens spent with Claude Code since the first commit, across 3,163 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+
+- claude-opus-5-5: 344,259,528 total, 856,266 output
+- claude-sonnet-5-5: 117,174,481 total, 32,105 output
 - claude-fable-5-1: 74,794,840 total, 178,397 output
 - claude-haiku-4-5-20251001: 17,586,042 total, 675 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 559,360,865 total, 1,100,413 output
+- all: 561,612,750 total, 1,110,756 output
+
 <!-- tokens:end -->
 
 ## Versioning

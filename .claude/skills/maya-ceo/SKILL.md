@@ -34,16 +34,17 @@ Taste and ponytail pull in opposite directions on purpose. A richer chart that c
 
 ## Test harness (what "verified" means)
 
-| Layer  | Command                                                          | Notes                                                                                |
-| ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Static | `npm run typecheck && npx prettier --check .`                    | no ESLint by design                                                                  |
-| Unit   | `npm test`                                                       | Vitest, ~720 tests incl. fuzz, hostile, perf, leak; seconds                          |
-| Size   | `npm run build && npm run size`                                  | gzip budgets in `package.json` `mayaSize`; theme budget also in `test/theme.test.ts` |
-| E2E    | `npm run e2e`                                                    | chromium, firefox, webkit, mobile-webkit; builds and serves `site/` itself           |
-| Visual | screenshots per agent brief, plus `e2e/global.spec.ts` baselines | per-pixel tolerance can hide colour changes; regenerate on purpose                   |
-| CI     | `gh pr checks <n>`                                               | compare with `gh run list --branch main --limit 3` before blaming a diff             |
+| Layer  | Command                                                          | Notes                                                                                      |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Static | `npm run typecheck && npx prettier --check .`                    | no ESLint by design                                                                        |
+| Unit   | `npm test`                                                       | Vitest, ~720 tests incl. fuzz, hostile, perf, leak; seconds                                |
+| Size   | `npm run build && npm run size`                                  | gzip budgets in `package.json` `mayaSize`; theme budget also in `test/theme.test.ts`       |
+| E2E    | `npm run e2e`                                                    | chromium, firefox, webkit, mobile-webkit; builds and serves `site/` itself                 |
+| Visual | screenshots per agent brief, plus `e2e/global.spec.ts` baselines | per-pixel tolerance can hide colour changes; regenerate on purpose                         |
+| CI     | `gh pr checks <n>`                                               | compare with `gh run list --branch main --limit 3` before blaming a diff                   |
+| Proof  | `npm run compare`                                                | chromium only, outside `npm run e2e`; regenerates `site/compare.json` (never edit by hand) |
 
-Never run two builds in one tree at once (`dist/` is shared). The dev server is `npm run dev` on http://localhost:5173/mayacharts/ (pinned in `.claude/launch.json`); reuse a running one.
+Never run two builds in one tree at once (`dist/` is shared). An agent that must build or run Playwright while others edit gets its own tree (`isolation: "worktree"` on the Agent call); merge its branch, then `npm ci` if it added devDependencies. The dev server is `npm run dev` on http://localhost:5173/mayacharts/ (pinned in `.claude/launch.json`); reuse a running one.
 
 ## The team (full definitions in `.claude/agents/`)
 
@@ -58,6 +59,10 @@ Never run two builds in one tree at once (`dist/` is shared). The dev server is 
 | `maya-release-manager`   | haiku  | report-only | GO/NO-GO gate                                                                                           |
 
 Ownership map: each finding goes to exactly one editor by file. A finding that spans two (a new spec field plus the mark that uses it) is two dispatches, core first: contracts before fan-out, so parallel editors never touch the same file. Route by cost: Opus only for the serial contracts task and the critics; Sonnet for code and tests; Haiku by default for anything the plan can spell out line by line (schema.json, llms.txt, README tables, docs/spec.html, CHANGELOG, NON-FEATURES, site fixtures, CI yaml, lookups), as a `model: haiku` dispatch of the owning editor. Verify Haiku's facts (dates, URLs, browser support) before merging.
+
+**Contracts typecheck first:** the serial contracts commit (types, validate, strings, signature stubs) must pass `npm run typecheck` and the full suite before any fan-out, and every new spec union must cover both the per-field and the bare form (`format` broke this way in 0.4). The Stop hook typechecks the whole tree, so an editor's half-written file blocks you: fix it with the smallest cast, tell the editor, never rewrite its logic.
+
+**Feature milestones:** after the fan-out lands, run `maya-security-engineer` and `maya-design-critic` on the branch before the gate even in `light`. In 0.4 they found a hang (`timeTicks` on huge epoch ms), a 1.4.11 contrast failure and a mislabelled axis that 800 unit tests and axe passed.
 
 **Parallel editors in one tree:** one owner per file, no `npm run build` from editors (you build), and if several need `theme.ts`, give each a temporary part file (`src/styles/wip-<name>.ts` imported into `theme.ts`) and fold them in yourself at the end. This is how the 2026-10-04 redesign of six chart types ran without a conflict.
 
