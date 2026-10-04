@@ -88,7 +88,8 @@
     "format:check": "prettier --check .",
     "e2e": "playwright test",
     "compare": "npm run build && E2E_NO_SERVER=1 playwright test --project=compare",
-    "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts"
+    "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts",
+    "tokens": "node scripts/tokens.mjs"
   },
   "mayaSize": {
     "dist/index.js": 29184,
