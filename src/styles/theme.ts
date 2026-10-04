@@ -83,7 +83,7 @@ export const css =
   "[data-selected]{stroke:var(--maya-fg);stroke-width:2}" +
   H +
   "[data-maya=labels],[data-maya=cross]{pointer-events:none}[data-maya=cross]{opacity:0}" +
-  "[data-maya=labels] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}" +
+  "[data-maya=labels] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}[data-maya=labels] [data-dark]{fill:var(--maya-bg)}[data-maya=hit]{stroke:none}" +
   "[data-maya=cross] line{stroke:var(--maya-fg-muted);stroke-dasharray:3 3}" +
   "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke;pointer-events:none}" +
   ".maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +

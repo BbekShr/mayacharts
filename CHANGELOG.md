@@ -4,6 +4,20 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## 0.2.1 - 2026-10-04
+
+### Fixed
+
+- Tooltips stay inside the viewport on every edge (they clipped in narrow frames such as dashboard tiles).
+- A heatmap measure toggle no longer leaves the previous ramp legend behind.
+- Labels on dark heatmap and hexmap cells turn light.
+- Treemap and sunburst with `drill` draw one level at a time; without drill, leaves under about 2px are skipped and hit targets no longer draw outlines.
+- Sankey columns always fit the plot, even with many nodes.
+- Chord sizes its ring from the real label widths and keeps labels up to 20 characters.
+- Waffle `colors` can be keyed by category, and its legend stays visible in narrow charts.
+- A fixed or reversed `yDomain` labels its top end (rank 1 on a `[15, 1]` axis).
+- Percent values under 1% keep two decimals.
+
 ## 0.2.0 - 2026-10-04
 
 ### Added
