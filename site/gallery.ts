@@ -80,16 +80,16 @@ const mon = (ms: number) =>
   new Date(ms).toLocaleString("en-US", { month: "short", timeZone: "UTC" });
 show("waterfall", {
   type: "waterfall",
-  title: "Change in monthly sales",
+  title: "Monthly sales through the year",
   x: "step",
   y: "delta",
-  totals: ["Start", "End"],
+  totals: ["Total"],
   labels: true,
   format: "compact",
   data: [
-    { step: "Start", delta: total[0]!.sales },
+    { step: "Jan", delta: total[0]!.sales },
     ...total.slice(1).map((m, i) => ({ step: mon(m.monthMs), delta: m.sales - total[i]!.sales })),
-    { step: "End", delta: 0 },
+    { step: "Total", delta: 0 },
   ],
 });
 
@@ -118,7 +118,7 @@ show("diverging", {
 // 6. League table.
 show("league", {
   type: "bar",
-  title: "Sales by state",
+  title: "Top ten states by sales",
   horizontal: true,
   x: "state",
   y: "sales",
@@ -171,6 +171,7 @@ show("heatmap", {
   y: ["sales", "units"],
   series: "region",
   format: "compact",
+  titles: { sales: "Sales", units: "Units" },
   data: rollup(FACTS, ["region", "family"], { sales: sum("sales"), units: sum("units") }) as Row[],
 });
 

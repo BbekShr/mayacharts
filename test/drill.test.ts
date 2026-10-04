@@ -132,7 +132,7 @@ describe("drill in <maya-chart>", () => {
     await frame();
     expect(el.view?.drill ?? []).toEqual([]);
     expect(views.at(-1)).toEqual({ drill: [] });
-    expect(el.shadowRoot!.querySelector(".maya-crumbs")).toBeNull();
+    expect(el.shadowRoot!.querySelector("nav.maya-crumbs")).toBeNull();
   });
   it("Back crumb pops to root", async () => {
     const el = await mount(spec());

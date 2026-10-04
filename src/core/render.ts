@@ -134,7 +134,7 @@ import { MODULES } from "./registry.ts";
 import { agg, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
-import { el, esc, r } from "./svg.ts";
+import { el, esc, OTHER, r } from "./svg.ts";
 import { fail, MAX_MARKS, resolve, validateOptions, validateSpec } from "./validate.ts";
 import type {
   Aggregate,
@@ -178,6 +178,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // Formatters are cached per (field, step): marks call fmt once per value.
   const fmts = new Map<string, (v: unknown) => string>();
   const fmt = (field: string, v: unknown, step?: number) => {
+    if (v === OTHER) return t(s, "other");
     const k = field + "\0" + step;
     let f = fmts.get(k);
     if (!f) fmts.set(k, (f = formatter(s, field, step)));
@@ -243,6 +244,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         y: r(place === "above" ? y - 4 : place === "below" ? y + 13 : y),
         "text-anchor": place === "start" || place === "end" ? place : "middle",
         "dominant-baseline": place === "above" || place === "below" ? null : "middle",
+        "data-in": place === "center", // sits on a mark: no halo
       },
       esc(text),
     );
@@ -401,7 +403,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
             )
             .join("") +
           `</nav>`
-        : "",
+        : s.drill
+          ? `<div class="maya-crumbs" aria-hidden="true"></div>` // holds the row: no shift on drill
+          : "",
     table: s.table ? dataTable(s, shaped, fmt, toneText) : "",
     title: s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`,
     style,

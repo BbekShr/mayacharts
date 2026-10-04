@@ -46,7 +46,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
       const cname = shaped.categories[c.ci]!;
       const cv = cb ? red(rows.get(cname + "\0" + ser) ?? []) : null;
       const other = cname === OTHER;
-      const x = other ? ctx.t("other") : cname;
+      const x = ctx.fmt(spec.x, cname); // display label: month presets, "Other"
       dots += el("circle", {
         "data-maya": "mark",
         "data-key": key(ser, cname),

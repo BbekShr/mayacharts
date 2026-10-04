@@ -61,6 +61,11 @@ export const scatter: Mark = {
       y1 = Math.max(y1, p.y);
     }
     if (x0 > x1) ((x0 = x1 = 0), (y0 = y1 = 0));
+    // Bubbles: pad 6% so the largest radius stays inside the plot.
+    const px = spec.size === null ? 0 : (x1 - x0) * 0.06;
+    const py = spec.size === null ? 0 : (y1 - y0) * 0.06;
+    const lo = (v: number, p: number) => (v >= 0 ? Math.max(0, v - p) : v - p);
+    [x0, x1, y0, y1] = [lo(x0, px), x1 + px, lo(y0, py), y1 + py];
     return [
       { kind: "linear", field: spec.x, domain: spec.xDomain ?? [x0, x1] },
       { kind: "linear", field: spec.y, domain: spec.yDomain ?? [y0, y1] },
@@ -73,7 +78,7 @@ export const scatter: Mark = {
     const pts = points(spec, shaped);
     let max = 0;
     for (const p of pts) if (p.sz !== null) max = Math.max(max, Math.abs(p.sz));
-    const scale = Math.min(plot.w, plot.h) / 12;
+    const scale = Math.min(plot.w, plot.h) / 16;
     const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
 
     const seen = new Map<string, number>();

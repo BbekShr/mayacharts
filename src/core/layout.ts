@@ -73,12 +73,10 @@ export function frame(
   const { width: W, height: H } = size;
   const bt = bx && bx.kind === "linear" ? ticks(spec, bx, fmt) : null;
   const lt = ly && ly.kind === "linear" ? ticks(spec, ly, fmt) : null;
-  // Left band labels are cut at 40% of the width; the full text goes in a <title>.
-  const lLab = ly
-    ? lt
-      ? lt.labels
-      : (ly.domain as readonly string[]).map((c) => clip(c, W * 0.4 - 8))
-    : [];
+  // Band labels go through the field's format (month presets on x); left ones are cut at 40%.
+  const bLab = bx && !bt ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c)) : [];
+  const lFull = ly && !lt ? (ly.domain as readonly string[]).map((c) => fmt(ly.field, c)) : [];
+  const lLab = lt ? lt.labels : lFull.map((c) => clip(c, W * 0.4 - 8));
   const yTitle = ly && spec.titles.get(ly.field);
   const xTitle = bx && spec.titles.get(bx.field);
   const left = (spec.yAxis && ly ? maxW(lLab) + 10 : 8) + (yTitle ? 18 : 0);
@@ -86,7 +84,8 @@ export function frame(
   const plot = {
     x: left,
     y: 10,
-    w: Math.max(1, W - left - 12),
+    // Room for half of the last bottom tick label, which is centred on the plot's right edge.
+    w: Math.max(1, W - left - Math.max(12, bt ? tw(bt.labels.at(-1) ?? "") / 2 + 2 : 0)),
     h: Math.max(1, H - 10 - bottom),
   };
   const x: Scale | null = bx
@@ -134,7 +133,7 @@ export function frame(
     else {
       const b = y as { at(i: number): number; bandwidth: number };
       const every = Math.max(1, Math.ceil(14 / (plot.h / Math.max(1, ly.domain.length))));
-      (ly.domain as readonly string[]).forEach((c, i) => {
+      lFull.forEach((c, i) => {
         if (i % every) return;
         const t = lLab[i]!;
         ay += el(
@@ -172,9 +171,8 @@ export function frame(
       });
     else {
       const b = x as { at(i: number): number; bandwidth: number };
-      const dom = bx.domain as readonly string[];
-      const every = Math.max(1, Math.ceil(maxW(dom) / (plot.w / Math.max(1, dom.length))));
-      dom.forEach((c, i) => {
+      const every = Math.max(1, Math.ceil(maxW(bLab) / (plot.w / Math.max(1, bLab.length))));
+      bLab.forEach((c, i) => {
         if (i % every === 0)
           ax += el(
             "text",

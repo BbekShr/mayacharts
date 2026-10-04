@@ -1,5 +1,5 @@
 import { bandScale } from "../scale.ts";
-import { el, key, r } from "../svg.ts";
+import { el, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
 
 const MIN = 24;
@@ -92,13 +92,14 @@ export const bar: Mark = {
         "data-key": key(ser, cname),
         "data-c": c.ci,
         "data-s": c.s,
-        "data-x": cname,
+        "data-x": ctx.fmt(spec.x, cname),
         "data-series": ser,
         "data-f": ctx.fmt(spec.y, c.v),
         "data-y": c.v,
         "data-neg": c.v < 0,
         "data-tone": ctx.tone(c.v),
         "data-q": cv === null || !q ? null : q(cv),
+        "data-other": cname === OTHER,
       };
       marks += el("rect", {
         "data-maya": "mark",

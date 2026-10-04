@@ -71,8 +71,13 @@ export function formatter(
     if (v == null) return "";
     let out: string;
     if (date) {
+      // Band categories arrive as strings: "1735689600000" is epoch ms, not a date string.
       const t =
-        typeof v === "number" || typeof v === "string" || v instanceof Date ? new Date(v) : NaN;
+        typeof v === "string" && /^-?\d+$/.test(v)
+          ? new Date(+v)
+          : typeof v === "number" || typeof v === "string" || v instanceof Date
+            ? new Date(v)
+            : NaN;
       out = Number.isNaN(+t) ? String(v) : date.format(t);
     } else out = typeof v === "number" ? num!.format(v) : String(v);
     return prefix + out + suffix;

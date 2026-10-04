@@ -138,7 +138,7 @@ test.describe("measure toggle", () => {
 test.describe("drill", () => {
   test("click a treemap tile drills, breadcrumb shows, Escape pops", async ({ page }) => {
     await open(page);
-    const crumbs = page.locator("#treemap .maya-crumbs");
+    const crumbs = page.locator("#treemap nav.maya-crumbs");
     await expect(crumbs).toHaveCount(0);
     await clickMark(page, page.locator("#treemap [data-maya=mark]").first());
     await expect(crumbs).toBeVisible();
@@ -230,7 +230,7 @@ test.describe("touch", () => {
     await open(page);
     const { x, y } = await center(page.locator("#treemap [data-maya=mark]").first());
     await page.touchscreen.tap(x, y);
-    await expect(page.locator("#treemap .maya-crumbs")).toBeVisible();
+    await expect(page.locator("#treemap nav.maya-crumbs")).toBeVisible();
     await expect.poll(async () => (await view(page, "treemap")).drill?.length).toBe(1);
     await ctx.close();
   });
