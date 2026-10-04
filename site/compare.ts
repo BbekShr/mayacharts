@@ -1,5 +1,4 @@
-import "mayacharts/element";
-import type { ChartSpec } from "../src/index.ts";
+import { theme } from "./theme.ts";
 import json from "./compare.json";
 
 // Everything shown here comes from compare.json. No number or verdict is written in this file.
@@ -31,6 +30,7 @@ interface Eval {
 const data = json as unknown as {
   generated: string;
   versions: Record<string, string>;
+  arrowCap?: number;
   browser: string;
   csp: string;
   notes: string[];
@@ -76,7 +76,12 @@ function table(
   const s = el("section");
   el("h2", caption, s);
   el("p", def, s);
-  const t = el("table", "", s);
+  const wrap = el("div", "", s);
+  wrap.className = "scroll";
+  wrap.tabIndex = 0;
+  wrap.setAttribute("role", "region");
+  wrap.setAttribute("aria-label", caption);
+  const t = el("table", "", wrap);
   const head = el("tr", "", el("thead", "", t));
   el("th", "Chart", head).scope = "col";
   for (const l of LIBS) el("th", NAME[l] ?? l, head).scope = "col";
@@ -133,11 +138,15 @@ tables.append(
   ),
   table(
     "Keyboard",
-    "Tab stops reached inside the chart, then the number of distinct states produced by pressing ArrowRight (stops counting at 40).",
+    `Tab stops reached inside the chart, then the number of distinct states produced by pressing ArrowRight${data.arrowCap == null ? "" : ` (stops counting at ${data.arrowCap})`}.`,
     (r) =>
       notRendered(r) || !r.keyboard
         ? "not rendered"
-        : `${r.keyboard.tabStops} tab stops, ${r.keyboard.arrowStates} arrow states`,
+        : `${r.keyboard.tabStops} tab ${r.keyboard.tabStops === 1 ? "stop" : "stops"}, ${
+            data.arrowCap != null && r.keyboard.arrowStates >= data.arrowCap
+              ? `${data.arrowCap} or more`
+              : r.keyboard.arrowStates
+          } arrow ${r.keyboard.arrowStates === 1 ? "state" : "states"}`,
   ),
   table(
     "Right-to-left",
@@ -157,24 +166,6 @@ tables.append(
   ),
 );
 
-// One bar per library, from the same JSON.
-const bytes = LIBS.flatMap((l) => {
-  const r = get(l, "bar");
-  return r ? [{ library: NAME[l] ?? l, bytes: r.gzipBytes }] : [];
-});
-const spec: ChartSpec = {
-  type: "bar",
-  title: "Gzipped script bytes loaded by each library",
-  x: "library",
-  y: "bytes",
-  horizontal: true,
-  labels: true,
-  format: { bytes: "integer" },
-  titles: { bytes: "Gzipped bytes", library: "Library" },
-  data: bytes,
-};
-($("bytes") as HTMLElement & { spec: ChartSpec }).spec = spec;
-
 $("method").textContent = data.notes.join(" ");
 $("csp").textContent = data.csp;
 
@@ -183,7 +174,12 @@ if (data.eval) {
   $("llm").hidden = false;
   $("llm-note").textContent =
     `${e.n} prompts sent to ${e.model} on ${e.date}. Valid JSON, renders without throwing, and non-blank output (at least one path or rect in the plot beyond the axes).`;
-  const t = el("table", "", $("llm-table"));
+  const wrap = el("div", "", $("llm-table"));
+  wrap.className = "scroll";
+  wrap.tabIndex = 0;
+  wrap.setAttribute("role", "region");
+  wrap.setAttribute("aria-label", "LLM-written specs");
+  const t = el("table", "", wrap);
   const head = el("tr", "", el("thead", "", t));
   for (const h of ["Library", "Valid JSON", "Renders", "Non-blank"])
     el("th", h, head).scope = "col";
@@ -197,15 +193,6 @@ if (data.eval) {
 
 const v = data.versions;
 $("foot").textContent =
-  `Generated ${data.generated}. mayaCharts ${v["mayacharts"]}, Chart.js ${v["chartjs"]}, ECharts ${v["echarts"]}. ${data.browser}.`;
+  `Generated ${data.generated}. mayaCharts ${v["mayacharts"]} (commit ${v["commit"] ?? "unknown"}), Chart.js ${v["chartjs"]}, ECharts ${v["echarts"]}. ${data.browser}.`;
 
-// Theme toggle: auto -> light -> dark.
-const modes = ["auto", "light", "dark"] as const;
-const scheme = { auto: "light dark", light: "light", dark: "dark" } as const;
-let mode = 0;
-$("theme").addEventListener("click", () => {
-  mode = (mode + 1) % modes.length;
-  const m = modes[mode] ?? "auto";
-  document.documentElement.style.colorScheme = scheme[m];
-  $("theme").textContent = `Theme: ${m}`;
-});
+theme();

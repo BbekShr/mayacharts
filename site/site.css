@@ -204,6 +204,9 @@ details pre {
 }
 
 /* Compare */
+.scroll {
+  overflow-x: auto;
+}
 table {
   border-collapse: collapse;
   width: 100%;
@@ -215,6 +218,12 @@ td {
   vertical-align: top;
   padding: 6px 10px;
   border-bottom: 1px solid var(--line);
+}
+@media (max-width: 480px) {
+  th,
+  td {
+    padding: 6px 4px;
+  }
 }
 thead th {
   color: var(--muted);

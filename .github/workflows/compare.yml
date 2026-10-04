@@ -2,6 +2,8 @@ name: Compare
 
 # Re-measures mayaCharts, Chart.js and ECharts and commits site/compare.json when it changed.
 # The LLM eval (eval/run.mjs) calls a paid API and never runs here.
+# The measuring job installs npm packages and has read-only access. Only the second job can write,
+# and it runs no repository code.
 on:
   schedule:
     - cron: "0 6 * * 1"
@@ -10,27 +12,50 @@ on:
       - "v*"
   workflow_dispatch:
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
-  compare:
+  measure:
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.63.0-noble
+    permissions:
+      contents: read
     env:
       HOME: /root
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
+          persist-credentials: false
 
       - run: npm ci
 
       - run: npm run compare
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compare-json
+          path: site/compare.json
+          if-no-files-found: error
+
+  commit:
+    needs: measure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: compare-json
+          path: measured
+
       - name: Commit site/compare.json if it changed
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          cp measured/compare.json site/compare.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --quiet -- site/compare.json; then

@@ -4,7 +4,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { extname, resolve } from "node:path";
+import { extname, resolve, sep } from "node:path";
+import { execSync } from "node:child_process";
 import { gzipSync } from "node:zlib";
 import { pathToFileURL } from "node:url";
 import { makeData, SIZE } from "./compare/data.ts";
@@ -60,7 +61,8 @@ async function route(ctx: BrowserContext): Promise<void> {
     if (p === "/data.json")
       return r.fulfill({ body: dataJson, contentType: TYPES[".json"]!, headers });
     const file = FILES[p] ?? resolve("e2e/compare", p.slice(1));
-    if (!file.startsWith(resolve("e2e/compare")) && !FILES[p]) return r.fulfill({ status: 403 });
+    if (!file.startsWith(resolve("e2e/compare") + sep) && !FILES[p])
+      return r.fulfill({ status: 403 });
     if (!existsSync(file)) return r.fulfill({ status: 404, headers });
     return r.fulfill({
       body: readFileSync(file),
@@ -331,14 +333,16 @@ test("compare libraries under one CSP", async ({ browser }: { browser: Browser }
       mayacharts: JSON.parse(readFileSync("package.json", "utf-8")).version,
       chartjs: version("chart.js"),
       echarts: version("echarts"),
+      commit: execSync("git rev-parse --short HEAD").toString().trim(),
     },
+    arrowCap: ARROW_CAP,
     browser: `Chromium ${browser.version()}`,
     csp: CSP,
     notes: [
-      "Chart.js loads chart.umd.min.js and ECharts loads echarts.min.js, the full builds, not tree-shaken. mayacharts loads dist/element.js.",
+      "Chart.js loads chart.umd.min.js and ECharts loads echarts.min.js, the full builds, not tree-shaken. mayaCharts loads dist/element.js.",
       "Chart.js and ECharts draw to canvas in the browser. ECharts SSR uses its SVG renderer.",
       "Chart.js has no heatmap type in core, and its time scale needs a separate date adapter, so months are category labels.",
-      "Accessibility setup: Chart.js canvas gets role=img and an aria-label, ECharts gets aria.enabled. mayacharts runs with defaults.",
+      "Accessibility setup: Chart.js canvas gets role=img and an aria-label, ECharts gets aria.enabled. mayaCharts runs with defaults.",
     ],
     results,
     ...(prev.eval ? { eval: prev.eval } : {}),
