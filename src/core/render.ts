@@ -13,12 +13,38 @@
  * State: interaction state is not in the spec. RenderOptions.view = { measure, drill, window,
  *   hidden } and RenderOptions.selected = Sel[] (raw values). resolve() applies measure
  *   (active y, measures[] kept for the control) and drill (filter rows, advance x/path).
- *   shape() applies, in order: aggregate -> sort -> limit -> window -> hidden. SSR can
- *   therefore render any state.
+ *   shape() applies, in order: aggregate -> time order -> sort -> limit -> window -> reduce ->
+ *   hidden. SSR can therefore render any state.
+ *
+ * Time axis: line, area and vertical bar (not waterfall) whose categories are all ISO 8601
+ *   dates, unsorted and unlimited (spec.xType "auto"), or any x under xType "time" (epoch ms
+ *   numbers allowed; null x rows dropped), get Shaped.time (UTC ms per category) and the
+ *   categories sorted by time. Axis { kind: "time" } -> timeScale: band centres sit at their
+ *   time, bandwidth is 0.8 of the smallest gap (at most 72 px); marks read cat.at(i) as ever.
+ *   When every time is a UTC month start (so quarter and year starts too), centres follow the
+ *   calendar month index instead of ms: even spacing, a missing month leaves one empty slot.
+ *   Epoch ms beyond +-8.64e15 are invalid-date. Ticks are calendar-aligned (timeTicks), about
+ *   plot.w / 80 of them (min 2); a year, quarter or month boundary less than half an interval
+ *   outside the data is kept and clamped to the first or last centre (so "Jan 2025" labels the
+ *   origin of data starting Jan 1 00:18). If the pixel gap would still drop a label the count
+ *   falls by one until none does, so ticks stay evenly spaced. Sub-day ticks at UTC midnight and
+ *   the first tick show the date. No vertical grid. Line and area paths break where the gap to
+ *   the previous non-null point exceeds 5x the series' median gap (fixed factor). The svg
+ *   carries data-t (empty) beside data-n; line hit rects and bar marks (y2 points too) carry
+ *   data-i, the category's index in the time-ordered list before window and reduction (the
+ *   index space of view.window). Without spec.format for x, labels use a preset from
+ *   the smallest gap (year, month, date, datetime); tick labels use per-unit defaults.
+ *   Downsampling: line and area on a time axis with more categories than min(MAX_POINTS,
+ *   4000 / series) run largest-triangle-three-buckets per series (keeping first, last, min, max
+ *   and one marker per gap), after the window; a union still over the target is thinned to
+ *   first, last and evenly spaced indexes. Kept categories keep their keys; Shaped.reduced
+ *   = [kept, before], and the description says so. view.window indexes the time-ordered list
+ *   before reduction. Scatter is exempt from the pre-draw mark cap (it bins its own rows).
  *
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
  *   (hierarchy, flow, geo) call registry.register() on import. A Mark is
  *   { noun, axes?(spec, shaped): [bottom, left], check?(spec, fail), draw(ctx) }.
+ *   draw() may return `note`, one sentence appended to the auto description.
  *   MarkCtx closures: fmt(field, v, step?), label(x, y, text, place, rotate?), tone(v), agg(kind),
  *   fail(code, path, headline, ...details), t(key, ...args); plus spec, shaped, width,
  *   height, plot, x (bottom-axis scale), y (left-axis scale). Modules import only
@@ -221,10 +247,20 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   if (opts !== undefined) validateOptions(opts);
   // validateSpec guarantees the type is core or registered.
   const mark = (Object.hasOwn(CORE, spec.type) ? CORE[spec.type] : MODULES.get(spec.type))!;
-  const s = resolve(spec, opts?.view);
+  const s0 = resolve(spec, opts?.view);
   const W = opts?.width ?? 640;
   const H = opts?.height ?? 320;
-  const shaped = shape(s, opts?.view ?? {});
+  const shaped = shape(s0, opts?.view ?? {});
+  // Time axis without a format for x: the preset follows the smallest gap between categories.
+  let s = s0;
+  if (shaped.time && !s0.format.has(s0.x)) {
+    let gap = Infinity;
+    shaped.time.forEach((v, i, a) => i && v > a[i - 1]! && (gap = Math.min(gap, v - a[i - 1]!)));
+    const day = 864e5;
+    const preset =
+      gap >= 365 * day ? "year" : gap >= 28 * day ? "month" : gap >= day ? "date" : "datetime";
+    s = { ...s0, format: new Map(s0.format).set(s0.x, preset) };
+  }
   const cap = (n: number) =>
     n > MAX_MARKS &&
     fail(
@@ -233,12 +269,15 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       `${n} marks exceed the limit of ${MAX_MARKS}.`,
       "Use spec.limit to keep the top N categories, or aggregate the rows first.",
     );
-  cap(shaped.cells.length);
+  if (s.type !== "scatter") cap(shaped.cells.length); // scatter draws from rows and bins past MAX_MARKS
 
   // Formatters are cached per (field, step): marks call fmt once per value.
   const fmts = new Map<string, (v: unknown) => string>();
+  // Time categories are strings: format them from their parsed ms (a bare date-time is UTC).
+  const ms = new Map(shaped.time?.map((v, i) => [shaped.categories[i]!, v]));
   const fmt = (field: string, v: unknown, step?: number) => {
     if (v === OTHER) return t(s, "other");
+    if (field === s.x && typeof v === "string") v = ms.get(v) ?? v;
     const k = field + "\0" + step;
     let f = fmts.get(k);
     if (!f) fmts.set(k, (f = formatter(s, field, step)));
@@ -327,7 +366,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     return true;
   };
 
-  const f = mark.axes ? frame(s, mark.axes(s, shaped), { width: W, height: H }, fmt) : null;
+  const f = mark.axes ? frame(s0, mark.axes(s, shaped), { width: W, height: H }, fmt) : null;
   const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
   const ctx: MarkCtx = {
     spec: s,
@@ -354,6 +393,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   mark.check?.(spec, fail);
 
   let markLegend: string | null = null;
+  let note = "";
   let body = "";
   if (s.data.length === 0) {
     body = el(
@@ -372,6 +412,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     const m = mark.draw(ctx);
     cap(m.marks.split(' data-maya="mark"').length - 1); // scatter and modules draw per row/node
     markLegend = m.legend ?? null;
+    note = m.note ?? "";
     // Area fills fade toward the baseline: one gradient per visible slot, kept in the grid group
     // (the marks group holds keyed marks only). ponytail: fixed ids, see NON-FEATURES.
     const fades =
@@ -441,13 +482,15 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       el(
         "desc",
         { id: sheet === null ? "maya-d" : null },
-        esc(describe(s, shaped, fmt, mark.noun)),
+        esc(
+          describe(s, shaped, fmt, mark.noun) + (note && s.description === null ? " " + note : ""),
+        ),
       ) +
       body,
   );
 
   let legend = "";
-  if (markLegend !== null && s.legend) legend = markLegend;
+  if (markLegend !== null && spec.legend !== false) legend = markLegend;
   else if ((s.series !== null || s.y2 !== null) && s.legend)
     legend =
       `<div class="maya-legend" data-maya="legend">` +

@@ -76,6 +76,7 @@ const SLOTS: Record<string, Slot> = {
     ...plain(t),
     format: { v: { prefix: p, suffix: p, maximumFractionDigits: 1 } },
   }),
+  "format template": (t, p) => ({ ...plain(t), format: `${p}{value}${p}` }),
   "text overrides": (t, p) => ({
     ...plain(t),
     text: Object.fromEntries(Object.keys(TEXT).map((k) => [k, p])),
@@ -156,6 +157,32 @@ describe.each(Object.keys(BASE))("hostile strings: %s", (type) => {
       void rendered;
     });
   }
+});
+
+describe("format templates are inert", () => {
+  const spec = (format: string) => ({
+    type: "bar",
+    x: "c",
+    y: "v",
+    table: true,
+    labels: true,
+    format,
+    data: [
+      { c: "A", v: 3 },
+      { c: "B", v: 5 },
+    ],
+  });
+  it.each(["<script>{value}</script>", '" onload=x {value}'])("%s", (tpl) => {
+    const svg = render(spec(tpl) as never);
+    expect(problems(svg)).toEqual([]);
+    expect(svg).not.toContain("<script>");
+    expect(svg).not.toMatch(/data-f="[^"]*"[^>]* onload=x/);
+    expect(svg).toContain("data-f=");
+    const shell = renderShell(spec(tpl) as never);
+    expect(problems(shell)).toEqual([]);
+    expect(shell).toMatch(/<td[^>]*>[^<]*(&lt;script&gt;|&quot; onload=x)/);
+    expect(svg).toMatch(/<text[^>]*>[^<]*(&lt;script&gt;|&quot; onload=x)/);
+  });
 });
 
 describe("unsafe CSS values are rejected", () => {

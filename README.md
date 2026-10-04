@@ -63,33 +63,34 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Encoding
 
-| Field        | Type             | Applies to                                                                          | Meaning                                                                  |
-| ------------ | ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `x`          | field            | all but path types                                                                  | Category; scatter numeric x; hexmap state; beeswarm optional row         |
-| `y`          | field or field[] | all                                                                                 | Value; array adds measure toggle (all-y types: axes/columns)             |
-| `series`     | field            | bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial | Split into series; heatmap row category; dumbbell exactly two (from, to) |
-| `path`       | field[]          | treemap sunburst sankey chord; bar/line/area/dumbbell with drill                    | Hierarchy outer to inner; replaces `x`                                   |
-| `size`       | field            | scatter                                                                             | Bubble area (sqrt scale)                                                 |
-| `name`       | field            | scatter beeswarm                                                                    | Point identity and tooltip title                                         |
-| `totals`     | string[]         | waterfall                                                                           | x values drawn as running-total bars                                     |
-| `stack`      | boolean          | bar area                                                                            | Stack series instead of grouping                                         |
-| `horizontal` | boolean          | bar dumbbell                                                                        | Categories on the left axis                                              |
-| `y2`         | field            | bar                                                                                 | Second value field as a line on right axis (vertical bars only)          |
+| Field        | Type                   | Applies to                                                                          | Meaning                                                                                                               |
+| ------------ | ---------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `x`          | field                  | all but path types                                                                  | Category; scatter numeric x; hexmap state; beeswarm optional row                                                      |
+| `xType`      | auto / category / time | bar line area                                                                       | How x is spaced: auto detects ISO 8601 dates for a time axis; else categories. "time" accepts epoch ms. Default auto. |
+| `y`          | field or field[]       | all                                                                                 | Value; array adds measure toggle (all-y types: axes/columns)                                                          |
+| `series`     | field                  | bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial | Split into series; heatmap row category; dumbbell exactly two (from, to)                                              |
+| `path`       | field[]                | treemap sunburst sankey chord; bar/line/area/dumbbell with drill                    | Hierarchy outer to inner; replaces `x`                                                                                |
+| `size`       | field                  | scatter                                                                             | Bubble area (sqrt scale)                                                                                              |
+| `name`       | field                  | scatter beeswarm                                                                    | Point identity and tooltip title                                                                                      |
+| `totals`     | string[]               | waterfall                                                                           | x values drawn as running-total bars                                                                                  |
+| `stack`      | boolean                | bar area                                                                            | Stack series instead of grouping                                                                                      |
+| `horizontal` | boolean                | bar dumbbell                                                                        | Categories on the left axis                                                                                           |
+| `y2`         | field                  | bar                                                                                 | Second value field as a line on right axis (vertical bars only)                                                       |
 
 ### Formatting
 
-| Field         | Type              | Default                                                                            | Meaning                                                             |
-| ------------- | ----------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `format`      | preset or options | auto                                                                               | Per field or one string for all measures; display only              |
-| `titles`      | {[field]: string} | field names                                                                        | Display names everywhere (axis, tooltip, legend, table)             |
-| `labels`      | boolean           | false (heatmap: true at ≥24 px; treemap, sunburst: names; marimekko: shares; true) | Formatted value on marks                                            |
-| `text`        | {[key]: string}   | English                                                                            | Localisable UI strings with {0} placeholders                        |
-| `locale`      | BCP 47            | en-US                                                                              | Formatting locale                                                   |
-| `currency`    | ISO 4217          | USD                                                                                | Currency for the currency preset                                    |
-| `title`       | string            | -                                                                                  | Visible heading and accessible name                                 |
-| `description` | string            | auto                                                                               | Accessible description                                              |
-| `yDomain`     | [min, max]        | -                                                                                  | Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top) |
-| `xDomain`     | [min, max]        | -                                                                                  | Fixed x domain (scatter only)                                       |
+| Field         | Type                        | Default                                                                            | Meaning                                                                                     |
+| ------------- | --------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `format`      | preset / template / options | auto                                                                               | Per field or one string for all measures; display only. Template: `"{value:percent} gross"` |
+| `titles`      | {[field]: string}           | field names                                                                        | Display names everywhere (axis, tooltip, legend, table)                                     |
+| `labels`      | boolean                     | false (heatmap: true at ≥24 px; treemap, sunburst: names; marimekko: shares; true) | Formatted value on marks                                                                    |
+| `text`        | {[key]: string}             | English                                                                            | Localisable UI strings with {0} placeholders                                                |
+| `locale`      | BCP 47                      | en-US                                                                              | Formatting locale                                                                           |
+| `currency`    | ISO 4217                    | USD                                                                                | Currency for the currency preset                                                            |
+| `title`       | string                      | -                                                                                  | Visible heading and accessible name                                                         |
+| `description` | string                      | auto                                                                               | Accessible description                                                                      |
+| `yDomain`     | [min, max]                  | -                                                                                  | Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top)                         |
+| `xDomain`     | [min, max]                  | -                                                                                  | Fixed x domain (scatter only)                                                               |
 
 ### Interaction
 
@@ -114,6 +115,14 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `xAxis`   | boolean                       | all                        | true          | Bottom axis                                                         |
 | `yAxis`   | boolean                       | all                        | true          | Left axis                                                           |
 | `table`   | boolean                       | all                        | true          | Visually hidden data table for screen readers                       |
+
+### Time axes
+
+Dates in x values are automatically detected and placed on a proportional time axis when using line, area or vertical bar charts. ISO 8601 dates are recognized as year-month ("2024-03"), full date ("2024-03-05") or date-time ("2024-03-05T14:30:00Z"); a date-time without an offset is read as UTC. A bare year such as "2024" stays a category. Numbers are never auto-detected as dates; use `xType: "time"` explicitly to interpret them as epoch milliseconds. A time axis preserves the chronological order and spacing of dates, so sort and limit options keep a category axis instead. To disable time axis detection and use a category axis with ISO dates, set `xType: "category"`. All ticks and boundaries are placed at UTC calendar boundaries.
+
+### Large data
+
+Line and area charts on a time axis automatically reduce long time series to at most 1000 categories using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. The data table and screen reader description indicate how many points are displayed. Scatter charts above 5000 visible points are drawn as density cells to reduce rendering cost; bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest using `limit` or `aggregate` when exceeded.
 
 ## Canonical examples
 
@@ -732,7 +741,25 @@ npm run build     # dist/
 npm run size      # check budgets
 npm run e2e       # Playwright
 npm run dev       # demo site at localhost:5173
+npm run tokens    # Claude token spend on this repo
+git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on each commit
 ```
+
+### Built with Claude
+
+<!-- tokens:start -->
+
+Tokens spent with Claude Code since the first commit, across 3,266 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+
+- claude-opus-5-5: 353,075,802 total, 877,253 output
+- claude-sonnet-5-5: 119,486,754 total, 32,569 output
+- claude-fable-5-1: 74,794,840 total, 178,397 output
+- claude-haiku-4-5-20251001: 18,021,998 total, 721 output
+- claude-sonnet-5: 7,674,739 total, 43,301 output
+- claude-opus-5: 123,120 total, 12 output
+- all: 573,177,253 total, 1,132,253 output
+
+<!-- tokens:end -->
 
 ## Versioning
 

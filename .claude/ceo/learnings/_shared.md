@@ -12,6 +12,9 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 **Verification**
 
+- axe passes non-text contrast it cannot compute (SVG fills, ramps). Compute 1.4.11 contrast from rendered fills for any new ramp or density view.
+- Feed every new numeric input the extremes (0, 8.64e15, 1e300, NaN-producing dates) before shipping; a loop guarded by `t > max` never ends on NaN.
+
 - Screenshot every visual change at 2x in light, dark, hovered, 360px and one hostile case, and open the files. Agent-reported screenshots have been mislabelled; look at the chart yourself before shipping.
 - Motion is verified by frames (0, 120, 270 ms, landed) in chromium AND webkit, never by unit tests alone.
 - Playwright per-pixel tolerance let a full sunburst recolour pass against the old baseline. Regenerate changed baselines on purpose, darwin locally and linux in the CI image, then `npm ci`.
@@ -33,7 +36,9 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 - Parallel editors in one tree: one owner per file, no builds from editors, temporary `src/styles/wip-<name>.ts` parts for `theme.ts`, folded in by the CEO.
 - The element bundle contains core; check every bundle with `npm run size` after merging fan-out work, not per agent.
-- Size budgets are the human's call: report an overage with the cut that would fix it.
+- Size budgets are the human's call: report an overage with the cut that would fix it. Ponytail trims of repeated code save almost nothing in gzip; quote the feature's real cost instead.
+- Haiku docs drafts invent plausible facts (0.4: claimed a bare year "2024" is a date, labelled `data-t` as tone, added a second CHANGELOG section). Diff every Haiku doc against the source before committing.
+- Give an agent that needs its own build `isolation: "worktree"`; everyone else shares the tree and never builds.
 
 **Process**
 

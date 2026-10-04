@@ -200,6 +200,85 @@ test.describe("zoom", () => {
   });
 });
 
+/** Mount a chart on the gallery page (the element is already defined there). */
+async function mount(page: Page, id: string, spec: object, fresh = true): Promise<void> {
+  if (fresh) await open(page);
+  await page.evaluate(
+    ([i, sp]) => {
+      const el = document.createElement("maya-chart") as any;
+      el.id = i;
+      el.style.cssText = "display:block;width:800px;height:320px";
+      el.spec = sp;
+      document.body.prepend(el);
+    },
+    [id, spec] as const,
+  );
+  await expect(page.locator(`#${id} [data-maya=mark]`).first()).toBeAttached();
+  await settle(page);
+}
+
+const day = (i: number) => new Date(Date.UTC(2010, 0, 1 + i)).toISOString().slice(0, 10);
+const xs = (page: Page, id: string) =>
+  page.evaluate((i) => {
+    const m = [
+      ...document.getElementById(i)!.shadowRoot!.querySelectorAll("[data-maya=mark][data-x]"),
+    ];
+    return [m[0]!.getAttribute("data-x"), m.at(-1)!.getAttribute("data-x")];
+  }, id);
+
+test.describe("time axis", () => {
+  test("brush maps to absolute indexes on a downsampled line; Escape restores", async ({
+    page,
+  }) => {
+    const data = Array.from({ length: 3000 }, (_, i) => ({
+      d: day(i),
+      v: 50 + 30 * Math.sin(i / 90),
+    }));
+    const line = { type: "line", x: "d", y: "v", zoom: true, data };
+    await mount(page, "tl", line);
+    const svg = page.locator("#tl svg.maya-svg");
+    const b = (await svg.boundingBox())!;
+    const [px, py, pw, ph, vw] = await svg.evaluate((e) => [
+      ...e.getAttribute("data-plot")!.split(" ").map(Number),
+      +e.getAttribute("viewBox")!.split(" ")[2]!,
+    ]);
+    const k = b.width / vw!;
+    const x0 = b.x + (px! + pw! * 0.25) * k,
+      x1 = b.x + (px! + pw! * 0.5) * k,
+      y = b.y + (py! + ph! / 2) * k;
+    await page.mouse.move(x0, y);
+    await page.mouse.down();
+    await page.mouse.move((x0 + x1) / 2, y, { steps: 5 });
+    await page.mouse.move(x1, y, { steps: 5 });
+    await page.mouse.up();
+    await expect.poll(async () => (await view(page, "tl")).window?.length).toBe(2);
+    const [w0, w1] = (await view(page, "tl")).window;
+    expect(Math.abs(w0 - 750)).toBeLessThanOrEqual(60);
+    expect(Math.abs(w1 - 1500)).toBeLessThanOrEqual(60);
+    // A reference chart over exactly that slice has the same first and last labels.
+    await mount(page, "ref", { ...line, zoom: false, data: data.slice(w0, w1 + 1) }, false);
+    await expect.poll(() => xs(page, "tl")).toEqual(await xs(page, "ref"));
+    await page.mouse.move(b.x + 2, b.y + 2);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "tl")).window).toBeUndefined();
+  });
+
+  test("bar hover column sits under an unevenly spaced bar", async ({ page }) => {
+    const months = ["01", "02", "03", "04", "05", "07", "08", "09", "10", "11", "12"];
+    const data = months.map((m, i) => ({ d: `2024-${m}-01`, v: 10 + i * 3 }));
+    await mount(page, "tb", { type: "bar", x: "d", y: "v", data });
+    const bar = page.locator("#tb [data-maya=mark]").nth(5); // July, after the gap
+    const { x, y } = await center(bar);
+    await page.mouse.move(x - 20, y);
+    await page.mouse.move(x, y);
+    const band = page.locator("#tb [data-maya=band][data-on]");
+    await expect(band).toBeAttached();
+    await settle(page);
+    const bb = (await band.boundingBox())!;
+    expect(Math.abs(bb.x + bb.width / 2 - x)).toBeLessThanOrEqual(2);
+  });
+});
+
 test.describe("touch", () => {
   const touchPage = async (browser: any, baseURL: string | undefined) => {
     const ctx = await browser.newContext({

@@ -19,13 +19,19 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Y-domain origin**: value axes (lines included) are 0-anchored. Negative values are supported; set `yDomain` to override the origin.
 - **Ramp depth**: 10-step sequential ramp for colorBy numeric fields (not user-tunable).
 - **Label truncation**: long x labels are thinned by code point; text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
-- **Dates without time scale**: dates are formatted via Intl.DateTimeFormat, never spaced on the axis. A categorical "date" field looks like any other category.
+- **Time axis scope**: line, area and vertical bar only, on the bottom axis. UTC only (no time zones or DST), no fiscal or ISO-week calendars, no sub-second ticks; a bare year like "2024" is a category. Numbers become epoch ms only with `xType: "time"`.
+- **Time line gaps**: a line breaks where the gap between readings exceeds 5 times the series' median step (fixed factor); use null rows for gaps it should not guess.
+- **Time bar width**: bars on a time axis take 0.8 of the smallest gap between dates, so one close pair makes every bar thin.
+- **Time tick labels**: a `format` entry for x replaces the per-unit tick labels entirely.
+- **Downsampling**: line and area on a time axis only, a fixed target of 1000 categories (fewer with many series; more than about 100 series or many gaps can exceed it). LTTB runs per series over all series, hidden ones included. Bars on a time axis are not reduced and stop at 5000 marks.
+- **Density cells**: scatter past 5000 visible points draws square cells (not hexagons), merges series into one ramp, drops `size` and `name`, and scales colour by the square root of the count against the visible maximum.
+- **Format templates**: one `{value}` or `{value:<preset>}` per template, at most 80 characters; no other placeholders such as the series or category name.
 - **Drill engine**: `drill: true` + `path` for navigation. No custom drill templates, custom breadcrumb shapes, or drilling by a measure-derived category (use `path` and `aggregate`).
 - **No pinch or wheel zoom**: `zoom: true` on line/area/scatter enables drag-to-brush; Reset chip, double-click and Escape restore. Pinch gestures and scroll wheel are not captured.
 - **Drill and select exclusive**: `drill: true` and `select: true/multi` cannot both be set (ceiling: drill state and selection are orthogonal pipelines and combining them overcomplicates the reducer).
 - **Stack labels show segments**: stacked bar labels display the segment value, not the total. Column labels in a heatmap show the cell value.
 - **Scatter keyboard order**: keyboard navigation follows mark draw order, not spatial proximity.
-- **5000-mark hard cap**: `MAX_MARKS = 5000`. Above it, render fails with `too-many-marks` error suggesting `limit` or `aggregate`.
+- **5000-mark hard cap**: `MAX_MARKS = 5000`. Above it, bars, tables, categorical lines and module charts fail with `too-many-marks`, suggesting `limit` or `aggregate`; time lines are downsampled and scatters binned instead.
 - **US-only hexmap**: hexmap covers the 50 states plus DC and PR; world maps are out of scope.
 - **Sankey without crossing minimisation**: sankey forces nodes per level without reordering to minimise link crossings (fast, deterministic, sufficient for publication).
 - **UTC dates**: date presets format in `timeZone: "UTC"` so server and client agree; pass Intl options with a `timeZone` for local time.
@@ -56,7 +62,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 ## What you can do instead
 
 - **Custom formatters**: use `format` (string presets or `Intl.*Format` options) plus `titles` for display names and `labels: true` for on-mark values. Localisation via `locale` and `text`.
-- **Time series without time scale**: use a "date" field as the x category. Frame the data with `aggregate: "mean"` or `"count"` if you want to coalesce timestamps.
+- **Time series in local time**: shift timestamps to the zone you want before charting, or pass Intl options with a `timeZone` in `format` for the labels.
 - **Diverging bar chart**: use `colorBy: { target: 0 }` to tone positive and negative bars differently.
 - **Complex drill UI**: listen to `maya-select` and `maya-view` events and control `el.view` and `el.selected` from your app.
 - **Stacked negative bars**: supported (negatives stack below zero); for a running total use `waterfall`.

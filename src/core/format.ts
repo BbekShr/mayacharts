@@ -1,4 +1,5 @@
 import type { FieldFormat, ResolvedSpec } from "./types.ts";
+import { TEMPLATE } from "./validate.ts";
 
 const decimals = (s: number) => {
   for (let d = 0; d < 8; d++) if (Math.abs(s * 10 ** d - Math.round(s * 10 ** d)) < 1e-9) return d;
@@ -23,11 +24,12 @@ export function formatter(
   step?: number,
 ): (v: unknown) => string {
   if (typeof field === "number") [field, step] = [s.y, field]; // T0-era formatter(spec, step)
-  const e: FieldFormat | undefined = s.format.get(field);
+  let e: FieldFormat | undefined = s.format.get(field);
+  const tpl = typeof e === "string" ? TEMPLATE.exec(e) : null; // "{value:percent} gross"
+  if (tpl) e = (tpl[2] ?? "auto") as FieldFormat; // validate.ts checked the preset
   const locale = Intl.NumberFormat.supportedLocalesOf(s.locale).length ? s.locale : "en-US";
   const d = step === undefined ? 2 : decimals(step);
-  let prefix = "";
-  let suffix = "";
+  let [prefix, suffix] = tpl ? [tpl[1]!, tpl[3]!] : ["", ""];
   let date: Intl.DateTimeFormat | null = null;
   let num: Intl.NumberFormat | null = null;
   let fine: Intl.NumberFormat | null = null; // step-less percent below 1%: 0.0025 is "0.25%", not "0.3%"

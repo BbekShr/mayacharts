@@ -1,7 +1,7 @@
-import { bandScale, linearScale } from "./scale.ts";
+import { bandScale, linearScale, timeScale } from "./scale.ts";
 import { el, esc, r } from "./svg.ts";
-import { niceTicks } from "./ticks.ts";
-import type { Axis, Box, LinearScale, ResolvedSpec, Scale } from "./types.ts";
+import { niceTicks, timeTicks } from "./ticks.ts";
+import type { Axis, Box, LinearScale, ResolvedSpec, Scale, TimeScale } from "./types.ts";
 
 const wide = (c: number) =>
   (c >= 0x1100 && c <= 0x115f) ||
@@ -46,8 +46,8 @@ export interface Frame {
   /** Inner markup of the axis-y and axis-x groups. */
   ay: string;
   ax: string;
-  /** svg attributes: data-plot, data-n | data-xd + data-yd. */
-  attrs: Record<string, string | number | null>;
+  /** svg attributes: data-plot, data-n | data-xd + data-yd, data-t (time axis). */
+  attrs: Record<string, string | number | boolean | null>;
 }
 
 type Fmt = (field: string, v: unknown, step?: number) => string;
@@ -73,6 +73,52 @@ function ticks(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "linear
   };
 }
 
+/** Per-unit default label formats (UTC); the first tick and each January of a month axis add the year. */
+const TIME_FMT = (u: string): Intl.DateTimeFormatOptions =>
+  u === "year"
+    ? { year: "numeric" }
+    : u === "quarter" || u === "month"
+      ? { month: "short" }
+      : u === "week" || u === "day"
+        ? { month: "short", day: "numeric" }
+        : { hour: "numeric", minute: "2-digit", second: u === "second" ? "2-digit" : undefined };
+
+/**
+ * Calendar ticks of a time axis, about `target` of them; `spec.format` on the axis field wins
+ * over the unit defaults. Sub-day ticks at UTC midnight and the first tick carry the date.
+ */
+function timeAxis(
+  spec: ResolvedSpec,
+  a: Extract<NonNullable<Axis>, { kind: "time" }>,
+  fmt: Fmt,
+  target: number,
+) {
+  const tk = timeTicks(a.t[0] ?? 0, a.t.at(-1) ?? 0, target, true);
+  const loc = Intl.NumberFormat.supportedLocalesOf(spec.locale).length ? spec.locale : "en-US";
+  const mk = (o: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(loc, { timeZone: "UTC", ...o });
+  const plain = mk(TIME_FMT(tk.unit));
+  const yeared = mk({ month: "short", year: "numeric" });
+  const dated = mk({ month: "short", day: "numeric" });
+  const datedTime = mk({ ...TIME_FMT("day"), ...TIME_FMT(tk.unit) });
+  const custom = spec.format.has(a.field);
+  const month = tk.unit === "quarter" || tk.unit === "month";
+  const sub = tk.unit === "hour" || tk.unit === "minute" || tk.unit === "second";
+  const labels = tk.values.map((v, i) =>
+    custom
+      ? fmt(a.field, v)
+      : (month && (i === 0 || new Date(v).getUTCMonth() === 0)
+          ? yeared
+          : sub && v % 864e5 === 0
+            ? dated
+            : sub && i === 0
+              ? datedTime
+              : plain
+        ).format(v),
+  );
+  return { values: tk.values, labels };
+}
+
 /** Axes, grid, plot box and scales for the two axes a mark asks for. */
 export function frame(
   spec: ResolvedSpec,
@@ -82,9 +128,14 @@ export function frame(
 ): Frame {
   const { width: W, height: H } = size;
   const bt = bx && bx.kind === "linear" ? ticks(spec, bx, fmt) : null;
+  // The plot is not known yet: size the first tick set from the full width (only its end labels matter here).
+  const tt =
+    bx && bx.kind === "time" ? timeAxis(spec, bx, fmt, Math.max(2, Math.round(W / 80))) : null;
+  const edge = bt ?? tt; // tick labels centred on the plot's ends need half their width as margin
   const lt = ly && ly.kind === "linear" ? ticks(spec, ly, fmt) : null;
   // Band labels go through the field's format (month presets on x); left ones are cut at 40%.
-  const bLab = bx && !bt ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c)) : [];
+  const bLab =
+    bx && !bt && !tt ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c)) : [];
   const lFull = ly && !lt ? (ly.domain as readonly string[]).map((c) => fmt(ly.field, c)) : [];
   const lLab = lt ? lt.labels : lFull.map((c) => clip(c, W * 0.4 - 8));
   const rt = ry && ry.kind === "linear" ? ticks(spec, ry, fmt) : null;
@@ -94,7 +145,7 @@ export function frame(
   // Without a left axis, still leave room for half of the first bottom tick label.
   const left = Math.max(
     (spec.yAxis && ly ? maxW(lLab) + 10 : 8) + (yTitle ? 18 : 0),
-    bt ? tw(bt.labels[0] ?? "") / 2 + 2 : 0,
+    edge ? tw(edge.labels[0] ?? "") / 2 + 2 : 0,
   );
   const bottom = (spec.xAxis && bx ? 24 : 8) + (xTitle ? 18 : 0);
   const plot = {
@@ -107,14 +158,16 @@ export function frame(
         left -
         (rt
           ? (spec.yAxis ? maxW(rt.labels) + 4 : 8) + (rTitle ? 18 : 0)
-          : Math.max(12, bt ? tw(bt.labels.at(-1) ?? "") / 2 + 2 : 0)),
+          : Math.max(12, edge ? tw(edge.labels.at(-1) ?? "") / 2 + 2 : 0)),
     ),
     h: Math.max(1, H - 10 - bottom),
   };
   const x: Scale | null = bx
     ? bx.kind === "band"
       ? bandScale(bx.domain, [plot.x, plot.x + plot.w])
-      : linearScale(bt!.domain, [plot.x, plot.x + plot.w])
+      : bx.kind === "time"
+        ? timeScale(bx.domain, bx.t, [plot.x, plot.x + plot.w])
+        : linearScale(bt!.domain, [plot.x, plot.x + plot.w])
     : null;
   const y: Scale | null = ly
     ? ly.kind === "band"
@@ -210,7 +263,30 @@ export function frame(
   let ax = "";
   if (spec.xAxis && bx) {
     const ty = r(plot.y + plot.h + 16);
-    if (bt) {
+    if (tt && bx.kind === "time") {
+      // Ticks sit at their time, clamped to the first and last band centres. If the pixel gap would
+      // still drop a label, retry with one tick fewer (down to 2) so the ticks stay evenly spaced.
+      const sc = x as TimeScale;
+      const [lo, hi] = [sc.of(bx.t[0] ?? 0), sc.of(bx.t.at(-1) ?? 0)];
+      let target = Math.max(2, Math.round(plot.w / 80));
+      for (;;) {
+        const t = timeAxis(spec, bx, fmt, target);
+        let right = -Infinity;
+        let out = "";
+        let dropped = false;
+        t.values.forEach((v, i) => {
+          const px = Math.min(hi, Math.max(lo, sc.of(v)));
+          const half = w(t.labels[i]!) / 2;
+          if (px - half < right) return void (dropped = true);
+          right = px + half;
+          out += el("text", { x: r(px), y: ty, "text-anchor": "middle" }, esc(t.labels[i]!));
+        });
+        ax += out;
+        if (!dropped || target <= 2) break;
+        ax = ax.slice(0, ax.length - out.length);
+        target--;
+      }
+    } else if (bt) {
       // Linear ticks are thinned like band labels when they would overlap.
       const every = Math.max(
         1,
@@ -241,7 +317,7 @@ export function frame(
     ax += el("text", { x: r(plot.x + plot.w / 2), y: H - 4, "text-anchor": "middle" }, esc(xTitle));
 
   const both = bt && lt;
-  const band = bx?.kind === "band" ? bx : ly?.kind === "band" ? ly : null;
+  const band = bx?.kind === "band" || bx?.kind === "time" ? bx : ly?.kind === "band" ? ly : null;
   return {
     plot,
     x,
@@ -253,6 +329,7 @@ export function frame(
     attrs: {
       "data-plot": `${r(plot.x)} ${r(plot.y)} ${r(plot.w)} ${r(plot.h)}`,
       "data-n": both || !band ? null : band.domain.length,
+      "data-t": tt ? true : null,
       "data-xd": both ? bt.domain.join(" ") : null,
       "data-yd": both ? lt.domain.join(" ") : null,
     },

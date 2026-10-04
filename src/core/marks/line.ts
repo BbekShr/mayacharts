@@ -3,7 +3,9 @@ import { el, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, Cell, LinearScale, Mark, MarkCtx, MarkOut } from "../types.ts";
 
 const axes: Mark["axes"] = (spec, shaped) => [
-  { kind: "band", field: spec.x, domain: shaped.categories } satisfies Axis,
+  shaped.time
+    ? ({ kind: "time", field: spec.x, domain: shaped.categories, t: shaped.time } satisfies Axis)
+    : ({ kind: "band", field: spec.x, domain: shaped.categories } satisfies Axis),
   // ponytail: 0-anchored via shape's extent (also for line); yDomain overrides in layout.
   { kind: "linear", field: spec.y, domain: shaped.extent } satisfies Axis,
 ];
@@ -23,9 +25,25 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     const cells: Cell[] = shaped.cells.filter((c) => c.si === si).sort((a, b) => a.ci - b.ci);
     let d = "";
     let gap = true;
+    // ponytail: on a time axis a hole wider than 5x the series' median gap breaks the line;
+    // a fixed factor, not a spec option.
+    const T = shaped.time;
+    const ts = T ? cells.filter((c) => c.value !== null).map((c) => T[c.ci]!) : [];
+    const gaps = ts
+      .flatMap((v, i) => (i && v > ts[i - 1]! ? [v - ts[i - 1]!] : []))
+      .sort((a, b) => a - b);
+    const hole = (gaps[gaps.length >> 1] ?? Infinity) * 5;
+    let prev = -Infinity;
     // Area runs: stacked areas treat null as 0 (shape did), so they never break.
     const runs: Cell[][] = [[]];
     for (const c of cells) {
+      if (T && c.value !== null) {
+        if (T[c.ci]! - prev > hole) {
+          gap = true;
+          if (!spec.stack) runs.push([]);
+        }
+        prev = T[c.ci]!;
+      }
       if (c.value === null && !spec.stack) runs.push([]);
       else runs[runs.length - 1]!.push(c);
       if (c.value === null) {
@@ -89,13 +107,22 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   }
 
   let hits = "";
+  // Time axis: each hit runs from the midpoint with the previous category to the one with the next.
+  const mid = (ci: number, d: number) => {
+    if (ci + d < 0 || ci + d >= shaped.categories.length) return d < 0 ? plot.x : plot.x + plot.w;
+    return (cat.at(ci) + cat.at(ci + d)) / 2 + cat.bandwidth / 2;
+  };
   shaped.categories.forEach((_, ci) => {
+    const [x0, x1] = shaped.time
+      ? [mid(ci, -1), mid(ci, 1)]
+      : [cat.at(ci), cat.at(ci) + cat.bandwidth];
     hits += el("rect", {
       "data-maya": "hit",
       "data-c": ci,
-      x: r(cat.at(ci)),
+      "data-i": shaped.index?.[ci],
+      x: r(x0),
       y: r(plot.y),
-      width: r(cat.bandwidth),
+      width: r(x1 - x0),
       height: r(plot.h),
       fill: "transparent",
     });

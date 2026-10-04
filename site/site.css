@@ -202,3 +202,41 @@ summary {
 details pre {
   max-height: 320px;
 }
+
+/* Compare */
+.scroll {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 480px) {
+  th,
+  td {
+    padding: 6px 4px;
+  }
+}
+thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+footer.site {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 16px 20px 40px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+[hidden] {
+  display: none;
+}

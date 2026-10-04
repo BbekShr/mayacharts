@@ -32,6 +32,9 @@ export type Aggregate = "sum" | "mean" | "count" | "min" | "max";
 export type NumberPreset = "auto" | "integer" | "decimal" | "compact" | "percent" | "currency";
 export type DatePreset = "date" | "month" | "year" | "time" | "datetime";
 export type FormatPreset = NumberPreset | DatePreset;
+/** A preset inside a template string: `"{value:percent} of revenue"`. One `{value}` per template. */
+export type FormatTemplate =
+  `${string}{value}${string}` | `${string}{value:${FormatPreset}}${string}`;
 
 /** Text added around a formatted value. */
 export interface Affix {
@@ -43,7 +46,10 @@ export interface Affix {
  * any date key (`year`, `month`, `dateStyle`, `timeZone`…) are date options; else number.
  */
 export type FieldFormat =
-  FormatPreset | (Intl.NumberFormatOptions & Affix) | (Intl.DateTimeFormatOptions & Affix);
+  | FormatPreset
+  | FormatTemplate
+  | (Intl.NumberFormatOptions & Affix)
+  | (Intl.DateTimeFormatOptions & Affix);
 
 export type ThemeToken =
   | "font"
@@ -99,6 +105,9 @@ export interface ChartSpec<R extends object = Row> {
   /** Category field (scatter: numeric x; hexmap: US state; kpi: optional period, last one is the headline; beeswarm: optional row; parallel: one line each; table: row label). Not used by path types.
    * @example x: "month" */
   x?: Field<R>;
+  /** How x is spaced. "auto": a time axis when every x is an ISO 8601 date ("2024-03" or longer) on line, area or vertical bar without sort or limit; else categories. "time" also accepts epoch ms numbers. Default "auto".
+   * @example xType: "category" */
+  xType?: "auto" | "category" | "time";
   /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each).
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
@@ -129,7 +138,7 @@ export interface ChartSpec<R extends object = Row> {
 
   /** A preset for every `y`, or a preset / Intl options per field. Display only.
    * @example format: { revenue: "currency", month: "month", margin: { style: "percent", suffix: " gm" } } */
-  format?: FormatPreset | Readonly<Partial<Record<Field<R>, FieldFormat>>>;
+  format?: FormatPreset | FormatTemplate | Readonly<Partial<Record<Field<R>, FieldFormat>>>;
   /** Display names by field: axis titles (shown only when set), tooltip, legend, table.
    * @example titles: { revenue: "Revenue ($)" } */
   titles?: Readonly<Partial<Record<Field<R>, string>>>;
@@ -266,7 +275,8 @@ export type ErrorCode =
   | "unsafe-css-value"
   | "invalid-size"
   | "unknown-state"
-  | "too-many-marks";
+  | "too-many-marks"
+  | "invalid-date";
 
 /* ------------------------------------------------------------------ */
 /* Internal pipeline types (exported for tests, marks, the element).   */
@@ -279,6 +289,8 @@ export interface ResolvedSpec {
   data: readonly Row[];
   /** Category field ("" for path types). With `path` + drill: the current level. */
   x: string;
+  /** spec.xType; shape() decides whether "auto" becomes a time axis (Shaped.time). */
+  xType: "auto" | "category" | "time";
   /** Active measure. */
   y: string;
   /** Every measure (`[y]` when `spec.y` is a string). */
@@ -362,6 +374,12 @@ export interface Shaped {
   extent: [number, number];
   /** spec.y2 aggregated per category (parallel to `categories`); [] without y2. */
   y2: (number | null)[];
+  /** Time axis: UTC ms per category (parallel to `categories`, ascending); null for a band axis. */
+  time: number[] | null;
+  /** Downsampled: [categories kept, categories before]; null when nothing was dropped. */
+  reduced: [kept: number, total: number] | null;
+  /** Time axis: each category's index in the time-ordered list before window and reduction (view.window's space); null otherwise. */
+  index: number[] | null;
 }
 
 export interface BandScale {
@@ -380,8 +398,28 @@ export interface LinearScale {
   of(value: number): number;
 }
 
-/** Narrow with `"bandwidth" in s`. */
-export type Scale = BandScale | LinearScale;
+/**
+ * A band scale whose bands sit at their time: `at(i)` is the start of a band centred on
+ * `t[i]`, so marks written for bands need no change. `bandwidth` comes from the smallest gap.
+ */
+export interface TimeScale extends BandScale {
+  kind: "time";
+  /** Pixel position of a UTC ms value (tick placement). */
+  of(ms: number): number;
+}
+
+/** Narrow with `"bandwidth" in s`; a time scale also has `kind === "time"`. */
+export type Scale = BandScale | LinearScale | TimeScale;
+
+export type TimeUnit = "year" | "quarter" | "month" | "week" | "day" | "hour" | "minute" | "second";
+
+export interface TimeTicks {
+  /** UTC ms of each tick, aligned to the unit's calendar boundary, inside [min, max]. */
+  values: number[];
+  unit: TimeUnit;
+  /** Multiple of the unit between ticks (e.g. 3 with "hour" for every 3 hours). */
+  every: number;
+}
 
 export interface Ticks {
   /** Nice, step-aligned domain covering the input. */
@@ -410,6 +448,8 @@ export interface Layout {
 export type Axis =
   | { kind: "band"; field: string; domain: readonly string[] }
   | { kind: "linear"; field: string; domain: readonly [number, number] }
+  /** Categories placed at their time; `t` parallel to `domain` (Shaped.time). */
+  | { kind: "time"; field: string; domain: readonly string[]; t: readonly number[] }
   | null;
 
 export type Fail = (code: ErrorCode, path: string, headline: string, ...details: string[]) => never;
@@ -453,6 +493,8 @@ export interface MarkOut {
   legend?: string;
   grid?: string;
   cross?: string;
+  /** A sentence appended to the auto description (scatter density cells). */
+  note?: string;
 }
 
 /** A chart type. Core marks live in render.ts's CORE map; modules `register()` theirs. */

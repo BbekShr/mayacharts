@@ -81,10 +81,11 @@ describe("performance envelope", () => {
     expect((err as MayaSpecError).code).toBe("too-many-marks");
   });
 
-  it("too-many-marks counts drawn marks (scatter: one per row)", () => {
+  it("6k scatter rows bin into at most MAX_MARKS density rects", () => {
     const data = Array.from({ length: 6000 }, (_, i) => ({ x: i % 3, y: i }));
-    expect(() => renderParts({ type: "scatter", x: "x", y: "y", data } as never)).toThrow(
-      /6000 marks/,
-    );
+    const svg = renderParts({ type: "scatter", x: "x", y: "y", data } as never).svg;
+    const n = svg.split(' data-maya="mark"').length - 1;
+    expect(n).toBeGreaterThan(0);
+    expect(n).toBeLessThanOrEqual(MAX_MARKS);
   });
 });

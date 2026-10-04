@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatter } from "../src/core/format.ts";
-import { resolve } from "../src/core/validate.ts";
+import { render } from "../src/core/render.ts";
+import { resolve, validateSpec } from "../src/core/validate.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 const f = (format: ChartSpec["format"], field = "v", step?: number, o: Partial<ChartSpec> = {}) =>
@@ -91,5 +92,50 @@ describe("percent ticks and small values", () => {
     expect(g(0.0025)).toBe("0.25%");
     expect(g(0.123)).toBe("12.3%");
     expect(g(0)).toBe("0%");
+  });
+});
+
+describe("format templates", () => {
+  it("wrap every number preset", () => {
+    expect(f("{value:integer} kg")(1234.6)).toBe("1,235 kg");
+    expect(f("{value:decimal} kg")(3)).toBe("3.00 kg");
+    expect(f("{value:compact} units")(1234567)).toBe("1.2M units");
+    expect(f("{value:percent} gross", "v", 0.05)(0.25)).toBe("25% gross");
+    expect(f("{value:currency}/mo", "v", 1)(5)).toBe("$5/mo");
+    expect(f("~{value}")(1234.5678)).toBe("~1,234.57");
+  });
+  it("wrap date presets", () => {
+    expect(f("Week of {value:date}")(Date.UTC(2025, 0, 6))).toBe("Week of Jan 6, 2025");
+  });
+  it("a bare string applies to every y", () => {
+    const o = { y: ["v", "w"] };
+    expect(f("{value} kg", "v", undefined, o)(1)).toBe("1 kg");
+    expect(f("{value} kg", "w", undefined, o)(2)).toBe("2 kg");
+  });
+  it("axis ticks use the template", () => {
+    const svg = render({
+      type: "bar",
+      x: "m",
+      y: "v",
+      format: { v: "{value} kg" },
+      data: [
+        { m: "a", v: 10 },
+        { m: "b", v: 20 },
+      ],
+    } as ChartSpec);
+    expect(svg).toMatch(/<text[^>]*>20 kg<\/text>/);
+  });
+  const bad = (format: string) => () =>
+    validateSpec({ type: "bar", x: "m", y: "v", format, data: [{ m: "a", v: 1 }] });
+  it.each([
+    ["two placeholders", "{value} {value}"],
+    ["unknown preset", "{value:pct} x"],
+    ["stray brace", "{value} }"],
+    ["81 chars", "x".repeat(70) + "{value}" + "y".repeat(4)],
+  ])("rejects %s", (_n, tpl) => {
+    expect(bad(tpl)).toThrowError(expect.objectContaining({ code: "invalid-format" }));
+  });
+  it("suggests a preset", () => {
+    expect(bad("{value:pct} x")).toThrowError(/percent/);
   });
 });

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mayaCharts comparison</title>
+    <meta
+      name="description"
+      content="mayaCharts, Chart.js and ECharts drawing the same four charts under the same strict Content Security Policy, as measured by one script."
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <header class="site">
+      <h1>Comparison</h1>
+      <p class="tagline">
+        The same four charts in three libraries, measured by one script. Every value on this page is
+        read from the file that script wrote.
+      </p>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="./gallery.html">Gallery</a>
+        <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
+        <button id="theme" type="button">Theme: auto</button>
+      </nav>
+    </header>
+    <main>
+      <section>
+        <h2>Method</h2>
+        <p id="method"></p>
+        <p>
+          The CSP is
+          <code id="csp"></code>
+        </p>
+      </section>
+      <div id="tables"></div>
+      <section id="llm" hidden>
+        <h2>LLM-written specs</h2>
+        <p id="llm-note"></p>
+        <div id="llm-table"></div>
+      </section>
+    </main>
+    <footer class="site">
+      <p id="foot"></p>
+      <p>Highcharts is not included because of its licence.</p>
+      <p>
+        Harness source:
+        <a href="https://github.com/BbekShr/mayacharts/blob/main/e2e/compare.spec.ts"
+          >e2e/compare.spec.ts</a
+        >
+      </p>
+    </footer>
+    <script type="module" src="./compare.ts"></script>
+  </body>
+</html>

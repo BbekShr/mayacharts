@@ -24,11 +24,13 @@
  *   invalid-size        RenderOptions width/height not finite > 0
  *   unknown-state       hexmap x names no US state (geo's Mark.check)
  *   too-many-marks      more than MAX_MARKS marks (thrown by render)
+ *   invalid-date        xType "time" with an x that is neither ISO 8601 nor epoch ms
  * "Did you mean": smallest score (|len diff| + chars not shared; ties to longest prefix), only if <= 3.
  * Lookups keyed by user input go through Object.hasOwn or Array#includes.
  */
 import { CORE_TYPES, MODULE_OF, MODULES, types } from "./registry.ts";
 import { TEXT } from "./strings.ts";
+import { toTime } from "./ticks.ts";
 import type {
   ChartSpec,
   ErrorCode,
@@ -54,6 +56,8 @@ export class MayaSpecError extends Error {
 
 // ponytail: hard cap instead of virtualisation; suggest limit/aggregate.
 export const MAX_MARKS = 5000;
+// ponytail: fixed downsampling target; a time axis keeps at most this many categories (LTTB).
+export const MAX_POINTS = 1000;
 
 const w = (s: string) => s.split(" ");
 const S: Record<string, "string" | "boolean"> = Object.fromEntries([
@@ -64,7 +68,9 @@ const S: Record<string, "string" | "boolean"> = Object.fromEntries([
 ]);
 /** Every spec key (schema.json is tested against this). */
 export const KEYS = [
-  ...w("type data y path totals aggregate sort limit format titles text yDomain xDomain select"),
+  ...w(
+    "type data y path totals aggregate sort limit format titles text yDomain xDomain select xType",
+  ),
   ...w("colors colorBy theme"),
   ...Object.keys(S),
 ];
@@ -79,13 +85,15 @@ const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} drillOut:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} drillOut:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
 );
 const AGGS = w("sum mean count min max");
 const PRESETS = w("auto integer decimal compact percent currency date month year time datetime");
+/** A format template: text, one `{value}` or `{value:preset}`, text. Braces elsewhere are not allowed. */
+export const TEMPLATE = /^([^{}]*)\{value(?::(\w+))?\}([^{}]*)$/;
 const DATE = w(
   "dateStyle timeStyle weekday era year month day dayPeriod hour minute second fractionalSecondDigits timeZoneName timeZone hour12 hourCycle calendar",
 );
@@ -207,6 +215,17 @@ const bFmt = (p: string, headline: string, ...d: string[]) =>
 
 const format = (path: string, v: unknown, locale: string) => {
   if (typeof v === "string") {
+    if (/[{}]/.test(v)) {
+      const m = TEMPLATE.exec(v);
+      if (!m || v.length > 80 || (m[2] !== undefined && !PRESETS.includes(m[2])))
+        bFmt(
+          path,
+          `spec.${path} = ${show(v)} is not a format template.`,
+          'A template holds one {value} or {value:<preset>} plus text, at most 80 characters, e.g. "{value:percent} of plan".',
+          m?.[2] === undefined ? "" : `Presets: ${PRESETS.join(", ")}. ${dym(m[2], PRESETS)}`,
+        );
+      return;
+    }
     if (!PRESETS.includes(v))
       bFmt(
         path,
@@ -247,6 +266,11 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ["totals", "an array of x values (strings)", (v) => strs(v)],
   ["aggregate", `one of ${AGGS.join(", ")}`, (v) => AGGS.includes(v)],
   ["sort", '"asc" or "desc"', (v) => v === "asc" || v === "desc"],
+  [
+    "xType",
+    '"auto", "category" or "time"',
+    (v) => v === "auto" || v === "category" || v === "time",
+  ],
   ["limit", "a positive integer", (v) => Number.isInteger(v) && v > 0],
   ["select", 'true or "multi"', (v) => v === true || v === "multi"],
   [
@@ -520,6 +544,18 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       "The y2 line needs a right value axis; draw vertical bars.",
     ],
     [
+      s.xType === "time" && (s.sort !== undefined || s.limit !== undefined),
+      "xType",
+      'spec.xType = "time" cannot be combined with spec.sort or spec.limit.',
+      'A time axis is ordered by time; remove sort and limit, or use xType: "category".',
+    ],
+    [
+      s.xType === "time" && s.horizontal === true,
+      "xType",
+      'spec.xType = "time" cannot be combined with spec.horizontal.',
+      'Time runs along the bottom axis; remove horizontal, or use xType: "category".',
+    ],
+    [
       t === "kpi" && colorBy !== undefined && !isObj(colorBy),
       "colorBy",
       'spec.colorBy on "kpi" must be { target: number }.',
@@ -614,6 +650,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         );
     }
     if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
+    if (s.xType === "time" && typeof s.x === "string")
+      scan(s.x, (v, p) => {
+        if (v == null || toTime(v) !== null) return;
+        fail(
+          "invalid-date",
+          p,
+          `spec.${p} is ${show(v)}, but spec.xType = "time" needs ISO 8601 dates or epoch ms.`,
+          'Use "2024-03-05", "2024-03" or "2024-03-05T14:30:00Z"; times without an offset are UTC.',
+        );
+      });
     if (typeof colorBy === "string" && colorBy !== "sign")
       numeric(colorBy, "non-numeric-field", "colorBy");
     if (isPath)
@@ -718,6 +764,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
       ? spec.data.filter((r) => drilled.every((d, i) => String(r[full[i]!]) === d))
       : spec.data,
     x: spec.x ?? (PATHX.includes(spec.type) ? (path[0] ?? "") : ""),
+    xType: spec.xType ?? "auto",
     y: measures[measure]!,
     measures,
     measure,

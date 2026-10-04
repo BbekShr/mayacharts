@@ -307,3 +307,55 @@ export function mean<T extends object>(field: keyof T) {
     return rows.length > 0 ? s / rows.length : 0;
   };
 }
+
+/** Normal draw from a uniform generator (Box-Muller). */
+const gauss = (rng: () => number) =>
+  Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(2 * Math.PI * rng());
+
+/** 50 000 synthetic (spend, revenue) points: three overlapping clusters of different spread. */
+export function makePoints(seed: number, n = 50000) {
+  const rng = mulberry32(seed);
+  return Array.from({ length: n }, () => {
+    const k = rng();
+    const [cx, cy, sx, sy] =
+      k < 0.55 ? [30, 42, 9, 11] : k < 0.85 ? [62, 70, 12, 8] : [48, 20, 20, 6];
+    const spend = cx + gauss(rng) * sx;
+    return { spend: R2(spend), revenue: R2(cy + (spend - cx) * 0.4 + gauss(rng) * sy) };
+  });
+}
+const R2 = (v: number) => Math.round(v * 100) / 100;
+
+/** Exactly n (20 000) irregular ISO timestamps over 2025 (random gaps, two quiet stretches) with a drifting reading. */
+export function makeReadings(seed: number, n = 20000) {
+  const rng = mulberry32(seed);
+  const start = Date.UTC(2025, 0, 1);
+  const span = Date.UTC(2026, 0, 1) - start;
+  const gaps: [number, number][] = [
+    [0.31, 0.34],
+    [0.72, 0.745],
+  ];
+  const out: { time: string; load: number }[] = [];
+  let v = 50;
+  const us: number[] = [];
+  while (us.length < n) {
+    const u = rng();
+    if (!gaps.some(([a, b]) => u > a && u < b)) us.push(u);
+  }
+  for (const u of us.sort((a, b) => a - b)) {
+    v += gauss(rng) * 0.8 + (50 + 12 * Math.sin(u * 12 * Math.PI) - v) * 0.02;
+    out.push({ time: new Date(start + u * span).toISOString().slice(0, 19) + "Z", load: R2(v) });
+  }
+  return out;
+}
+
+/** "2025-01" to "2025-12" with one month missing (the axis keeps the hole). */
+export function makeMonths(seed: number) {
+  const rng = mulberry32(seed);
+  const skip = 3 + Math.floor(rng() * 6);
+  return Array.from({ length: 12 }, (_, m) => m)
+    .filter((m) => m !== skip)
+    .map((m) => ({
+      month: `2025-${String(m + 1).padStart(2, "0")}`,
+      orders: Math.round(900 + rng() * 700 + m * 40),
+    }));
+}

@@ -2,7 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import { renderParts } from "../src/core/render.ts";
-import { reduce } from "../src/element/zoom.ts";
+import { reduce, span } from "../src/element/zoom.ts";
 import type { ChartSpec, State } from "../src/core/types.ts";
 
 const S: State = { view: {}, selected: [] };
@@ -162,5 +162,23 @@ dom("zoom brush (DOM)", () => {
       );
     expect(root.querySelector("[data-maya=brush]")).toBeNull();
     expect(el.shadowRoot!.querySelector(".maya-reset")).toBeNull();
+  });
+});
+
+describe("span (time axis)", () => {
+  // uneven centres: indexes 10, 11, 40 (a gap), 41
+  const cs: [number, number][] = [
+    [50, 10],
+    [100, 11],
+    [400, 40],
+    [450, 41],
+  ];
+  it("maps pixels to the nearest absolute index", () => {
+    expect(span(cs, 60, 130)).toEqual([10, 11]);
+    expect(span(cs, 110, 300)).toEqual([11, 40]);
+  });
+  it("orders reversed ends and allows a single category", () => {
+    expect(span(cs, 460, 90)).toEqual([11, 41]);
+    expect(span(cs, 95, 105)).toEqual([11, 11]);
   });
 });

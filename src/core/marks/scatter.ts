@@ -1,5 +1,6 @@
-import { el, key, r } from "../svg.ts";
-import type { Mark, ResolvedSpec, Row, Shaped } from "../types.ts";
+import { el, esc, key, r } from "../svg.ts";
+import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
+import { MAX_MARKS } from "../validate.ts";
 
 const MIN = 24;
 
@@ -47,6 +48,85 @@ function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
   return out;
 }
 
+/**
+ * Density cells for more than MAX_MARKS visible points: a grid over the plot (cells >= 6 px, at
+ * most MAX_MARKS of them), non-empty cells only, ramp by sqrt(count). The grid is a function of
+ * the axis domains and the plot size, so the same window gives the same cells.
+ * ponytail: square cells, series merged (no per-series colour), no size or name; hexes and
+ * per-series stacks if anyone needs them.
+ */
+function bins(ctx: MarkCtx, pts: Pt[]) {
+  const { spec, plot } = ctx;
+  const [sx, sy] = [ctx.x as LinearScale, ctx.y as LinearScale];
+  const cell = Math.max(6, Math.sqrt((plot.w * plot.h) / MAX_MARKS));
+  // Extreme aspect ratios (400000 x 20) would floor to thousands of columns: cap the grid too.
+  const ny = Math.max(1, Math.min(Math.floor(plot.h / cell), MAX_MARKS));
+  const nx = Math.max(1, Math.min(Math.floor(plot.w / cell), Math.floor(MAX_MARKS / ny)));
+  const [cw, ch] = [plot.w / nx, plot.h / ny];
+  const at = (v: number, s: LinearScale, o: number, n: number) =>
+    Math.min(n - 1, Math.max(0, Math.floor((s.of(v) - o) / (n === nx ? cw : ch))));
+  const grid = new Map<number, number>();
+  for (const p of pts) {
+    const k = at(p.x, sx, plot.x, nx) * ny + at(p.y, sy, plot.y, ny);
+    grid.set(k, (grid.get(k) ?? 0) + 1);
+  }
+  const max = Math.max(...grid.values());
+  const ti = (f: string) => spec.titles.get(f) ?? f;
+  // Pixel to data, from the scale's own endpoints.
+  const inv = (s: LinearScale, px: number) =>
+    s.domain[0] + ((px - s.range[0]) / (s.range[1] - s.range[0])) * (s.domain[1] - s.domain[0]);
+  const span = (s: LinearScale, f: string, a: number, b: number) =>
+    ctx.t("range", ctx.fmt(f, inv(s, a)), ctx.fmt(f, inv(s, b)));
+  let marks = "";
+  [...grid]
+    .sort((a, b) => a[0] - b[0])
+    .forEach(([k, n], c) => {
+      const [i, j] = [Math.floor(k / ny), k % ny];
+      const [x, y] = [plot.x + i * cw, plot.y + j * ch];
+      const gx = span(sx, spec.x, x, x + cw);
+      const gy = span(sy, spec.y, y + ch, y);
+      marks += el("rect", {
+        "data-maya": "mark",
+        "data-key": key("b", i, j),
+        "data-c": c,
+        "data-s": 0,
+        "data-x": `${ti(spec.x)} ${gx}, ${ti(spec.y)} ${gy}`,
+        "data-y": n,
+        "data-f": ctx.t(n === 1 ? "point" : "points", ctx.fmt("", n)),
+        "data-gx": gx,
+        "data-gy": gy,
+        "data-q": Math.min(9, Math.ceil(Math.sqrt(n / max) * 10) - 1),
+        x: r(x + 0.5),
+        y: r(y + 0.5),
+        width: r(cw - 1),
+        height: r(ch - 1),
+      });
+    });
+  // The ramp is sqrt, so the middle of the gradient is a quarter of the maximum.
+  const mid = Math.round(max / 4);
+  const f = (n: number) => `<span>${esc(ctx.fmt("", n))}</span>`;
+  const legend =
+    `<div class="maya-legend" data-maya="ramp" data-d><b>${esc(ctx.t("perCell"))}</b>${f(1)}<i></i>` +
+    (mid > 1 && mid < max ? `${f(mid)}<i></i>` : "") +
+    f(max) +
+    "</div>";
+  const note =
+    ctx.t("density", ...[grid.size, Math.min(...grid.values()), max].map((v) => ctx.fmt("", v))) +
+    ".";
+  return { marks, hits: "", cross: cross(ctx), legend, note };
+}
+
+/** Hover guides: element-owned, moved to the hovered point (tooltip.ts); pills carry its x and y. */
+function cross({ plot }: MarkCtx) {
+  const [l, t, b] = [plot.x, plot.y, plot.y + plot.h];
+  return (
+    el("line", { "data-g": "x", x1: 0, x2: 0, y1: r(t), y2: r(b) }) +
+    el("line", { "data-g": "y", x1: r(l), x2: r(l + plot.w), y1: 0, y2: 0 }) +
+    el("text", { "data-g": "x", y: r(b - 6), "text-anchor": "middle" }, "") +
+    el("text", { "data-g": "y", x: r(l + 6), y: -6 }, "")
+  );
+}
+
 export const scatter: Mark = {
   noun: "Scatter",
   axes(spec, shaped) {
@@ -76,6 +156,7 @@ export const scatter: Mark = {
     const sx = ctx.x as { of(v: number): number };
     const sy = ctx.y as { of(v: number): number };
     const pts = points(spec, shaped);
+    if (pts.length > MAX_MARKS) return bins(ctx, pts);
     let max = 0;
     for (const p of pts) if (p.sz !== null) max = Math.max(max, Math.abs(p.sz));
     const scale = Math.min(plot.w, plot.h) / 16;
@@ -139,14 +220,6 @@ export const scatter: Mark = {
         });
       if (spec.labels) ctx.label(cx, cy - rad, ctx.fmt(spec.y, p.y), "above");
     }
-    // Hover guides: element-owned, moved to the hovered point (tooltip.ts); pills carry its x and y.
-    const [l, t, b] = [plot.x, plot.y, plot.y + plot.h];
-    const cross = pts.length
-      ? el("line", { "data-g": "x", x1: 0, x2: 0, y1: r(t), y2: r(b) }) +
-        el("line", { "data-g": "y", x1: r(l), x2: r(l + plot.w), y1: 0, y2: 0 }) +
-        el("text", { "data-g": "x", y: r(b - 6), "text-anchor": "middle" }, "") +
-        el("text", { "data-g": "y", x: r(l + 6), y: -6 }, "")
-      : "";
-    return { marks, hits, cross };
+    return { marks, hits, cross: pts.length ? cross(ctx) : "" };
   },
 };

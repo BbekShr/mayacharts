@@ -37,7 +37,7 @@ async function open(page: Page, path: string): Promise<number> {
 for (const path of PAGES) {
   for (const scheme of ["light", "dark"] as const) {
     test(`axe WCAG 2.x AA: ${path} ${scheme}`, async ({ page }) => {
-      test.slow(); // one axe run per chart; the gallery has every type
+      test.setTimeout(180_000); // one axe run per chart; the gallery has 31 (about 60 s in Firefox)
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
       const n = await open(page, path);
       expect(n).toBeGreaterThan(0);
@@ -144,3 +144,15 @@ test("keyboard: Tab reaches the chart, ArrowRight activates and announces", asyn
   await expect(host.locator("[data-maya=mark][data-active]")).toHaveCount(1);
   await expect(host.locator("[data-maya=live]")).not.toBeEmpty({ timeout: 400 });
 });
+
+// compare.html has no charts: one page-level axe run per scheme.
+for (const scheme of ["light", "dark"] as const) {
+  test(`axe WCAG 2.x AA: compare.html ${scheme}`, async ({ page }) => {
+    test.skip(!existsSync("site/compare.html"), "no compare page");
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto("compare.html");
+    await expect(page.locator("table").first()).toBeVisible();
+    const r = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+    expect(r.violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+  });
+}

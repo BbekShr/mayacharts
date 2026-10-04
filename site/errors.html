@@ -190,6 +190,24 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
 // Aggregate by day instead of hour
 { "aggregate": "mean", ... }</code></pre>
       </section>
+      <section id="invalid-date">
+        <h2><code>invalid-date</code></h2>
+        <p>
+          spec.xType is "time" but an x value is neither an ISO 8601 date nor epoch milliseconds.
+          Valid ISO 8601 dates are "2024-03" (year-month), "2024-03-05" (date) or
+          "2024-03-05T14:30:00Z" (date-time; no offset means UTC). Epoch ms are finite numbers,
+          negative ones are before 1970. To use text categories with dates, set xType: "category".
+        </p>
+        <pre><code>// ISO 8601 date
+{ "type": "line", "x": "date", "y": "revenue", "xType": "time",
+  "data": [{ "date": "2024-01-15", "revenue": 5000 }] }
+// Epoch milliseconds
+{ "type": "line", "x": "timestamp", "y": "revenue", "xType": "time",
+  "data": [{ "timestamp": 1705276800000, "revenue": 5000 }] }
+// Text labels with date format
+{ "type": "line", "x": "date", "y": "revenue", "xType": "category",
+  "data": [{ "date": "Jan 2024", "revenue": 5000 }] }</code></pre>
+      </section>
     </main>
   </body>
 </html>
