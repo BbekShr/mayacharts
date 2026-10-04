@@ -20,6 +20,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Ramp depth**: 10-step sequential ramp for colorBy numeric fields (not user-tunable).
 - **Label truncation**: long x labels are thinned by code point; text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
 - **Time axis scope**: line, area and vertical bar only, on the bottom axis. UTC only (no time zones or DST), no fiscal or ISO-week calendars, no sub-second ticks; a bare year like "2024" is a category. Numbers become epoch ms only with `xType: "time"`.
+- **Time line gaps**: a line breaks where the gap between readings exceeds 5 times the series' median step (fixed factor); use null rows for gaps it should not guess.
 - **Time bar width**: bars on a time axis take 0.8 of the smallest gap between dates, so one close pair makes every bar thin.
 - **Time tick labels**: a `format` entry for x replaces the per-unit tick labels entirely.
 - **Downsampling**: line and area on a time axis only, a fixed target of 1000 categories (fewer with many series; more than about 100 series or many gaps can exceed it). LTTB runs per series over all series, hidden ones included. Bars on a time axis are not reduced and stop at 5000 marks.

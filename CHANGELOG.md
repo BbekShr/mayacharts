@@ -14,7 +14,7 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 
 ### Added
 
-- `xType`: "auto", "category" or "time". Line, area and vertical bar charts whose x values are all ISO 8601 dates ("2024-03", "2024-03-05", "2024-03-05T14:30:00Z") get a time axis: categories sorted by time, spaced in proportion, ticks on UTC calendar boundaries. `"time"` also accepts epoch ms; `"category"` opts out.
+- `xType`: "auto", "category" or "time". Line, area and vertical bar charts whose x values are all ISO 8601 dates ("2024-03", "2024-03-05", "2024-03-05T14:30:00Z") get a time axis: categories sorted by time, spaced in proportion, ticks on UTC calendar boundaries. `"time"` also accepts epoch ms (within the Date range); `"category"` opts out. Month, quarter and year starts are spaced by calendar so bars line up evenly, tick density follows the chart width, and a line breaks where the gap between readings is more than 5 times the usual step.
 - Line and area series on a time axis longer than 1000 points are downsampled with LTTB, keeping each series' first, last, minimum and maximum. The description says how many points are shown.
 - Scatter charts with more than 5000 visible points draw density cells with a ramp legend instead of failing with `too-many-marks`.
 - Format templates: one `{value}` or `{value:<preset>}` plus text, such as `format: { margin: "{value:percent} gross" }`.
