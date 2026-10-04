@@ -1,0 +1,6 @@
+dist/
+site/dist/
+docs/research/
+e2e/__screenshots__/
+test/__snapshots__/
+package-lock.json

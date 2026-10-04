@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mayaCharts</title>
+    <meta
+      name="description"
+      content="Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine."
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <header class="site">
+      <h1>mayaCharts</h1>
+      <p class="tagline">
+        Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart
+        engine.
+      </p>
+      <nav>
+        <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
+        <a href="https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md">NON-FEATURES</a>
+        <a href="./errors.html">Errors</a>
+        <button id="theme" type="button">Theme: auto</button>
+      </nav>
+    </header>
+    <main>
+      <section>
+        <h2>Simple</h2>
+        <p>One series, compact number format.</p>
+        <maya-chart id="simple" style="height: 300px"></maya-chart>
+        <pre><code id="simple-code"></code></pre>
+      </section>
+      <section>
+        <h2>Grouped</h2>
+        <p>Add <code>series</code> to split rows into grouped bars.</p>
+        <maya-chart id="grouped" style="height: 300px"></maya-chart>
+        <pre><code id="grouped-code"></code></pre>
+      </section>
+      <section>
+        <h2>Stacked</h2>
+        <p>Set <code>stack: true</code>. Negative values stack below zero.</p>
+        <maya-chart id="stacked" style="height: 300px"></maya-chart>
+        <pre><code id="stacked-code"></code></pre>
+      </section>
+      <section>
+        <h2>Live updates</h2>
+        <p>
+          Assign <code>el.data</code> and the change animates. Adding or removing a series animates
+          enter and exit.
+        </p>
+        <div class="controls">
+          <button id="update" type="button">Update data</button>
+          <button id="toggle-series" type="button">Toggle series</button>
+        </div>
+        <maya-chart id="live" style="height: 300px"></maya-chart>
+        <pre><code id="live-code"></code></pre>
+      </section>
+      <section>
+        <h2>Plain HTML</h2>
+        <p>No JavaScript needed beyond loading the element: put the spec in a JSON child.</p>
+        <maya-chart id="html" style="height: 240px">
+          <script type="application/json">
+            {
+              "type": "bar",
+              "x": "fruit",
+              "y": "kg",
+              "title": "Fruit sold",
+              "data": [
+                { "fruit": "Apples", "kg": 42 },
+                { "fruit": "Pears", "kg": 28 },
+                { "fruit": "Plums", "kg": 17 }
+              ]
+            }
+          </script>
+        </maya-chart>
+        <pre><code>&lt;maya-chart style="height:240px"&gt;
+  &lt;script type="application/json"&gt;
+    {"type":"bar","x":"fruit","y":"kg","data":[{"fruit":"Apples","kg":42},{"fruit":"Pears","kg":28}]}
+  &lt;/script&gt;
+&lt;/maya-chart&gt;</code></pre>
+      </section>
+      <section>
+        <h2>Server rendering</h2>
+        <p>
+          <code>renderShell(spec)</code> returns plain HTML and SVG that works without JavaScript.
+          See the <a href="./ssr.html">server-rendered example</a>.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="./demo.ts"></script>
+  </body>
+</html>

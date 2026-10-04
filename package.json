@@ -1,0 +1,72 @@
+{
+  "name": "mayacharts",
+  "version": "0.0.1",
+  "description": "Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.",
+  "keywords": [
+    "chart",
+    "charts",
+    "svg",
+    "web-component",
+    "custom-element",
+    "dataviz",
+    "ssr"
+  ],
+  "license": "MIT",
+  "author": "Bibek Shrestha",
+  "homepage": "https://bbekshr.github.io/mayacharts/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BbekShr/mayacharts.git"
+  },
+  "bugs": "https://github.com/BbekShr/mayacharts/issues",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./element": {
+      "types": "./dist/element.d.ts",
+      "default": "./dist/element.js"
+    },
+    "./theme.css": "./dist/theme.css"
+  },
+  "sideEffects": [
+    "./dist/element.js"
+  ],
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
+    "build": "vite build && vite build --mode element && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "size": "node scripts/size.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "e2e": "playwright test",
+    "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts"
+  },
+  "mayaSize": {
+    "dist/index.js": 7000,
+    "dist/element.js": 10240,
+    "dist/theme.css": 1200
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
+    "happy-dom": "^20.14.5",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}

@@ -1,0 +1,45 @@
+name: E2E (all browsers)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - labeled
+      - synchronize
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'run-e2e')
+
+jobs:
+  e2e-full:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - chromium
+          - firefox
+          - webkit
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps ${{ matrix.project }}
+
+      - run: npm run build
+
+      - run: npx playwright test --project=${{ matrix.project }}
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-${{ matrix.project }}-results
+          path: |
+            test-results/
+            playwright-report/

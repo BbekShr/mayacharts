@@ -1,0 +1,9 @@
+node_modules/
+dist/
+site/dist/
+test-results/
+playwright-report/
+coverage/
+.DS_Store
+*.log
+site/ssr.html

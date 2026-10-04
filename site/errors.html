@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mayaCharts errors</title>
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <header class="site">
+      <h1>Errors</h1>
+      <p class="tagline">
+        Every mayaCharts error links here. Each section explains the code and shows a fix.
+      </p>
+      <nav><a href="./index.html">Back to examples</a></nav>
+    </header>
+    <main>
+      <section id="spec-not-object">
+        <h2><code>spec-not-object</code></h2>
+        <p>
+          The spec must be a plain JSON object. You passed something else, such as a string, array,
+          null or undefined. A common cause is passing the raw JSON text instead of parsing it.
+        </p>
+        <pre><code>el.spec = JSON.parse(text); // not the string itself</code></pre>
+      </section>
+      <section id="missing-field">
+        <h2><code>missing-field</code></h2>
+        <p>Every spec needs the four fields type, data, x and y. One of them is absent.</p>
+        <pre><code>{ "type": "bar", "x": "month", "y": "revenue",
+  "data": [{ "month": "Jan", "revenue": 12 }] }</code></pre>
+      </section>
+      <section id="unknown-type">
+        <h2><code>unknown-type</code></h2>
+        <p>
+          spec.type must be one of bar, line or area. The message suggests the closest match when
+          there is one.
+        </p>
+        <pre><code>{ "type": "bar", ... }</code></pre>
+      </section>
+      <section id="data-not-array">
+        <h2><code>data-not-array</code></h2>
+        <p>
+          spec.data must be an array of row objects. An object keyed by category, or a JSON string,
+          is not accepted.
+        </p>
+        <pre><code>data: Object.entries(totals).map(([month, revenue]) =&gt; ({ month, revenue }))</code></pre>
+      </section>
+      <section id="row-not-object">
+        <h2><code>row-not-object</code></h2>
+        <p>
+          Every entry in spec.data must be a plain object. Arrays, numbers and null rows are
+          rejected; the message names the index.
+        </p>
+        <pre><code>data: [{ "month": "Jan", "revenue": 12 }]   // not [["Jan", 12]]</code></pre>
+      </section>
+      <section id="unknown-field">
+        <h2><code>unknown-field</code></h2>
+        <p>
+          spec.x, spec.y or spec.series names a field that no row has. The message lists the fields
+          found in your data. Check spelling and case.
+        </p>
+        <pre><code>// rows have "month" and "revenue"
+{ "x": "month", "y": "revenue" }</code></pre>
+      </section>
+      <section id="non-numeric-y">
+        <h2><code>non-numeric-y</code></h2>
+        <p>
+          The y field must hold finite numbers. null and undefined are allowed and draw a gap.
+          Numeric strings are rejected, so convert them first.
+        </p>
+        <pre><code>data.map(r =&gt; ({ ...r, revenue: Number(r.revenue) }))</code></pre>
+      </section>
+      <section id="unknown-option">
+        <h2><code>unknown-option</code></h2>
+        <p>
+          The spec has a top-level key that mayaCharts does not know. The message suggests the
+          closest known option. Typos such as "stacked" instead of "stack" land here.
+        </p>
+        <pre><code>{ "stack": true }   // not "stacked"</code></pre>
+      </section>
+      <section id="invalid-option">
+        <h2><code>invalid-option</code></h2>
+        <p>
+          A known option has the wrong type, for example a string where a boolean is expected, or
+          colors that is not an array of strings.
+        </p>
+        <pre><code>{ "legend": true, "colors": ["#2563eb", "#f97316"] }</code></pre>
+      </section>
+      <section id="stack-unsupported">
+        <h2><code>stack-unsupported</code></h2>
+        <p>
+          Stacking is not defined for line charts. Use an area chart or a bar chart to stack series.
+        </p>
+        <pre><code>{ "type": "area", "stack": true, ... }</code></pre>
+      </section>
+      <section id="invalid-domain">
+        <h2><code>invalid-domain</code></h2>
+        <p>spec.yDomain must be [min, max] with two finite numbers and min less than max.</p>
+        <pre><code>{ "yDomain": [0, 100] }</code></pre>
+      </section>
+      <section id="invalid-format">
+        <h2><code>invalid-format</code></h2>
+        <p>
+          spec.yFormat must be one of auto, compact, percent or currency. Formatting is preset-based
+          because the spec is plain JSON and cannot hold functions.
+        </p>
+        <pre><code>{ "yFormat": "compact" }</code></pre>
+      </section>
+      <section id="invalid-theme">
+        <h2><code>invalid-theme</code></h2>
+        <p>
+          spec.theme contains a key that is not a theme token. Valid tokens are font, fontSize, fg,
+          fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg and focus.
+        </p>
+        <pre><code>{ "theme": { "accent": "#7c3aed" } }</code></pre>
+      </section>
+      <section id="unsafe-css-value">
+        <h2><code>unsafe-css-value</code></h2>
+        <p>
+          Theme and color values are written into CSS custom properties, so they must be plain CSS
+          values. Characters such as ; { } &lt; &gt; \ and url( or expression( are rejected.
+        </p>
+        <pre><code>{ "colors": ["#2563eb", "rgb(249 115 22)"] }</code></pre>
+      </section>
+      <section id="invalid-size">
+        <h2><code>invalid-size</code></h2>
+        <p>The width and height render options must be finite numbers greater than zero.</p>
+        <pre><code>renderShell(spec, { width: 760, height: 320 })</code></pre>
+      </section>
+    </main>
+  </body>
+</html>
