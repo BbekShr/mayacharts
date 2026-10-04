@@ -21,14 +21,20 @@ export default defineConfig({
           timeout: 120_000,
         },
       }),
+  // compare.spec.ts only runs in its own project (`npm run compare`).
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: "**/compare.spec.ts" },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] }, testIgnore: "**/compare.spec.ts" },
+    { name: "webkit", use: { ...devices["Desktop Safari"] }, testIgnore: "**/compare.spec.ts" },
     {
       name: "mobile-webkit",
       use: { ...devices["iPhone 13"] },
       testMatch: ["**/interactions.spec.ts"],
+    },
+    {
+      name: "compare",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: ["**/compare.spec.ts"],
     },
   ],
 });

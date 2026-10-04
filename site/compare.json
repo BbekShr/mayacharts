@@ -1,0 +1,328 @@
+{
+  "generated": "2026-10-04",
+  "versions": {
+    "mayacharts": "0.3.0",
+    "chartjs": "4.5.1",
+    "echarts": "6.1.0"
+  },
+  "browser": "Chromium 153.0.8010.12",
+  "csp": "default-src 'self'; style-src 'self'; require-trusted-types-for 'script'; trusted-types mayacharts",
+  "notes": [
+    "Chart.js loads chart.umd.min.js and ECharts loads echarts.min.js, the full builds, not tree-shaken. mayacharts loads dist/element.js.",
+    "Chart.js and ECharts draw to canvas in the browser. ECharts SSR uses its SVG renderer.",
+    "Chart.js has no heatmap type in core, and its time scale needs a separate date adapter, so months are category labels.",
+    "Accessibility setup: Chart.js canvas gets role=img and an aria-label, ECharts gets aria.enabled. mayacharts runs with defaults."
+  ],
+  "results": [
+    {
+      "library": "mayacharts",
+      "chart": "bar",
+      "supported": true,
+      "gzipBytes": 38016,
+      "ssr": {
+        "noDom": true,
+        "svg": true,
+        "bytes": 34191
+      },
+      "rendered": true,
+      "renders": true,
+      "firstViolation": "",
+      "axeSeriousCritical": 0,
+      "axeRules": [],
+      "ariaSnapshotLines": 74,
+      "keyboard": {
+        "tabStops": 4,
+        "arrowStates": 13
+      },
+      "rtl": {
+        "yAxisMovedRight": true,
+        "inkLtr": {
+          "left": 0.33233506944444446,
+          "right": 0.25008680555555557
+        },
+        "inkRtl": {
+          "left": 0.3060112847222222,
+          "right": 0.27703993055555554
+        }
+      },
+      "ttfpMs": 31.6
+    },
+    {
+      "library": "mayacharts",
+      "chart": "line",
+      "supported": true,
+      "gzipBytes": 38016,
+      "ssr": {
+        "noDom": true,
+        "svg": true,
+        "bytes": 37862
+      },
+      "rendered": true,
+      "renders": true,
+      "firstViolation": "",
+      "axeSeriousCritical": 0,
+      "axeRules": [],
+      "ariaSnapshotLines": 156,
+      "keyboard": {
+        "tabStops": 3,
+        "arrowStates": 36
+      },
+      "rtl": {
+        "yAxisMovedRight": true,
+        "inkLtr": {
+          "left": 0.046723090277777775,
+          "right": 0.020638020833333333
+        },
+        "inkRtl": {
+          "left": 0.020746527777777777,
+          "right": 0.04559461805555556
+        }
+      },
+      "ttfpMs": 34.9
+    },
+    {
+      "library": "mayacharts",
+      "chart": "scatter",
+      "supported": true,
+      "gzipBytes": 38016,
+      "ssr": {
+        "noDom": true,
+        "svg": false,
+        "bytes": 0,
+        "note": "could not render without a DOM: mayacharts: 9929 marks exceed the limit of 5000.\n  Use spec.limit to keep the top N categories, or aggregate the rows fi"
+      },
+      "rendered": false,
+      "renders": false,
+      "firstViolation": "mayacharts: 9929 marks exceed the limit of 5000.",
+      "axeSeriousCritical": null,
+      "keyboard": null,
+      "rtl": null,
+      "ttfpMs": null,
+      "note": "did not render, so the remaining measures do not apply"
+    },
+    {
+      "library": "mayacharts",
+      "chart": "heatmap",
+      "supported": true,
+      "gzipBytes": 38016,
+      "ssr": {
+        "noDom": true,
+        "svg": true,
+        "bytes": 81012
+      },
+      "rendered": true,
+      "renders": true,
+      "firstViolation": "",
+      "axeSeriousCritical": 0,
+      "axeRules": [],
+      "ariaSnapshotLines": 231,
+      "keyboard": {
+        "tabStops": 1,
+        "arrowStates": 40
+      },
+      "rtl": {
+        "yAxisMovedRight": true,
+        "inkLtr": {
+          "left": 0.32918836805555557,
+          "right": 0.38209635416666665
+        },
+        "inkRtl": {
+          "left": 0.2972222222222222,
+          "right": 0.41423611111111114
+        }
+      },
+      "ttfpMs": 32.1
+    },
+    {
+      "library": "chartjs",
+      "chart": "bar",
+      "supported": true,
+      "gzipBytes": 70736,
+      "ssr": {
+        "noDom": true,
+        "svg": false,
+        "bytes": 0,
+        "note": "Chart.js has no SVG output."
+      },
+      "rendered": true,
+      "renders": true,
+      "firstViolation": "",
+      "axeSeriousCritical": 0,
+      "axeRules": [],
+      "ariaSnapshotLines": 1,
+      "keyboard": {
+        "tabStops": 0,
+        "arrowStates": 0
+      },
+      "rtl": {
+        "yAxisMovedRight": false,
+        "inkLtr": {
+          "left": 0.3011501736111111,
+          "right": 0.2879557291666667
+        },
+        "inkRtl": {
+          "left": 0.3011501736111111,
+          "right": 0.2879557291666667
+        }
+      },
+      "ttfpMs": 28.9
+    },
+    {
+      "library": "chartjs",
+      "chart": "line",
+      "supported": true,
+      "gzipBytes": 70736,
+      "ssr": {
+        "noDom": true,
+        "svg": false,
+        "bytes": 0,
+        "note": "Chart.js has no SVG output and made no chart without a canvas."
+      },
+      "rendered": true,
+      "renders": true,
+      "firstViolation": "",
+      "axeSeriousCritical": 0,
+      "axeRules": [],
+      "ariaSnapshotLines": 1,
+      "keyboard": {
+        "tabStops": 0,
+        "arrowStates": 0
+      },
+      "rtl": {
+        "yAxisMovedRight": false,
+        "inkLtr": {
+          "left": 0.05640190972222222,
+          "right": 0.040125868055555555
+        },
+        "inkRtl": {
+          "left": 0.05640190972222222,
+          "right": 0.040125868055555555
+        }
+      },
+      "ttfpMs": 31.1
+    },
+    {
+      "library": "chartjs",
+      "chart": "scatter",
+      "supported": true,
+      "gzipBytes": 70736,
+      "ssr": {
+        "noDom": true,
+        "svg": false,
+        "bytes": 0,
+        "note": "Chart.js has no SVG output and made no chart without a canvas."
+      },
+      "rendered": true,
+      "renders": true,
+      "firstViolation": "",
+      "axeSeriousCritical": 0,
+      "axeRules": [],
+      "ariaSnapshotLines": 1,
+      "keyboard": {
+        "tabStops": 0,
+        "arrowStates": 0
+      },
+      "rtl": {
+        "yAxisMovedRight": false,
+        "inkLtr": {
+          "left": 0.24607204861111112,
+          "right": 0.2789279513888889
+        },
+        "inkRtl": {
+          "left": 0.24607204861111112,
+          "right": 0.2789279513888889
+        }
+      },
+      "ttfpMs": 150.3
+    },
+    {
+      "library": "chartjs",
+      "chart": "heatmap",
+      "supported": false,
+      "gzipBytes": 70736,
+      "ssr": {
+        "noDom": true,
+        "svg": false,
+        "bytes": 0,
+        "note": "Chart.js has no SVG output and made no chart without a canvas."
+      },
+      "note": "no heatmap type in Chart.js core"
+    },
+    {
+      "library": "echarts",
+      "chart": "bar",
+      "supported": true,
+      "gzipBytes": 370016,
+      "ssr": {
+        "noDom": true,
+        "svg": true,
+        "bytes": 11563
+      },
+      "rendered": false,
+      "renders": false,
+      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
+      "axeSeriousCritical": null,
+      "keyboard": null,
+      "rtl": null,
+      "ttfpMs": null,
+      "note": "did not render, so the remaining measures do not apply"
+    },
+    {
+      "library": "echarts",
+      "chart": "line",
+      "supported": true,
+      "gzipBytes": 370016,
+      "ssr": {
+        "noDom": true,
+        "svg": true,
+        "bytes": 9060
+      },
+      "rendered": false,
+      "renders": false,
+      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
+      "axeSeriousCritical": null,
+      "keyboard": null,
+      "rtl": null,
+      "ttfpMs": null,
+      "note": "did not render, so the remaining measures do not apply"
+    },
+    {
+      "library": "echarts",
+      "chart": "scatter",
+      "supported": true,
+      "gzipBytes": 370016,
+      "ssr": {
+        "noDom": true,
+        "svg": true,
+        "bytes": 11000665
+      },
+      "rendered": false,
+      "renders": false,
+      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
+      "axeSeriousCritical": null,
+      "keyboard": null,
+      "rtl": null,
+      "ttfpMs": null,
+      "note": "did not render, so the remaining measures do not apply"
+    },
+    {
+      "library": "echarts",
+      "chart": "heatmap",
+      "supported": true,
+      "gzipBytes": 370016,
+      "ssr": {
+        "noDom": true,
+        "svg": true,
+        "bytes": 51353
+      },
+      "rendered": false,
+      "renders": false,
+      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
+      "axeSeriousCritical": null,
+      "keyboard": null,
+      "rtl": null,
+      "ttfpMs": null,
+      "note": "did not render, so the remaining measures do not apply"
+    }
+  ]
+}

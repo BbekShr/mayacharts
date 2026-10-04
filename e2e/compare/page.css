@@ -1,0 +1,14 @@
+html,
+body {
+  margin: 0;
+  background: #fff;
+  color: #111;
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+}
+#chart,
+maya-chart {
+  display: block;
+  width: 640px;
+  height: 360px;
+}
