@@ -4,7 +4,7 @@ const chart = (data) =>
   Plot.plot({
     title: "Monthly value by region, stacked",
     width: 640,
-    height: 308,
+    height: 254,
     x: { type: "utc" },
     marks: [Plot.areaY(data, { x: "date", y: "value", fill: "region" }), Plot.ruleY([0])],
     color: { legend: true },

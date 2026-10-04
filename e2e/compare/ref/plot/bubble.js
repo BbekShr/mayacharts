@@ -4,7 +4,7 @@ const chart = (data) =>
   Plot.plot({
     title: "Income, life expectancy and population",
     width: 640,
-    height: 350,
+    height: 292,
     grid: true,
     marks: [
       Plot.dot(data, { x: "income", y: "life", r: "population", title: "country", tip: true }),

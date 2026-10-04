@@ -4,7 +4,7 @@ const chart = (data) =>
   Plot.plot({
     title: "Value by category, stacked by region",
     width: 640,
-    height: 308,
+    height: 254,
     marks: [Plot.barY(data, { x: "cat", y: "value", fill: "region" }), Plot.ruleY([0])],
     color: { legend: true },
   });

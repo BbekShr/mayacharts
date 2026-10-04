@@ -4,7 +4,7 @@ const chart = (data) =>
   Plot.plot({
     title: "Scatter of 500 points",
     width: 640,
-    height: 350,
+    height: 292,
     grid: true,
     marks: [Plot.dot(data, { x: "x", y: "y" })],
   });

@@ -4,7 +4,7 @@ const chart = (data) =>
   Plot.plot({
     title: "Monthly value",
     width: 640,
-    height: 350,
+    height: 292,
     x: { type: "utc" },
     marks: [Plot.lineY(data, { x: "date", y: "value" })],
   });

@@ -4,7 +4,7 @@ const chart = (data) =>
   Plot.plot({
     title: "Value by hour and weekday",
     width: 640,
-    height: 296,
+    height: 242,
     x: { type: "band" },
     y: { domain: [...new Set(data.map((d) => d.day))] },
     marks: [Plot.cell(data, { x: "hour", y: "day", fill: "value" })],

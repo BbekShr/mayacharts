@@ -4,7 +4,7 @@ const chart = (data) =>
   Plot.plot({
     title: "Value by category",
     width: 640,
-    height: 350,
+    height: 292,
     marks: [Plot.barY(data, { x: "cat", y: "value" }), Plot.ruleY([0])],
   });
 

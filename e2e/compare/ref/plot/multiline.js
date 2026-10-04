@@ -4,7 +4,7 @@ const chart = (data) =>
   Plot.plot({
     title: "Monthly value, plan and actual",
     width: 640,
-    height: 308,
+    height: 254,
     x: { type: "utc" },
     marks: [Plot.lineY(data, { x: "date", y: "value", stroke: "series" })],
     color: { legend: true },
