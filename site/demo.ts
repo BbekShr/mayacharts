@@ -23,7 +23,7 @@ show("simple", {
   title: "Revenue by month",
   x: "month",
   y: "revenue",
-  yFormat: "compact",
+  format: "compact",
   data: months.map((month, i) => ({ month, revenue: revenue[i] ?? 0 })),
 });
 

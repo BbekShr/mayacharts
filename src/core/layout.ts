@@ -9,8 +9,8 @@ export function layout(
   yLabels: readonly string[],
   size: { width: number; height: number },
 ): Layout {
-  const left = (spec.yAxis ? maxW(yLabels) + 10 : 8) + (spec.yLabel ? 18 : 0);
-  const bottom = (spec.xAxis ? 24 : 8) + (spec.xLabel ? 18 : 0);
+  const left = (spec.yAxis ? maxW(yLabels) + 10 : 8) + (spec.titles.has(spec.y) ? 18 : 0);
+  const bottom = (spec.xAxis ? 24 : 8) + (spec.titles.has(spec.x) ? 18 : 0);
   const pw = Math.max(1, size.width - left - 12);
   const ph = Math.max(1, size.height - 10 - bottom);
   const step = pw / Math.max(1, shaped.categories.length);

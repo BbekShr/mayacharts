@@ -2,6 +2,7 @@ import type { Cell, ResolvedSpec, Shaped } from "./types.ts";
 
 export function shape(spec: ResolvedSpec, hidden: readonly string[] = []): Shaped {
   const categories: string[] = [];
+  const raw: unknown[] = [];
   const series: string[] = [];
   const ci = new Map<string, number>();
   const si = new Map<string, number>();
@@ -10,7 +11,7 @@ export function shape(spec: ResolvedSpec, hidden: readonly string[] = []): Shape
     const c = String(row[spec.x]);
     const s = spec.series === null ? "" : String(row[spec.series]);
     let i = ci.get(c);
-    if (i === undefined) ci.set(c, (i = categories.push(c) - 1));
+    if (i === undefined) (ci.set(c, (i = categories.push(c) - 1)), raw.push(row[spec.x]));
     let j = si.get(s);
     if (j === undefined) si.set(s, (j = series.push(s) - 1));
     const v = row[spec.y];
@@ -42,5 +43,6 @@ export function shape(spec: ResolvedSpec, hidden: readonly string[] = []): Shape
       cells.push({ ci: i, si: j, value, y0, y1 });
     }
   }
-  return { categories, series, visible, cells, extent: [lo, hi] };
+  const totals = categories.map((c) => spec.totals.includes(c));
+  return { categories, raw, totals, series, visible, cells, extent: [lo, hi] };
 }

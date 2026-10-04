@@ -56,8 +56,8 @@
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts"
   },
   "mayaSize": {
-    "dist/index.js": 7000,
-    "dist/element.js": 10240,
+    "dist/index.js": 12288,
+    "dist/element.js": 18432,
     "dist/theme.css": 1200
   },
   "devDependencies": {

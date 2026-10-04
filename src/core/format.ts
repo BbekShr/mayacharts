@@ -7,7 +7,9 @@ const decimals = (s: number) => {
 
 export function formatter(spec: ResolvedSpec, step: number): (v: number) => string {
   const d = decimals(step);
-  const f = spec.yFormat;
+  // T1b: formatter(spec, field, step?) with every preset and Intl options.
+  const p = spec.format.get(spec.y);
+  const f = typeof p === "string" ? p : "auto";
   const o: Intl.NumberFormatOptions =
     f === "compact"
       ? { notation: "compact", maximumFractionDigits: 1 }

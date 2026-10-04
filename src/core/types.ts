@@ -1,9 +1,39 @@
-/** A data row. Field values are read by name via `spec.x`, `spec.y`, `spec.series`. */
+import type { TextKey } from "./strings.ts";
+
+export type { TextKey };
+
+/** A data row. Field values are read by name via `spec.x`, `spec.y`, `spec.series`… */
 export type Row = Readonly<Record<string, string | number | boolean | null | undefined>>;
 
-export type ChartType = "bar" | "line" | "area";
+export type ChartType =
+  | "bar"
+  | "line"
+  | "area"
+  | "scatter"
+  | "heatmap"
+  | "waterfall"
+  | "treemap"
+  | "sunburst"
+  | "sankey"
+  | "hexmap";
 
-export type NumberFormat = "auto" | "compact" | "percent" | "currency";
+export type Aggregate = "sum" | "mean" | "count" | "min" | "max";
+
+export type NumberPreset = "auto" | "integer" | "decimal" | "compact" | "percent" | "currency";
+export type DatePreset = "date" | "month" | "year" | "time" | "datetime";
+export type FormatPreset = NumberPreset | DatePreset;
+
+/** Text added around a formatted value. */
+export interface Affix {
+  prefix?: string;
+  suffix?: string;
+}
+/**
+ * One field's format: a preset, or Intl options plus `prefix`/`suffix`. Options holding
+ * any date key (`year`, `month`, `dateStyle`, `timeZone`…) are date options; else number.
+ */
+export type FieldFormat =
+  FormatPreset | (Intl.NumberFormatOptions & Affix) | (Intl.DateTimeFormatOptions & Affix);
 
 export type ThemeToken =
   | "font"
@@ -16,91 +46,264 @@ export type ThemeToken =
   | "radius"
   | "tooltipBg"
   | "tooltipFg"
-  | "focus";
+  | "focus"
+  | "good"
+  | "bad"
+  | "series1"
+  | "series2"
+  | "series3"
+  | "series4"
+  | "series5"
+  | "series6"
+  | "series7"
+  | "series8";
+
+/** Field names of row type `R` (autocompletes for typed rows; `string` for `Row`). */
+export type Field<R> = Extract<keyof R, string>;
 
 /**
  * The whole public API surface. Plain JSON on purpose: it must stay serializable,
  * LLM-generatable, diffable and hashable. Never add function-valued options.
+ * Rule: `x` is always the category and `y` always the value, whatever the orientation.
  */
-export interface ChartSpec {
+export interface ChartSpec<R extends object = Row> {
+  /** Ignored; lets editors and LLMs find the JSON schema.
+   * @example "$schema": "https://unpkg.com/mayacharts/schema.json" */
+  $schema?: string;
+  /** Chart type. treemap/sunburst need `mayacharts/hierarchy`, sankey `flow`, hexmap `geo`.
+   * @example type: "bar" */
   type: ChartType;
-  data: readonly Row[];
-  /** Field for the category axis. */
-  x: string;
-  /** Field holding numbers. */
-  y: string;
-  /** Field that splits rows into series (grouped or stacked). */
-  series?: string;
-  /** Stack series instead of grouping them. `bar` and `area` only. */
+  /** Row objects.
+   * @example data: [{ month: "Jan", revenue: 10 }] */
+  data: readonly R[];
+  /** How rows sharing a (category, series) combine. `count` counts non-null y. Default "sum".
+   * @example aggregate: "mean" */
+  aggregate?: Aggregate;
+  /** Order categories by total across all series (hidden ones too). Default: data order.
+   * @example sort: "desc" */
+  sort?: "asc" | "desc";
+  /** Keep the top N categories by total; the rest roll up into a final "Other".
+   * @example limit: 10 */
+  limit?: number;
+
+  /** Category field (scatter: numeric x; hexmap: US state). Not used by path types.
+   * @example x: "month" */
+  x?: Field<R>;
+  /** Value field; an array adds a measure toggle, first one active.
+   * @example y: ["revenue", "units"] */
+  y: Field<R> | readonly Field<R>[];
+  /** Splits rows into series (heatmap: the row category). bar line area heatmap.
+   * @example series: "region" */
+  series?: Field<R>;
+  /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area with `drill` (replaces `x`).
+   * @example path: ["region", "state"] */
+  path?: readonly Field<R>[];
+  /** Bubble area field (sqrt scale). scatter only.
+   * @example size: "population" */
+  size?: Field<R>;
+  /** Point identity and tooltip title. scatter only.
+   * @example name: "country" */
+  name?: Field<R>;
+  /** x values drawn as running-total bars. waterfall only.
+   * @example totals: ["Q1", "FY"] */
+  totals?: readonly string[];
+  /** Stack series instead of grouping them. bar and area only.
+   * @example stack: true */
   stack?: boolean;
+  /** Categories on the left axis. bar only.
+   * @example horizontal: true */
+  horizontal?: boolean;
 
-  /** Visible heading, also the accessible name. */
-  title?: string;
-  /** Accessible description; auto-generated when omitted. */
-  description?: string;
-
-  /** Default: true when `series` is set. */
-  legend?: boolean;
-  tooltip?: boolean;
-  grid?: boolean;
-  xAxis?: boolean;
-  yAxis?: boolean;
-  xLabel?: string;
-  yLabel?: string;
-  yFormat?: NumberFormat;
-  /** BCP 47 locale for number formatting. Default "en-US" (deterministic SSR). */
+  /** A preset for every `y`, or a preset / Intl options per field. Display only.
+   * @example format: { revenue: "currency", month: "month", margin: { style: "percent", suffix: " gm" } } */
+  format?: FormatPreset | Readonly<Partial<Record<Field<R>, FieldFormat>>>;
+  /** Display names by field: axis titles (shown only when set), tooltip, legend, table.
+   * @example titles: { revenue: "Revenue ($)" } */
+  titles?: Readonly<Partial<Record<Field<R>, string>>>;
+  /** Formatted values on marks. Default false (heatmap: true when cells are ≥ 24 px).
+   * @example labels: true */
+  labels?: boolean;
+  /** Localised UI strings with `{0}` placeholders (see strings.ts for keys).
+   * @example text: { noData: "Keine Daten", back: "Zurück" } */
+  text?: Readonly<Partial<Record<TextKey, string>>>;
+  /** BCP 47 locale for formatting. Default "en-US" (deterministic SSR).
+   * @example locale: "de-DE" */
   locale?: string;
-  /** ISO 4217 code used when `yFormat` is "currency". Default "USD". */
+  /** ISO 4217 code for the "currency" preset. Default "USD".
+   * @example currency: "EUR" */
   currency?: string;
-  /** Fixed y domain. Default: nice-extended data extent, 0-anchored for bars. */
+  /** Visible heading, also the accessible name.
+   * @example title: "Revenue by month" */
+  title?: string;
+  /** Accessible description; auto-generated when omitted.
+   * @example description: "Revenue doubled from January to December." */
+  description?: string;
+  /** Fixed value-axis domain. Not allowed with a `y` array.
+   * @example yDomain: [0, 100] */
   yDomain?: readonly [number, number];
-  /** Visually hidden data table for screen readers. Default true. */
-  table?: boolean;
-  /** Animate data updates (element only). Default true. */
+  /** Fixed x domain. scatter only.
+   * @example xDomain: [0, 1] */
+  xDomain?: readonly [number, number];
+
+  /** Hover/keyboard tooltip. Default true.
+   * @example tooltip: false */
+  tooltip?: boolean;
+  /** Legend; clicking toggles series. Default: true when `series` is set.
+   * @example legend: false */
+  legend?: boolean;
+  /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop.
+   * @example drill: true */
+  drill?: boolean;
+  /** Click/Enter/legend selects marks, others dim; Escape clears. Not with `drill`.
+   * @example select: "multi" */
+  select?: true | "multi";
+  /** Drag to zoom. line, area, scatter. Reset chip, double-click and Escape restore.
+   * @example zoom: true */
+  zoom?: boolean;
+  /** Animate updates (element only). Default true.
+   * @example animate: false */
   animate?: boolean;
 
-  /** Overrides the categorical palette, in series order. */
-  colors?: readonly string[];
-  /** Overrides theme tokens (written as CSS custom properties). */
-  theme?: Partial<Record<ThemeToken, string>>;
+  /** Palette in series order (max 8), or colours by series value.
+   * @example colors: { North: "#0b6", South: "oklch(.6 .17 30)" } */
+  colors?: readonly string[] | Readonly<Record<string, string>>;
+  /** Tone by sign of y, by a target, or a ramp by a numeric field. Not with `series`.
+   * @example colorBy: { target: 100 } */
+  colorBy?: "sign" | { readonly target: number } | Field<R>;
+  /** Theme token overrides (CSS values, allowlisted).
+   * @example theme: { accent: "#0b6", font: "'Inter', sans-serif" } */
+  theme?: Readonly<Partial<Record<ThemeToken, string>>>;
+  /** Grid lines perpendicular to the value axis. Default true.
+   * @example grid: false */
+  grid?: boolean;
+  /** Bottom axis. Default true.
+   * @example xAxis: false */
+  xAxis?: boolean;
+  /** Left axis. Default true.
+   * @example yAxis: false */
+  yAxis?: boolean;
+  /** Visually hidden data table for screen readers. Default true.
+   * @example table: false */
+  table?: boolean;
+}
+
+/** A selected mark, by raw values (never formatted text). */
+export interface Sel {
+  x?: unknown;
+  series?: unknown;
+  name?: unknown;
+}
+
+/** Interaction state outside the spec. SSR can render any of it. */
+export interface View {
+  /** Active index into a `y` array. */
+  measure?: number;
+  /** Drilled branch: one raw value per `path` level, outer first. */
+  drill?: readonly string[];
+  /** Zoom: category index slice [i0, i1] (inclusive), or scatter box [x0, x1, y0, y1]. */
+  window?: readonly [number, number] | readonly [number, number, number, number];
+  /** Series keys hidden by the legend. */
+  hidden?: readonly string[];
 }
 
 export interface RenderOptions {
   /** Pixel size of the plot box. Default 640 x 320. */
   width?: number;
   height?: number;
-  /** Series keys to omit (legend toggling). */
-  hidden?: readonly string[];
+  view?: View;
+  selected?: readonly Sel[];
+  /** CSP nonce for the shell's `<style>` (renderShell). */
+  nonce?: string;
 }
 
+/* Events dispatched by <maya-chart> (bubbles, composed; never include the spec). */
+export interface MayaSelectDetail {
+  selected: Sel[];
+  target: (Sel & { value: unknown }) | null;
+}
+export type MayaViewDetail = View;
+export interface MayaErrorDetail {
+  code: ErrorCode;
+  path: string;
+  message: string;
+}
+
+export type ErrorCode =
+  | "spec-not-object"
+  | "missing-field"
+  | "unknown-type"
+  | "data-not-array"
+  | "row-not-object"
+  | "unknown-field"
+  | "non-numeric-y"
+  | "non-numeric-field"
+  | "non-positive-value"
+  | "unknown-option"
+  | "invalid-option"
+  | "option-unsupported"
+  | "stack-unsupported"
+  | "invalid-domain"
+  | "invalid-format"
+  | "invalid-theme"
+  | "unsafe-css-value"
+  | "invalid-size"
+  | "unknown-state"
+  | "too-many-marks";
+
 /* ------------------------------------------------------------------ */
-/* Internal pipeline types (exported for tests and the element layer). */
+/* Internal pipeline types (exported for tests, marks, the element).   */
 /* ------------------------------------------------------------------ */
 
-/** Spec with every default applied. Produced by `resolve()` in validate.ts. */
+/** Spec with every default and the view's measure/drill applied. From `resolve()`. */
 export interface ResolvedSpec {
   type: ChartType;
+  /** Rows after the drill filter. */
   data: readonly Row[];
+  /** Category field ("" for path types). With `path` + drill: the current level. */
   x: string;
+  /** Active measure. */
   y: string;
+  /** Every measure (`[y]` when `spec.y` is a string). */
+  measures: string[];
+  /** Index of `y` in `measures`. */
+  measure: number;
   series: string | null;
+  /** Remaining path levels below the drilled branch ([] when no path). */
+  path: string[];
+  /** Applied drill values, outer first ([] at the root). */
+  drilled: string[];
+  size: string | null;
+  name: string | null;
+  totals: string[];
   stack: boolean;
+  horizontal: boolean;
+  aggregate: Aggregate;
+  sort: "asc" | "desc" | null;
+  limit: number | null;
+  /** Per-field format; a bare-string `spec.format` is expanded to every measure. */
+  format: ReadonlyMap<string, FieldFormat>;
+  titles: ReadonlyMap<string, string>;
+  /** null = the type's default. */
+  labels: boolean | null;
+  text: Partial<Record<TextKey, string>>;
   title: string | null;
   description: string | null;
   legend: boolean;
   tooltip: boolean;
+  drill: boolean;
+  select: false | true | "multi";
+  zoom: boolean;
   grid: boolean;
   xAxis: boolean;
   yAxis: boolean;
-  xLabel: string | null;
-  yLabel: string | null;
-  yFormat: NumberFormat;
   locale: string;
   currency: string;
   yDomain: readonly [number, number] | null;
+  xDomain: readonly [number, number] | null;
   table: boolean;
   animate: boolean;
-  colors: readonly string[] | null;
+  colors: readonly string[] | ReadonlyMap<string, string> | null;
+  colorBy: "sign" | { readonly target: number } | string | null;
   theme: Partial<Record<ThemeToken, string>>;
 }
 
@@ -118,11 +321,15 @@ export interface Cell {
 }
 
 export interface Shaped {
-  /** Category labels in first-appearance order. */
+  /** Category labels (String of the raw value; `OTHER` for the limit roll-up). */
   categories: string[];
+  /** Raw category values, parallel to `categories` (event payloads, keys). */
+  raw: unknown[];
+  /** Waterfall: true where the category is in `spec.totals`. Parallel to `categories`. */
+  totals: boolean[];
   /** Series keys in first-appearance order ([""] when there is no series field). */
   series: string[];
-  /** Visible series only (excludes `RenderOptions.hidden`), as indexes into `series`. */
+  /** Visible series only (excludes `view.hidden`), as indexes into `series`. */
   visible: number[];
   /** Cells for visible series, category-major order. */
   cells: Cell[];
@@ -145,6 +352,9 @@ export interface LinearScale {
   range: readonly [number, number];
   of(value: number): number;
 }
+
+/** Narrow with `"bandwidth" in s`. */
+export type Scale = BandScale | LinearScale;
 
 export interface Ticks {
   /** Nice, step-aligned domain covering the input. */
@@ -169,16 +379,121 @@ export interface Layout {
   xLabelEvery: number;
 }
 
+/** One screen axis a mark asks for. `field` names the title/format source. */
+export type Axis =
+  | { kind: "band"; field: string; domain: readonly string[] }
+  | { kind: "linear"; field: string; domain: readonly [number, number] }
+  | null;
+
+export type Fail = (code: ErrorCode, path: string, headline: string, ...details: string[]) => never;
+
+/** Where `ctx.label` places text relative to its anchor point. */
+export type LabelPlace = "center" | "above" | "below" | "start" | "end";
+
+/** Everything a mark may use. Closures are built in render.ts. */
+export interface MarkCtx {
+  spec: ResolvedSpec;
+  shaped: Shaped;
+  width: number;
+  height: number;
+  plot: Box;
+  /** Scale of the bottom (horizontal) axis; null when the mark has none. */
+  x: Scale | null;
+  /** Scale of the left (vertical) axis; null when the mark has none. */
+  y: Scale | null;
+  /** Display text for a raw value of `field` (step = tick step for number decimals). */
+  fmt(field: string, v: unknown, step?: number): string;
+  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. */
+  label(x: number, y: number, text: string, place: LabelPlace): boolean;
+  /** colorBy tone for a value: "good" | "bad", or null when colorBy is not sign/target. */
+  tone(v: number): "good" | "bad" | null;
+  /** Shared aggregation (same rules as shape: nulls skipped, count = non-null). */
+  agg(kind: Aggregate): (values: readonly (number | null | undefined)[]) => number | null;
+  fail: Fail;
+  t(key: TextKey, ...args: (string | number)[]): string;
+}
+
+/** Markup for each SVG group a mark fills. Absent groups render empty. */
+export interface MarkOut {
+  marks: string;
+  hits: string;
+  labels?: string;
+  legend?: string;
+  grid?: string;
+  cross?: string;
+}
+
+/** A chart type. Core marks live in render.ts's CORE map; modules `register()` theirs. */
+export interface Mark {
+  /** Noun for the auto description ("Bar" -> "Bar chart of …"). */
+  noun: string;
+  /** Bottom and left axes. Absent: no axes (path types). */
+  axes?(spec: ResolvedSpec, shaped: Shaped): [bottom: Axis, left: Axis];
+  /** Extra validation after the core checks (e.g. hexmap `unknown-state`). */
+  check?(spec: ChartSpec, fail: Fail): void;
+  draw(ctx: MarkCtx): MarkOut;
+}
+
 /** Pieces the shell and the element assemble. */
 export interface Parts {
   /** `<svg>` markup without an embedded `<style>`. */
   svg: string;
   /** Legend HTML (`""` when hidden). */
   legend: string;
+  /** Measure toggle HTML, a `.maya-ctl` radiogroup (`""` without a `y` array). */
+  controls: string;
+  /** Breadcrumb HTML, `.maya-crumbs` (`""` when not drilled). */
+  crumbs: string;
   /** Hidden data table HTML (`""` when disabled). */
   table: string;
   /** Visible title HTML (`""` when no title). */
   title: string;
   /** Inline style for overrides from `spec.colors` / `spec.theme` (`""` when none). */
   style: string;
+  /** The same overrides as [custom property, value] pairs (applied via CSSOM). */
+  vars: [string, string][];
+  /** Non-fatal notes for the developer (never rendered). */
+  warnings: string[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Element interaction contracts (src/element/{measure,drill,select,zoom}.ts). */
+/* ------------------------------------------------------------------ */
+
+/** Interaction state the element owns; rendered through RenderOptions.view/selected. */
+export interface State {
+  view: View;
+  selected: readonly Sel[];
+}
+
+/** Sent to every reducer when the element's spec object changes (incl. `el.data =`). */
+export interface SpecEvent {
+  type: "spec";
+  prev: ChartSpec | undefined;
+  next: ChartSpec;
+}
+
+/** What <maya-chart> hands each interaction module's `mount()`. */
+export interface Host {
+  root: ShadowRoot;
+  el: HTMLElement;
+  spec(): ChartSpec | undefined;
+  state(): State;
+  /** User-initiated transition: re-render, then dispatch maya-view / maya-select if changed. */
+  commit(next: State, target?: (Sel & { value: unknown }) | null): void;
+  /** Polite live-region announcement (debounced 300 ms). */
+  announce(text: string): void;
+}
+
+/** Returned by `mount()`. Keyboard handlers return true when they handled the key. */
+export interface Handlers {
+  /** Abort an in-progress gesture (zoom brush). Escape priority 2. */
+  cancel?(): boolean;
+  /** Escape at this module's priority: select 3, zoom window 4, drill pop 5. */
+  escape?(): boolean;
+  /** Enter on the keyboard-active mark: drill first, then select. */
+  enter?(mark: Element): boolean;
+  /** After every paint (re-apply data-selected, restore focus). */
+  painted?(): void;
+  off(): void;
 }

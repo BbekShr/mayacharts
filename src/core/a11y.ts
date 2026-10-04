@@ -19,7 +19,7 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: (v: number) =>
 
 export function dataTable(spec: ResolvedSpec, shaped: Shaped, fmt: (v: number) => string): string {
   const keys = spec.series === null ? [spec.y] : shaped.visible.map((j) => shaped.series[j]!);
-  let t = `<table class="maya-sr"><caption>${esc(titleText(spec))}</caption><thead><tr><th>${esc(spec.xLabel ?? spec.x)}</th>`;
+  let t = `<table class="maya-sr"><caption>${esc(titleText(spec))}</caption><thead><tr><th>${esc(spec.titles.get(spec.x) ?? spec.x)}</th>`;
   for (const k of keys) t += `<th>${esc(k)}</th>`;
   t += "</tr></thead><tbody>";
   const by = new Map(shaped.cells.map((c) => [c.ci + "," + c.si, c.value]));
