@@ -18,10 +18,11 @@
         engine.
       </p>
       <nav>
-        <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
-        <a href="https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md">NON-FEATURES</a>
-        <a href="./errors.html">Errors</a>
+        <a href="./index.html" aria-current="page">Home</a>
         <a href="./gallery.html">Gallery</a>
+        <a href="./errors.html">Errors</a>
+        <a href="https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md">Non-features</a>
+        <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
         <button id="theme" type="button">Theme: auto</button>
       </nav>
     </header>
@@ -30,18 +31,27 @@
         <h2>Simple</h2>
         <p>One series, compact number format.</p>
         <maya-chart id="simple" style="height: 300px"></maya-chart>
+        <div class="controls">
+          <button type="button" data-reroll="simple">Re-roll data</button>
+        </div>
         <pre><code id="simple-code"></code></pre>
       </section>
       <section>
         <h2>Grouped</h2>
         <p>Add <code>series</code> to split rows into grouped bars.</p>
         <maya-chart id="grouped" style="height: 300px"></maya-chart>
+        <div class="controls">
+          <button type="button" data-reroll="grouped">Re-roll data</button>
+        </div>
         <pre><code id="grouped-code"></code></pre>
       </section>
       <section>
         <h2>Stacked</h2>
         <p>Set <code>stack: true</code>. Negative values stack below zero.</p>
         <maya-chart id="stacked" style="height: 300px"></maya-chart>
+        <div class="controls">
+          <button type="button" data-reroll="stacked">Re-roll data</button>
+        </div>
         <pre><code id="stacked-code"></code></pre>
       </section>
       <section>
@@ -51,7 +61,7 @@
           enter and exit.
         </p>
         <div class="controls">
-          <button id="update" type="button">Update data</button>
+          <button id="update" type="button">Re-roll data</button>
           <button id="toggle-series" type="button">Toggle series</button>
         </div>
         <maya-chart id="live" style="height: 300px"></maya-chart>
@@ -75,6 +85,9 @@
             }
           </script>
         </maya-chart>
+        <div class="controls">
+          <button type="button" data-reroll="html">Re-roll data</button>
+        </div>
         <pre><code>&lt;maya-chart style="height:240px"&gt;
   &lt;script type="application/json"&gt;
     {"type":"bar","x":"fruit","y":"kg","data":[{"fruit":"Apples","kg":42},{"fruit":"Pears","kg":28}]}
