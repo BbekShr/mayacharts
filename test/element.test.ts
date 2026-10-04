@@ -262,3 +262,21 @@ describe("patch()", () => {
     expect(gone.hasAttribute("data-key")).toBe(false);
   });
 });
+
+describe("patch ghosts", () => {
+  it("leaves no unnamed groups after an instant re-render", async () => {
+    const { patch } = await import("../src/element/animate.ts");
+    const box = document.createElement("div");
+    const svg = (n: number) =>
+      `<svg><g data-maya="axis-y">${"<text>a</text>".repeat(n)}</g><g data-maya="marks"><rect data-key="k" x="0" y="0" width="1" height="${n}"/></g><g data-maya="labels"></g></svg>`;
+    patch(box, svg(1), false);
+    patch(box, svg(2), true, { instant: true });
+    patch(box, svg(3), true, { instant: true });
+    const unnamed = [...box.querySelectorAll("svg > g")].filter(
+      (g) => !g.hasAttribute("data-maya"),
+    );
+    expect(unnamed).toHaveLength(0);
+    expect(box.querySelectorAll("[data-maya=axis-y]")).toHaveLength(1);
+    expect(box.querySelectorAll("[data-maya=axis-y] text")).toHaveLength(3);
+  });
+});

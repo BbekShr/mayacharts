@@ -159,6 +159,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   const pool = new Map([...o.children].filter((c) => c !== om).map((c) => [id(c), c]));
   const out: Element[] = [];
   const fadeIn: Element[] = [];
+  const ghosts: Element[] = [];
   const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
   for (const c of [...w.children]) {
     if (c === wm) {
@@ -169,17 +170,16 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
     else {
-      if (p && fadeable(p)) {
-        ghost(p);
-        out.push(p);
-      }
+      if (p && fadeable(p)) (ghosts.push(p), out.push(p));
       out.push(c);
       if (p && fadeable(c)) fadeIn.push(c);
     }
   }
-  for (const p of pool.values()) if (fadeable(p)) (ghost(p), out.push(p));
+  for (const p of pool.values()) if (fadeable(p)) (ghosts.push(p), out.push(p));
   o.replaceChildren(...out);
-  // Animations started on template children stay pending forever in WebKit and Firefox.
+  // Start every fade after the swap: animations on template children stay pending forever in
+  // WebKit and Firefox, and a ghost removed synchronously would be re-inserted by the swap.
+  for (const g of ghosts) ghost(g);
   for (const c of fadeIn) fade(c, false, undefined, UI);
 }
 
