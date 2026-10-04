@@ -69,13 +69,15 @@ export const KEYS = [
   ...Object.keys(S),
 ];
 const CART = ["bar", "line", "area"];
+/** Types whose x can come from path with drill (the current level is the category). */
+const PATHX = [...CART, "dumbbell"];
 const PATH = ["treemap", "sunburst", "sankey"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter path:${CPA},${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell sort:${CPA},heatmap,dumbbell limit:${CPA},heatmap,dumbbell stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,treemap,sunburst,hexmap zoom:line,area,scatter`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell sort:${CPA},heatmap,dumbbell limit:${CPA},heatmap,dumbbell stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,treemap,sunburst,hexmap zoom:line,area,scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -344,7 +346,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (
     s[need] === undefined &&
     t !== "kpi" &&
-    !(need === "x" && CART.includes(t) && s.path !== undefined)
+    !(need === "x" && PATHX.includes(t) && s.path !== undefined)
   )
     missing(need);
   if (s.y === undefined) missing("y");
@@ -465,7 +467,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         `spec.${k} is not supported with spec.type = "${t}".`,
         `spec.${k} works with: ${ONLY[k]!.join(", ")}.`,
       );
-  const cart = CART.includes(t);
+  const cart = PATHX.includes(t);
   const pairs: [boolean, string, string, string][] = [
     [
       colorBy !== undefined && s.series !== undefined && t !== "dumbbell",
@@ -683,7 +685,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     data: drilled.length
       ? spec.data.filter((r) => drilled.every((d, i) => String(r[full[i]!]) === d))
       : spec.data,
-    x: spec.x ?? (CART.includes(spec.type) ? (path[0] ?? "") : ""),
+    x: spec.x ?? (PATHX.includes(spec.type) ? (path[0] ?? "") : ""),
     y: measures[measure]!,
     measures,
     measure,

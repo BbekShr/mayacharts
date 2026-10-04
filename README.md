@@ -63,18 +63,18 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Encoding
 
-| Field        | Type             | Applies to                                        | Meaning                                                                  |
-| ------------ | ---------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
-| `x`          | field            | all but path types                                | Category; scatter numeric x; hexmap state                                |
-| `y`          | field or field[] | all                                               | Value; array adds measure toggle                                         |
-| `series`     | field            | bar line area scatter heatmap dumbbell            | Split into series; heatmap row category; dumbbell exactly two (from, to) |
-| `path`       | field[]          | treemap sunburst sankey; bar/line/area with drill | Hierarchy outer to inner; replaces `x`                                   |
-| `size`       | field            | scatter                                           | Bubble area (sqrt scale)                                                 |
-| `name`       | field            | scatter                                           | Point identity and tooltip title                                         |
-| `totals`     | string[]         | waterfall                                         | x values drawn as running-total bars                                     |
-| `stack`      | boolean          | bar area                                          | Stack series instead of grouping                                         |
-| `horizontal` | boolean          | bar dumbbell                                      | Categories on the left axis                                              |
-| `y2`         | field            | bar                                               | Second value field as a line on right axis (vertical bars only)          |
+| Field        | Type             | Applies to                                                 | Meaning                                                                  |
+| ------------ | ---------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `x`          | field            | all but path types                                         | Category; scatter numeric x; hexmap state                                |
+| `y`          | field or field[] | all                                                        | Value; array adds measure toggle                                         |
+| `series`     | field            | bar line area scatter heatmap dumbbell                     | Split into series; heatmap row category; dumbbell exactly two (from, to) |
+| `path`       | field[]          | treemap sunburst sankey; bar/line/area/dumbbell with drill | Hierarchy outer to inner; replaces `x`                                   |
+| `size`       | field            | scatter                                                    | Bubble area (sqrt scale)                                                 |
+| `name`       | field            | scatter                                                    | Point identity and tooltip title                                         |
+| `totals`     | string[]         | waterfall                                                  | x values drawn as running-total bars                                     |
+| `stack`      | boolean          | bar area                                                   | Stack series instead of grouping                                         |
+| `horizontal` | boolean          | bar dumbbell                                               | Categories on the left axis                                              |
+| `y2`         | field            | bar                                                        | Second value field as a line on right axis (vertical bars only)          |
 
 ### Formatting
 
@@ -93,14 +93,14 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Interaction
 
-| Field     | Type           | Applies to                                         | Default                   | Meaning                                                                  |
-| --------- | -------------- | -------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------ |
-| `tooltip` | boolean        | all                                                | true                      | Hover/keyboard tooltip                                                   |
-| `legend`  | boolean        | all                                                | true when `series` is set | Legend; clicking toggles series                                          |
-| `drill`   | boolean        | treemap sunburst sankey; bar line area with `path` | false                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop |
-| `select`  | true / "multi" | all but sankey                                     | off                       | Click/Enter/legend selects marks; Escape clears. Not with drill          |
-| `zoom`    | boolean        | line area scatter                                  | false                     | Drag to zoom; Reset, double-click, Escape restore                        |
-| `animate` | boolean        | all (element only)                                 | true                      | Animate updates                                                          |
+| Field     | Type           | Applies to                                                  | Default                   | Meaning                                                                  |
+| --------- | -------------- | ----------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------ |
+| `tooltip` | boolean        | all                                                         | true                      | Hover/keyboard tooltip                                                   |
+| `legend`  | boolean        | all                                                         | true when `series` is set | Legend; clicking toggles series                                          |
+| `drill`   | boolean        | treemap sunburst sankey; bar line area dumbbell with `path` | false                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop |
+| `select`  | true / "multi" | all but sankey                                              | off                       | Click/Enter/legend selects marks; Escape clears. Not with drill          |
+| `zoom`    | boolean        | line area scatter                                           | false                     | Drag to zoom; Reset, double-click, Escape restore                        |
+| `animate` | boolean        | all (element only)                                          | true                      | Animate updates                                                          |
 
 ### Style
 
