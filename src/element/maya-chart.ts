@@ -38,6 +38,7 @@ export class MayaChart extends HTMLElement {
   #size = [0, 0];
   #raf = 0;
   #ro: ResizeObserver | undefined;
+  #resized = false;
   #off: (() => void) | undefined;
   #tip: Tooltip | undefined;
   #origin: Box | undefined;
@@ -156,6 +157,7 @@ export class MayaChart extends HTMLElement {
         Math.abs(box.clientHeight - this.#size[1]!) > 1
       ) {
         this.#ix?.zoom.cancel?.(); // a brush's pixel geometry is stale after a resize
+        this.#resized = true;
         this.#schedule();
       }
     });
@@ -344,7 +346,12 @@ export class MayaChart extends HTMLElement {
     for (const k of this.#vars)
       if (!parts.vars.some(([n]) => n === k)) maya.style.removeProperty(k);
     this.#vars = new Set(parts.vars.map(([k]) => k));
-    const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Nothing animates on resize: geometry must track the container immediately.
+    const still =
+      this.#resized ||
+      spec.animate === false ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.#resized = false;
     patch(box, parts.svg, this.#drawn && !still, {
       origin: this.#origin,
       after: () => this.#tip?.refresh(),
