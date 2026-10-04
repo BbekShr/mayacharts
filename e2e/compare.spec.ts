@@ -212,7 +212,7 @@ async function ssr(lib: Lib, chart: ChartName): Promise<Record<string, unknown>>
       noDom,
       svg: false,
       bytes: 0,
-      note: `Chart.js has no SVG output (instance: ${c ? "created" : "none"})`,
+      note: `Chart.js has no SVG output${c ? "" : " and made no chart without a canvas"}.`,
     };
   } catch (e) {
     return {
@@ -256,7 +256,7 @@ test("compare libraries under one CSP", async ({ browser }: { browser: Browser }
         l.violations[0] ?? l.errors[0] ?? (probe.error || (l.done.ok ? "" : (l.done.error ?? "")));
       row["rendered"] = painted;
       row["renders"] = painted && !l.violations.length && !l.errors.length;
-      row["firstViolation"] = first;
+      row["firstViolation"] = first.replace(/\|$/, "").trim();
       await l.page.waitForTimeout(300);
 
       if (!painted) {

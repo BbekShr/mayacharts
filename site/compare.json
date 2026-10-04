@@ -18,7 +18,7 @@
       "library": "mayacharts",
       "chart": "bar",
       "supported": true,
-      "gzipBytes": 37657,
+      "gzipBytes": 38016,
       "ssr": {
         "noDom": true,
         "svg": true,
@@ -45,13 +45,13 @@
           "right": 0.27703993055555554
         }
       },
-      "ttfpMs": 34.4
+      "ttfpMs": 31.6
     },
     {
       "library": "mayacharts",
       "chart": "line",
       "supported": true,
-      "gzipBytes": 37657,
+      "gzipBytes": 38016,
       "ssr": {
         "noDom": true,
         "svg": true,
@@ -78,13 +78,13 @@
           "right": 0.04559461805555556
         }
       },
-      "ttfpMs": 27.7
+      "ttfpMs": 34.9
     },
     {
       "library": "mayacharts",
       "chart": "scatter",
       "supported": true,
-      "gzipBytes": 37657,
+      "gzipBytes": 38016,
       "ssr": {
         "noDom": true,
         "svg": false,
@@ -93,7 +93,7 @@
       },
       "rendered": false,
       "renders": false,
-      "firstViolation": "",
+      "firstViolation": "mayacharts: 9929 marks exceed the limit of 5000.",
       "axeSeriousCritical": null,
       "keyboard": null,
       "rtl": null,
@@ -104,7 +104,7 @@
       "library": "mayacharts",
       "chart": "heatmap",
       "supported": true,
-      "gzipBytes": 37657,
+      "gzipBytes": 38016,
       "ssr": {
         "noDom": true,
         "svg": true,
@@ -131,7 +131,7 @@
           "right": 0.41423611111111114
         }
       },
-      "ttfpMs": 25.6
+      "ttfpMs": 32.1
     },
     {
       "library": "chartjs",
@@ -142,7 +142,7 @@
         "noDom": true,
         "svg": false,
         "bytes": 0,
-        "note": "Chart.js has no SVG output (instance: created)"
+        "note": "Chart.js has no SVG output."
       },
       "rendered": true,
       "renders": true,
@@ -165,7 +165,7 @@
           "right": 0.2879557291666667
         }
       },
-      "ttfpMs": 26.8
+      "ttfpMs": 28.9
     },
     {
       "library": "chartjs",
@@ -176,7 +176,7 @@
         "noDom": true,
         "svg": false,
         "bytes": 0,
-        "note": "Chart.js has no SVG output (instance: none)"
+        "note": "Chart.js has no SVG output and made no chart without a canvas."
       },
       "rendered": true,
       "renders": true,
@@ -199,7 +199,7 @@
           "right": 0.040125868055555555
         }
       },
-      "ttfpMs": 27.5
+      "ttfpMs": 31.1
     },
     {
       "library": "chartjs",
@@ -210,7 +210,7 @@
         "noDom": true,
         "svg": false,
         "bytes": 0,
-        "note": "Chart.js has no SVG output (instance: none)"
+        "note": "Chart.js has no SVG output and made no chart without a canvas."
       },
       "rendered": true,
       "renders": true,
@@ -233,7 +233,7 @@
           "right": 0.2789279513888889
         }
       },
-      "ttfpMs": 131.1
+      "ttfpMs": 150.3
     },
     {
       "library": "chartjs",
@@ -244,7 +244,7 @@
         "noDom": true,
         "svg": false,
         "bytes": 0,
-        "note": "Chart.js has no SVG output (instance: none)"
+        "note": "Chart.js has no SVG output and made no chart without a canvas."
       },
       "note": "no heatmap type in Chart.js core"
     },
@@ -260,7 +260,7 @@
       },
       "rendered": false,
       "renders": false,
-      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|",
+      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
       "axeSeriousCritical": null,
       "keyboard": null,
       "rtl": null,
@@ -279,7 +279,7 @@
       },
       "rendered": false,
       "renders": false,
-      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|",
+      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
       "axeSeriousCritical": null,
       "keyboard": null,
       "rtl": null,
@@ -298,7 +298,7 @@
       },
       "rendered": false,
       "renders": false,
-      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|",
+      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
       "axeSeriousCritical": null,
       "keyboard": null,
       "rtl": null,
@@ -317,7 +317,7 @@
       },
       "rendered": false,
       "renders": false,
-      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|",
+      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
       "axeSeriousCritical": null,
       "keyboard": null,
       "rtl": null,

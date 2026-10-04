@@ -16,6 +16,7 @@ export function mayaSpecs(data) {
       x: "t",
       y: "value",
       series: "series",
+      xType: "time",
       format: { t: "month" },
     },
     scatter: { type: "scatter", data: data.scatter, x: "x", y: "y" },
