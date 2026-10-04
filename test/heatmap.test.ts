@@ -63,4 +63,10 @@ describe("heatmap", () => {
       ]
     `);
   });
+  it("marks labels on dark ramp steps with data-dark and no halo", () => {
+    const svg = render(spec, { width: 800, height: 400 });
+    const t = svg.match(/<text [^>]*data-in[^>]*>/g) ?? [];
+    expect(t.length).toBe(11);
+    expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(5); // q >= 6 of 11 cells
+  });
 });

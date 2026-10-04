@@ -110,3 +110,57 @@ describe("sunburst", () => {
     expect(at(tags(s, "path")[0]!, "d")).toContain("A");
   });
 });
+
+describe("drill draws one level", () => {
+  const many = Array.from({ length: 4 }, (_, g) =>
+    Array.from({ length: 30 }, (_, n) => ({ g: `G${g}`, n: `n${n}`, v: 10 + n })),
+  ).flat();
+  for (const type of ["treemap", "sunburst"] as const) {
+    const tag = type === "treemap" ? "rect" : "path";
+    const spec: ChartSpec = {
+      type,
+      path: ["g", "n"],
+      y: "v",
+      data: many,
+      drill: true,
+      labels: true,
+    };
+    it(`${type}: root shows only the top level, a drilled view its children`, () => {
+      const root = tags(renderParts(spec).svg, tag);
+      expect(root.map((t) => at(t, "data-key"))).toEqual(
+        ["G0", "G1", "G2", "G3"].map((g) => `h~${g}`),
+      );
+      expect(root.every((t) => at(t, "data-depth") === "1")).toBe(true);
+      const inner = tags(renderParts(spec, { view: { drill: ["G1"] } }).svg, tag);
+      expect(inner).toHaveLength(30);
+      expect(inner.every((t) => at(t, "data-key").startsWith("h~G1~"))).toBe(true);
+    });
+  }
+  it("treemap top level carries its label", () => {
+    const spec: ChartSpec = {
+      type: "treemap",
+      path: ["g", "n"],
+      y: "v",
+      data: many,
+      drill: true,
+      labels: true,
+    };
+    expect(renderParts(spec).svg).toContain(">G0<");
+  });
+  it("without drill, tiny leaves are skipped", () => {
+    const rows = [
+      { g: "A", n: "big", v: 1e6 },
+      ...Array.from({ length: 50 }, (_, i) => ({ g: "A", n: `s${i}`, v: 1 })),
+    ];
+    const t = tags(
+      renderParts({ type: "treemap", path: ["g", "n"], y: "v", data: rows }).svg,
+      "rect",
+    );
+    expect(t).toHaveLength(1);
+    const p = tags(
+      renderParts({ type: "sunburst", path: ["g", "n"], y: "v", data: rows }).svg,
+      "path",
+    );
+    expect(p.map((x) => at(x, "data-key"))).toEqual(["h~A", "h~A~big"]);
+  });
+});
