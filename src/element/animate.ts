@@ -147,6 +147,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   const id = (c: Element) => c.getAttribute("data-maya") ?? c.localName;
   const pool = new Map([...o.children].filter((c) => c !== om).map((c) => [id(c), c]));
   const out: Element[] = [];
+  const fadeIn: Element[] = [];
   const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
   for (const c of [...w.children]) {
     if (c === wm) {
@@ -162,11 +163,13 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
         out.push(p);
       }
       out.push(c);
-      if (p && fadeable(c)) fade(c, false, undefined, UI);
+      if (p && fadeable(c)) fadeIn.push(c);
     }
   }
   for (const p of pool.values()) if (fadeable(p)) (ghost(p), out.push(p));
   o.replaceChildren(...out);
+  // Animations started on template children stay pending forever in WebKit and Firefox.
+  for (const c of fadeIn) fade(c, false, undefined, UI);
 }
 
 /** An outgoing group: unaddressable while it fades, then removed. */

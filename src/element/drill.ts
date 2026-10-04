@@ -121,9 +121,13 @@ export const mount = (host: Host): Handlers => {
                 (want as { value: string }).value,
             );
       want = undefined;
-      if (!m) return;
-      if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
-      (m as unknown as HTMLElement).focus?.({ preventScroll: true });
+      if (m) {
+        if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
+        (m as unknown as HTMLElement).focus?.({ preventScroll: true });
+      }
+      // Keyboard must keep working after a pointer drill: fall back to the chart itself.
+      if (!host.root.activeElement || !host.root.contains(host.root.activeElement))
+        host.root.querySelector<HTMLElement>("[data-focus=svg]")?.focus({ preventScroll: true });
     },
     off: () => host.root.removeEventListener("click", click),
   };

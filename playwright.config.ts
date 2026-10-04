@@ -9,16 +9,26 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
   use: { baseURL: "http://localhost:4173/mayacharts/" },
-  webServer: {
-    command:
-      "npm run site:build && npx vite preview --config site/vite.config.ts --port 4173 --strictPort",
-    url: "http://localhost:4173/mayacharts/",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  // E2E_NO_SERVER=1: for specs that never navigate to the site (global, csp).
+  ...(process.env.E2E_NO_SERVER
+    ? {}
+    : {
+        webServer: {
+          command:
+            "npm run site:build && npx vite preview --config site/vite.config.ts --port 4173 --strictPort",
+          url: "http://localhost:4173/mayacharts/",
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
+      }),
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    {
+      name: "mobile-webkit",
+      use: { ...devices["iPhone 13"] },
+      testMatch: ["**/interactions.spec.ts"],
+    },
   ],
 });

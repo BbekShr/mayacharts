@@ -430,7 +430,7 @@ export function shellInner(parts: Parts, css: string, nonce?: string): string {
   const st = parts.style ? ` style="${esc(parts.style)}"` : "";
   const n = nonce ? ` nonce="${esc(nonce)}"` : "";
   return (
-    `<style${n}>${css}</style><div class="maya"${st}>${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
+    `${css ? `<style${n}>${css}</style>` : ""}<div class="maya"${st}>${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
     `<div class="maya-box">${parts.svg}</div>${parts.table}` +
     `<div class="maya-sr" data-maya="live" aria-live="polite"></div>` +
     `<div class="maya-probe" data-maya="probe"></div><div class="maya-tip" popover="manual" role="tooltip"></div></div>`

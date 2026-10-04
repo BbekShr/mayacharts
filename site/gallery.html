@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mayaCharts gallery</title>
+    <meta
+      name="description"
+      content="Every mayaCharts chart type with the exact spec that draws it."
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <header class="site">
+      <h1>Gallery</h1>
+      <p class="tagline">Fourteen charts, each drawn from the spec printed beneath it.</p>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
+        <button id="theme" type="button">Theme: auto</button>
+      </nav>
+    </header>
+    <main>
+      <p id="sample-note">
+        All data on this page is synthetic sample data. Code blocks show the first three rows only.
+      </p>
+      <section>
+        <h2>Monthly sales and units</h2>
+        <p>
+          Switch the measure with the toggle above the chart, drag across the plot to zoom, or
+          re-roll the data to watch the lines move.
+        </p>
+        <div class="controls"><button id="live-btn" type="button">Re-roll data</button></div>
+        <maya-chart id="monthly-line" style="height: 320px"></maya-chart>
+        <pre><code id="monthly-line-code"></code></pre>
+      </section>
+      <section>
+        <h2>Cumulative sales by region</h2>
+        <p>
+          Running totals show which region pulls ahead and when. Drag to zoom into a stretch of
+          months.
+        </p>
+        <maya-chart id="pace-lines" style="height: 320px"></maya-chart>
+        <pre><code id="pace-lines-code"></code></pre>
+      </section>
+      <section>
+        <h2>Sales by product family</h2>
+        <p>Stacked areas show the mix and the total together.</p>
+        <maya-chart id="stacked-area" style="height: 320px"></maya-chart>
+        <pre><code id="stacked-area-code"></code></pre>
+      </section>
+      <section>
+        <h2>Month-over-month change in sales</h2>
+        <p>Each bar is the change from the month before, between a start and an end total.</p>
+        <maya-chart id="waterfall" style="height: 320px"></maya-chart>
+        <pre><code id="waterfall-code"></code></pre>
+      </section>
+      <section>
+        <h2>Margin against the national average</h2>
+        <p>Bars colored by sign: the 8 best and 7 weakest states.</p>
+        <maya-chart id="diverging" style="height: 320px"></maya-chart>
+        <pre><code id="diverging-code"></code></pre>
+      </section>
+      <section>
+        <h2>Top ten states by sales</h2>
+        <p>Sorted, trimmed to ten and labeled.</p>
+        <maya-chart id="league" style="height: 320px"></maya-chart>
+        <pre><code id="league-code"></code></pre>
+      </section>
+      <section>
+        <h2>Price against margin by item</h2>
+        <p>Bubble area is units sold. Click a bubble to select it, Escape clears.</p>
+        <maya-chart id="bubble" style="height: 320px"></maya-chart>
+        <pre><code id="bubble-code"></code></pre>
+      </section>
+      <section>
+        <h2>Sales against units by state</h2>
+        <p>Color ramps with average margin. Drag to zoom, double-click to reset.</p>
+        <maya-chart id="scatter" style="height: 320px"></maya-chart>
+        <pre><code id="scatter-code"></code></pre>
+      </section>
+      <section>
+        <h2>Sales by region and product family</h2>
+        <p>Darker cells are larger. Use the toggle to switch to units.</p>
+        <maya-chart id="heatmap" style="height: 320px"></maya-chart>
+        <pre><code id="heatmap-code"></code></pre>
+      </section>
+      <section>
+        <h2>Orders by week and weekday</h2>
+        <p>A year of daily orders. Weekends run quieter.</p>
+        <maya-chart id="calendar" style="height: 320px"></maya-chart>
+        <pre><code id="calendar-code"></code></pre>
+      </section>
+      <section>
+        <h2>Sales by region, family and item</h2>
+        <p>Click a tile to drill in. Escape or the breadcrumb goes back.</p>
+        <maya-chart id="treemap" style="height: 320px"></maya-chart>
+        <pre><code id="treemap-code"></code></pre>
+      </section>
+      <section>
+        <h2>The same hierarchy as rings</h2>
+        <p>Click a segment to drill in.</p>
+        <maya-chart id="sunburst" style="height: 320px"></maya-chart>
+        <pre><code id="sunburst-code"></code></pre>
+      </section>
+      <section>
+        <h2>Where sales flow</h2>
+        <p>Region to family to the eight best-selling items.</p>
+        <maya-chart id="sankey" style="height: 320px"></maya-chart>
+        <pre><code id="sankey-code"></code></pre>
+      </section>
+      <section>
+        <h2>Sales by state</h2>
+        <p>One hexagon per state, shaded by sales.</p>
+        <maya-chart id="hexmap" style="height: 320px"></maya-chart>
+        <pre><code id="hexmap-code"></code></pre>
+      </section>
+    </main>
+    <script type="module" src="./gallery.ts"></script>
+  </body>
+</html>

@@ -40,6 +40,7 @@ export default defineConfig({
         index: `${here}index.html`,
         errors: `${here}errors.html`,
         ssr: `${here}ssr.html`,
+        gallery: `${here}gallery.html`,
       },
     },
   },
