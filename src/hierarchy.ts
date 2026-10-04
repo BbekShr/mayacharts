@@ -92,7 +92,7 @@ function squarify(nodes: Node[], x: number, y: number, w: number, h: number) {
 }
 
 /** Validate values, build the tree, and compute attributes shared by both marks. */
-function setup(ctx: MarkCtx) {
+function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null) {
   const { spec } = ctx;
   spec.data.forEach((row, i) => {
     const v = row[spec.y];
@@ -108,12 +108,12 @@ function setup(ctx: MarkCtx) {
   const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
   const root = tree(spec.data, spec.path, spec.y, ctx.agg(spec.aggregate as Aggregate), cb);
   // Drilling: draw only the next level; a click pushes it, so each click goes one level deeper.
-  if (spec.drill) for (const n of root.children) n.children = [];
+  if (flat) for (const n of root.children) n.children = [];
   let c = 0;
   const tops = root.children;
   const attrs = (n: Node) => {
     const parts = [...spec.drilled, ...n.parts];
-    const s = tops.findIndex((t) => t.name === n.parts[0]);
+    const s = hue ?? tops.findIndex((t) => t.name === n.parts[0]);
     return {
       "data-maya": "mark",
       "data-key": key("h", ...parts),
@@ -137,7 +137,7 @@ const treemap: Mark = {
   noun: "Treemap",
   draw(ctx): MarkOut {
     const { plot, spec } = ctx;
-    const { root, attrs } = setup(ctx);
+    const { root, attrs } = setup(ctx, !!spec.drill, spec.hue); // a drilled branch keeps its colour
     let marks = "";
     let hits = "";
     const walk = (n: Node, x: number, y: number, w: number, h: number): void => {
@@ -157,7 +157,7 @@ const treemap: Mark = {
           a["data-f"],
           `${n.name} · ${a["data-f"]}`,
         ];
-        if (!spec.labels || bh < 16) return;
+        if (spec.labels === false || bh < 16) return; // names on unless turned off
         if (bh >= 34 && text(n.name) <= bw && text(f) <= bw)
           ctx.label(lx, ly - 8, n.name, "center") && ctx.label(lx, ly + 8, f, "center");
         else if (text(one) <= bw) ctx.label(lx, ly, one, "center");
@@ -174,53 +174,98 @@ const treemap: Mark = {
   },
 };
 
-const TAU = Math.PI * 2;
+const DEG = 180 / Math.PI;
+const pct = (p: number) => (p > 0 && p < 0.005 ? "<1%" : `${Math.round(p * 100)}%`);
 
+/*
+ * Sunburst slices are stroked circles, not paths: pathLength 360 makes the dash an angle, so
+ * r, stroke-width, stroke-dasharray and stroke-dashoffset (all CSS properties) carry the whole
+ * shape and a drill sweeps in angle space (animate.ts). Dash period is exactly 360, so a slice
+ * that crosses the circle's start (3 o'clock) wraps. Offset = 90 - start, angles from 12 o'clock.
+ * Every level is drawn; a drill zooms: the branch becomes the centre disk and fills the circle.
+ */
 const sunburst: Mark = {
   noun: "Sunburst",
   draw(ctx): MarkOut {
     const { plot, spec } = ctx;
-    const { root, attrs } = setup(ctx);
-    const D = spec.drill ? 1 : spec.path.length;
-    const R = Math.min(plot.w, plot.h) / 2;
+    const { root, attrs } = setup(ctx, false, spec.hue); // a drilled branch keeps its colour
+    const w = Math.min(plot.w, plot.h) / 2 / (spec.path.length + 1); // ring width; the disk is one
     const [cx, cy] = [plot.x + plot.w / 2, plot.y + plot.h / 2];
-    const pt = (rad: number, a: number) =>
-      `${r(cx + rad * Math.cos(a - Math.PI / 2))} ${r(cy + rad * Math.sin(a - Math.PI / 2))}`;
+    const at = (rad: number, deg: number) => [
+      cx + rad * Math.sin(deg / DEG),
+      cy - rad * Math.cos(deg / DEG),
+    ];
+    const circle = (a: object, rm: number, a0: number, sweep: number) =>
+      el("circle", {
+        ...a,
+        cx: r(cx),
+        cy: r(cy),
+        r: r(rm),
+        "stroke-width": r(Math.max(0, w - 1)),
+        pathLength: 360,
+        "stroke-dasharray": `${r(sweep)} ${r(360 - sweep)}`,
+        "stroke-dashoffset": r(90 - a0),
+      });
+    const names = spec.labels !== false; // on unless turned off: a sunburst without names is unreadable
     let marks = "";
-    const walk = (n: Node, a0: number, a1: number): void => {
+    const walk = (n: Node, a0: number, a1: number, parent: Node): void => {
+      const span = a1 - a0;
       if (n.depth) {
-        const [r0, r1] = [(n.depth * R) / (D + 1), ((n.depth + 1) * R) / (D + 1)];
-        if ((a1 - a0) * r1 < 2) return; // ponytail: arcs under 2 px are not drawn (nor their children)
-        const e = Math.min(a1, a0 + (TAU * 359.99) / 360);
-        const big = e - a0 > Math.PI ? 1 : 0;
-        const d =
-          `M${pt(r1, a0)}A${r(r1)} ${r(r1)} 0 ${big} 1 ${pt(r1, e)}` +
-          `L${pt(r0, e)}A${r(r0)} ${r(r0)} 0 ${big} 0 ${pt(r0, a0)}Z`;
-        marks += el("path", { ...attrs(n), d });
-        // Horizontal name if it fits the wedge: arc length near the top/bottom, ring thickness at the sides.
-        const [mid, rm, arc] = [(a0 + e) / 2, (r0 + r1) / 2, (e - a0) * ((r0 + r1) / 2)];
-        const room = Math.abs(Math.sin(mid)) * (r1 - r0) + Math.abs(Math.cos(mid)) * arc;
-        if (spec.labels && arc >= 14 && text(n.name) <= room) {
-          const [lx, ly] = pt(rm, mid).split(" ") as [string, string];
-          ctx.label(+lx, +ly, n.name, "center");
+        const rm = (n.depth + 0.5) * w;
+        if ((span / DEG) * (rm + w / 2) < 2) return; // ponytail: arcs under 2 px are not drawn (nor their children)
+        const full = span > 359.99;
+        const pad = full ? 0 : Math.min(span / 2, DEG / rm); // 1 px between siblings
+        const a = attrs(n);
+        const share = pct(n.value / parent.value);
+        a["data-f"] += ` · ${n.depth > 1 ? ctx.t("shareOf", share, parent.name) : share}`;
+        marks += circle(
+          { ...a, "data-tint": Math.min(3, n.depth + spec.drilled.length) },
+          rm,
+          a0 + pad / 2,
+          span - pad,
+        );
+        // Label across the ring when it fits, else along the radius, else none.
+        const mid = a0 + span / 2;
+        const arc = (span / DEG) * rm;
+        const room = Math.abs(Math.sin(mid / DEG)) * (w - 1) + Math.abs(Math.cos(mid / DEG)) * arc;
+        const [lx, ly] = at(rm, mid) as [number, number];
+        if (names && arc >= 14) {
+          if (text(n.name) <= room) ctx.label(lx, ly, n.name, "center");
+          else if (text(n.name) <= w - 4)
+            ctx.label(lx, ly, n.name, "center", mid < 180 ? mid - 90 : mid + 90);
         }
       }
       let a = a0;
-      for (const c of n.children) {
-        const span = ((a1 - a0) * c.value) / n.value;
-        walk(c, a, a + span);
-        a += span;
+      for (const c of [...n.children].sort((p, q) => q.value - p.value)) {
+        const s = (span * c.value) / n.value;
+        walk(c, a, a + s, n);
+        a += s;
       }
     };
-    walk(root, 0, TAU);
+    walk(root, 0, 360, root);
+    // Centre disk: the current branch (key of its slice one level up, so a drill grows it in).
+    const name = spec.drilled.at(-1) ?? ctx.t("total");
+    const f = ctx.fmt(spec.y, root.value);
+    marks += circle(
+      {
+        ...attrs(root),
+        "data-s": spec.hue === null ? null : spec.hue % 8,
+        "data-tint": Math.min(3, spec.drilled.length) || null,
+        "data-x": name,
+        "data-depth": 0,
+      },
+      (w - 1) / 2,
+      0,
+      360,
+    );
+    if (names && text(name) <= 2 * w - 8 && text(f) <= 2 * w - 8)
+      ctx.label(cx, cy - 8, name, "center") && ctx.label(cx, cy + 8, f, "center");
     return { marks, hits: "" };
   },
 };
 
 register("treemap", treemap);
 register("sunburst", sunburst);
-
-const pct = (p: number) => (p > 0 && p < 0.005 ? "<1%" : `${Math.round(p * 100)}%`);
 
 /** Column width ~ column total; segments are shares of the column total (visible series only). */
 export const marimekko: Mark = {
@@ -238,21 +283,40 @@ export const marimekko: Mark = {
     }
     const grand = tot.reduce((a, b) => a + b, 0);
     if (!grand) return { marks: "", hits: "" };
-    const gap = 4;
-    const [top, bot] = [plot.y + 2, plot.y + plot.h - 20];
-    const free = plot.w - gap * (categories.length - 1);
+    // Left gutter for the 0-100% scale, bottom strip for "name · share of total".
+    const [x0, top, bot] = [plot.x + 36, plot.y + 8, plot.y + plot.h - 26];
+    const [gap, sg] = [3, 1.5];
+    const live = tot.filter((t) => t > 0).length;
+    const free = plot.x + plot.w - 1 - x0 - gap * (live - 1);
     let marks = "";
     let hits = "";
-    let x = plot.x;
+    let grid = "";
+    let labels = "";
+    const on = spec.labels !== false;
+    const txt = (x: number, y: number, s: string, a: Record<string, string | number>) =>
+      el("text", { x: r(x), y: r(y), "text-anchor": "middle", "data-in": true, ...a }, esc(s));
+    // Scale: gridlines behind the columns show through the gaps; ticks stay inside the plot.
+    for (const p of bot - top < 120 ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1]) {
+      const ty = r(bot - (bot - top) * p);
+      grid += el("line", { x1: plot.x + 32, x2: plot.x + plot.w, y1: ty, y2: ty });
+      if (on)
+        labels += txt(plot.x + 30, ty, `${p * 100}%`, {
+          "text-anchor": "end",
+          "dominant-baseline": "middle",
+          "data-ax": "",
+        });
+    }
+    let x = x0;
     categories.forEach((name, ci) => {
       const t = tot[ci] ?? 0;
+      if (!t) return;
       const w = (free * t) / grand;
       let y = bot;
       for (const si of shaped.visible) {
         const v = val.get(`${ci}/${si}`);
         if (!v) continue;
         const h = ((bot - top) * v) / t;
-        const f = ctx.fmt(spec.y, v);
+        const share = pct(v / t);
         const a = {
           "data-maya": "mark",
           "data-key": key(series[si], name),
@@ -261,25 +325,45 @@ export const marimekko: Mark = {
           "data-x": name,
           "data-series": series[si],
           "data-y": v,
-          "data-f": `${f} (${pct(v / t)})`,
+          "data-f": `${ctx.fmt(spec.y, v)} (${share})`,
+          "data-mm": true,
         };
         y -= h;
-        marks += el("rect", { ...a, x: r(x), y: r(y), width: r(w), height: r(h) });
+        // Segments sit 1.5 px apart: each is inset half the gap, so the stack keeps its true height.
+        const [sy, sh] = [y + sg / 2, Math.max(0, h - sg)];
+        marks += el("rect", { ...a, x: r(x), y: r(sy), width: r(w), height: r(sh) });
         hits += hit(a, x, y, w, h);
-        if (spec.labels && h >= 16) {
-          const share = pct(v / t);
-          ctx.label(
-            x + w / 2,
-            y + h / 2,
-            `${f} (${share})`.length * 7.2 + 4 <= w ? `${f} (${share})` : share,
-            "center",
-          );
+        const [cx, cy] = [x + w / 2, y + h / 2];
+        // Share, plus the series name above it when the segment is tall and wide enough.
+        if (on && h >= 18 && text(share) <= w) {
+          const two = h >= 40 && text(series[si]!) <= w;
+          if (two)
+            labels += txt(cx, cy - 8, series[si]!, {
+              "dominant-baseline": "middle",
+              "data-ink": "n",
+            });
+          labels += txt(cx, cy + (two ? 8 : 0), share, {
+            "dominant-baseline": "middle",
+            "data-ink": "",
+          });
         }
       }
-      if (w > 0) ctx.label(x + w / 2, plot.y + plot.h - 20, name, "below");
+      // Column label: name and its share of the grand total, shortened to what fits.
+      const gs = pct(t / grand);
+      const full = `${name} · ${gs}`;
+      const room = Math.floor((w + gap - 4) / 7.2); // chars that fit; a name is cut, never swapped for a bare share
+      const fit =
+        full.length <= room
+          ? full
+          : name.length <= room
+            ? name
+            : room >= 4
+              ? `${name.slice(0, room - 1)}…`
+              : "";
+      if (on && fit) labels += txt(x + w / 2, bot + 17, fit, { "data-col": "" });
       x += w + gap;
     });
-    return { marks, hits };
+    return { marks, hits, grid, labels };
   },
 };
 

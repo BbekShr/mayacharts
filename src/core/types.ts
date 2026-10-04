@@ -133,7 +133,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Display names by field: axis titles (shown only when set), tooltip, legend, table.
    * @example titles: { revenue: "Revenue ($)" } */
   titles?: Readonly<Partial<Record<Field<R>, string>>>;
-  /** Formatted values on marks. Default false (heatmap: true when cells are ≥ 24 px).
+  /** Formatted values on marks. Default false (heatmap: true when cells are ≥ 24 px; treemap and sunburst: names, marimekko: shares, true).
    * @example labels: true */
   labels?: boolean;
   /** Localised UI strings with `{0}` placeholders (see strings.ts for keys).
@@ -161,12 +161,15 @@ export interface ChartSpec<R extends object = Row> {
   /** Hover/keyboard tooltip. Default true.
    * @example tooltip: false */
   tooltip?: boolean;
-  /** Legend; clicking toggles series. Default: true when `series` is set.
+  /** Legend; clicking toggles series. Default: true when `series` is set, and for waffle and hexmap (colour ramp).
    * @example legend: false */
   legend?: boolean;
   /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop.
    * @example drill: true */
   drill?: boolean;
+  /** With `drill`: a click on empty chart space goes back up one level. Default true.
+   * @example drillOut: false */
+  drillOut?: boolean;
   /** Click/Enter/legend selects marks, others dim; Escape clears. Not with `drill`.
    * @example select: "multi" */
   select?: true | "multi";
@@ -289,6 +292,9 @@ export interface ResolvedSpec {
   path: string[];
   /** Applied drill values, outer first ([] at the root). */
   drilled: string[];
+  /** Drilled: first-appearance index of the outermost branch among its siblings (its palette
+   * slot, so a sunburst keeps the branch's colour); null at the root. */
+  hue: number | null;
   /** Scatter zoom box [x0, x1, y0, y1] from view.window; null otherwise. */
   window: readonly [number, number, number, number] | null;
   size: string | null;
@@ -426,8 +432,9 @@ export interface MarkCtx {
   y2: LinearScale | null;
   /** Display text for a raw value of `field` (step = tick step for number decimals). */
   fmt(field: string, v: unknown, step?: number): string;
-  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. */
-  label(x: number, y: number, text: string, place: LabelPlace): boolean;
+  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped.
+   * `rotate` (degrees about the anchor) skips the overlap scan: the mark must fit it itself. */
+  label(x: number, y: number, text: string, place: LabelPlace, rotate?: number): boolean;
   /** colorBy tone for a value: "good" | "bad", or null when colorBy is not sign/target. */
   tone(v: number): "good" | "bad" | null;
   /** colorBy ramp bucket 0..9 for a value of the colorBy field; null when colorBy is not a field. */

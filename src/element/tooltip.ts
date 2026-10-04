@@ -96,7 +96,18 @@ export function tooltip(
     const r = m.getBoundingClientRect(),
       s = svg.getBoundingClientRect();
     const vw = +(a(svg, "viewBox").split(" ")[2] || s.width) || 1;
-    g.style.transform = `translateX(${((r.left + r.width / 2 - s.left) * vw) / (s.width || vw)}px)`;
+    const k = vw / (s.width || vw),
+      px = (r.left + r.width / 2 - s.left) * k,
+      py = (r.top + r.height / 2 - s.top) * k,
+      tx = g.querySelectorAll("text");
+    g.style.transform = tx.length ? `translate(${px}px,${py}px)` : `translateX(${px}px)`;
+    // Scatter guides: the lines and value pills cancel one axis of the move (see wip-scatter css).
+    if (tx.length) {
+      g.style.setProperty("--x", px + "px");
+      g.style.setProperty("--y", py + "px");
+      tx[0]!.textContent = a(m, "data-gx");
+      tx[1]!.textContent = a(m, "data-gy");
+    }
     // Glide between categories once visible; the first placement jumps (flush, then enable).
     if (!was) getComputedStyle(g).transform;
     g.setAttribute("data-on", "");
@@ -215,7 +226,7 @@ export function tooltip(
     // The probe's containing block is the host's padding box (:host is position:relative).
     // Charts with a crosshair anchor to it: the tooltip sits beside the line, never over the points.
     const svg = box.querySelector("svg"),
-      side = !!svg?.querySelector("[data-maya=cross] *");
+      side = !!svg?.querySelector("[data-maya=cross] :not(text,[data-g])");
     let r: {
       left: number;
       top: number;

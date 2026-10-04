@@ -1,3 +1,4 @@
+import { key } from "../core/svg.ts";
 import { html } from "./html.ts";
 
 /** x, y, width, height in viewBox units. */
@@ -13,10 +14,31 @@ export interface PatchOptions {
   instant?: boolean;
   /** First draw: play this entrance (only when animating). */
   intro?: Intro | undefined;
+  /** Drill: zoom `in` to, or `out` of, the branch with this raw value: the marks whose key
+   * ends in it (old marks going in, new ones coming out). Rect marks scale with the view. */
+  zoom?: { in: string } | { out: string } | undefined;
 }
 
 let instant = false;
 let lag = 0; // ms per category step of the current patch's stagger
+let zoom: [number, number] | undefined; // sunburst: span of the branch the patch zooms into/out of
+// Drill on rect marks: P is the branch's box, F the plot. In, the view maps P onto F: children
+// start inside P, everything else is pushed out. Out is the reverse.
+let zm: { P: Box; F: Box; out: boolean } | undefined;
+/** `r` in the frame `a` re-expressed in the frame `b`. */
+const map = (r: Box, a: Box, b: Box): Box => [
+  b[0] + ((r[0] - a[0]) * b[2]) / a[2],
+  b[1] + ((r[1] - a[1]) * b[3]) / a[3],
+  (r[2] * b[2]) / a[2],
+  (r[3] * b[3]) / a[3],
+];
+/** Where a rect enters from (or exits to) during a drill zoom; undefined when not zooming. */
+const zoomed = (e: Element, g: Box, leaving: boolean): Box | undefined =>
+  !zm || e.localName !== "rect"
+    ? undefined
+    : zm.out === leaving
+      ? map(g, zm.F, zm.P)
+      : map(g, zm.P, zm.F);
 
 const EASE = "cubic-bezier(.22,1,.36,1)"; // ease-out-quint: fast start, long soft landing
 const POP = "cubic-bezier(.34,1.5,.64,1)"; // slight overshoot for points
@@ -24,24 +46,57 @@ const SWEEP = "cubic-bezier(.65,0,.35,1)";
 const DATA: KeyframeAnimationOptions = { duration: 520, easing: EASE };
 const INTRO: KeyframeAnimationOptions = { duration: 760, easing: EASE };
 const UI: KeyframeAnimationOptions = { duration: 220, easing: EASE };
+const ZOOM: KeyframeAnimationOptions = { duration: 640, easing: SWEEP };
 const MAX = 1500; // ponytail: no animation above this many marks
 const STAGGER = 320; // total stagger spread across categories, ms
 const Z = 1e-6;
 const n = (e: Element, k: string) => +(e.getAttribute(k) ?? 0);
 
+/*
+ * Sunburst slices (hierarchy.ts): stroked circles whose dash is the arc, pathLength 360, so
+ * offset = 90 - start angle. They tween r, stroke-width and the dash, all CSS properties,
+ * which sweeps in angle space; no geometry attribute is ever tweened.
+ */
+const ring = (e: Element) => e.localName === "circle" && e.hasAttribute("pathLength");
+/** A ring's shape as a keyframe: the attributes, or mid-animation what is on screen. */
+const arc = (e: Element, live = false): Keyframe => {
+  if (live && e.getAnimations?.().length) {
+    const c = getComputedStyle(e);
+    return {
+      r: c.r,
+      strokeWidth: c.strokeWidth,
+      strokeDasharray: c.strokeDasharray,
+      strokeDashoffset: c.strokeDashoffset,
+    };
+  }
+  return {
+    r: `${n(e, "r")}px`,
+    strokeWidth: `${n(e, "stroke-width")}px`,
+    strokeDasharray: e.getAttribute("stroke-dasharray") ?? "",
+    strokeDashoffset: `${n(e, "stroke-dashoffset")}`,
+  };
+};
+/** Start and end angle (degrees from 12 o'clock) of a ring. */
+const span = (e: Element): [number, number] => {
+  const a = 90 - n(e, "stroke-dashoffset");
+  return [a, a + parseFloat(e.getAttribute("stroke-dasharray") ?? "0")];
+};
+/** Where a ring outside the zoomed branch folds to: the branch edge it lies beyond. */
+const folded = (e: Element): Keyframe | undefined => {
+  const [a0, a1] = span(e);
+  const at = !zoom ? undefined : a0 >= zoom[1] - 0.01 ? 360 : a1 <= zoom[0] + 0.01 ? 0 : undefined;
+  if (at !== undefined && e.getAttribute("data-depth") !== "0")
+    return { ...arc(e), strokeDasharray: "0 360", strokeDashoffset: `${90 - at}` };
+};
+
 /** Geometry of a rect or circle (circle = its bounding square); undefined for paths etc. */
 const geo = (e: Element): Box | undefined => {
+  if (ring(e)) return;
   if (e.localName === "rect") return [n(e, "x"), n(e, "y"), n(e, "width"), n(e, "height")];
   if (e.localName === "circle") {
     const r = n(e, "r");
     return [n(e, "cx") - r, n(e, "cy") - r, 2 * r, 2 * r];
   }
-};
-
-/** Box of any mark (paths via getBBox where it exists); used to derive a drill origin. */
-export const boxOf = (e: Element): Box | undefined => {
-  const b = (e as SVGGraphicsElement).getBBox?.();
-  return geo(e) ?? (b ? [b.x, b.y, b.width, b.height] : undefined);
 };
 
 /** Transform (origin 0 0 of the fill-box) that maps geometry `g` onto box `b`. */
@@ -90,7 +145,8 @@ function fade(e: Element, out: boolean, then?: () => void, o = DATA): void {
 const pop = (out = false) => {
   const k: Keyframe[] = [
     { transform: "scale(.6)", transformOrigin: "50% 50%", opacity: 0 },
-    { transform: "none", transformOrigin: "50% 50%", opacity: 1 },
+    // No end opacity: it lands on the CSS value (links rest translucent, not at 1).
+    { transform: "none", transformOrigin: "50% 50%" },
   ];
   return out ? k.reverse() : k;
 };
@@ -98,7 +154,19 @@ const pop = (out = false) => {
 function enter(e: Element, origin?: Box, o = DATA): void {
   const g = geo(e);
   const at = { ...o, delay: delay(e) };
-  if (g) {
+  const f = ring(e) && folded(e);
+  const z = g && zoomed(e, g, false);
+  if (f) run(e, [f, arc(e)], ZOOM);
+  else if (g && z)
+    run(
+      e,
+      [
+        { transform: tf(g, z), opacity: 0 },
+        { transform: "none", opacity: 1 },
+      ],
+      ZOOM,
+    );
+  else if (g) {
     const c = e.localName === "circle";
     run(
       e,
@@ -127,7 +195,20 @@ function exit(e: Element, origin?: Box): void {
   const g = geo(e);
   const done = () => e.remove();
   const o = { ...DATA, fill: "forwards" as const };
-  if (g)
+  const f = ring(e) && folded(e);
+  const z = g && zoomed(e, g, true);
+  if (f) run(e, [arc(e, true), f], { ...ZOOM, fill: "forwards" }, done);
+  else if (g && z)
+    run(
+      e,
+      [
+        { transform: "none", opacity: 1 },
+        { transform: tf(g, z), opacity: 0 },
+      ],
+      { ...ZOOM, fill: "forwards" },
+      done,
+    );
+  else if (g)
     run(
       e,
       [
@@ -227,6 +308,18 @@ function marks(o: Element, w: Element, origin?: Box): void {
   const old = new Map<string, Element>();
   for (const e of o.children)
     if (e.hasAttribute("data-key")) old.set(e.getAttribute("data-key")!, e);
+  // Sunburst drill: the branch whose slice becomes the centre disk, or the disk that becomes a
+  // slice again. Its slice's span is the zoom window the rest folds out of or in from.
+  const hub = (g: Element) => g.querySelector(':scope > circle[data-depth="0"]');
+  const [ho, hw] = [hub(o), hub(w)];
+  const ko = ho?.getAttribute("data-key"),
+    kw = hw?.getAttribute("data-key");
+  const slice =
+    ko === kw
+      ? undefined
+      : ((kw && old.get(kw)) ??
+        [...w.children].find((e) => ko && e.getAttribute("data-key") === ko));
+  zoom = slice && ring(slice) ? span(slice) : undefined;
   const order: Element[] = [];
   for (const e of [...w.children]) {
     const k = e.getAttribute("data-key")!;
@@ -237,6 +330,14 @@ function marks(o: Element, w: Element, origin?: Box): void {
       continue;
     }
     old.delete(k);
+    if (ring(m)) {
+      const from = arc(m, true);
+      for (const a of m.getAnimations?.() ?? []) a.cancel();
+      sync(m, e);
+      if (!instant) run(m, [from, arc(m)], ZOOM);
+      order.push(m);
+      continue;
+    }
     const g0 = geo(m);
     const v = g0 && visual(m, g0);
     const d0 = m.getAttribute("d") ?? "",
@@ -304,7 +405,9 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   // Start every fade after the swap: animations on template children stay pending forever in
   // WebKit and Firefox, and a ghost removed synchronously would be re-inserted by the swap.
   for (const g of ghosts) ghost(g);
-  for (const c of fadeIn) fade(c, false, undefined, UI);
+  // After a drill zoom, value labels wait for the marks to land; axes swap at once.
+  const late = zoom || zm ? { ...UI, delay: Number(ZOOM.duration) * 0.75 } : UI;
+  for (const c of fadeIn) fade(c, false, undefined, id(c) === "labels" ? late : UI);
 }
 
 /** An outgoing group: unaddressable while it fades, then removed. */
@@ -374,11 +477,34 @@ export function patch(
   } else {
     instant = !!opts.instant;
     lag = spread(wm);
+    zm = undefined;
+    const z = opts.zoom;
+    if (z) {
+      const F = (w.getAttribute("data-plot") ?? "").split(" ").map(Number) as Box;
+      const [v, from] = "in" in z ? [z.in, om] : [z.out, wm];
+      // Union of the branch's marks (stacked segments, dumbbell ends).
+      let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+      for (const e of from.children) {
+        const g = e.getAttribute("data-key")?.endsWith("~" + key(v)) && geo(e);
+        if (!g) continue;
+        [x0, y0] = [Math.min(x0, g[0]), Math.min(y0, g[1])];
+        [x1, y1] = [Math.max(x1, g[0] + g[2]), Math.max(y1, g[1] + g[3])];
+      }
+      const P: Box = [x0, y0, x1 - x0, y1 - y0];
+      if (P[2] > 1 && P[3] > 1 && F.length === 4 && F[2]! > 0 && F[3]! > 0) {
+        zm = { P, F, out: !("in" in z) };
+        // Zoomed marks may grow past the plot; keep them inside it while they move.
+        const [vw, vh] = (w.getAttribute("viewBox") ?? "").split(" ").slice(2).map(Number);
+        const clip = `inset(${F[1]}px ${vw! - F[0] - F[2]}px ${vh! - F[1] - F[3]}px ${F[0]}px) view-box`;
+        run(om, [{ clipPath: clip }, { clipPath: clip }], ZOOM);
+      }
+    }
     sync(o, w);
     sync(om, wm);
     marks(om, wm, opts.origin);
     ui(o, w, om, wm);
     instant = false;
+    zm = undefined;
   }
   opts.after?.(box.firstElementChild!);
 }

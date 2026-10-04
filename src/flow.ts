@@ -1,10 +1,74 @@
-// mayacharts/flow: sankey. Imports only registry, svg and types (never validate/render/shape).
+// mayacharts/flow: sankey and chord. Imports only registry, svg and types (never validate/render/shape).
 import { register } from "./core/registry.ts";
-import { el, key, r } from "./core/svg.ts";
-import type { Mark } from "./core/types.ts";
+import { el, esc, key, r } from "./core/svg.ts";
+import type { Mark, MarkCtx } from "./core/types.ts";
 
-const W = 12;
-const PAD = 8;
+const W = 14;
+const PAD = 10;
+const CH = 7.2; // label width per character, the same estimate the core uses
+
+const clip = (s: string, max: number) => {
+  const c = [...s];
+  return c.length > max ? c.slice(0, Math.max(1, max - 1)).join("") + "…" : s;
+};
+// Colour rule shared by both charts: the outer column is neutral slate (darker when larger,
+// `data-neu` 0..3), the next column takes palette slots, and a link takes its level-1 node's colour.
+interface C {
+  s: number; // palette slot, -1 for neutral
+  u: number; // neutral step
+}
+const paint = (n: C) => (n.s < 0 ? { "data-neu": n.u } : { "data-s": n.s });
+const neutral = (col: (C & { v: number })[]) =>
+  [...col]
+    .sort((a, b) => b.v - a.v)
+    .forEach((n, j) => ((n.s = -1), (n.u = Math.min(3, Math.floor((j * 4) / col.length)))));
+// Every node index upstream or downstream of a node along any path; hovering lights them.
+const reach = (ls: L[]) => {
+  const walk = (i: number, up: boolean, seen = new Set<number>()) => {
+    for (const l of ls) {
+      const [a, b] = up ? [l.t, l.s] : [l.s, l.t];
+      if (a.i === i && !seen.has(b.i)) (seen.add(b.i), walk(b.i, up, seen));
+    }
+    return seen;
+  };
+  const ids = (n: N, up: boolean) => [n.i, ...walk(n.i, up)];
+  const join = (a: number[]) => [...new Set(a)].join(" ");
+  return {
+    node: (n: N) => join([...ids(n, true), ...ids(n, false)]),
+    link: (l: L) => join([...ids(l.s, true), ...ids(l.t, false)]),
+  };
+};
+type Reach = ReturnType<typeof reach>;
+/** A vertical-room check for labels: accepts (and books) a span inside lo..hi that is still free. */
+const slots = (lo: number, hi: number) => {
+  const t: number[][] = [];
+  return (a: number, b: number) =>
+    a >= lo && b <= hi && !t.some(([u, d]) => a < d! && b > u!) && (t.push([a, b]), true);
+};
+/** Name over a muted value (two lines), else "name value" on one; "" when neither fits. */
+const lines = (
+  x: number,
+  cy: number,
+  anchor: string,
+  name: string,
+  val: string,
+  cap: number,
+  room: (top: number, bottom: number) => boolean,
+) => {
+  const at = { x: r(x), "text-anchor": anchor, "dominant-baseline": "middle" };
+  if (room(cy - 14, cy + 14))
+    return (
+      el("text", { ...at, y: r(cy - 7), "data-nm": true }, esc(clip(name, cap))) +
+      el("text", { ...at, y: r(cy + 8), "data-v": true }, esc(val))
+    );
+  if (!room(cy - 7, cy + 7)) return "";
+  const both = cap - val.length - 1 >= [...name].length; // name and value must both fit
+  return el(
+    "text",
+    { ...at, y: r(cy), "data-nm": true },
+    esc(clip(name, cap)) + (both ? el("tspan", { "data-v": true, dx: 6 }, esc(val)) : ""),
+  );
+};
 
 interface N {
   lv: number;
@@ -14,6 +78,9 @@ interface N {
   out: number;
   v: number;
   y: number;
+  s: number;
+  u: number;
+  a: number;
 }
 interface L {
   s: N;
@@ -23,6 +90,86 @@ interface L {
   sy: number;
   ty: number;
 }
+
+// Hydration attributes common to both charts; `off` is the number of drilled levels.
+const linkAttrs = (ctx: MarkCtx, h: Reach, l: L, c: number, off: number, tint: N) => ({
+  "data-maya": "link",
+  "data-key": key("k", l.s.lv + off, l.s.name, l.t.name), // level in the whole path
+  "data-c": c,
+  ...paint(tint),
+  "data-a": h.link(l),
+  "data-x": `${l.s.name} → ${l.t.name}`,
+  "data-series": "",
+  "data-y": l.v,
+  "data-f": ctx.fmt(ctx.spec.y, l.v),
+});
+const nodeAttrs = (ctx: MarkCtx, h: Reach, n: N, c: number, off: number, series = "") => ({
+  "data-maya": "mark",
+  "data-key": key("n", n.lv + off, n.name),
+  "data-c": c,
+  ...paint(n),
+  "data-n": n.i,
+  "data-a": h.node(n),
+  "data-x": n.name,
+  "data-series": series,
+  "data-y": n.v,
+  "data-f": ctx.fmt(ctx.spec.y, n.v),
+  "data-depth": n.lv,
+});
+
+/** Rows to nodes (one per name per level) and links (one per adjacent pair, aggregated). */
+const graph = (ctx: MarkCtx, what: string) => {
+  const { spec } = ctx;
+  const P = spec.path;
+  const cols = P.length;
+  // Maps, not objects: node names such as "__proto__" are plain data.
+  const nodes: N[] = [];
+  const byLv: Map<string, N>[] = P.map(() => new Map());
+  const links = new Map<string, L>();
+  const node = (lv: number, name: string): N => {
+    let n = byLv[lv]!.get(name);
+    if (!n) {
+      n = { lv, name, i: nodes.length, in: 0, out: 0, v: 0, y: 0, s: 0, u: 0, a: 0 };
+      byLv[lv]!.set(name, n);
+      nodes.push(n);
+    }
+    return n;
+  };
+  for (const row of spec.data) {
+    const v = row[spec.y];
+    if (typeof v !== "number") continue;
+    if (!(v > 0))
+      ctx.fail(
+        "non-positive-value",
+        spec.y,
+        `spec.${spec.y} is ${v}, but ${what} sizes must be positive.`,
+      );
+    let prev = node(0, String(row[P[0]!]));
+    for (let lv = 1; lv < cols; lv++) {
+      const next = node(lv, String(row[P[lv]!]));
+      const k = prev.i + "\0" + next.i;
+      let l = links.get(k);
+      if (!l) links.set(k, (l = { s: prev, t: next, vals: [], v: 0, sy: 0, ty: 0 }));
+      l.vals.push(v);
+      prev = next;
+    }
+  }
+  const red = ctx.agg(spec.aggregate);
+  const ls = [...links.values()];
+  for (const l of ls) {
+    l.v = red(l.vals) ?? 0;
+    if (!(l.v > 0))
+      ctx.fail(
+        "non-positive-value",
+        spec.y,
+        `link ${l.s.name} to ${l.t.name} is ${l.v}, but ${what} sizes must be positive.`,
+      );
+    l.s.out += l.v;
+    l.t.in += l.v;
+  }
+  for (const n of nodes) n.v = Math.max(n.in, n.out);
+  return { nodes, ls };
+};
 
 export const sankey: Mark = {
   noun: "Sankey",
@@ -39,72 +186,71 @@ export const sankey: Mark = {
     const { spec, plot } = ctx;
     const P = spec.path;
     const cols = P.length;
-    // Maps, not objects: node names such as "__proto__" are plain data.
-    const nodes: N[] = [];
-    const byLv: Map<string, N>[] = P.map(() => new Map());
-    const links = new Map<string, L>();
-    const node = (lv: number, name: string): N => {
-      let n = byLv[lv]!.get(name);
-      if (!n) {
-        n = { lv, name, i: nodes.length, in: 0, out: 0, v: 0, y: 0 };
-        byLv[lv]!.set(name, n);
-        nodes.push(n);
-      }
-      return n;
-    };
-    for (const row of spec.data) {
-      const v = row[spec.y];
-      if (typeof v !== "number") continue;
-      if (!(v > 0))
-        ctx.fail(
-          "non-positive-value",
-          spec.y,
-          `spec.${spec.y} is ${v}, but sankey sizes must be positive.`,
-        );
-      let prev = node(0, String(row[P[0]!]));
-      for (let lv = 1; lv < cols; lv++) {
-        const next = node(lv, String(row[P[lv]!]));
-        const k = prev.i + "\0" + next.i;
-        let l = links.get(k);
-        if (!l) links.set(k, (l = { s: prev, t: next, vals: [], v: 0, sy: 0, ty: 0 }));
-        l.vals.push(v);
-        prev = next;
-      }
-    }
-    const red = ctx.agg(spec.aggregate);
-    const ls = [...links.values()];
-    for (const l of ls) {
-      l.v = red(l.vals) ?? 0;
-      if (!(l.v > 0))
-        ctx.fail(
-          "non-positive-value",
-          spec.y,
-          `link ${l.s.name} to ${l.t.name} is ${l.v}, but sankey sizes must be positive.`,
-        );
-      l.s.out += l.v;
-      l.t.in += l.v;
-    }
-    for (const n of nodes) n.v = Math.max(n.in, n.out);
+    const { nodes, ls } = graph(ctx, "sankey");
 
-    // ponytail: no crossing minimisation; columns sorted by value only.
-    const col = (lv: number) => nodes.filter((n) => n.lv === lv).sort((a, b) => b.v - a.v);
+    // Colour: column 0 neutral, column 1 palette slots in first-seen order, deeper nodes the slot
+    // of their single level-1 ancestor (several different ones: neutral).
+    neutral(nodes.filter((n) => n.lv === 0));
+    let slot = 0;
+    for (let lv = 1; lv < cols; lv++)
+      for (const n of nodes.filter((n) => n.lv === lv)) {
+        const from = new Set(ls.filter((l) => l.t === n).map((l) => l.s.s));
+        const [one] = from;
+        if (lv === 1) n.s = slot++ % 8;
+        else ((n.s = from.size === 1 ? one! : -1), (n.u = 2));
+      }
+    // A link takes its target's colour out of column 0, else its source's.
+    const tint = (l: L) => (l.s.lv === 0 ? l.t : l.s);
+    const hov = reach(ls);
+
+    // Order: columns start sorted by value, then barycentre sweeps pull each node towards the
+    // weighted middle of its neighbours (fewer crossings). Keys never depend on the order.
+    const order = Array.from({ length: cols }, (_, lv) =>
+      nodes.filter((n) => n.lv === lv).sort((a, b) => b.v - a.v || a.i - b.i),
+    );
+    const sweep = (lv: number, from: number) => {
+      const bary = new Map<N, number>();
+      for (const n of order[lv]!) {
+        let [sum, w] = [0, 0];
+        for (const l of ls) {
+          const o = from < lv ? (l.t === n ? l.s : null) : l.s === n ? l.t : null;
+          if (o) ((sum += l.v * order[from]!.indexOf(o)), (w += l.v));
+        }
+        bary.set(n, w ? sum / w : 0);
+      }
+      order[lv]!.sort((a, b) => bary.get(a)! - bary.get(b)! || b.v - a.v || a.i - b.i);
+    };
+    for (let lv = 1; lv < cols; lv++) sweep(lv, lv - 1);
+    for (let lv = cols - 2; lv > 0; lv--) sweep(lv, lv + 1);
+
+    // Label room: a wide tile keeps the outer labels beside the columns (clear of the flows);
+    // a narrow one puts them inside, over the flows, behind a halo.
+    const val = (n: N) => ctx.fmt(spec.y, n.v);
+    const room = (lv: number) =>
+      Math.min(
+        plot.w * 0.22,
+        Math.max(0, ...order[lv]!.map((n) => Math.min(20, [...n.name].length) * CH)) + 12,
+      );
+    const wide = plot.w >= 420;
+    const [padL, padR] = wide ? [room(0), room(cols - 1)] : [0, 0];
+    const gap = (plot.w - padL - padR - W) / (cols - 1);
+    const x = (n: N) => plot.x + padL + n.lv * gap;
+
     // Inset 8 px (half a label) so edge nodes keep their labels; padding shrinks so it never
     // takes more than a quarter of the height, then the scale is what is left over.
     const [top, avail] = [plot.y + 8, Math.max(0, plot.h - 16)];
-    const most = Math.max(...Array.from({ length: cols }, (_, lv) => col(lv).length));
+    const most = Math.max(...order.map((c) => c.length));
     const pad = most > 1 ? Math.min(PAD, avail / 4 / (most - 1)) : 0;
     let k = Infinity;
-    for (let lv = 0; lv < cols; lv++) {
-      const c = col(lv);
+    for (const c of order) {
       const sum = c.reduce((a, n) => a + n.v, 0);
       if (sum > 0) k = Math.min(k, (avail - pad * (c.length - 1)) / sum);
     }
     if (!(k > 0 && k < Infinity)) k = 0;
-    for (let lv = 0; lv < cols; lv++) {
+    for (const c of order) {
       let y = top;
-      for (const n of col(lv)) ((n.y = y), (y += n.v * k + pad));
+      for (const n of c) ((n.y = y), (y += n.v * k + pad));
     }
-    const x = (n: N) => plot.x + (n.lv * (plot.w - W)) / (cols - 1);
     for (const n of nodes) {
       let o = n.y;
       for (const l of ls.filter((l) => l.s === n).sort((a, b) => a.t.y - b.t.y))
@@ -120,65 +266,51 @@ export const sankey: Mark = {
       const [x0, x1, th, m] = [x(l.s) + W, x(l.t), l.v * k, (x(l.s) + W + x(l.t)) / 2];
       const [a, b] = [l.sy, l.ty];
       const d = `M${r(x0)} ${r(a)}C${r(m)} ${r(a)} ${r(m)} ${r(b)} ${r(x1)} ${r(b)}L${r(x1)} ${r(b + th)}C${r(m)} ${r(b + th)} ${r(m)} ${r(a + th)} ${r(x0)} ${r(a + th)}Z`;
-      marks += el("path", {
-        "data-maya": "link",
-        "data-key": key("k", l.s.lv, l.s.name, l.t.name),
-        "data-c": c++,
-        "data-s": l.s.i % 8,
-        "data-x": `${l.s.name} → ${l.t.name}`,
-        "data-series": "",
-        "data-y": l.v,
-        "data-f": ctx.fmt(spec.y, l.v),
-        d,
-      });
+      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, spec.drilled.length, tint(l)), d });
     }
     for (const n of nodes) {
-      const h = n.v * k;
       marks += el("rect", {
-        "data-maya": "mark",
-        "data-key": key("n", n.lv, n.name),
-        "data-c": c++,
-        "data-s": n.i % 8,
-        "data-x": n.name,
-        "data-series": "",
-        "data-y": n.v,
-        "data-f": ctx.fmt(spec.y, n.v),
-        "data-depth": n.lv,
+        ...nodeAttrs(ctx, hov, n, c++, spec.drilled.length),
         x: r(x(n)),
         y: r(n.y),
         width: W,
-        height: r(h),
+        height: r(n.v * k),
       });
-      const last = n.lv === cols - 1;
-      ctx.label(last ? x(n) - 4 : x(n) + W + 4, n.y + h / 2, n.name, last ? "end" : "start");
     }
-    return { marks, hits: "" };
+
+    // Labels, biggest node first so a crowded column keeps the important ones.
+    // ponytail: a label that collides with a bigger one is dropped (the tooltip still names it).
+    const taken = order.map(() => slots(plot.y, plot.y + plot.h));
+    const lab = new Map<N, string>();
+    for (const n of [...nodes].sort((a, b) => b.v - a.v || a.i - b.i)) {
+      const [first, last] = [n.lv === 0, n.lv === cols - 1];
+      const left = wide ? first : last;
+      const w = wide && first ? padL : wide && last ? padR : gap;
+      const cap = Math.max(3, Math.floor((w - (wide && (first || last) ? 12 : W + 14)) / CH));
+      const cy = n.y + (n.v * k) / 2;
+      const s = lines(
+        left ? x(n) - 6 : x(n) + W + 6,
+        cy,
+        left ? "end" : "start",
+        n.name,
+        val(n),
+        cap,
+        taken[n.lv]!,
+      );
+      lab.set(n, s);
+    }
+    return {
+      marks,
+      hits: "",
+      labels: nodes.map((n) => lab.get(n) ?? "").join(""),
+    };
   },
 };
 
 register("sankey", sankey);
 
+const RING = 14;
 const TAU = Math.PI * 2;
-const RING = 8;
-const clip = (s: string, max: number) => {
-  const c = [...s];
-  return c.length > max ? c.slice(0, max - 1).join("") + "\u2026" : s;
-};
-
-interface CN {
-  lv: number;
-  s: number;
-  name: string;
-  i: number;
-  v: number;
-  a: number;
-}
-interface CL {
-  s: CN;
-  t: CN;
-  vals: number[];
-  v: number;
-}
 
 /** Chord diagram: from-nodes on the left half, to-nodes on the right, ribbons between them. */
 export const chord: Mark = {
@@ -186,56 +318,18 @@ export const chord: Mark = {
   draw(ctx) {
     const { spec, plot } = ctx;
     const [P0, P1] = spec.path as [string, string];
-    const nodes: CN[] = [];
-    const byLv: Map<string, CN>[] = [new Map(), new Map()];
-    const links = new Map<string, CL>();
-    const node = (lv: number, name: string): CN => {
-      let n = byLv[lv]!.get(name);
-      if (!n) {
-        n = { lv, name, i: nodes.length, s: 0, v: 0, a: 0 };
-        byLv[lv]!.set(name, n);
-        nodes.push(n);
-      }
-      return n;
-    };
-    for (const row of spec.data) {
-      const v = row[spec.y];
-      if (typeof v !== "number") continue;
-      if (!(v > 0))
-        ctx.fail(
-          "non-positive-value",
-          spec.y,
-          `spec.${spec.y} is ${v}, but chord sizes must be positive.`,
-        );
-      const s = node(0, String(row[P0]));
-      const t = node(1, String(row[P1]));
-      const k = s.i + "\0" + t.i;
-      let l = links.get(k);
-      if (!l) links.set(k, (l = { s, t, vals: [], v: 0 }));
-      l.vals.push(v);
-    }
-    const red = ctx.agg(spec.aggregate);
-    const ls = [...links.values()];
-    for (const l of ls) {
-      l.v = red(l.vals) ?? 0;
-      if (!(l.v > 0))
-        ctx.fail(
-          "non-positive-value",
-          spec.y,
-          `link ${l.s.name} to ${l.t.name} is ${l.v}, but chord sizes must be positive.`,
-        );
-      l.s.v += l.v;
-      l.t.v += l.v;
-    }
-    // Palette slots: from-nodes first, then to-nodes, in first-seen order.
-    nodes.sort((a, b) => a.lv - b.lv || a.i - b.i).forEach((n, j) => (n.s = j % 8));
+    const { nodes, ls } = graph(ctx, "chord");
+    // From-nodes neutral, to-nodes palette slots in first-seen order; ribbons take the to-node's colour.
+    neutral(nodes.filter((n) => n.lv === 0));
+    nodes.filter((n) => n.lv === 1).forEach((n, j) => (n.s = j % 8));
+    const hov = reach(ls);
     const total = ls.reduce((a, l) => a + l.v, 0);
     if (!(total > 0)) return { marks: "", hits: "" };
 
     // Angles run clockwise from 12 o'clock. To-nodes fill the right half top to bottom (largest on
     // top), from-nodes the left half bottom to top (largest on top). Each side holds `total`.
-    const SIDE = 0.1;
-    const GAP = 0.03;
+    const SIDE = 0.14;
+    const GAP = 0.04;
     const sides = [0, 1].map((lv) => nodes.filter((n) => n.lv === lv));
     const k = Math.min(...sides.map((c) => (Math.PI - SIDE - GAP * (c.length - 1)) / total));
     for (const lv of [0, 1]) {
@@ -245,14 +339,21 @@ export const chord: Mark = {
     }
     // Label room per side from the longest label (at most 20 characters, at most 36% of the
     // width), so the ring grows to what is left; the pair is then centred as a whole.
-    const maxCh = Math.min(20, Math.floor((plot.w * 0.36 - 4) / 7.2));
+    const maxCh = Math.min(20, Math.floor((plot.w * 0.36 - 4) / CH));
+    const val = (n: N) => ctx.fmt(spec.y, n.v);
     const lw = [0, 1].map(
-      (lv) => Math.max(0, ...sides[lv]!.map((n) => [...clip(n.name, maxCh)].length)) * 7.2 + 4,
+      (lv) =>
+        Math.max(
+          0,
+          ...sides[lv]!.map((n) => Math.max([...clip(n.name, maxCh)].length, val(n).length)),
+        ) *
+          CH +
+        4,
     ) as [number, number];
-    const gutter = RING + 4;
+    const gutter = RING + 6;
     const R = Math.max(
       12,
-      Math.min(plot.h / 2 - RING - 20, (plot.w - lw[0] - lw[1] - 2 * gutter - 4) / 2),
+      Math.min(plot.h / 2 - RING - 40, (plot.w - lw[0] - lw[1] - 2 * gutter - 4) / 2),
     );
     const spare = plot.w - lw[0] - lw[1] - 2 * (R + gutter);
     const cx = plot.x + spare / 2 + lw[0] + R + gutter;
@@ -261,71 +362,65 @@ export const chord: Mark = {
       `${r(cx + rad * Math.sin(a))} ${r(cy - rad * Math.cos(a))}`;
     const arc = (a0: number, a1: number, rad: number, sweep: 0 | 1) =>
       `A${r(rad)} ${r(rad)} 0 0 ${sweep} ${pt(sweep ? a1 : a0, rad)}`;
+    // An edge from angle u to v bows towards the centre by how far apart they are: opposite ends
+    // pass near it, neighbours (across the gap at 12 and 6 o'clock) run straight along the rim, so
+    // no notch is cut into the ribbon.
+    const edge = (u: number, v: number) => {
+      const delta = ((v - u + 3 * Math.PI) % TAU) - Math.PI;
+      const far = Math.abs(delta) / Math.PI;
+      const near = 1 - far;
+      const q = R * (1 - 0.9 * far * far * (3 - 2 * far)); // smoothstep: 1 R when close, .1 R opposite
+      // Neighbours lean the controls along the rim (a third of the way), so the edge follows the arc.
+      const f = (near * near * delta) / 3;
+      return `C${pt(u + f, q)} ${pt(v - f, q)} ${pt(v, R)}`;
+    };
 
     // Ribbon slots: each node hands them out clockwise, ordered to avoid crossings.
-    const slot = new Map<CL, { sa: number; ta: number }>();
     for (const n of nodes) {
-      const mine = ls
-        .filter((l) => (n.lv ? l.t : l.s) === n)
-        .sort((x, y) => (n.lv ? y.s.a - x.s.a : y.t.a - x.t.a));
       let a = n.a;
-      for (const l of mine) {
-        const o = slot.get(l) ?? { sa: 0, ta: 0 };
-        n.lv ? (o.ta = a) : (o.sa = a);
-        slot.set(l, o);
+      for (const l of ls
+        .filter((l) => (n.lv ? l.t : l.s) === n)
+        .sort((x, y) => (n.lv ? y.s.a - x.s.a : y.t.a - x.t.a))) {
+        n.lv ? (l.ty = a) : (l.sy = a); // here sy and ty are angles
         a += l.v * k;
       }
     }
-    const title = (f: string) => spec.titles.get(f) ?? f;
     let c = 0;
     let marks = "";
     for (const l of ls) {
-      const { sa, ta } = slot.get(l)!;
+      const [sa, ta] = [l.sy, l.ty];
       const [sb, tb] = [sa + l.v * k, ta + l.v * k];
-      const d = `M${pt(sa, R)}${arc(sa, sb, R, 1)}Q${r(cx)} ${r(cy)} ${pt(ta, R)}${arc(ta, tb, R, 1)}Q${r(cx)} ${r(cy)} ${pt(sa, R)}Z`;
+      const d = `M${pt(sa, R)}${arc(sa, sb, R, 1)}${edge(sb, ta)}${arc(ta, tb, R, 1)}${edge(tb, sa)}Z`;
+      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, 0, l.t), d });
+    }
+    // The group arc is a 10 px band inset 2 px; CSS strokes it 4 px with round joins in its own
+    // colour, which rounds the ends and lands the band at R + 4 .. R + RING (clear of the ribbons).
+    for (const n of nodes) {
+      const ia = Math.min(2 / R, (n.v * k) / 4);
+      const [a0, a1, r0, r1] = [n.a + ia, n.a + n.v * k - ia, R + 6, R + RING - 2];
+      const d = `M${pt(a0, r1)}${arc(a0, a1, r1, 1)}L${pt(a1, r0)}${arc(a0, a1, r0, 0)}Z`;
       marks += el("path", {
-        "data-maya": "link",
-        "data-key": key("k", 0, l.s.name, l.t.name),
-        "data-c": c++,
-        "data-s": l.s.s,
-        "data-x": `${l.s.name} -> ${l.t.name}`,
-        "data-series": "",
-        "data-y": l.v,
-        "data-f": ctx.fmt(spec.y, l.v),
+        ...nodeAttrs(ctx, hov, n, c++, 0, spec.titles.get(n.lv ? P1 : P0) ?? (n.lv ? P1 : P0)),
+        "data-arc": true,
         d,
       });
     }
-    for (const n of nodes) {
-      const [a0, a1] = [n.a, n.a + n.v * k];
-      const d = `M${pt(a0, R + RING)}${arc(a0, a1, R + RING, 1)}L${pt(a1, R)}${arc(a0, a1, R, 0)}Z`;
-      marks += el("path", {
-        "data-maya": "mark",
-        "data-key": key("n", n.lv, n.name),
-        "data-c": c++,
-        "data-s": n.s,
-        "data-x": n.name,
-        "data-series": title(n.lv ? P1 : P0),
-        "data-y": n.v,
-        "data-f": ctx.fmt(spec.y, n.v),
-        "data-depth": n.lv,
-        d,
-      });
-    }
-    // ponytail: labels are clipped to 20 characters; ones that still collide are dropped by ctx.label.
-    for (const n of nodes) {
+    // ponytail: labels are clipped to 20 characters; one that would overlap its neighbour on the
+    // same side is dropped, after trying it on one line.
+    const room = [0, 1].map(() => slots(plot.y, plot.y + plot.h));
+    let labels = "";
+    for (const n of [...nodes].sort((a, b) => b.v - a.v)) {
       const m = n.a + (n.v * k) / 2;
       const [sn, cs] = [Math.sin(m), Math.cos(m)];
-      const rad = R + RING + 4;
+      const rad = R + RING + 6;
       const [lx, ly] = [cx + rad * sn, cy - rad * cs];
-      const text = clip(n.name, maxCh);
-      ctx.label(
-        lx,
-        ly,
-        text,
-        Math.abs(sn) < 0.25 ? (cs > 0 ? "above" : "below") : sn > 0 ? "start" : "end",
-      );
+      const pole = Math.abs(sn) < 0.25;
+      // Top and bottom labels grow away from the ring; side labels centre on the arc.
+      const cyy = pole ? ly + (cs > 0 ? -14 : 14) : ly;
+      const anchor = pole ? "middle" : sn > 0 ? "start" : "end";
+      labels += lines(lx, cyy, anchor, n.name, val(n), maxCh, room[sn > 0 ? 1 : 0]!);
     }
-    return { marks, hits: "" };
+    return { marks, hits: "", labels };
   },
 };
 register("chord", chord);

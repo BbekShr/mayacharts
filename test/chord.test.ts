@@ -22,7 +22,7 @@ describe("chord", () => {
     expect(arcs.some((a) => a.includes('data-key="n~0~East"'))).toBe(true);
     expect(arcs.some((a) => a.includes('data-key="n~1~Food"'))).toBe(true);
     expect(tags(s, 'path data-maya="link"')[0]).toContain('data-key="k~0~East~Food"');
-    expect(tags(s, 'path data-maya="link"')[0]).toContain('data-x="East -&gt; Food"');
+    expect(tags(s, 'path data-maya="link"')[0]).toContain('data-x="East → Food"');
   });
   it("node totals and aggregation of duplicate rows", () => {
     const s = svg({ ...spec, data: [...data, { region: "East", fam: "Food", v: 5 }] });
@@ -82,5 +82,29 @@ describe("chord", () => {
     const arc = tags(s, 'path data-maya="mark"')[0]!;
     const ys = [...arc.matchAll(/([ML])(-?[\d.]+) (-?[\d.]+)/g)].map((m) => +m[3]!);
     expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(10);
+  });
+  it("from-groups are neutral, to-groups coloured, ribbons take the to-group colour", () => {
+    const s = svg(spec);
+    const arcs = tags(s, 'path data-maya="mark"');
+    const from = arcs.filter((a) => a.includes('data-depth="0"'));
+    expect(from.every((a) => a.includes("data-neu=") && !a.includes("data-s="))).toBe(true);
+    expect(arcs.find((a) => a.includes('data-key="n~1~Food"'))).toContain('data-s="0"');
+    expect(arcs.find((a) => a.includes('data-key="n~1~Tools"'))).toContain('data-s="1"');
+    const l = tags(s, 'path data-maya="link"');
+    expect(l[0]).toContain('data-s="0"'); // East -> Food
+    expect(l[1]).toContain('data-s="1"'); // East -> Tools
+    expect(l[0]).toMatch(/data-a="\d+ \d+"/);
+    expect(s).not.toContain("linearGradient");
+  });
+  it("labels show the group name and its value", () => {
+    const s = svg(spec);
+    expect(s).toMatch(/data-nm=""[^>]*>East</);
+    expect(s).toMatch(/data-v=""[^>]*>\d+</);
+  });
+  it("ribbon edges bow by angular distance, never straight through the centre", () => {
+    const s = svg({ ...spec, data: [{ region: "A", fam: "B", v: 1 }] });
+    const d = /data-maya="link"[^>]* d="([^"]+)"/.exec(s)![1]!;
+    expect(d.match(/C/g)).toHaveLength(2);
+    expect(d).not.toContain("Q");
   });
 });

@@ -97,17 +97,66 @@ describe("treemap", () => {
 });
 
 describe("sunburst", () => {
-  const paths = tags(renderParts(sb).svg, "path");
-  it("one arc per non-root node with depth", () => {
-    expect(paths.length).toBe(3 + 5);
-    expect(paths.filter((p) => at(p, "data-depth") === "1").length).toBe(3);
-    expect(paths.filter((p) => at(p, "data-depth") === "2").length).toBe(5);
-    expect(new Set(paths.map((p) => at(p, "data-key"))).size).toBe(8);
+  const svg = renderParts(sb).svg;
+  const rings = tags(svg, "circle");
+  const start = (c: string) => 90 - +at(c, "stroke-dashoffset");
+  const sweep = (c: string) => parseFloat(at(c, "stroke-dasharray"));
+  it("one slice per node plus the centre disk, last", () => {
+    expect(rings.length).toBe(3 + 5 + 1);
+    expect(rings.filter((p) => at(p, "data-depth") === "1").length).toBe(3);
+    expect(rings.filter((p) => at(p, "data-depth") === "2").length).toBe(5);
+    expect(new Set(rings.map((p) => at(p, "data-key"))).size).toBe(9);
+    expect(at(rings.at(-1)!, "data-key")).toBe("h");
+    expect(at(rings.at(-1)!, "data-x")).toBe("Total");
+    expect(at(rings.at(-1)!, "stroke-dasharray")).toBe("360 0");
   });
-  it("a lone node does not collapse to an empty arc", () => {
-    const s = renderParts({ ...sb, data: [{ g: "A", n: "a", v: 1 }] }).svg;
-    expect(tags(s, "path").length).toBe(2);
-    expect(at(tags(s, "path")[0]!, "d")).toContain("A");
+  it("slices are dashes in degrees: period 360, each ring closes the circle", () => {
+    for (const c of rings) {
+      expect(at(c, "pathLength")).toBe("360");
+      const [d, g] = at(c, "stroke-dasharray").split(" ").map(Number) as [number, number];
+      expect(d + g).toBeCloseTo(360, 1);
+    }
+    const top = rings.filter((p) => at(p, "data-depth") === "1");
+    // 1 px gaps: sweeps fall just short of 360, and slices tile in order from 12 o'clock.
+    const total = top.reduce((s, c) => s + sweep(c), 0);
+    expect(total).toBeGreaterThan(355);
+    expect(total).toBeLessThan(360);
+    expect(start(top[0]!)).toBeGreaterThanOrEqual(0);
+    expect(start(top[0]!)).toBeLessThan(2);
+  });
+  it("children sort largest first and tooltips carry their share", () => {
+    const c = rings.filter((p) => at(p, "data-key").startsWith("h~C~"));
+    expect(c.map((p) => at(p, "data-key"))).toEqual(["h~C~c1", "h~C~c2"]);
+    expect(at(c[0]!, "data-f")).toBe("30 · 86% of C");
+    expect(
+      at(
+        rings.find((p) => at(p, "data-key") === "h~B")!,
+        "data-f",
+      ),
+    ).toBe("40 · 35%");
+  });
+  it("names label the rings and the centre shows the total", () => {
+    expect(svg).toContain(">B<");
+    expect(svg).toContain(">Total<");
+    expect(svg).toContain(">115<");
+    expect(renderParts({ ...sb, labels: false }).svg).not.toContain(">B<");
+  });
+  it("a lone node is a full ring", () => {
+    const s = tags(renderParts({ ...sb, data: [{ g: "A", n: "a", v: 1 }] }).svg, "circle");
+    expect(s.length).toBe(3);
+    expect(at(s[0]!, "stroke-dasharray")).toBe("360 0");
+  });
+  it("drilled: every level below the branch, the branch is the centre", () => {
+    const d = tags(renderParts({ ...sb, drill: true }, { view: { drill: ["C"] } }).svg, "circle");
+    expect(d.map((p) => at(p, "data-key"))).toEqual(["h~C~c1", "h~C~c2", "h~C"]);
+    expect(at(d[2]!, "data-x")).toBe("C");
+    expect(at(d[0]!, "data-depth")).toBe("1");
+  });
+  it("a drilled branch keeps its colour", () => {
+    const d = tags(renderParts({ ...sb, drill: true }, { view: { drill: ["C"] } }).svg, "circle");
+    expect(d.map((p) => at(p, "data-s"))).toEqual(["2", "2", "2"]);
+    // Tint by depth in the whole tree: the disk is C's own colour, its children one step lighter.
+    expect(d.map((p) => at(p, "data-tint"))).toEqual(["2", "2", "1"]);
   });
 });
 
@@ -115,8 +164,8 @@ describe("drill draws one level", () => {
   const many = Array.from({ length: 4 }, (_, g) =>
     Array.from({ length: 30 }, (_, n) => ({ g: `G${g}`, n: `n${n}`, v: 10 + n })),
   ).flat();
-  for (const type of ["treemap", "sunburst"] as const) {
-    const tag = type === "treemap" ? "rect" : "path";
+  for (const type of ["treemap"] as const) {
+    const tag = "rect";
     const spec: ChartSpec = {
       type,
       path: ["g", "n"],
@@ -159,8 +208,24 @@ describe("drill draws one level", () => {
     expect(t).toHaveLength(1);
     const p = tags(
       renderParts({ type: "sunburst", path: ["g", "n"], y: "v", data: rows }).svg,
-      "path",
+      "circle",
     );
-    expect(p.map((x) => at(x, "data-key"))).toEqual(["h~A", "h~A~big"]);
+    expect(p.map((x) => at(x, "data-key"))).toEqual(["h~A", "h~A~big", "h"]);
+  });
+});
+
+describe("treemap names and drill hooks", () => {
+  it("names are on unless labels is false", () => {
+    expect(renderParts(tm).svg).toContain(">b1<");
+    expect(renderParts({ ...tm, labels: false }).svg).not.toContain(">b1<");
+  });
+  it("svg carries data-drill only while a click can go deeper", () => {
+    const d: ChartSpec = { ...tm, drill: true };
+    expect(renderParts(d).svg).toMatch(/<svg[^>]* data-drill=""/);
+    expect(renderParts(d, { view: { drill: ["A"] } }).svg).not.toMatch(/<svg[^>]* data-drill/);
+  });
+  it("a drilled treemap keeps its branch colour", () => {
+    const s = renderParts({ ...tm, drill: true }, { view: { drill: ["C"] } }).svg;
+    expect(tags(s, "rect").map((t) => at(t, "data-s"))).toEqual(["2", "2"]);
   });
 });

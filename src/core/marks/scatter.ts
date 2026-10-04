@@ -83,7 +83,7 @@ export const scatter: Mark = {
 
     const seen = new Map<string, number>();
     const items = pts.map((p) => {
-      const rad = p.sz !== null && max > 0 ? 2 + Math.sqrt(Math.abs(p.sz) / max) * scale : 4;
+      const rad = p.sz !== null && max > 0 ? 3 + Math.sqrt(Math.abs(p.sz) / max) * scale : 5;
       let id: string | number = p.i;
       if (p.name !== null) {
         const n = (seen.get(p.name) ?? 0) + 1;
@@ -107,6 +107,8 @@ export const scatter: Mark = {
             : [x, y, p.sz === null ? null : ctx.fmt(spec.size!, p.sz)]
                 .filter((v) => v !== null)
                 .join(" · "),
+        "data-gx": x,
+        "data-gy": y,
         "data-neg": p.y < 0,
         "data-tone": ctx.tone(p.y),
         "data-q": typeof cv === "number" ? ctx.q(cv) : null,
@@ -137,6 +139,14 @@ export const scatter: Mark = {
         });
       if (spec.labels) ctx.label(cx, cy - rad, ctx.fmt(spec.y, p.y), "above");
     }
-    return { marks, hits };
+    // Hover guides: element-owned, moved to the hovered point (tooltip.ts); pills carry its x and y.
+    const [l, t, b] = [plot.x, plot.y, plot.y + plot.h];
+    const cross = pts.length
+      ? el("line", { "data-g": "x", x1: 0, x2: 0, y1: r(t), y2: r(b) }) +
+        el("line", { "data-g": "y", x1: r(l), x2: r(l + plot.w), y1: 0, y2: 0 }) +
+        el("text", { "data-g": "x", y: r(b - 6), "text-anchor": "middle" }, "") +
+        el("text", { "data-g": "y", x: r(l + 6), y: -6 }, "")
+      : "";
+    return { marks, hits, cross };
   },
 };

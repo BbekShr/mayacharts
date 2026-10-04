@@ -62,7 +62,8 @@ export const hexmap: Mark = {
     const s = Math.min(plot.w / (R3 * COLS), plot.h / (1.5 * (ROWS - 1) + 2));
     const ox = plot.x + (plot.w - R3 * s * COLS) / 2;
     const oy = plot.y + (plot.h - s * (1.5 * (ROWS - 1) + 2)) / 2;
-    const k = s * 0.94;
+    // Gap between hexes in px (shrinks with tiny maps); the 1.5px round-join stroke is part of the hex.
+    const k = s - Math.min(2.4, s * 0.14);
     const at = (st: (typeof STATES)[number]) => [
       ox + R3 * s * (st.c + 0.5 + (st.r % 2) / 2),
       oy + s + 1.5 * s * st.r,
@@ -90,11 +91,42 @@ export const hexmap: Mark = {
     const lo = Math.min(...vals);
     const hi = Math.max(...vals);
 
+    // Missing states stay on the map as dashed empty hexes with a faint code.
     let grid = "";
-    for (const st of STATES) grid += el("path", { d: hex(st), fill: "none" });
     let marks = "";
     let labels = "";
     let n = 0;
+    const w = R3 * k;
+    const fc = Math.min(13, s * 0.55);
+    const fv = fc * 0.8;
+    const text = (cx: number, cy: number, str: string, extra: Record<string, unknown>) =>
+      el(
+        "text",
+        { x: r(cx), y: r(cy), "text-anchor": "middle", "dominant-baseline": "middle", ...extra },
+        esc(str),
+      );
+    // Values only when the longest still fits in a hex (so narrow maps drop them first, then codes).
+    const f = new Map([...sum].map(([st, v]) => [st, ctx.fmt(spec.y, v)] as const));
+    const showV =
+      fv >= 8 && Math.max(0, ...[...f.values()].map((x) => x.length)) * fv * 0.6 <= w * 0.8;
+    const showC = w >= 15;
+    const dy = showV ? fc * 0.3 : 0;
+    for (const st of STATES) {
+      if (sum.has(st)) continue;
+      grid += el("path", {
+        d: hex(st),
+        fill: "none",
+        "stroke-dasharray": "3 3",
+        "data-none": true,
+      });
+      const [cx, cy] = at(st) as [number, number];
+      if (showC)
+        labels += text(cx, cy, st.code, {
+          "data-in": true,
+          opacity: 0.4,
+          "font-size": r(fc),
+        });
+    }
     for (const [st, v] of sum) {
       const [cx, cy] = at(st) as [number, number];
       const q = hi > lo ? Math.min(9, Math.floor(((v - lo) / (hi - lo)) * 10)) : 9;
@@ -105,7 +137,7 @@ export const hexmap: Mark = {
         "data-s": 0,
         "data-x": st.name,
         "data-series": "",
-        "data-f": ctx.fmt(spec.y, v),
+        "data-f": f.get(st),
         "data-y": v,
         "data-neg": v < 0,
         "data-tone": ctx.tone(v),
@@ -113,22 +145,15 @@ export const hexmap: Mark = {
         d: hex(st),
       });
       // Drawn here (not ctx.label) so labels on the dark ramp steps can carry data-dark.
-      labels += el(
-        "text",
-        {
-          x: r(cx),
-          y: r(cy),
-          "text-anchor": "middle",
-          "dominant-baseline": "middle",
-          "data-in": true,
-          "data-dark": q >= 6,
-        },
-        esc(st.code),
-      );
+      const o = { "data-in": true, "data-dark": q >= 7 };
+      if (showC)
+        labels += text(cx, cy - dy, st.code, { ...o, "font-size": r(fc), "font-weight": 600 });
+      if (showV)
+        labels += text(cx, cy + fc * 0.62, f.get(st)!, { ...o, "font-size": r(fv), opacity: 0.8 });
     }
     const legend =
       hi > lo
-        ? `<div class="maya-legend" data-maya="ramp"><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
+        ? `<div class="maya-legend" data-maya="ramp" data-hex><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
         : "";
     return { marks, hits: "", labels, grid, legend };
   },
