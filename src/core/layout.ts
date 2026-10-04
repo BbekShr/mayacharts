@@ -74,16 +74,14 @@ function ticks(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "linear
 }
 
 /** Per-unit default label formats (UTC); the first tick and each January of a month axis add the year. */
-const TIME_FMT: Record<string, Intl.DateTimeFormatOptions> = {
-  year: { year: "numeric" },
-  quarter: { month: "short" },
-  month: { month: "short" },
-  week: { month: "short", day: "numeric" },
-  day: { month: "short", day: "numeric" },
-  hour: { hour: "numeric", minute: "2-digit" },
-  minute: { hour: "numeric", minute: "2-digit" },
-  second: { hour: "numeric", minute: "2-digit", second: "2-digit" },
-};
+const TIME_FMT = (u: string): Intl.DateTimeFormatOptions =>
+  u === "year"
+    ? { year: "numeric" }
+    : u === "quarter" || u === "month"
+      ? { month: "short" }
+      : u === "week" || u === "day"
+        ? { month: "short", day: "numeric" }
+        : { hour: "numeric", minute: "2-digit", second: u === "second" ? "2-digit" : undefined };
 
 /** Calendar ticks of a time axis; `spec.format` on the axis field wins over the unit defaults. */
 function timeAxis(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "time" }>, fmt: Fmt) {
@@ -91,7 +89,7 @@ function timeAxis(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "tim
   const loc = Intl.NumberFormat.supportedLocalesOf(spec.locale).length ? spec.locale : "en-US";
   const mk = (o: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(loc, { timeZone: "UTC", ...o });
-  const plain = mk(TIME_FMT[tk.unit]!);
+  const plain = mk(TIME_FMT(tk.unit));
   const yeared = mk({ month: "short", year: "numeric" });
   const custom = spec.format.has(a.field);
   const month = tk.unit === "quarter" || tk.unit === "month";

@@ -81,15 +81,16 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
     .forEach(([k, n], c) => {
       const [i, j] = [Math.floor(k / ny), k % ny];
       const [x, y] = [plot.x + i * cw, plot.y + j * ch];
+      const gx = span(sx, spec.x, x, x + cw);
       marks += el("rect", {
         "data-maya": "mark",
         "data-key": key("b", i, j),
         "data-c": c,
         "data-s": 0,
-        "data-x": span(sx, spec.x, x, x + cw),
+        "data-x": gx,
         "data-y": n,
         "data-f": ctx.t("points", ctx.fmt("", n)),
-        "data-gx": span(sx, spec.x, x, x + cw),
+        "data-gx": gx,
         "data-gy": span(sy, spec.y, y + ch, y),
         "data-q": Math.min(9, Math.floor(Math.sqrt(n / max) * 10)),
         x: r(x + 0.5),
@@ -99,18 +100,18 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
       });
     });
   const legend = `<div class="maya-legend" data-maya="ramp"><span>1</span><i></i><span>${esc(ctx.fmt("", max))}</span></div>`;
-  return { marks, hits: "", cross: cross(ctx, true), legend };
+  return { marks, hits: "", cross: cross(ctx), legend };
 }
 
 /** Hover guides: element-owned, moved to the hovered point (tooltip.ts); pills carry its x and y. */
-function cross({ plot }: MarkCtx, any: boolean) {
+function cross({ plot }: MarkCtx) {
   const [l, t, b] = [plot.x, plot.y, plot.y + plot.h];
-  return any
-    ? el("line", { "data-g": "x", x1: 0, x2: 0, y1: r(t), y2: r(b) }) +
-        el("line", { "data-g": "y", x1: r(l), x2: r(l + plot.w), y1: 0, y2: 0 }) +
-        el("text", { "data-g": "x", y: r(b - 6), "text-anchor": "middle" }, "") +
-        el("text", { "data-g": "y", x: r(l + 6), y: -6 }, "")
-    : "";
+  return (
+    el("line", { "data-g": "x", x1: 0, x2: 0, y1: r(t), y2: r(b) }) +
+    el("line", { "data-g": "y", x1: r(l), x2: r(l + plot.w), y1: 0, y2: 0 }) +
+    el("text", { "data-g": "x", y: r(b - 6), "text-anchor": "middle" }, "") +
+    el("text", { "data-g": "y", x: r(l + 6), y: -6 }, "")
+  );
 }
 
 export const scatter: Mark = {
@@ -206,7 +207,6 @@ export const scatter: Mark = {
         });
       if (spec.labels) ctx.label(cx, cy - rad, ctx.fmt(spec.y, p.y), "above");
     }
-    const cross_ = cross(ctx, pts.length > 0);
-    return { marks, hits, cross: cross_ };
+    return { marks, hits, cross: pts.length ? cross(ctx) : "" };
   },
 };

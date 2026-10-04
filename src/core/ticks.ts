@@ -58,24 +58,22 @@ export function toTime(v: unknown, ms = true): number | null {
  */
 export function timeTicks(min: number, max: number, target = 6): TimeTicks {
   const H = 3600e3;
-  // [unit, every, approximate ms]; quarter is its own unit (3 months, Jan/Apr/Jul/Oct).
   const D = 864e5;
   const Y = 365.25 * D;
   const M = Y / 12;
-  const cand: [TimeUnit, number, number][] = [
-    ...[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000].map((e): [TimeUnit, number, number] => [
-      "year",
-      e,
-      e * Y,
-    ]),
-    ["quarter", 1, 3 * M],
-    ...[1, 2, 6].map((e): [TimeUnit, number, number] => ["month", e, e * M]),
-    ["week", 1, 7 * D],
-    ...[1, 2].map((e): [TimeUnit, number, number] => ["day", e, e * D]),
-    ...[1, 3, 6, 12].map((e): [TimeUnit, number, number] => ["hour", e, e * H]),
-    ...[1, 5, 15, 30].map((e): [TimeUnit, number, number] => ["minute", e, e * 6e4]),
-    ...[1, 5, 15, 30].map((e): [TimeUnit, number, number] => ["second", e, e * 1e3]),
-  ];
+  // [unit, approximate ms, multiples]; quarter is its own unit (3 months, Jan/Apr/Jul/Oct).
+  const cand = (
+    [
+      ["year", Y, [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]],
+      ["quarter", 3 * M, [1]],
+      ["month", M, [1, 2, 6]],
+      ["week", 7 * D, [1]],
+      ["day", D, [1, 2]],
+      ["hour", H, [1, 3, 6, 12]],
+      ["minute", 6e4, [1, 5, 15, 30]],
+      ["second", 1e3, [1, 5, 15, 30]],
+    ] as [TimeUnit, number, number[]][]
+  ).flatMap(([u, ms, es]) => es.map((e): [TimeUnit, number, number] => [u, e, e * ms]));
   const span = max - min;
   if (!(span > 0)) return { values: [min], unit: "day", every: 1 };
   const score = (c: (typeof cand)[number]) => Math.abs(span / c[2] - target);
