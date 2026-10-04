@@ -63,6 +63,12 @@
       "type": "string",
       "description": "Category field (scatter: numeric x; hexmap: US state). Not used by path types."
     },
+    "xType": {
+      "type": "string",
+      "enum": ["auto", "category", "time"],
+      "default": "auto",
+      "description": "How x is spaced. \"auto\": a time axis when every x is an ISO 8601 date (\"2024-03\" or longer) on line, area or vertical bar without sort or limit; else categories. \"time\" also accepts epoch ms numbers."
+    },
     "y": {
       "oneOf": [
         {
@@ -138,6 +144,12 @@
           "description": "A preset for every `y`."
         },
         {
+          "type": "string",
+          "pattern": "^[^{}]*\\{value(?::(?:auto|integer|decimal|compact|percent|currency|date|month|year|time|datetime))?\\}[^{}]*$",
+          "maxLength": 80,
+          "description": "A template string with `{value}` or `{value:preset}`."
+        },
+        {
           "type": "object",
           "additionalProperties": {
             "oneOf": [
@@ -158,6 +170,11 @@
                 ]
               },
               {
+                "type": "string",
+                "pattern": "^[^{}]*\\{value(?::(?:auto|integer|decimal|compact|percent|currency|date|month|year|time|datetime))?\\}[^{}]*$",
+                "maxLength": 80
+              },
+              {
                 "type": "object",
                 "properties": {
                   "prefix": {
@@ -171,7 +188,7 @@
               }
             ]
           },
-          "description": "A preset / Intl options per field. Display only."
+          "description": "A preset / template / Intl options per field. Display only."
         }
       ],
       "description": "Display format for values."
@@ -219,7 +236,10 @@
           "shareOf",
           "sortedBy",
           "ascending",
-          "descending"
+          "descending",
+          "fromTo",
+          "reduced",
+          "points"
         ]
       }
     },

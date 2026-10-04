@@ -66,6 +66,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | Field        | Type             | Applies to                                                                          | Meaning                                                                  |
 | ------------ | ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `x`          | field            | all but path types                                                                  | Category; scatter numeric x; hexmap state; beeswarm optional row         |
+| `xType`      | auto / category / time | bar line area                                                                    | How x is spaced: auto detects ISO 8601 dates for a time axis; else categories. "time" accepts epoch ms. Default auto. |
 | `y`          | field or field[] | all                                                                                 | Value; array adds measure toggle (all-y types: axes/columns)             |
 | `series`     | field            | bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial | Split into series; heatmap row category; dumbbell exactly two (from, to) |
 | `path`       | field[]          | treemap sunburst sankey chord; bar/line/area/dumbbell with drill                    | Hierarchy outer to inner; replaces `x`                                   |
@@ -80,7 +81,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 | Field         | Type              | Default                                                                            | Meaning                                                             |
 | ------------- | ----------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `format`      | preset or options | auto                                                                               | Per field or one string for all measures; display only              |
+| `format`      | preset / template / options | auto                                                                               | Per field or one string for all measures; display only. Template: `"{value:percent} gross"` |
 | `titles`      | {[field]: string} | field names                                                                        | Display names everywhere (axis, tooltip, legend, table)             |
 | `labels`      | boolean           | false (heatmap: true at ≥24 px; treemap, sunburst: names; marimekko: shares; true) | Formatted value on marks                                            |
 | `text`        | {[key]: string}   | English                                                                            | Localisable UI strings with {0} placeholders                        |
@@ -114,6 +115,14 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `xAxis`   | boolean                       | all                        | true          | Bottom axis                                                         |
 | `yAxis`   | boolean                       | all                        | true          | Left axis                                                           |
 | `table`   | boolean                       | all                        | true          | Visually hidden data table for screen readers                       |
+
+### Time axes
+
+Dates in x values are automatically detected and placed on a proportional time axis when using line, area or vertical bar charts. ISO 8601 dates are recognized as year-month ("2024-03"), full date ("2024-03-05") or date-time ("2024-03-05T14:30:00Z"); a date-time without an offset is read as UTC. A bare year such as "2024" stays a category. Numbers are never auto-detected as dates; use `xType: "time"` explicitly to interpret them as epoch milliseconds. A time axis preserves the chronological order and spacing of dates, so sort and limit options keep a category axis instead. To disable time axis detection and use a category axis with ISO dates, set `xType: "category"`. All ticks and boundaries are placed at UTC calendar boundaries.
+
+### Large data
+
+Line and area charts on a time axis automatically reduce long time series to at most 1000 categories using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. The data table and screen reader description indicate how many points are displayed. Scatter charts above 5000 visible points are drawn as density cells to reduce rendering cost; bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest using `limit` or `aggregate` when exceeded.
 
 ## Canonical examples
 

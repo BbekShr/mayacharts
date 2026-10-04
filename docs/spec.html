@@ -138,6 +138,14 @@
               </td>
             </tr>
             <tr>
+              <td><a class="spec-anchor" id="xType"></a><code>xType</code></td>
+              <td>auto / category / time</td>
+              <td>bar line area</td>
+              <td>
+                How x is spaced. "auto": time axis when every x is an ISO 8601 date on line, area or vertical bar without sort/limit; else categories. "time" accepts epoch ms. Default auto
+              </td>
+            </tr>
+            <tr>
               <td><a class="spec-anchor" id="y"></a><code>y</code></td>
               <td>field or field[]</td>
               <td>all</td>
@@ -209,12 +217,12 @@
           <tbody>
             <tr>
               <td><a class="spec-anchor" id="format"></a><code>format</code></td>
-              <td>preset or {[field]: preset or options}</td>
+              <td>preset / template / {[field]: preset / template / options}</td>
               <td>auto</td>
               <td>
                 Bare string applies to every y. Presets: auto integer decimal compact percent
-                currency date month year time datetime. Or Intl options plus optional prefix/suffix.
-                Display only
+                currency date month year time datetime. Template: <code>"{value:percent} gross"</code>.
+                Or Intl options plus optional prefix/suffix. Display only
               </td>
             </tr>
             <tr>
@@ -341,6 +349,20 @@
             </tr>
           </tbody>
         </table>
+      </section>
+
+      <section>
+        <h2>Time axes</h2>
+        <p>
+          Dates in x values are automatically detected and placed on a proportional time axis when using line, area or vertical bar charts. ISO 8601 dates are recognized as year-month ("2024-03"), full date ("2024-03-05") or date-time ("2024-03-05T14:30:00Z"); a date-time without an offset is read as UTC. A bare year such as "2024" stays a category. Numbers are never auto-detected as dates; use <code>xType: "time"</code> explicitly to interpret them as epoch milliseconds. A time axis preserves the chronological order and spacing of dates, so sort and limit options keep a category axis instead. To disable time axis detection and use a category axis with ISO dates, set <code>xType: "category"</code>. All ticks and boundaries are placed at UTC calendar boundaries.
+        </p>
+      </section>
+
+      <section>
+        <h2>Large data</h2>
+        <p>
+          Line and area charts on a time axis automatically reduce long time series to at most 1000 categories using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. The data table and screen reader description indicate how many points are displayed. Scatter charts above 5000 visible points are drawn as density cells to reduce rendering cost; bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest using <code>limit</code> or <code>aggregate</code> when exceeded.
+        </p>
       </section>
 
       <section>
