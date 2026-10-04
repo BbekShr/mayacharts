@@ -732,7 +732,25 @@ npm run build     # dist/
 npm run size      # check budgets
 npm run e2e       # Playwright
 npm run dev       # demo site at localhost:5173
+npm run tokens    # Claude token spend on this repo
+git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on each commit
 ```
+
+### Built with Claude
+
+<!-- tokens:start -->
+
+Tokens spent with Claude Code since the first commit, across 3,269 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+
+- claude-opus-5-5: 353,177,064 total, 877,974 output
+- claude-sonnet-5-5: 119,486,754 total, 32,569 output
+- claude-fable-5-1: 74,794,840 total, 178,397 output
+- claude-haiku-4-5-20251001: 18,071,116 total, 728 output
+- claude-sonnet-5: 7,674,739 total, 43,301 output
+- claude-opus-5: 123,120 total, 12 output
+- all: 573,327,633 total, 1,132,981 output
+
+<!-- tokens:end -->
 
 ## Versioning
 

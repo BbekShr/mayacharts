@@ -1,0 +1,9 @@
+#!/bin/sh
+# Refresh the Claude token count in README.md and include it in this commit. Resolves the script
+# next to this hook so it also runs in worktrees whose branch predates it. Never blocks a commit.
+# Sub-agent worktree branches skip it: they would all edit the same lines and conflict on merge,
+# and the merge commit that brings them in counts their tokens anyway.
+case "$(git rev-parse --show-toplevel)" in */.claude/worktrees/agent-*) exit 0 ;; esac
+node "$(dirname "$0")/../scripts/tokens.mjs" --readme >/dev/null && git add README.md ||
+  echo "warning: token count in README.md not updated" >&2
+exit 0
