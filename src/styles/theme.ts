@@ -85,9 +85,13 @@ const HEXMAP =
 // scatter
 // SCAT = a chart whose cross group holds guide text (scatter only).
 const SCAT = "svg:has([data-maya=cross] text) ";
+// Density cells: floor of 88% accent (>= 3:1 on --maya-bg in both themes), darkening toward --maya-fg.
+const DENS = (p: string) =>
+  `color-mix(in oklab,color-mix(in oklab,var(--maya-accent) 88%,var(--maya-bg)),var(--maya-fg) ${p})`;
 const SCATTER =
   `${SCAT}circle[data-maya=mark]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 58%,transparent);stroke:color-mix(in oklab,var(--c,var(--maya-series-1)) 70%,var(--maya-fg));stroke-width:1.25;transform-origin:center;transition:opacity .25s var(--maya-ease),fill .2s,stroke-width .2s,transform .2s var(--maya-ease)}` +
-  `${SCAT}rect[data-maya=mark]{rx:0}` +
+  `${SCAT}rect[data-maya=mark]{rx:0}${SCAT}rect[data-maya=mark][data-q]{--c:${DENS("calc((var(--q) - 20%)*.5)")}}` +
+  `[data-d] i{width:80px;background:linear-gradient(90deg,${DENS("0%")},${DENS("40%")})}[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("20%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("20%")},${DENS("40%")})}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +

@@ -23,8 +23,22 @@ export function linearScale(
   return { domain, range, of: (v) => (d1 === d0 ? (r0 + r1) / 2 : r0 + (v - d0) * k) };
 }
 
+const monthStart = (ms: number) => ms % 864e5 === 0 && new Date(ms).getUTCDate() === 1;
+
+/** Fractional months since the epoch, piecewise linear inside each month. */
+function monthIndex(ms: number): number {
+  const a = new Date(ms);
+  a.setUTCDate(1);
+  a.setUTCHours(0, 0, 0, 0);
+  const b = new Date(a);
+  b.setUTCMonth(b.getUTCMonth() + 1);
+  return a.getUTCFullYear() * 12 + a.getUTCMonth() + (ms - +a) / (+b - +a);
+}
+
 /**
- * Time scale over UTC ms `t` (ascending, parallel to `domain`). Band centres sit at their time;
+ * Time scale over UTC ms `t` (ascending, parallel to `domain`). Band centres sit at their time,
+ * except when every t is a UTC month start (so also quarter and year starts): then positions
+ * follow the calendar month index, so months are evenly spaced and a missing one leaves one slot;
  * the range is inset by half a band so the first and last bands stay inside it. `bandwidth` is
  * 0.8 of the smallest gap in px, capped at 72 (bar width ceiling), at least 1.
  */
@@ -35,6 +49,9 @@ export function timeScale(
 ): TimeScale {
   const [r0, r1] = range;
   const w = r1 - r0;
+  const cal = t.length > 1 && t.every(monthStart);
+  const pos = (ms: number) => (cal ? monthIndex(ms) : ms);
+  t = t.map(pos);
   const n = t.length;
   const span = n > 1 ? t[n - 1]! - t[0]! : 0;
   let gap = Infinity;
@@ -46,13 +63,13 @@ export function timeScale(
   const b = Number.isFinite(gap) ? (0.8 * gap * w) / (span + 0.8 * gap) : 0.8 * w;
   const bandwidth = Math.max(1, Math.min(72, b));
   const k = span > 0 ? (w - bandwidth) / span : 0;
-  const of = (ms: number) => (span > 0 ? r0 + bandwidth / 2 + (ms - t[0]!) * k : r0 + w / 2);
+  const of = (ms: number) => (span > 0 ? r0 + bandwidth / 2 + (pos(ms) - t[0]!) * k : r0 + w / 2);
   return {
     kind: "time",
     domain,
     step: bandwidth / 0.8,
     bandwidth,
-    at: (i) => of(t[i]!) - bandwidth / 2,
+    at: (i) => (span > 0 ? r0 + bandwidth / 2 + (t[i]! - t[0]!) * k : r0 + w / 2) - bandwidth / 2,
     of,
   };
 }

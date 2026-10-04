@@ -60,7 +60,7 @@ describe("time downsampling", () => {
   });
   it("describes the reduction", () => {
     const p = renderParts(spec(3000));
-    expect(p.svg).toMatch(/Showing \d+ of 3000 points\./);
+    expect(p.svg).toMatch(/Showing \d+ of 3,?000 points\./);
   });
   it("100k rows render fast with <= 1000 point marks", () => {
     const s = spec(100_000);
@@ -107,5 +107,17 @@ describe("data-i on a time axis", () => {
       render({ type: "bar", x: "x", y: "v", data: x.map((v) => ({ x: v, v: 1 })) } as never);
     expect(bar(["2024-01-02", "2024-01-01"])).toMatch(/data-c="0" data-i="0"/);
     expect(bar(["a", "b"]).replace(/<style>.*<\/style>/, "")).not.toContain("data-i=");
+  });
+});
+
+describe("downsampling bound", () => {
+  it("20 000 daily points with alternate nulls render", () => {
+    const data = Array.from({ length: 20000 }, (_, i) => ({
+      x: new Date(Date.UTC(1970, 0, 1) + i * 864e5).toISOString().slice(0, 10),
+      v: i % 2 ? null : i % 97,
+    }));
+    const s = sh({ type: "line", x: "x", y: "v", data } as ChartSpec);
+    expect(s.categories.length).toBeLessThanOrEqual(MAX_POINTS);
+    expect(render({ type: "line", x: "x", y: "v", data } as never)).toContain("<svg");
   });
 });

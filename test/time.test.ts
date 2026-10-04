@@ -169,3 +169,98 @@ describe("time render", () => {
     expect(g).not.toMatch(/x1="(\d+(\.\d+)?)" x2="\1"/);
   });
 });
+
+describe("time axis review fixes", () => {
+  const bad = (v: number) => () =>
+    render({ type: "line", x: "x", y: "v", xType: "time", data: rows([0, v]) } as never);
+  const labels = (svg: string) =>
+    [
+      ...(/data-maya="axis-x">(.*?)<\/g>/.exec(svg)?.[1] ?? "").matchAll(/<text[^>]*>([^<]*)</g),
+    ].map((m) => m[1]!);
+  const xsOf = (svg: string) =>
+    [...svg.matchAll(/<rect data-maya="mark"[^>]* x="([\d.]+)" y=[^>]* width="([\d.]+)"/g)].map(
+      (m) => +m[1]! + +m[2]! / 2,
+    );
+
+  it("out-of-range epoch ms are invalid-date, not a hang", () => {
+    for (const v of [8.64e15 + 2000, 1e300, -1e300]) expect(bad(v)).toThrow(/invalid-date|xType/);
+    expect(toTime(1e300)).toBeNull();
+    const t = performance.now();
+    const k = timeTicks(-8.64e15, 8.64e15);
+    expect(performance.now() - t).toBeLessThan(500);
+    expect(k.values.length).toBeGreaterThanOrEqual(2);
+    expect(() => timeTicks(0, 8.64e15, 6, true)).not.toThrow();
+    expect(
+      render({ type: "line", x: "x", y: "v", xType: "time", data: rows([0, 8.64e15]) } as never),
+    ).toContain("data-t");
+  });
+
+  it("a boundary just before the data labels the origin", () => {
+    const svg = render({
+      type: "line",
+      x: "x",
+      y: "v",
+      data: rows(["2025-01-01T00:18Z", "2025-06-01T00:00Z", "2025-12-15T00:00Z"]),
+    } as never);
+    expect(labels(svg)[0]).toBe("Jan 2025");
+  });
+
+  it("month-start bars are evenly spaced; a missing month is one empty slot", () => {
+    const months = Array.from(
+      { length: 12 },
+      (_, i) => `2025-${String(i + 1).padStart(2, "0")}-01`,
+    );
+    const xs = xsOf(
+      render({
+        type: "bar",
+        x: "x",
+        y: "v",
+        data: rows(months.filter((m) => m !== "2025-05-01")),
+      } as never),
+    );
+    expect(xs).toHaveLength(11);
+    const gaps = xs.slice(1).map((v, i) => v - xs[i]!);
+    const g = gaps[0]!;
+    gaps.forEach((v, i) => expect(v).toBeCloseTo(i === 3 ? 2 * g : g, 1));
+    const s = timeScale(["a", "b"], [Date.UTC(2025, 0, 1), Date.UTC(2025, 2, 1)], [0, 100]);
+    expect(s.of(Date.UTC(2025, 2, 1))).toBeCloseTo(s.at(1) + s.bandwidth / 2);
+  });
+
+  it("tick count follows the width and stays evenly spaced", () => {
+    const data = rows(
+      Array.from({ length: 12 }, (_, i) => `2025-${String(i + 1).padStart(2, "0")}-01`),
+    );
+    const at = (width: number) =>
+      render({ type: "line", x: "x", y: "v", data } as never, { width });
+    const narrow = labels(at(360));
+    expect(narrow.slice(0, 4)).toEqual(["Jan 2025", "Apr", "Jul", "Oct"]);
+    expect(labels(at(1200)).length).toBeGreaterThan(narrow.length);
+  });
+
+  it("sub-day ticks show the date at midnight and on the first tick", () => {
+    const data = rows(
+      Array.from({ length: 49 }, (_, i) =>
+        new Date(Date.UTC(2025, 2, 1, 6) + i * 3600e3).toISOString(),
+      ),
+    );
+    const l = labels(render({ type: "line", x: "x", y: "v", data } as never));
+    expect(l[0]).toMatch(/^Mar 1/);
+    expect(l[0]).toMatch(/\d:\d\d/);
+    expect(l.some((t) => t === "Mar 2")).toBe(true);
+  });
+
+  it("a 10-day hole in hourly data breaks the line", () => {
+    const hrs = (from: number, n: number) =>
+      Array.from({ length: n }, (_, i) =>
+        new Date(Date.UTC(2025, 0, 1) + (from + i) * 3600e3).toISOString(),
+      );
+    const svg = render({
+      type: "line",
+      x: "x",
+      y: "v",
+      data: rows([...hrs(0, 48), ...hrs(48 + 240, 48)]),
+    } as never);
+    const d = /data-maya="line"[^>]* d="([^"]*)"/.exec(svg)![1]!;
+    expect(d.match(/M/g)).toHaveLength(2);
+  });
+});

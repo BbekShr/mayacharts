@@ -239,7 +239,11 @@
           "descending",
           "fromTo",
           "reduced",
-          "points"
+          "points",
+          "point",
+          "range",
+          "density",
+          "perCell"
         ]
       }
     },

@@ -49,6 +49,14 @@ export const TEXT = {
   reduced: "Showing {0} of {1} points",
   /** Scatter density cell (too many points to draw): {0} = point count. */
   points: "{0} points",
+  /** One scatter density cell holding a single point: {0} = 1. */
+  point: "{0} point",
+  /** A span of values: {0} = from, {1} = to. */
+  range: "{0} to {1}",
+  /** Description of a density scatter: {0} = cells drawn, {1} = fewest points in a cell, {2} = most. */
+  density: "Shown as {0} density cells, {1} to {2} points each",
+  /** Title of the density colour legend. */
+  perCell: "Points per cell",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

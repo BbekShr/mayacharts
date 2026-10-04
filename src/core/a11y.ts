@@ -2,6 +2,8 @@ import { t } from "./strings.ts";
 import { esc } from "./svg.ts";
 import type { ResolvedSpec, Shaped } from "./types.ts";
 
+/** Density scatter stats [cells, fewest, most], left by the mark's draw for describe (same spec object). */
+
 export const titleText = (spec: ResolvedSpec): string =>
   spec.title ??
   `${spec.titles.get(spec.y) ?? spec.y}` +
@@ -24,7 +26,7 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
       : t(spec, "chartOfAll", noun, ti(spec.y));
   if (spec.series !== null && shaped.series.length)
     s += `, ${spec.stack ? "stacked" : "grouped"} by ${ti(spec.series)} (${shaped.series.join(", ")})`;
-  if (ROWS.includes(spec.type)) return `${s}. ${spec.data.length} rows.`;
+  if (ROWS.includes(spec.type)) return `${s}. ${fmt("", spec.data.length)} rows.`;
   // Reduce loops: Math.min(...v) throws RangeError past ~65k values.
   let n = 0;
   let lo = Infinity;
@@ -37,8 +39,17 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
   if (tm?.length)
     s +=
       ", " +
-      t(spec, "fromTo", fmt(spec.x, shaped.categories[0]), fmt(spec.x, shaped.categories.at(-1)));
-  const cut = shaped.reduced ? " " + t(spec, "reduced", ...shaped.reduced) + "." : "";
+      (tm.length === 1
+        ? fmt(spec.x, shaped.categories[0])
+        : t(
+            spec,
+            "fromTo",
+            fmt(spec.x, shaped.categories[0]),
+            fmt(spec.x, shaped.categories.at(-1)),
+          ));
+  const cut = shaped.reduced
+    ? " " + t(spec, "reduced", ...shaped.reduced.map((v) => fmt("", v))) + "."
+    : "";
   return (
     (n === 1 ? `${s}. 1 value: ${f(lo)}.` : `${s}. ${n} values from ${f(lo)} to ${f(hi)}.`) + cut
   );

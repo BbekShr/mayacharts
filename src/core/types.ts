@@ -493,6 +493,8 @@ export interface MarkOut {
   legend?: string;
   grid?: string;
   cross?: string;
+  /** A sentence appended to the auto description (scatter density cells). */
+  note?: string;
 }
 
 /** A chart type. Core marks live in render.ts's CORE map; modules `register()` theirs. */

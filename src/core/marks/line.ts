@@ -25,9 +25,25 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     const cells: Cell[] = shaped.cells.filter((c) => c.si === si).sort((a, b) => a.ci - b.ci);
     let d = "";
     let gap = true;
+    // ponytail: on a time axis a hole wider than 5x the series' median gap breaks the line;
+    // a fixed factor, not a spec option.
+    const T = shaped.time;
+    const ts = T ? cells.filter((c) => c.value !== null).map((c) => T[c.ci]!) : [];
+    const gaps = ts
+      .flatMap((v, i) => (i && v > ts[i - 1]! ? [v - ts[i - 1]!] : []))
+      .sort((a, b) => a - b);
+    const hole = (gaps[gaps.length >> 1] ?? Infinity) * 5;
+    let prev = -Infinity;
     // Area runs: stacked areas treat null as 0 (shape did), so they never break.
     const runs: Cell[][] = [[]];
     for (const c of cells) {
+      if (T && c.value !== null) {
+        if (T[c.ci]! - prev > hole) {
+          gap = true;
+          if (!spec.stack) runs.push([]);
+        }
+        prev = T[c.ci]!;
+      }
       if (c.value === null && !spec.stack) runs.push([]);
       else runs[runs.length - 1]!.push(c);
       if (c.value === null) {

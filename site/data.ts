@@ -325,7 +325,7 @@ export function makePoints(seed: number, n = 50000) {
 }
 const R2 = (v: number) => Math.round(v * 100) / 100;
 
-/** 20 000 irregular ISO timestamps over 2025 (random gaps, two quiet stretches) with a drifting reading. */
+/** Exactly n (20 000) irregular ISO timestamps over 2025 (random gaps, two quiet stretches) with a drifting reading. */
 export function makeReadings(seed: number, n = 20000) {
   const rng = mulberry32(seed);
   const start = Date.UTC(2025, 0, 1);
@@ -336,8 +336,12 @@ export function makeReadings(seed: number, n = 20000) {
   ];
   const out: { time: string; load: number }[] = [];
   let v = 50;
-  for (const u of Array.from({ length: n }, () => rng()).sort((a, b) => a - b)) {
-    if (gaps.some(([a, b]) => u > a && u < b)) continue;
+  const us: number[] = [];
+  while (us.length < n) {
+    const u = rng();
+    if (!gaps.some(([a, b]) => u > a && u < b)) us.push(u);
+  }
+  for (const u of us.sort((a, b) => a - b)) {
     v += gauss(rng) * 0.8 + (50 + 12 * Math.sin(u * 12 * Math.PI) - v) * 0.02;
     out.push({ time: new Date(start + u * span).toISOString().slice(0, 19) + "Z", load: R2(v) });
   }

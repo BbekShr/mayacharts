@@ -21,20 +21,30 @@
  *   numbers allowed; null x rows dropped), get Shaped.time (UTC ms per category) and the
  *   categories sorted by time. Axis { kind: "time" } -> timeScale: band centres sit at their
  *   time, bandwidth is 0.8 of the smallest gap (at most 72 px); marks read cat.at(i) as ever.
- *   Ticks are calendar-aligned (timeTicks), thinned by pixel gap, no vertical grid. The svg
+ *   When every time is a UTC month start (so quarter and year starts too), centres follow the
+ *   calendar month index instead of ms: even spacing, a missing month leaves one empty slot.
+ *   Epoch ms beyond +-8.64e15 are invalid-date. Ticks are calendar-aligned (timeTicks), about
+ *   plot.w / 80 of them (min 2); a year, quarter or month boundary less than half an interval
+ *   outside the data is kept and clamped to the first or last centre (so "Jan 2025" labels the
+ *   origin of data starting Jan 1 00:18). If the pixel gap would still drop a label the count
+ *   falls by one until none does, so ticks stay evenly spaced. Sub-day ticks at UTC midnight and
+ *   the first tick show the date. No vertical grid. Line and area paths break where the gap to
+ *   the previous non-null point exceeds 5x the series' median gap (fixed factor). The svg
  *   carries data-t (empty) beside data-n; line hit rects and bar marks (y2 points too) carry
  *   data-i, the category's index in the time-ordered list before window and reduction (the
  *   index space of view.window). Without spec.format for x, labels use a preset from
  *   the smallest gap (year, month, date, datetime); tick labels use per-unit defaults.
  *   Downsampling: line and area on a time axis with more categories than min(MAX_POINTS,
  *   4000 / series) run largest-triangle-three-buckets per series (keeping first, last, min, max
- *   and one marker per gap), after the window. Kept categories keep their keys; Shaped.reduced
+ *   and one marker per gap), after the window; a union still over the target is thinned to
+ *   first, last and evenly spaced indexes. Kept categories keep their keys; Shaped.reduced
  *   = [kept, before], and the description says so. view.window indexes the time-ordered list
  *   before reduction. Scatter is exempt from the pre-draw mark cap (it bins its own rows).
  *
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
  *   (hierarchy, flow, geo) call registry.register() on import. A Mark is
  *   { noun, axes?(spec, shaped): [bottom, left], check?(spec, fail), draw(ctx) }.
+ *   draw() may return `note`, one sentence appended to the auto description.
  *   MarkCtx closures: fmt(field, v, step?), label(x, y, text, place, rotate?), tone(v), agg(kind),
  *   fail(code, path, headline, ...details), t(key, ...args); plus spec, shaped, width,
  *   height, plot, x (bottom-axis scale), y (left-axis scale). Modules import only
@@ -383,6 +393,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   mark.check?.(spec, fail);
 
   let markLegend: string | null = null;
+  let note = "";
   let body = "";
   if (s.data.length === 0) {
     body = el(
@@ -401,6 +412,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     const m = mark.draw(ctx);
     cap(m.marks.split(' data-maya="mark"').length - 1); // scatter and modules draw per row/node
     markLegend = m.legend ?? null;
+    note = m.note ?? "";
     // Area fills fade toward the baseline: one gradient per visible slot, kept in the grid group
     // (the marks group holds keyed marks only). ponytail: fixed ids, see NON-FEATURES.
     const fades =
@@ -470,7 +482,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       el(
         "desc",
         { id: sheet === null ? "maya-d" : null },
-        esc(describe(s, shaped, fmt, mark.noun)),
+        esc(
+          describe(s, shaped, fmt, mark.noun) + (note && s.description === null ? " " + note : ""),
+        ),
       ) +
       body,
   );

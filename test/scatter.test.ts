@@ -149,9 +149,23 @@ describe("scatter", () => {
       expect(rects(svg).length).toBeLessThanOrEqual(5000);
       expect(sum(svg)).toBe(20000);
       const c = rects(svg)[0]!;
-      expect(attr(c, "data-f")).toMatch(/ points$/);
-      expect(attr(c, "data-gx")).toContain(" – ");
+      expect(attr(c, "data-f")).toMatch(/ points?$/);
+      expect(attr(c, "data-gx")).toMatch(/ to /);
       expect(attr(c, "data-s")).toBe("0");
+    });
+
+    it("announces ranges with both axis titles, pluralises, and describes the cells", () => {
+      const svg = renderParts(mk(20000)).svg;
+      const one = rects(svg).find((c) => attr(c, "data-f") === "1 point")!;
+      expect(one).toBeTruthy();
+      expect(attr(one, "data-x")).toMatch(/^a [^,]+ to [^,]+, b [^,]+ to /);
+      expect(svg).not.toContain("–");
+      expect(svg).toMatch(/20,000 rows\. Shown as [\d,]+ density cells, 1 to [\d,]+ points each\./);
+    });
+
+    it("keeps cells under MAX_MARKS on an extreme aspect ratio", () => {
+      const svg = renderParts(mk(20000), { width: 400000, height: 60 }).svg;
+      expect(rects(svg).length).toBeLessThanOrEqual(5000);
     });
 
     it("is deterministic and keys are unique", () => {

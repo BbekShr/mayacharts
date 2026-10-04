@@ -257,7 +257,12 @@ function reduceTime(cats: readonly Cat[], nSeries: number, catTarget: number): n
       for (const k of lttb(xs, ys, share)) keep.add(idx[k]!);
     }
   }
-  return [...keep].sort((a, b) => a - b);
+  // Many series or sparse runs can still overshoot: first, last and evenly spaced indexes.
+  const u = [...keep].sort((a, b) => a - b);
+  const n = Math.max(2, catTarget);
+  return u.length <= n
+    ? u
+    : Array.from({ length: n }, (_, k) => u[Math.round((k * (u.length - 1)) / (n - 1))]!);
 }
 
 /** colorBy field aggregated per (category, series) like the marks; null without a field colorBy. */

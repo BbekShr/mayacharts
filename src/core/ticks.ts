@@ -42,7 +42,8 @@ const ISO =
  * when `ms` is true (xType "time"). Anything else: null.
  */
 export function toTime(v: unknown, ms = true): number | null {
-  if (typeof v === "number") return ms && Number.isFinite(v) ? v : null;
+  // 8.64e15 is the Date range; beyond it every calendar helper gives NaN.
+  if (typeof v === "number") return ms && Math.abs(v) <= 8.64e15 ? v : null;
   if (typeof v !== "string") return null;
   const m = ISO.exec(v);
   if (!m) return null;
@@ -54,9 +55,11 @@ export function toTime(v: unknown, ms = true): number | null {
  * About `target` ticks over [min, max] (UTC ms), each on a calendar boundary of one unit:
  * year (1, 2, 5, 10…), quarter, month (1, 2, 6), week (Mondays), day (1, 2), hour (1, 3, 6, 12),
  * minute (1, 5, 15, 30), second (1, 5, 15, 30). Ticks lie inside [min, max]; one-point
- * domains get the single tick at min. Pure, UTC, no Date mutation leaks.
+ * domains get the single tick at min. With `pad`, a year, quarter or month boundary that lies
+ * outside [min, max] by less than half a tick interval is kept too (the caller clamps it to
+ * the plot edge). Pure, UTC, no Date mutation leaks.
  */
-export function timeTicks(min: number, max: number, target = 6): TimeTicks {
+export function timeTicks(min: number, max: number, target = 6, pad = false): TimeTicks {
   const H = 3600e3;
   const D = 864e5;
   const Y = 365.25 * D;
@@ -88,11 +91,14 @@ export function timeTicks(min: number, max: number, target = 6): TimeTicks {
       // Count months since year 0 so every N aligns the same way across years.
       const step = unit === "year" ? 12 * every : unit === "quarter" ? 3 : every;
       const d = new Date(min);
-      let k = Math.ceil((d.getUTCFullYear() * 12 + d.getUTCMonth()) / step) * step;
-      for (; ; k += step) {
-        const t = at(Math.floor(k / 12), k % 12);
-        if (t > max) break;
-        if (t >= min) out.push(t);
+      const slack = pad ? ms / 2 : 0;
+      let k =
+        Math.ceil((d.getUTCFullYear() * 12 + d.getUTCMonth()) / step) * step - (pad ? step : 0);
+      // The cap and the negated test stop the loop where Date turns NaN (beyond +-8.64e15).
+      for (let n = 0; n < 1e4; n++, k += step) {
+        const t = at(Math.floor(k / 12), ((k % 12) + 12) % 12);
+        if (!(t <= max + slack)) break;
+        if (t >= min - slack) out.push(t);
       }
     } else {
       const step = unit === "week" ? 7 * D : ms;
@@ -105,7 +111,7 @@ export function timeTicks(min: number, max: number, target = 6): TimeTicks {
   const best = cand.sort((a, b) => score(a) - score(b)).slice(0, 4);
   for (const [unit, every, ms] of best) {
     const values = gen(unit, every, ms);
-    if (values.length >= 2) return { values, unit, every };
+    if (values.filter((v) => v >= min && v <= max).length >= 2) return { values, unit, every };
   }
   const [unit, every] = best[0]!;
   return { values: [min], unit, every };

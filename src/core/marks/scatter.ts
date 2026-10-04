@@ -59,8 +59,9 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
   const { spec, plot } = ctx;
   const [sx, sy] = [ctx.x as LinearScale, ctx.y as LinearScale];
   const cell = Math.max(6, Math.sqrt((plot.w * plot.h) / MAX_MARKS));
-  const nx = Math.max(1, Math.floor(plot.w / cell));
-  const ny = Math.max(1, Math.floor(plot.h / cell));
+  // Extreme aspect ratios (400000 x 20) would floor to thousands of columns: cap the grid too.
+  const ny = Math.max(1, Math.min(Math.floor(plot.h / cell), MAX_MARKS));
+  const nx = Math.max(1, Math.min(Math.floor(plot.w / cell), Math.floor(MAX_MARKS / ny)));
   const [cw, ch] = [plot.w / nx, plot.h / ny];
   const at = (v: number, s: LinearScale, o: number, n: number) =>
     Math.min(n - 1, Math.max(0, Math.floor((s.of(v) - o) / (n === nx ? cw : ch))));
@@ -70,11 +71,12 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
     grid.set(k, (grid.get(k) ?? 0) + 1);
   }
   const max = Math.max(...grid.values());
+  const ti = (f: string) => spec.titles.get(f) ?? f;
   // Pixel to data, from the scale's own endpoints.
   const inv = (s: LinearScale, px: number) =>
     s.domain[0] + ((px - s.range[0]) / (s.range[1] - s.range[0])) * (s.domain[1] - s.domain[0]);
   const span = (s: LinearScale, f: string, a: number, b: number) =>
-    `${ctx.fmt(f, inv(s, a))} – ${ctx.fmt(f, inv(s, b))}`;
+    ctx.t("range", ctx.fmt(f, inv(s, a)), ctx.fmt(f, inv(s, b)));
   let marks = "";
   [...grid]
     .sort((a, b) => a[0] - b[0])
@@ -82,25 +84,36 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
       const [i, j] = [Math.floor(k / ny), k % ny];
       const [x, y] = [plot.x + i * cw, plot.y + j * ch];
       const gx = span(sx, spec.x, x, x + cw);
+      const gy = span(sy, spec.y, y + ch, y);
       marks += el("rect", {
         "data-maya": "mark",
         "data-key": key("b", i, j),
         "data-c": c,
         "data-s": 0,
-        "data-x": gx,
+        "data-x": `${ti(spec.x)} ${gx}, ${ti(spec.y)} ${gy}`,
         "data-y": n,
-        "data-f": ctx.t("points", ctx.fmt("", n)),
+        "data-f": ctx.t(n === 1 ? "point" : "points", ctx.fmt("", n)),
         "data-gx": gx,
-        "data-gy": span(sy, spec.y, y + ch, y),
-        "data-q": Math.min(9, Math.floor(Math.sqrt(n / max) * 10)),
+        "data-gy": gy,
+        "data-q": Math.min(9, Math.ceil(Math.sqrt(n / max) * 10) - 1),
         x: r(x + 0.5),
         y: r(y + 0.5),
         width: r(cw - 1),
         height: r(ch - 1),
       });
     });
-  const legend = `<div class="maya-legend" data-maya="ramp"><span>1</span><i></i><span>${esc(ctx.fmt("", max))}</span></div>`;
-  return { marks, hits: "", cross: cross(ctx), legend };
+  // The ramp is sqrt, so the middle of the gradient is a quarter of the maximum.
+  const mid = Math.round(max / 4);
+  const f = (n: number) => `<span>${esc(ctx.fmt("", n))}</span>`;
+  const legend =
+    `<div class="maya-legend" data-maya="ramp" data-d><b>${esc(ctx.t("perCell"))}</b>${f(1)}<i></i>` +
+    (mid > 1 && mid < max ? `${f(mid)}<i></i>` : "") +
+    f(max) +
+    "</div>";
+  const note =
+    ctx.t("density", ...[grid.size, Math.min(...grid.values()), max].map((v) => ctx.fmt("", v))) +
+    ".";
+  return { marks, hits: "", cross: cross(ctx), legend, note };
 }
 
 /** Hover guides: element-owned, moved to the hovered point (tooltip.ts); pills carry its x and y. */

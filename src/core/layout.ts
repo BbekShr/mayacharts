@@ -1,7 +1,7 @@
 import { bandScale, linearScale, timeScale } from "./scale.ts";
 import { el, esc, r } from "./svg.ts";
 import { niceTicks, timeTicks } from "./ticks.ts";
-import type { Axis, Box, LinearScale, ResolvedSpec, Scale } from "./types.ts";
+import type { Axis, Box, LinearScale, ResolvedSpec, Scale, TimeScale } from "./types.ts";
 
 const wide = (c: number) =>
   (c >= 0x1100 && c <= 0x115f) ||
@@ -83,20 +83,38 @@ const TIME_FMT = (u: string): Intl.DateTimeFormatOptions =>
         ? { month: "short", day: "numeric" }
         : { hour: "numeric", minute: "2-digit", second: u === "second" ? "2-digit" : undefined };
 
-/** Calendar ticks of a time axis; `spec.format` on the axis field wins over the unit defaults. */
-function timeAxis(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "time" }>, fmt: Fmt) {
-  const tk = timeTicks(a.t[0] ?? 0, a.t.at(-1) ?? 0);
+/**
+ * Calendar ticks of a time axis, about `target` of them; `spec.format` on the axis field wins
+ * over the unit defaults. Sub-day ticks at UTC midnight and the first tick carry the date.
+ */
+function timeAxis(
+  spec: ResolvedSpec,
+  a: Extract<NonNullable<Axis>, { kind: "time" }>,
+  fmt: Fmt,
+  target: number,
+) {
+  const tk = timeTicks(a.t[0] ?? 0, a.t.at(-1) ?? 0, target, true);
   const loc = Intl.NumberFormat.supportedLocalesOf(spec.locale).length ? spec.locale : "en-US";
   const mk = (o: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(loc, { timeZone: "UTC", ...o });
   const plain = mk(TIME_FMT(tk.unit));
   const yeared = mk({ month: "short", year: "numeric" });
+  const dated = mk({ month: "short", day: "numeric" });
+  const datedTime = mk({ ...TIME_FMT("day"), ...TIME_FMT(tk.unit) });
   const custom = spec.format.has(a.field);
   const month = tk.unit === "quarter" || tk.unit === "month";
+  const sub = tk.unit === "hour" || tk.unit === "minute" || tk.unit === "second";
   const labels = tk.values.map((v, i) =>
     custom
       ? fmt(a.field, v)
-      : (month && (i === 0 || new Date(v).getUTCMonth() === 0) ? yeared : plain).format(v),
+      : (month && (i === 0 || new Date(v).getUTCMonth() === 0)
+          ? yeared
+          : sub && v % 864e5 === 0
+            ? dated
+            : sub && i === 0
+              ? datedTime
+              : plain
+        ).format(v),
   );
   return { values: tk.values, labels };
 }
@@ -110,7 +128,9 @@ export function frame(
 ): Frame {
   const { width: W, height: H } = size;
   const bt = bx && bx.kind === "linear" ? ticks(spec, bx, fmt) : null;
-  const tt = bx && bx.kind === "time" ? timeAxis(spec, bx, fmt) : null;
+  // The plot is not known yet: size the first tick set from the full width (only its end labels matter here).
+  const tt =
+    bx && bx.kind === "time" ? timeAxis(spec, bx, fmt, Math.max(2, Math.round(W / 80))) : null;
   const edge = bt ?? tt; // tick labels centred on the plot's ends need half their width as margin
   const lt = ly && ly.kind === "linear" ? ticks(spec, ly, fmt) : null;
   // Band labels go through the field's format (month presets on x); left ones are cut at 40%.
@@ -243,16 +263,29 @@ export function frame(
   let ax = "";
   if (spec.xAxis && bx) {
     const ty = r(plot.y + plot.h + 16);
-    if (tt) {
-      // Time ticks are thinned by pixel gap: a label that would touch the previous one is dropped.
-      let right = -Infinity;
-      tt.values.forEach((v, i) => {
-        const px = (x as { of(v: number): number }).of(v);
-        const half = w(tt.labels[i]!) / 2;
-        if (px - half < right) return;
-        right = px + half;
-        ax += el("text", { x: r(px), y: ty, "text-anchor": "middle" }, esc(tt.labels[i]!));
-      });
+    if (tt && bx.kind === "time") {
+      // Ticks sit at their time, clamped to the first and last band centres. If the pixel gap would
+      // still drop a label, retry with one tick fewer (down to 2) so the ticks stay evenly spaced.
+      const sc = x as TimeScale;
+      const [lo, hi] = [sc.of(bx.t[0] ?? 0), sc.of(bx.t.at(-1) ?? 0)];
+      let target = Math.max(2, Math.round(plot.w / 80));
+      for (;;) {
+        const t = timeAxis(spec, bx, fmt, target);
+        let right = -Infinity;
+        let out = "";
+        let dropped = false;
+        t.values.forEach((v, i) => {
+          const px = Math.min(hi, Math.max(lo, sc.of(v)));
+          const half = w(t.labels[i]!) / 2;
+          if (px - half < right) return void (dropped = true);
+          right = px + half;
+          out += el("text", { x: r(px), y: ty, "text-anchor": "middle" }, esc(t.labels[i]!));
+        });
+        ax += out;
+        if (!dropped || target <= 2) break;
+        ax = ax.slice(0, ax.length - out.length);
+        target--;
+      }
     } else if (bt) {
       // Linear ticks are thinned like band labels when they would overlap.
       const every = Math.max(
