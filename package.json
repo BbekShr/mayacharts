@@ -89,7 +89,8 @@
     "e2e": "playwright test",
     "compare": "npm run build && E2E_NO_SERVER=1 playwright test --project=compare",
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts",
-    "tokens": "node scripts/tokens.mjs"
+    "tokens": "node scripts/tokens.mjs",
+    "compare:bundle": "node scripts/compare-bundle.mjs"
   },
   "mayaSize": {
     "dist/index.js": 29184,
@@ -104,13 +105,30 @@
   "devDependencies": {
     "@anthropic-ai/sdk": "0.131.0",
     "@axe-core/playwright": "^4.13.0",
+    "@nivo/bar": "0.99.0",
+    "@nivo/core": "0.99.0",
+    "@nivo/heatmap": "0.99.0",
+    "@nivo/line": "0.99.0",
+    "@nivo/sankey": "0.99.0",
+    "@nivo/scatterplot": "0.99.0",
+    "@nivo/treemap": "0.99.0",
+    "@observablehq/plot": "0.6.17",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4",
     "chart.js": "4.5.1",
     "echarts": "6.1.0",
+    "esbuild": "0.28.2",
     "happy-dom": "^20.14.5",
+    "plotly.js-dist-min": "4.1.1",
     "prettier": "^3.9.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "recharts": "3.10.1",
     "typescript": "^7.0.2",
+    "vega": "6.4.0",
+    "vega-embed": "7.3.0",
+    "vega-interpreter": "2.3.2",
+    "vega-lite": "6.4.3",
     "vite": "^8.3.2",
     "vitest": "^5.0.3"
   }

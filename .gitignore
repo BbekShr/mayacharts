@@ -14,3 +14,4 @@ site/ssr.html
 .claude/settings.local.json
 .claude/tokens.json
 eval/results-*.json
+e2e/compare/.build/
