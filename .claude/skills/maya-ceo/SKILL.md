@@ -57,7 +57,7 @@ Never run two builds in one tree at once (`dist/` is shared). The dev server is 
 | `maya-security-engineer` | sonnet | report-only | injection, CSP/Trusted Types, prototype pollution, zero deps, provenance, licensing and employer policy |
 | `maya-release-manager`   | haiku  | report-only | GO/NO-GO gate                                                                                           |
 
-Ownership map: each finding goes to exactly one editor by file. A finding that spans two (a new spec field plus the mark that uses it) is two dispatches, core first: contracts before fan-out, so parallel editors never touch the same file. Docs and config chores can go to a `haiku` dispatch of the owning editor when the plan specifies them line by line; verify Haiku's facts.
+Ownership map: each finding goes to exactly one editor by file. A finding that spans two (a new spec field plus the mark that uses it) is two dispatches, core first: contracts before fan-out, so parallel editors never touch the same file. Route by cost: Opus only for the serial contracts task and the critics; Sonnet for code and tests; Haiku by default for anything the plan can spell out line by line (schema.json, llms.txt, README tables, docs/spec.html, CHANGELOG, NON-FEATURES, site fixtures, CI yaml, lookups), as a `model: haiku` dispatch of the owning editor. Verify Haiku's facts (dates, URLs, browser support) before merging.
 
 **Parallel editors in one tree:** one owner per file, no `npm run build` from editors (you build), and if several need `theme.ts`, give each a temporary part file (`src/styles/wip-<name>.ts` imported into `theme.ts`) and fold them in yourself at the end. This is how the 2026-10-04 redesign of six chart types ran without a conflict.
 

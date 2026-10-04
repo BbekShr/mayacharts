@@ -1,4 +1,4 @@
-import type { BandScale, LinearScale } from "./types.ts";
+import type { BandScale, LinearScale, TimeScale } from "./types.ts";
 
 export function bandScale(
   domain: readonly string[],
@@ -21,4 +21,20 @@ export function linearScale(
   const [r0, r1] = range;
   const k = d1 === d0 ? 0 : (r1 - r0) / (d1 - d0);
   return { domain, range, of: (v) => (d1 === d0 ? (r0 + r1) / 2 : r0 + (v - d0) * k) };
+}
+
+/**
+ * Time scale over UTC ms `t` (ascending, parallel to `domain`). Band centres sit at their time;
+ * the range is inset by half a band so the first and last bands stay inside it. `bandwidth` is
+ * 0.8 of the smallest gap in px, capped at 72 (bar width ceiling), at least 1.
+ */
+export function timeScale(
+  domain: readonly string[],
+  t: readonly number[],
+  range: readonly [number, number],
+): TimeScale {
+  void domain;
+  void t;
+  void range;
+  throw new Error("timeScale: not implemented");
 }

@@ -142,6 +142,8 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
     cells,
     extent: [lo, hi],
     y2: s.y2 === null ? [] : cats.map((c) => c.y2 ?? null),
+    time: null,
+    reduced: null,
   };
 }
 

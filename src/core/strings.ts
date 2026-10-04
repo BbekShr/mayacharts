@@ -43,6 +43,12 @@ export const TEXT = {
   total: "Total",
   /** Sunburst tooltip share: {0} = percent, {1} = parent name. */
   shareOf: "{0} of {1}",
+  /** Auto description on a time axis: {0} = first date, {1} = last date. */
+  fromTo: "from {0} to {1}",
+  /** Description when a time axis was downsampled: {0} = points drawn, {1} = points in the data. */
+  reduced: "Showing {0} of {1} points",
+  /** Scatter density cell (too many points to draw): {0} = point count. */
+  points: "{0} points",
 } as const;
 
 export type TextKey = keyof typeof TEXT;
