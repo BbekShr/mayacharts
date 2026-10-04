@@ -39,12 +39,33 @@ for (const [filePath, budget] of files) {
   const fullPath = `${projectRoot}/${filePath}`;
 
   if (!existsSync(fullPath)) {
-    console.error(`Error: File not found: ${filePath}`);
-    hasError = true;
+    if (!process.env.MAYA_SIZE_PARTIAL) {
+      console.error(`Error: File not found: ${filePath}`);
+      hasError = true;
+    }
     continue;
   }
 
   const buffer = readFileSync(fullPath);
+  const content = buffer.toString("utf-8");
+
+  // Check banner on all JS files
+  if (filePath.endsWith(".js")) {
+    if (!content.startsWith("/*! mayacharts")) {
+      console.error(`Error: ${filePath} does not start with banner "/*! mayacharts"`);
+      hasError = true;
+    }
+  }
+
+  // Check for top-level var maya or const maya in global build
+  if (filePath === "dist/maya.global.js") {
+    const first200 = content.substring(0, 200);
+    if (/^\s*(var|const)\s+maya\s*[=;]/.test(first200)) {
+      console.error(`Error: ${filePath} has top-level var maya or const maya declaration`);
+      hasError = true;
+    }
+  }
+
   const rawBytes = buffer.length;
   const gzipBytes = gzipSync(buffer, { level: 9 }).length;
 

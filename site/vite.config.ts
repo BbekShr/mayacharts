@@ -10,18 +10,23 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^mayacharts\/element$/, replacement: src("element.ts") },
+      { find: /^mayacharts\/hierarchy$/, replacement: src("hierarchy.ts") },
+      { find: /^mayacharts\/flow$/, replacement: src("flow.ts") },
+      { find: /^mayacharts\/geo$/, replacement: src("geo.ts") },
       { find: /^mayacharts$/, replacement: src("index.ts") },
     ],
   },
   plugins: [
     {
-      // package.json "sideEffects" lists only dist/element.js, so the bare `import "mayacharts/element"`
-      // (aliased to src/element.ts) was tree-shaken and the element never registered.
-      name: "keep-element-side-effects",
+      // package.json "sideEffects" lists dist side-effect files, so bare imports were tree-shaken
+      // and the modules never registered.
+      name: "keep-side-effects",
       enforce: "pre",
       // Vite's alias plugin has already rewritten the id to the absolute path by the time this runs.
       async resolveId(id, importer, opts) {
-        if (id !== "mayacharts/element" && id !== src("element.ts")) return null;
+        const sideEffectPattern = /^mayacharts\/(element|hierarchy|flow|geo)$/;
+        const srcFiles = [src("element.ts"), src("hierarchy.ts"), src("flow.ts"), src("geo.ts")];
+        if (!sideEffectPattern.test(id) && !srcFiles.includes(id)) return null;
         const r = await this.resolve(id, importer, { ...opts, skipSelf: true });
         return r && { ...r, moduleSideEffects: true };
       },

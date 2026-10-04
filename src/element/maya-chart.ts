@@ -7,18 +7,19 @@ import type {
   Host,
   MayaErrorDetail,
   MayaSelectDetail,
+  Parts,
   Sel,
   SpecEvent,
   State,
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { patch } from "./animate.ts";
+import { type Box, boxOf, patch } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import * as measure from "./measure.ts";
 import * as select from "./select.ts";
-import { tooltip } from "./tooltip.ts";
+import { type Tooltip, tooltip } from "./tooltip.ts";
 import * as zoom from "./zoom.ts";
 
 let sheet: CSSStyleSheet | undefined;
@@ -38,7 +39,9 @@ export class MayaChart extends HTMLElement {
   #raf = 0;
   #ro: ResizeObserver | undefined;
   #off: (() => void) | undefined;
-  #hide: (() => void) | undefined;
+  #tip: Tooltip | undefined;
+  #origin: Box | undefined;
+  #vars = new Set<string>();
   #err = "";
   #drawn = false;
 
@@ -86,6 +89,13 @@ export class MayaChart extends HTMLElement {
   }
 
   connectedCallback(): void {
+    // Upgrade race: properties set on the element before it was defined shadow the accessors.
+    for (const p of ["spec", "data", "view", "selected"] as const)
+      if (Object.hasOwn(this, p)) {
+        const v = (this as any)[p];
+        delete (this as any)[p];
+        (this as any)[p] = v;
+      }
     const j = this.querySelector(':scope > script[type="application/json"]')?.textContent;
     try {
       if (j) this.#json = JSON.parse(j);
@@ -124,13 +134,7 @@ export class MayaChart extends HTMLElement {
       spec: () => this.spec,
       state: () => this.#state,
       commit: (next, target) => this.#commit(next, target ?? null),
-      announce: (text) => {
-        clearTimeout(this.#say);
-        this.#say = setTimeout(() => {
-          const live = root.querySelector("[data-maya=live]");
-          if (live) live.textContent = text;
-        }, 300);
-      },
+      announce: (text) => this.#announce(text),
     };
     this.#ix = {
       measure: measure.mount(host),
@@ -139,13 +143,21 @@ export class MayaChart extends HTMLElement {
       zoom: zoom.mount(host),
     };
     const box = root.querySelector(".maya-box")!;
-    [this.#off, this.#hide] = tooltip(root, () => this.spec?.tooltip !== false);
+    this.#tip = tooltip(
+      root,
+      () => this.spec?.tooltip !== false,
+      (t) => this.#announce(t),
+      () => this.spec,
+    );
+    this.#off = this.#tip.off;
     this.#ro = new ResizeObserver(() => {
       if (
         Math.abs(box.clientWidth - this.#size[0]!) > 1 ||
         Math.abs(box.clientHeight - this.#size[1]!) > 1
-      )
+      ) {
+        this.#ix?.zoom.cancel?.(); // a brush's pixel geometry is stale after a resize
         this.#schedule();
+      }
     });
     this.#ro.observe(box);
     this.#schedule();
@@ -166,6 +178,38 @@ export class MayaChart extends HTMLElement {
 
   #registered = () => this.#schedule();
 
+  /** Polite live region: static node, textContent only, debounced 300 ms. User-initiated only. */
+  #announce(text: string): void {
+    clearTimeout(this.#say);
+    this.#say = setTimeout(() => {
+      const live = this.shadowRoot?.querySelector("[data-maya=live]");
+      if (live) live.textContent = text;
+    }, 300);
+  }
+
+  /** Standalone SVG: custom properties resolved from the computed style (dark export looks right). */
+  toSVG(): string {
+    const root = this.shadowRoot;
+    const svg = root?.querySelector<SVGSVGElement>("svg.maya-svg");
+    if (!root || !svg) return "";
+    const cs = getComputedStyle(root.querySelector(".maya")!);
+    const names = new Set([...css.matchAll(/--maya-[\w-]+/g)].map((m) => m[0]));
+    for (const v of this.#vars) names.add(v);
+    const decl = [...names]
+      .map((k) => [k, cs.getPropertyValue(k).trim()])
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}:${v}`)
+      .join(";");
+    const c = svg.cloneNode(true) as SVGSVGElement;
+    c.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    c.removeAttribute("tabindex");
+    for (const e of c.querySelectorAll("[data-active]")) e.removeAttribute("data-active");
+    const st = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    st.textContent = `${css}.maya-svg{${decl}}`;
+    c.prepend(st);
+    return c.outerHTML;
+  }
+
   #emit(type: string, detail: unknown, cancelable = false): boolean {
     return this.dispatchEvent(
       new CustomEvent(type, { detail, bubbles: true, composed: true, cancelable }),
@@ -175,6 +219,10 @@ export class MayaChart extends HTMLElement {
   /** User-initiated state change: re-render, then tell the page what changed. */
   #commit(next: State, target: MayaSelectDetail["target"]): void {
     const prev = this.#state;
+    // Drilling: the clicked mark is where entering marks start from.
+    const am = this.#tip?.active();
+    if (am && JSON.stringify(prev.view.drill) !== JSON.stringify(next.view.drill))
+      this.#origin = boxOf(am);
     this.#state = next;
     this.#schedule();
     if (JSON.stringify(prev.view) !== JSON.stringify(next.view)) this.#emit("maya-view", next.view);
@@ -193,13 +241,14 @@ export class MayaChart extends HTMLElement {
   #key = (e: Event) => {
     const ix = this.#ix;
     if (!ix) return;
+    if (e.defaultPrevented) return; // the tooltip consumed it (pinned Escape)
     const k = (e as KeyboardEvent).key;
     let done: boolean | undefined;
     if (k === "Escape")
       done =
         ix.zoom.cancel?.() || ix.select.escape?.() || ix.zoom.escape?.() || ix.drill.escape?.();
     else if (k === "Enter") {
-      const m = this.shadowRoot!.querySelector("[data-maya=mark][data-active]");
+      const m = this.#tip?.active();
       done = !!m && (ix.drill.enter?.(m) || ix.select.enter?.(m));
     }
     if (done) e.preventDefault();
@@ -210,7 +259,7 @@ export class MayaChart extends HTMLElement {
     if (this.spec?.select) return;
     const b = (e.target as Element).closest("[data-maya=legend] button");
     if (!b) return;
-    const k = b.textContent ?? "";
+    const k = b.getAttribute("data-key") ?? b.textContent ?? ""; // ponytail: textContent fallback until core emits data-key
     const hidden = new Set(this.#state.view.hidden);
     if (hidden.has(k)) hidden.delete(k);
     else if (this.shadowRoot!.querySelectorAll("[data-maya=legend] [aria-pressed=true]").length > 1)
@@ -250,6 +299,7 @@ export class MayaChart extends HTMLElement {
         selected: this.#state.selected,
       });
     } catch (e) {
+      this.#tip?.hide();
       const d: MayaErrorDetail | null =
         e instanceof MayaSpecError ? { code: e.code, path: e.path, message: e.message } : null;
       // Cancelable: preventDefault() hides the box (the host shows its own error).
@@ -259,11 +309,7 @@ export class MayaChart extends HTMLElement {
         return;
       }
       const pre = document.createElement("pre");
-      pre.className = "maya-err";
-      pre.setAttribute(
-        "style",
-        "margin:0;padding:8px;color:#c00;white-space:pre-wrap;font:12px monospace",
-      );
+      pre.className = "maya-err"; // styled by theme.ts; never an inline style
       pre.textContent = e instanceof Error ? e.message : String(e);
       box.replaceChildren(pre);
       this.#drawn = false;
@@ -272,40 +318,68 @@ export class MayaChart extends HTMLElement {
       return;
     }
     this.#err = "";
-    this.#hide?.();
-    const maya = root.querySelector(".maya")!;
-    const put = (
-      k: "legend" | "title" | "table",
-      sel: string,
-      ref: Element | null,
-      where: InsertPosition,
-    ) => {
-      const markup = parts[k];
-      if (this.#last[k] === markup) return;
-      this.#last[k] = markup;
-      const old = root.querySelector(sel);
-      const i =
-        k === "legend"
-          ? [...root.querySelectorAll("[data-maya=legend] button")].indexOf(
-              (root.activeElement ?? box) as Element,
-            )
-          : -1;
-      old?.remove();
-      (ref ?? box).insertAdjacentHTML(where, html(markup));
-      if (i >= 0) root.querySelectorAll<HTMLElement>("[data-maya=legend] button")[i]?.focus();
-    };
-    put("legend", "[data-maya=legend]", null, "beforebegin");
-    put("title", ".maya-title", root.querySelector("[data-maya=legend]"), "beforebegin");
-    put("table", "table.maya-sr", null, "afterend");
-    if (this.#last["style"] !== parts.style) {
-      this.#last["style"] = parts.style;
-      if (parts.style) maya.setAttribute("style", parts.style);
-      else maya.removeAttribute("style");
+    const focus = this.#focusId();
+    const maya = root.querySelector<HTMLElement>(".maya")!;
+    // Slots in shell order; each is replaced only when its markup changed.
+    const slots: [keyof Parts, string][] = [
+      ["title", ".maya-title"],
+      ["controls", ".maya-ctl"],
+      ["legend", "[data-maya=legend]"],
+      ["crumbs", ".maya-crumbs"],
+    ];
+    slots.forEach(([k, sel], i) => {
+      if (this.#last[k] === parts[k]) return;
+      this.#last[k] = parts[k] as string;
+      root.querySelector(sel)?.remove();
+      const next = slots.slice(i + 1).map(([, s]) => root.querySelector(s));
+      (next.find(Boolean) ?? box).insertAdjacentHTML("beforebegin", html(parts[k] as string));
+    });
+    if (this.#last["table"] !== parts.table) {
+      this.#last["table"] = parts.table;
+      root.querySelector("table.maya-sr")?.remove();
+      box.insertAdjacentHTML("afterend", html(parts.table));
     }
+    // Overrides via CSSOM (never a style attribute).
+    for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
+    for (const k of this.#vars)
+      if (!parts.vars.some(([n]) => n === k)) maya.style.removeProperty(k);
+    this.#vars = new Set(parts.vars.map(([k]) => k));
     const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
-    patch(box, parts.svg, this.#drawn && !still);
+    patch(box, parts.svg, this.#drawn && !still, {
+      origin: this.#origin,
+      after: () => this.#tip?.refresh(),
+    });
+    this.#origin = undefined;
     this.#drawn = true;
+    this.#restore(focus);
     for (const h of Object.values(this.#ix ?? {})) h.painted?.();
     this.#emit("maya-render", {});
   }
+
+  /** Stable id of the focused control: svg, legend:i, measure:i, crumb:i or reset. */
+  #focusId(): string | undefined {
+    const f = this.shadowRoot!.activeElement;
+    if (!f) return;
+    for (const [id, sel] of FOCUS) {
+      const all = [...this.shadowRoot!.querySelectorAll(sel)];
+      const i = all.indexOf(f);
+      if (i >= 0) return `${id}:${i}`;
+    }
+  }
+
+  #restore(id: string | undefined): void {
+    const root = this.shadowRoot!;
+    if (!id || root.activeElement) return;
+    const [k, i] = id.split(":");
+    const sel = FOCUS.find(([n]) => n === k)![1];
+    root.querySelectorAll<HTMLElement>(sel)[+i!]?.focus({ preventScroll: true });
+  }
 }
+
+const FOCUS: [string, string][] = [
+  ["svg", ".maya-svg"],
+  ["legend", "[data-maya=legend] button"],
+  ["measure", ".maya-ctl [role=radio]"],
+  ["crumb", ".maya-crumbs :is(button,a)"],
+  ["reset", ".maya-reset"],
+];

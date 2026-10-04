@@ -54,7 +54,7 @@
  *     <title id="maya-t">  <desc id="maya-d">
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
- *     <g data-maya="axis-x">   category labels, every `layout.xLabelEvery`th, axis title
+ *     <g data-maya="axis-x">   category labels (thinned to fit), axis title
  *     <g data-maya="marks">    only [data-key] children, one tag per key
  *     <g data-maya="labels">   value labels (text), from ctx.label
  *     <g data-maya="cross">    crosshair (line/area), moved via CSSOM transform
@@ -90,7 +90,9 @@
  * CSS hooks theme.ts styles (interaction modules never touch theme.ts):
  *   .maya-ctl [role=radio][aria-checked]  .maya-crumbs  .maya-reset  .maya-err
  *   [data-maya=brush]  [data-maya=cross]  [data-maya=link]  [data-depth]  [data-selected]
- *   [data-tone]  [data-q]  [data-other]  [data-dir=h]
+ *   [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
+ *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
+ *   indicator; line point circles are hidden until active under `svg[data-n]`.
  *
  * Keyboard (one keydown dispatcher in maya-chart.ts; handlers return "handled"):
  *   Escape priority: pinned tooltip -> brush in progress -> selection -> zoom window -> drill
@@ -112,30 +114,38 @@
  *   Guard zero sizes (use 1e-6). Skip entirely under prefers-reduced-motion or
  *   spec.animate === false.
  *
- * Layout: no text measurement exists in Node, so label widths are estimated as
- *   chars * 0.6 * 12 + 8 (font-size constant 12). x labels are never rotated; every nth
- *   label is drawn where n = ceil(maxLabelWidth / band.step). Coordinates are rounded
- *   to 2 decimals (`r()` in svg.ts).
+ * Layout (layout.ts frame()): no text measurement exists in Node, so axis label widths are
+ *   estimated as 0.6 em per code point (1 em for East-Asian-wide) * 12 + 8, value labels
+ *   (ctx.label) as chars * 7.2 + 4. Labels are never rotated; band axes draw every nth label
+ *   (bottom: by width, left: 14 px per step); left band labels are cut at 40% of the width.
+ *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
  *
  * Legend and title are HTML, not SVG (free wrapping and font metrics). render() — the
  * bare SVG — therefore has no legend; renderShell() is the full-fidelity output.
  */
 import { dataTable, describe, titleText } from "./a11y.ts";
 import { formatter } from "./format.ts";
-import { layout } from "./layout.ts";
+import { frame } from "./layout.ts";
 import { bar } from "./marks/bar.ts";
 import { heatmap } from "./marks/heatmap.ts";
 import { area, line } from "./marks/line.ts";
 import { scatter } from "./marks/scatter.ts";
 import { MODULES } from "./registry.ts";
-import { bandScale, linearScale } from "./scale.ts";
-import { shape } from "./shape.ts";
+import { agg, shape } from "./shape.ts";
 import { t } from "./strings.ts";
-import { niceTicks } from "./ticks.ts";
 import { css } from "../styles/theme.ts";
 import { el, esc, r } from "./svg.ts";
-import { fail, resolve, validateOptions, validateSpec } from "./validate.ts";
-import type { ChartSpec, Mark, MarkCtx, Parts, RenderOptions, Row } from "./types.ts";
+import { fail, MAX_MARKS, resolve, validateOptions, validateSpec } from "./validate.ts";
+import type {
+  Aggregate,
+  ChartSpec,
+  LabelPlace,
+  Mark,
+  MarkCtx,
+  Parts,
+  RenderOptions,
+  Row,
+} from "./types.ts";
 
 const CORE: Readonly<Record<string, Mark>> = {
   bar,
@@ -156,23 +166,116 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const s = resolve(spec, opts?.view);
   const W = opts?.width ?? 640;
   const H = opts?.height ?? 320;
-  const shaped = shape(s, opts?.view?.hidden);
-  const empty = s.data.length === 0;
-  const [lo, hi] = s.yDomain ?? shaped.extent;
-  const tk = niceTicks(lo, hi);
-  const domain = s.yDomain ?? tk.domain;
-  const values = s.yDomain ? tk.values.filter((v) => v >= lo && v <= hi) : tk.values;
-  const fmt = formatter(s, tk.step);
-  const yLabels = values.map(fmt);
-  const lay = layout(s, shaped, yLabels, { width: W, height: H });
-  const { plot } = lay;
-  const x = bandScale(shaped.categories, [plot.x, plot.x + plot.w]);
-  const y = linearScale(domain, [plot.y + plot.h, plot.y]);
-  const yTitle = s.titles.get(s.y);
-  const xTitle = s.titles.get(s.x);
+  const shaped = shape(s, opts?.view ?? {});
+  if (shaped.cells.length > MAX_MARKS)
+    fail(
+      "too-many-marks",
+      "data",
+      `${shaped.cells.length} marks exceed the limit of ${MAX_MARKS}.`,
+      "Use spec.limit to keep the top N categories, or aggregate the rows first.",
+    );
+
+  // Formatters are cached per (field, step): marks call fmt once per value.
+  const fmts = new Map<string, (v: unknown) => string>();
+  const fmt = (field: string, v: unknown, step?: number) => {
+    const k = field + "\0" + step;
+    let f = fmts.get(k);
+    if (!f) fmts.set(k, (f = formatter(s, field, step)));
+    return f(v);
+  };
+
+  // colorBy: sign/target give tone; a numeric field gives a 0..9 bucket over its extent.
+  const cb = s.colorBy;
+  let lo = Infinity;
+  let hi = -Infinity;
+  if (typeof cb === "string" && cb !== "sign")
+    for (const row of s.data) {
+      const v = row[cb];
+      if (typeof v === "number") ((lo = Math.min(lo, v)), (hi = Math.max(hi, v)));
+    }
+  const tone = (v: number): "good" | "bad" | null =>
+    cb === "sign"
+      ? v < 0
+        ? "bad"
+        : "good"
+      : cb && typeof cb === "object"
+        ? v >= cb.target
+          ? "good"
+          : "bad"
+        : null;
+  const toneText = (v: number) => {
+    const n = tone(v);
+    return n === null
+      ? null
+      : t(
+          s,
+          cb === "sign"
+            ? n === "good"
+              ? "positive"
+              : "negative"
+            : n === "good"
+              ? "above"
+              : "below",
+        );
+  };
+
+  // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
+  const boxes: number[][] = [];
+  let labels = "";
+  const label = (x: number, y: number, text: string, place: LabelPlace) => {
+    const w = text.length * 7.2 + 4;
+    const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
+    const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
+    // ponytail: O(n^2) overlap scan; MAX_MARKS bounds it.
+    if (
+      l < 0 ||
+      tp < 0 ||
+      l + w > W ||
+      tp + 14 > H ||
+      boxes.some((b) => l < b[2]! && l + w > b[0]! && tp < b[3]! && tp + 14 > b[1]!)
+    )
+      return false;
+    boxes.push([l, tp, l + w, tp + 14]);
+    labels += el(
+      "text",
+      {
+        x: r(x),
+        y: r(place === "above" ? y - 4 : place === "below" ? y + 13 : y),
+        "text-anchor": place === "start" || place === "end" ? place : "middle",
+        "dominant-baseline": place === "above" || place === "below" ? null : "middle",
+      },
+      esc(text),
+    );
+    return true;
+  };
+
+  const f = mark.axes ? frame(s, mark.axes(s, shaped), { width: W, height: H }, fmt) : null;
+  const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
+  const ctx: MarkCtx = {
+    spec: s,
+    shaped,
+    width: W,
+    height: H,
+    plot,
+    x: f?.x ?? null,
+    y: f?.y ?? null,
+    fmt,
+    label,
+    tone,
+    // Ramp bucket 0..9 over the colorBy field's extent (ctx.q; types.ts MarkCtx has no slot yet).
+    q: (v) => (hi > lo ? Math.min(9, Math.max(0, Math.floor(((v - lo) / (hi - lo)) * 10))) : 9),
+    agg: (kind: Aggregate) => (vs) => {
+      const a = agg(kind);
+      for (const v of vs) if (typeof v === "number") a.add(v);
+      return a.value();
+    },
+    fail,
+    t: (k, ...a) => t(s, k, ...a),
+  };
+  mark.check?.(spec, fail);
 
   let body = "";
-  if (empty) {
+  if (s.data.length === 0) {
     body = el(
       "text",
       {
@@ -186,87 +289,26 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     );
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
-    const x2 = r(plot.x + plot.w);
-    body += g(
-      "grid",
-      s.grid
-        ? values
-            .map((v) => el("line", { x1: r(plot.x), x2, y1: r(y.of(v)), y2: r(y.of(v)) }))
-            .join("")
-        : "",
-    );
-    let ay = "";
-    if (s.yAxis)
-      values.forEach((v, i) => {
-        ay += el(
-          "text",
-          { x: r(plot.x - 6), y: r(y.of(v)), "text-anchor": "end", "dominant-baseline": "middle" },
-          esc(yLabels[i]!),
-        );
-      });
-    if (yTitle) {
-      const cy = r(plot.y + plot.h / 2);
-      ay += el(
-        "text",
-        { x: 9, y: cy, "text-anchor": "middle", transform: `rotate(-90 9 ${cy})` },
-        esc(yTitle),
-      );
-    }
-    body += g("axis-y", ay);
-    let ax = "";
-    if (s.xAxis)
-      shaped.categories.forEach((c, i) => {
-        if (i % lay.xLabelEvery === 0)
-          ax += el(
-            "text",
-            {
-              x: r(x.at(i) + x.bandwidth / 2),
-              y: r(plot.y + plot.h + 16),
-              "text-anchor": "middle",
-            },
-            esc(c),
-          );
-      });
-    if (xTitle)
-      ax += el(
-        "text",
-        { x: r(plot.x + plot.w / 2), y: H - 4, "text-anchor": "middle" },
-        esc(xTitle),
-      );
-    body += g("axis-x", ax);
-    // T1a: frame() from mark.axes(), real label()/tone(), agg() from shape.ts.
-    const ctx: MarkCtx = {
-      spec: s,
-      shaped,
-      width: W,
-      height: H,
-      plot,
-      x,
-      y,
-      fmt: (_field, v, step) =>
-        typeof v === "number"
-          ? (step === undefined ? fmt : formatter(s, step))(v)
-          : String(v ?? ""),
-      label: () => false,
-      tone: () => null,
-      agg: () => {
-        throw new Error("mayacharts: agg not implemented");
-      },
-      fail,
-      t: (k, ...a) => t(s, k, ...a),
-    };
     const m = mark.draw(ctx);
-    body +=
+    body =
+      g("grid", m.grid ?? f?.grid ?? "") +
+      g("axis-y", f?.ay ?? "") +
+      g("axis-x", f?.ax ?? "") +
       g("marks", m.marks) +
-      g("labels", m.labels ?? "") +
+      g("labels", (m.labels ?? "") + labels) +
       g("cross", m.cross ?? "") +
       g("hits", m.hits);
   }
 
   const vars: [string, string][] = [];
-  // T1a: object-form colors map to stable slots by series key.
   if (Array.isArray(s.colors))
     (s.colors as readonly string[]).forEach((c, i) => vars.push([`--maya-series-${i + 1}`, c]));
+  else if (s.colors)
+    // ponytail: slot = the series' first-appearance index, so reordered rows move colours.
+    for (const [k, c] of s.colors as ReadonlyMap<string, string>) {
+      const j = shaped.series.indexOf(k);
+      if (j >= 0) vars.push([`--maya-series-${(j % 8) + 1}`, c]);
+    }
   for (const k in s.theme) vars.push([`--maya-${kebab(k)}`, s.theme[k as keyof typeof s.theme]!]);
   const style = vars.map(([k, v]) => `${k}:${v};`).join("");
 
@@ -285,40 +327,79 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       tabindex: sheet === null ? "0" : null,
       style: sheet === null ? null : style || null,
       "data-plot": `${r(plot.x)} ${r(plot.y)} ${r(plot.w)} ${r(plot.h)}`,
-      "data-n": shaped.categories.length,
+      ...f?.attrs,
       "data-dir": s.horizontal ? "h" : null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
       el("title", { id: sheet === null ? "maya-t" : null }, esc(titleText(s))) +
-      el("desc", { id: sheet === null ? "maya-d" : null }, esc(describe(s, shaped, fmt))) +
+      el(
+        "desc",
+        { id: sheet === null ? "maya-d" : null },
+        esc(describe(s, shaped, fmt, mark.noun)),
+      ) +
       body,
   );
 
-  const legend =
-    s.legend && s.series !== null
-      ? `<div class="maya-legend" data-maya="legend">` +
-        shaped.series
-          .map((k, i) =>
-            el(
-              "button",
-              {
-                type: "button",
-                "data-si": i,
-                "data-s": i % 8,
-                "aria-pressed": String(shaped.visible.includes(i)),
-              },
-              `<i></i>${esc(k)}`,
-            ),
-          )
-          .join("") +
-        `</div>`
-      : "";
+  let legend = "";
+  if (s.series !== null && s.legend)
+    legend =
+      `<div class="maya-legend" data-maya="legend">` +
+      shaped.series
+        .map((k, i) =>
+          el(
+            "button",
+            {
+              type: "button",
+              "data-si": i,
+              "data-s": i % 8,
+              "data-key": k,
+              "aria-pressed": String(shaped.visible.includes(i)),
+            },
+            `<i></i>${esc(k)}`,
+          ),
+        )
+        .join("") +
+      `</div>`;
+  else if (spec.legend !== false && cb !== null && s.series === null)
+    legend =
+      cb === "sign" || typeof cb === "object"
+        ? `<div class="maya-legend" data-maya="tone">` +
+          (["good", "bad"] as const)
+            .map(
+              (n) =>
+                `<span data-tone="${n}"><i></i>${esc(t(s, cb === "sign" ? (n === "good" ? "positive" : "negative") : n === "good" ? "above" : "below"))}</span>`,
+            )
+            .join("") +
+          `</div>`
+        : hi > lo
+          ? `<div class="maya-legend" data-maya="ramp"><span>${esc(fmt(cb, lo))}</span><i></i><span>${esc(fmt(cb, hi))}</span></div>`
+          : "";
   return {
     svg,
     legend,
-    controls: "",
-    crumbs: "",
-    table: s.table ? dataTable(s, shaped, fmt) : "",
+    controls:
+      s.measures.length > 1
+        ? `<div class="maya-ctl" role="radiogroup" aria-label="${esc(t(s, "measures"))}" data-n="${s.measures.length}" data-i="${s.measure}">` +
+          s.measures
+            .map(
+              (m, i) =>
+                `<button type="button" role="radio" aria-checked="${i === s.measure}" data-i="${i}" data-focus="measure:${i}" tabindex="${i === s.measure ? 0 : -1}">${esc(s.titles.get(m) ?? m)}</button>`,
+            )
+            .join("") +
+          `</div>`
+        : "",
+    crumbs:
+      s.drilled.length > 0
+        ? `<nav class="maya-crumbs" aria-label="${esc(t(s, "crumbs"))}"><button type="button" data-depth="0" data-focus="crumb:0">${esc(t(s, "back"))}</button>` +
+          s.drilled
+            .map(
+              (v, i) =>
+                `<span aria-hidden="true">›</span><button type="button" data-depth="${i + 1}" data-focus="crumb:${i + 1}"${i === s.drilled.length - 1 ? ' aria-current="page"' : ""}>${esc(String(v))}</button>`,
+            )
+            .join("") +
+          `</nav>`
+        : "",
+    table: s.table ? dataTable(s, shaped, fmt, toneText) : "",
     title: s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`,
     style,
     vars,

@@ -1,45 +1,31 @@
 /*
- * Validation: hand-written guards, zero deps. Errors only (no warnings, no logging).
- *
- * Message format (every error):
- *   mayacharts: <one-line headline naming the exact spec path>
- *     <detail lines, 2-space indent>
- *     -> https://bbekshr.github.io/mayacharts/errors.html#<code>
- *
- * Check order (first failure wins):
- *   object -> unknown-option (HINTS before "did you mean") -> type present -> unknown-type
- *   (core ∪ registered; aliases; "import mayacharts/<module>" for unloaded module types)
- *   -> data / rows -> per-type required fields -> option types and values -> ONLY table and
- *   pair rules (option-unsupported) -> field existence -> numeric checks -> Mark.check().
- *
- * Error catalogue (code: when -> what the detail must say):
- *   spec-not-object     spec is not a plain object          -> typeof received
- *   missing-field       type/data/x|path/y absent           -> required fields for the type + example
- *   unknown-type        type not core or registered         -> valid types, alias hint or "Did you mean",
- *                                                              or the module import for unloaded types
- *   data-not-array      data is not an array                -> typeof
- *   row-not-object      data[i] is not a plain object       -> index and typeof
- *   unknown-field       a field-valued option names no field -> fields found (first 20), "Did you mean",
- *                                                              what the option is for
- *   non-numeric-y       data[i][y[k]] not a finite number   -> null/undefined allowed (gaps); numeric
- *                                                              strings get the coercion hint
- *   non-numeric-field   size / scatter x / colorBy field    -> same as non-numeric-y
- *   non-positive-value  treemap/sunburst/sankey y <= 0      -> filter hint
- *   unknown-option      top-level key not in ChartSpec      -> HINTS replacement, else "Did you mean"
- *   invalid-option      wrong type/value for a known option -> expected shape, received value, HINTS
- *   option-unsupported  option not valid for this type/pair -> which types (or which option) it works with
- *   stack-unsupported   stack: true with type "line"        -> suggest type "area"
- *   invalid-domain      yDomain/xDomain not [lo, hi], lo<hi -> received
+ * Validation: hand-written guards, zero deps. Errors only. Every error:
+ *   mayacharts: <headline naming the spec path>\n  <detail lines>\n  -> https://bbekshr.github.io/mayacharts/errors.html#<code>
+ * Order (first failure wins): object, unknown-option (HINTS, then "did you mean"), type, data/rows,
+ * required fields, option types/values, ONLY + pair rules, field existence, numeric checks, Mark.check().
+ * Codes:
+ *   spec-not-object     spec is not a plain object
+ *   missing-field       type/data/x|path/y absent (required fields + example)
+ *   unknown-type        not core or registered (valid types, alias hint, "did you mean", or module import)
+ *   data-not-array      data is not an array
+ *   row-not-object      data[i] is not a plain object
+ *   unknown-field       a field-valued option names no field in data
+ *   non-numeric-y       data[i][y] not a finite number (null allowed; numeric strings get a coercion hint)
+ *   non-numeric-field   size / scatter x / colorBy field, as above
+ *   non-positive-value  treemap/sunburst/sankey y <= 0
+ *   unknown-option      top-level key not in ChartSpec (HINTS, else "did you mean")
+ *   invalid-option      wrong type/value for a known option
+ *   option-unsupported  option not valid for this type or pair
+ *   stack-unsupported   stack: true with type "line"
+ *   invalid-domain      yDomain/xDomain not [lo, hi] with lo < hi
  *   invalid-format      unknown preset, bad Intl options, unsupported locale, bad currency
- *   invalid-theme       unknown theme token                 -> tokens + "Did you mean"
+ *   invalid-theme       unknown theme token
  *   unsafe-css-value    colors/theme value outside the CSS allowlist
  *   invalid-size        RenderOptions width/height not finite > 0
- *   unknown-state       hexmap x names no US state (thrown by geo's Mark.check)
- *   too-many-marks      more than MAX_MARKS marks (thrown by render) -> suggest limit / aggregate
- *
- * "Did you mean": pick the candidate with the smallest score (|len diff| + count of chars
- * not shared, case-insensitive; ties to the longest shared prefix); suggest only if score <= 3.
- * Every lookup keyed by user input goes through Object.hasOwn or Array#includes.
+ *   unknown-state       hexmap x names no US state (geo's Mark.check)
+ *   too-many-marks      more than MAX_MARKS marks (thrown by render)
+ * "Did you mean": smallest score (|len diff| + chars not shared; ties to longest prefix), only if <= 3.
+ * Lookups keyed by user input go through Object.hasOwn or Array#includes.
  */
 import { CORE_TYPES, MODULE_OF, MODULES, types } from "./registry.ts";
 import { TEXT } from "./strings.ts";
@@ -69,118 +55,40 @@ export class MayaSpecError extends Error {
 // ponytail: hard cap instead of virtualisation; suggest limit/aggregate.
 export const MAX_MARKS = 5000;
 
-const S: Record<string, "string" | "boolean"> = {
-  $schema: "string",
-  x: "string",
-  series: "string",
-  size: "string",
-  name: "string",
-  title: "string",
-  description: "string",
-  locale: "string",
-  currency: "string",
-  stack: "boolean",
-  horizontal: "boolean",
-  labels: "boolean",
-  legend: "boolean",
-  tooltip: "boolean",
-  drill: "boolean",
-  zoom: "boolean",
-  grid: "boolean",
-  xAxis: "boolean",
-  yAxis: "boolean",
-  table: "boolean",
-  animate: "boolean",
-};
+const w = (s: string) => s.split(" ");
+const S: Record<string, "string" | "boolean"> = Object.fromEntries([
+  ...w("$schema x series size name title description locale currency").map((k) => [k, "string"]),
+  ...w("stack horizontal labels legend tooltip drill zoom grid xAxis yAxis table animate").map(
+    (k) => [k, "boolean"],
+  ),
+]);
 /** Every spec key (schema.json is tested against this). */
 export const KEYS = [
-  "type",
-  "data",
-  "y",
-  "path",
-  "totals",
-  "aggregate",
-  "sort",
-  "limit",
-  "format",
-  "titles",
-  "text",
-  "yDomain",
-  "xDomain",
-  "select",
-  "colors",
-  "colorBy",
-  "theme",
+  ...w("type data y path totals aggregate sort limit format titles text yDomain xDomain select"),
+  ...w("colors colorBy theme"),
   ...Object.keys(S),
 ];
 const CART = ["bar", "line", "area"];
 const PATH = ["treemap", "sunburst", "sankey"];
 /** Option -> types that accept it (option-unsupported otherwise). */
-export const ONLY: Readonly<Record<string, readonly string[]>> = {
-  horizontal: ["bar"],
-  size: ["scatter"],
-  name: ["scatter"],
-  path: [...CART, ...PATH],
-  totals: ["waterfall"],
-  series: [...CART, "heatmap"],
-  sort: [...CART, "heatmap"],
-  limit: [...CART, "heatmap"],
-  stack: ["bar", "area"],
-  colorBy: ["bar", "waterfall", "scatter", "treemap", "sunburst", "hexmap"],
-  xDomain: ["scatter"],
-  drill: [...CART, ...PATH],
-  select: [...CART, "waterfall", "scatter", "heatmap", "treemap", "sunburst", "hexmap"],
-  zoom: ["line", "area", "scatter"],
-};
-const AGGS = ["sum", "mean", "count", "min", "max"];
-const PRESETS = [
-  "auto",
-  "integer",
-  "decimal",
-  "compact",
-  "percent",
-  "currency",
-  "date",
-  "month",
-  "year",
-  "time",
-  "datetime",
-];
-const DATE = [
-  "dateStyle",
-  "timeStyle",
-  "weekday",
-  "era",
-  "year",
-  "month",
-  "day",
-  "dayPeriod",
-  "hour",
-  "minute",
-  "second",
-  "fractionalSecondDigits",
-  "timeZoneName",
-  "timeZone",
-  "hour12",
-  "hourCycle",
-  "calendar",
-];
+const CPA = "bar,line,area";
+const PTH = "treemap,sunburst,sankey";
+export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
+  w(
+    `horizontal:bar size:scatter name:scatter path:${CPA},${PTH} totals:waterfall series:${CPA},heatmap sort:${CPA},heatmap limit:${CPA},heatmap stack:bar,area colorBy:bar,waterfall,scatter,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},${PTH} select:${CPA},waterfall,scatter,heatmap,treemap,sunburst,hexmap zoom:line,area,scatter`,
+  )
+    .map((e) => e.split(":"))
+    .map(([k, v]) => [k, v!.split(",")]),
+);
+const AGGS = w("sum mean count min max");
+const PRESETS = w("auto integer decimal compact percent currency date month year time datetime");
+const DATE = w(
+  "dateStyle timeStyle weekday era year month day dayPeriod hour minute second fractionalSecondDigits timeZoneName timeZone hour12 hourCycle calendar",
+);
 /** Format options holding any date key are Intl.DateTimeFormat options. */
 export const isDateOpts = (o: object): boolean => DATE.some((k) => Object.hasOwn(o, k));
 const TOKENS = [
-  "font",
-  "fontSize",
-  "fg",
-  "fgMuted",
-  "grid",
-  "bg",
-  "accent",
-  "radius",
-  "tooltipBg",
-  "tooltipFg",
-  "focus",
-  "good",
-  "bad",
+  ...w("font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good bad"),
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => "series" + n),
 ];
 const USE: Record<string, string> = {
@@ -194,6 +102,12 @@ const USE: Record<string, string> = {
   format: "formatting that field",
   titles: "naming that field",
 };
+const HORIZ = "Use horizontal: true to put categories on the left axis.";
+const SIZED = "Size comes from the element's CSS box, or render(spec, { width, height }).";
+const PIE = 'Pie and donut charts are not supported: use "bar" or "treemap" to compare parts.';
+const GEO = 'Use type: "hexmap" (import "mayacharts/geo").';
+const EX =
+  'Example: { type: "bar", data: [{ month: "Jan", revenue: 10 }], x: "month", y: "revenue" }';
 /** Replacement text for foreign or retired option names, checked before "did you mean". */
 const HINTS: Record<string, string> = {
   label: 'Use titles: { <field>: "Name" } for display names, or labels: true for values on marks.',
@@ -203,10 +117,10 @@ const HINTS: Record<string, string> = {
     'Use titles: { <y field>: "Name" }. titles is keyed by field and also names tooltips, legend and table headers.',
   yFormat: 'Use format: "compact" (applies to every y), or format: { <field>: "currency" }.',
   dataKey: 'Use y: "<field>" for values and x: "<field>" for categories.',
-  indexAxis: "Use horizontal: true to put categories on the left axis.",
-  orientation: "Use horizontal: true to put categories on the left axis.",
-  width: "Size comes from the element's CSS box, or render(spec, { width, height }).",
-  height: "Size comes from the element's CSS box, or render(spec, { width, height }).",
+  indexAxis: HORIZ,
+  orientation: HORIZ,
+  width: SIZED,
+  height: SIZED,
   color: 'Use colors: [...] for the palette, or colorBy: "sign" | { target: n } | "<field>".',
   groupBy: 'Use series: "<field>".',
   formatter: "Functions are not supported (the spec is JSON). Use format presets or Intl options.",
@@ -219,26 +133,12 @@ const ALIAS: Record<string, string> = {
   column: 'Use type: "bar".',
   barh: 'Use type: "bar" with horizontal: true.',
   bubble: 'Use type: "scatter" with size: "<field>".',
-  choropleth: 'Use type: "hexmap" (import "mayacharts/geo").',
-  map: 'Use type: "hexmap" (import "mayacharts/geo").',
-  pie: 'Pie and donut charts are not supported: use "bar" or "treemap" to compare parts.',
-  donut: 'Pie and donut charts are not supported: use "bar" or "treemap" to compare parts.',
+  choropleth: GEO,
+  map: GEO,
+  pie: PIE,
+  donut: PIE,
 };
-const FN = [
-  "rgb",
-  "rgba",
-  "hsl",
-  "hsla",
-  "oklch",
-  "oklab",
-  "lab",
-  "lch",
-  "color",
-  "color-mix",
-  "light-dark",
-  "var",
-  "calc",
-];
+const FN = w("rgb rgba hsl hsla oklch oklab lab lch color color-mix light-dark var calc");
 const FAM = String.raw`\s*(?:"[\w\s.\-]*"|'[\w\s.\-]*'|[\w\-]+(?:\s+[\w\-]+)*)\s*`;
 const FONT = new RegExp(`^${FAM}(?:,${FAM})*$`);
 
@@ -253,7 +153,6 @@ const show = (v: unknown) => {
   const t = typeof v === "string" || isObj(v) || Array.isArray(v) ? JSON.stringify(v) : String(v);
   return t.length > 60 ? t.slice(0, 59) + "…" : t;
 };
-const list = (a: readonly string[]) => a.slice(0, 20).join(", ");
 
 export const dym = (s: string, c: readonly string[]): string => {
   const a = s.toLowerCase();
@@ -269,21 +168,10 @@ export const dym = (s: string, c: readonly string[]): string => {
   return best && `Did you mean "${best}"?`;
 };
 
-export const fail = (
-  code: ErrorCode,
-  path: string,
-  headline: string,
-  ...details: string[]
-): never => {
-  const lines = [...details, `-> https://bbekshr.github.io/mayacharts/errors.html#${code}`];
-  throw new MayaSpecError(
-    code,
-    path,
-    `mayacharts: ${headline}\n${lines
-      .filter(Boolean)
-      .map((d) => "  " + d)
-      .join("\n")}`,
-  );
+export const fail = (code: ErrorCode, path: string, headline: string, ...d: string[]): never => {
+  const lines = [...d, `-> https://bbekshr.github.io/mayacharts/errors.html#${code}`];
+  const body = lines.filter(Boolean).map((l) => "  " + l);
+  throw new MayaSpecError(code, path, `mayacharts: ${headline}\n${body.join("\n")}`);
 };
 
 const bad = (k: string, v: unknown, want: string) =>
@@ -309,30 +197,13 @@ const css = (path: string, v: string, font: boolean) => {
     );
 };
 
-const domain = (k: string, d: unknown) => {
-  if (
-    d !== undefined &&
-    !(
-      Array.isArray(d) &&
-      d.length === 2 &&
-      Number.isFinite(d[0]) &&
-      Number.isFinite(d[1]) &&
-      d[0] < d[1]
-    )
-  )
-    fail(
-      "invalid-domain",
-      k,
-      `spec.${k} = ${show(d)} is not a valid domain.`,
-      "Expected [min, max] with finite numbers and min < max, e.g. [0, 100].",
-    );
-};
+const bFmt = (p: string, headline: string, ...d: string[]) =>
+  fail("invalid-format", p, headline, ...d);
 
 const format = (path: string, v: unknown, locale: string) => {
   if (typeof v === "string") {
     if (!PRESETS.includes(v))
-      fail(
-        "invalid-format",
+      bFmt(
         path,
         `spec.${path} = ${show(v)} is not a format preset.`,
         `Presets: ${PRESETS.join(", ")}. Or per field: { <field>: preset or Intl options }.`,
@@ -340,35 +211,52 @@ const format = (path: string, v: unknown, locale: string) => {
       );
     return;
   }
-  if (!isObj(v))
-    fail(
-      "invalid-format",
-      path,
-      `spec.${path} must be a preset or Intl options, received ${show(v)}.`,
-    );
+  if (!isObj(v)) bFmt(path, `spec.${path} must be a preset or Intl options, received ${show(v)}.`);
   const { prefix, suffix, ...o } = v as Record<string, unknown>;
   for (const [k, a] of [
     ["prefix", prefix],
     ["suffix", suffix],
   ] as const)
     if (a !== undefined && typeof a !== "string")
-      fail(
-        "invalid-format",
-        `${path}.${k}`,
-        `spec.${path}.${k} must be a string, received ${show(a)}.`,
-      );
+      bFmt(`${path}.${k}`, `spec.${path}.${k} must be a string, received ${show(a)}.`);
+  const dt = isDateOpts(o);
   try {
-    if (isDateOpts(o)) new Intl.DateTimeFormat(locale, o);
-    else new Intl.NumberFormat(locale, o);
+    void (dt ? new Intl.DateTimeFormat(locale, o) : new Intl.NumberFormat(locale, o));
   } catch (e) {
-    fail(
-      "invalid-format",
+    bFmt(
       path,
-      `spec.${path} = ${show(v)} is not valid ${isDateOpts(o) ? "Intl.DateTimeFormat" : "Intl.NumberFormat"} options.`,
+      `spec.${path} = ${show(v)} is not valid ${dt ? "Intl.DateTimeFormat" : "Intl.NumberFormat"} options.`,
       e instanceof Error ? e.message : String(e),
     );
   }
 };
+
+/** Table-driven option checks: [key, expected shape, predicate]. Applied only when the key is set. */
+const CHECKS: [string, string, (v: any) => boolean][] = [
+  [
+    "y",
+    "a field name or a non-empty array of field names",
+    (v) => typeof v === "string" || strs(v, 1),
+  ],
+  ["path", "a non-empty array of field names", (v) => strs(v, 1)],
+  ["totals", "an array of x values (strings)", (v) => strs(v)],
+  ["aggregate", `one of ${AGGS.join(", ")}`, (v) => AGGS.includes(v)],
+  ["sort", '"asc" or "desc"', (v) => v === "asc" || v === "desc"],
+  ["limit", "a positive integer", (v) => Number.isInteger(v) && v > 0],
+  ["select", 'true or "multi"', (v) => v === true || v === "multi"],
+  [
+    "colorBy",
+    '"sign", { target: number } or a numeric field name',
+    (v) =>
+      (typeof v === "string" && !!v) ||
+      (isObj(v) && Object.keys(v).join() === "target" && Number.isFinite(v.target)),
+  ],
+  [
+    "titles",
+    "an object of strings keyed by field",
+    (v) => isObj(v) && Object.values(v).every((x) => typeof x === "string"),
+  ],
+];
 
 export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (!isObj(spec))
@@ -396,11 +284,12 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       "type",
       "spec.type is required but missing.",
       "Required fields: type, data, x, y.",
-      'Example: { type: "bar", data: [{ month: "Jan", revenue: 10 }], x: "month", y: "revenue" }',
+      EX,
     );
   const known = [...CORE_TYPES, ...types()];
-  if (typeof type !== "string" || !known.includes(type)) {
-    const mod = typeof type === "string" ? own(MODULE_OF, type) : undefined;
+  const str = typeof type === "string" ? type : undefined;
+  if (str === undefined || !known.includes(str)) {
+    const mod = str === undefined ? undefined : own(MODULE_OF, str);
     if (mod)
       fail(
         "unknown-type",
@@ -413,9 +302,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       "type",
       `spec.type = ${show(type)} is not a chart type.`,
       `Valid types: ${known.join(", ")}.`,
-      typeof type === "string"
-        ? (own(ALIAS, type) ?? dym(type, [...known, ...Object.keys(MODULE_OF)]))
-        : "",
+      str === undefined ? "" : (own(ALIAS, str) ?? dym(str, [...known, ...Object.keys(MODULE_OF)])),
     );
   }
   const t = type as string;
@@ -429,7 +316,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       `Required fields: type, data, ${need}, y.`,
       isPath
         ? `Example: { type: "${t}", data: [{ region: "N", state: "NY", sales: 10 }], path: ["region", "state"], y: "sales" }`
-        : 'Example: { type: "bar", data: [{ month: "Jan", revenue: 10 }], x: "month", y: "revenue" }',
+        : EX,
     );
 
   if (s.data === undefined) missing("data");
@@ -449,36 +336,9 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     missing(need);
   if (s.y === undefined) missing("y");
 
-  // Option types and values.
-  for (const k in S) {
-    const v = s[k];
-    if (v !== undefined && typeof v !== S[k]) bad(k, v, `a ${S[k]}`);
-  }
-  const { y, path, totals, aggregate, sort, limit, select, colors, colorBy, theme, titles, text } =
-    s;
-  if (!(typeof y === "string" || strs(y, 1)))
-    bad("y", y, "a field name or a non-empty array of field names");
-  if (path !== undefined && !strs(path, 1)) bad("path", path, "a non-empty array of field names");
-  if (totals !== undefined && !strs(totals))
-    bad("totals", totals, "an array of x values (strings)");
-  if (aggregate !== undefined && !AGGS.includes(aggregate as string))
-    bad("aggregate", aggregate, `one of ${AGGS.join(", ")}`);
-  if (sort !== undefined && sort !== "asc" && sort !== "desc") bad("sort", sort, '"asc" or "desc"');
-  if (limit !== undefined && !(Number.isInteger(limit) && (limit as number) > 0))
-    bad("limit", limit, "a positive integer");
-  if (select !== undefined && select !== true && select !== "multi")
-    bad("select", select, 'true or "multi"');
-  if (
-    colorBy !== undefined &&
-    !(typeof colorBy === "string" && colorBy) &&
-    !(isObj(colorBy) && Object.keys(colorBy).join() === "target" && Number.isFinite(colorBy.target))
-  )
-    bad("colorBy", colorBy, '"sign", { target: number } or a numeric field name');
-  if (
-    titles !== undefined &&
-    !(isObj(titles) && Object.values(titles).every((v) => typeof v === "string"))
-  )
-    bad("titles", titles, "an object of strings keyed by field");
+  for (const k in S) if (s[k] !== undefined && typeof s[k] !== S[k]) bad(k, s[k], `a ${S[k]}`);
+  for (const [k, want, ok] of CHECKS) if (s[k] !== undefined && !ok(s[k])) bad(k, s[k], want);
+  const { y, path, select, colors, colorBy, theme, text } = s;
   if (text !== undefined) {
     if (!isObj(text)) bad("text", text, "an object of strings");
     for (const [k, v] of Object.entries(text as object)) {
@@ -493,8 +353,25 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       if (typeof v !== "string") bad(`text.${k}`, v, "a string");
     }
   }
-  domain("yDomain", s.yDomain);
-  domain("xDomain", s.xDomain);
+  for (const k of ["yDomain", "xDomain"]) {
+    const d = s[k] as number[] | undefined;
+    if (
+      d !== undefined &&
+      !(
+        Array.isArray(d) &&
+        d.length === 2 &&
+        Number.isFinite(d[0]) &&
+        Number.isFinite(d[1]) &&
+        d[0]! < d[1]!
+      )
+    )
+      fail(
+        "invalid-domain",
+        k,
+        `spec.${k} = ${show(d)} is not a valid domain.`,
+        "Expected [min, max] with finite numbers and min < max, e.g. [0, 100].",
+      );
+  }
 
   let locale = "en-US";
   if (typeof s.locale === "string") {
@@ -503,8 +380,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       ok = Intl.NumberFormat.supportedLocalesOf(s.locale).length > 0;
     } catch {}
     if (!ok)
-      fail(
-        "invalid-format",
+      bFmt(
         "locale",
         `spec.locale = ${show(s.locale)} is not a locale this runtime supports.`,
         'Use a BCP 47 tag such as "de-DE". Node built with small ICU supports English only.',
@@ -515,8 +391,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     try {
       new Intl.NumberFormat(locale, { style: "currency", currency: s.currency });
     } catch {
-      fail(
-        "invalid-format",
+      bFmt(
         "currency",
         `spec.currency = ${show(s.currency)} is not an ISO 4217 currency code.`,
         'Use a three-letter code such as "USD" or "EUR".',
@@ -529,8 +404,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   }
 
   if (colors !== undefined) {
-    const arr = Array.isArray(colors);
-    const entries = arr
+    const entries = Array.isArray(colors)
       ? colors.map((c, i) => [`[${i}]`, c])
       : isObj(colors)
         ? Object.entries(colors).map(([k, c]) => [`.${k}`, c])
@@ -562,7 +436,6 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       css(`theme.${k}`, v, k === "font");
   }
 
-  // Type support and pair rules.
   if (s.stack === true && t === "line")
     fail(
       "stack-unsupported",
@@ -578,61 +451,71 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         `spec.${k} is not supported with spec.type = "${t}".`,
         `spec.${k} works with: ${ONLY[k]!.join(", ")}.`,
       );
-  const pair = (k: string, headline: string, detail: string) =>
-    fail("option-unsupported", k, headline, detail);
-  if (colorBy !== undefined && s.series !== undefined)
-    pair(
+  const cart = CART.includes(t);
+  const pairs: [boolean, string, string, string][] = [
+    [
+      colorBy !== undefined && s.series !== undefined,
       "colorBy",
       "spec.colorBy cannot be combined with spec.series.",
       "Series already set the colours; remove one of them.",
-    );
-  if (s.yDomain !== undefined && Array.isArray(y))
-    pair(
+    ],
+    [
+      s.yDomain !== undefined && Array.isArray(y),
       "yDomain",
       "spec.yDomain cannot be combined with a y array.",
       "Each measure needs its own domain; use a single y or remove yDomain.",
-    );
-  if (s.drill === true && select !== undefined)
-    pair(
+    ],
+    [
+      s.drill === true && select !== undefined,
       "select",
       "spec.select cannot be combined with spec.drill.",
       "A click either drills or selects; choose one.",
-    );
-  if (CART.includes(t) && path !== undefined && s.x !== undefined)
-    pair(
+    ],
+    [
+      cart && path !== undefined && s.x !== undefined,
       "x",
       "spec.x cannot be combined with spec.path.",
       "With path, the current drill level is the category; remove x.",
-    );
-  if (CART.includes(t) && s.drill === true && path === undefined)
-    pair(
+    ],
+    [
+      cart && s.drill === true && path === undefined,
       "drill",
       `spec.drill on "${t}" needs spec.path.`,
       'Replace x with path: ["region", "state"] (outer to inner).',
-    );
+    ],
+  ];
+  for (const [hit, k, headline, detail] of pairs)
+    if (hit) fail("option-unsupported", k, headline, detail);
 
   if (rows.length) {
-    // Field existence.
     const found = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+    const unk = (p: string, headline: string, f: string, use: string) =>
+      fail(
+        "unknown-field",
+        p,
+        headline,
+        `Fields found: ${found.slice(0, 20).join(", ")}.`,
+        dym(f, found),
+        use,
+      );
     const ys = typeof y === "string" ? [y] : (y as string[]);
-    const fields: [path: string, field: unknown][] = [
+    const arr = (o: string, a: string[]): [string, string][] => a.map((f, i) => [`${o}[${i}]`, f]);
+    const fields: [string, unknown][] = [
       ["x", s.x],
-      ...ys.map((f, i): [string, string] => [typeof y === "string" ? "y" : `y[${i}]`, f]),
+      ...(typeof y === "string" ? [["y", y] as [string, string]] : arr("y", ys)),
       ["series", s.series],
       ["size", s.size],
       ["name", s.name],
-      ...((path as string[] | undefined) ?? []).map((f, i): [string, string] => [`path[${i}]`, f]),
+      ...arr("path", (path as string[] | undefined) ?? []),
       ["colorBy", colorBy === "sign" ? undefined : colorBy],
     ];
     for (const [p, f] of fields) {
       if (typeof f !== "string" || found.includes(f)) continue;
       const opt = p.replace(/\[.*/, "");
-      fail(
-        "unknown-field",
+      unk(
         p,
         `spec.${p} = ${show(f)} is not a field in spec.data.`,
-        `Fields found: ${list(found)}.`,
-        dym(f, found),
+        f,
         `spec.${opt} names the field used for ${USE[opt]}.`,
       );
     }
@@ -640,12 +523,10 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       if (isObj(s[opt]))
         for (const f of Object.keys(s[opt] as object))
           if (!found.includes(f))
-            fail(
-              "unknown-field",
+            unk(
               `${opt}.${f}`,
               `spec.${opt} key "${f}" is not a field in spec.data.`,
-              `Fields found: ${list(found)}.`,
-              dym(f, found),
+              f,
               `spec.${opt} keys name fields, for ${USE[opt]}.`,
             );
     if (colorBy === "sign" && found.includes("sign"))
@@ -656,15 +537,15 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         "Rename that field (e.g. data.map(({ sign, ...r }) => ({ ...r, signValue: sign }))) to colour by it.",
       );
 
-    // Numeric checks.
+    const scan = (f: string, g: (v: unknown, p: string) => void) =>
+      rows.forEach((r, i) => g(r[f], `data[${i}].${f}`));
     const numeric = (f: string, code: ErrorCode, opt: string) =>
-      rows.forEach((r, i) => {
-        const v = r[f];
+      scan(f, (v, p) => {
         if (v == null || (typeof v === "number" && Number.isFinite(v))) return;
         fail(
           code,
-          `data[${i}].${f}`,
-          `spec.data[${i}].${f} is ${show(v)} (a ${ty(v)}), but spec.${opt} requires numbers.`,
+          p,
+          `spec.${p} is ${show(v)} (a ${ty(v)}), but spec.${opt} requires numbers.`,
           typeof v === "string" && v.trim() && Number.isFinite(Number(v))
             ? `Convert first: data.map(r => ({ ...r, ${f}: Number(r.${f}) }))`
             : "Use null for a gap in the data.",
@@ -677,13 +558,12 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       numeric(colorBy, "non-numeric-field", "colorBy");
     if (isPath)
       for (const f of ys)
-        rows.forEach((r, i) => {
-          const v = r[f];
+        scan(f, (v, p) => {
           if (typeof v === "number" && v <= 0)
             fail(
               "non-positive-value",
-              `data[${i}].${f}`,
-              `spec.data[${i}].${f} is ${v}, but ${t} sizes must be positive.`,
+              p,
+              `spec.${p} is ${v}, but ${t} sizes must be positive.`,
               `Filter first: data.filter(r => r.${f} > 0), or chart the signed values with "bar".`,
             );
         });
@@ -704,7 +584,7 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
       dym(k, keys),
       `Known options: ${keys.join(", ")}.`,
     );
-  const keys = ["width", "height", "view", "selected", "nonce"];
+  const keys = w("width height view selected nonce");
   for (const k of Object.keys(o)) if (!keys.includes(k)) unknown("options", k, keys);
   const inv = (p: string, v: unknown, want: string) =>
     fail("invalid-option", `options.${p}`, `options.${p} must be ${want}, received ${show(v)}.`);
@@ -721,18 +601,18 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   const { view: v, selected: sel, nonce } = o;
   if (v !== undefined) {
     if (!isObj(v)) inv("view", v, "an object");
-    const vk = ["measure", "drill", "window", "hidden"];
+    const vk = w("measure drill window hidden");
     for (const k of Object.keys(v as object)) if (!vk.includes(k)) unknown("options.view", k, vk);
-    const { measure, drill, window: w, hidden } = v as Record<string, unknown>;
+    const { measure, drill, window: win, hidden } = v as Record<string, unknown>;
     if (measure !== undefined && !(Number.isInteger(measure) && (measure as number) >= 0))
       inv("view.measure", measure, "an index (integer >= 0)");
     if (drill !== undefined && !strs(drill)) inv("view.drill", drill, "an array of strings");
     if (hidden !== undefined && !strs(hidden)) inv("view.hidden", hidden, "an array of strings");
     if (
-      w !== undefined &&
-      !(Array.isArray(w) && (w.length === 2 || w.length === 4) && w.every(Number.isFinite))
+      win !== undefined &&
+      !(Array.isArray(win) && (win.length === 2 || win.length === 4) && win.every(Number.isFinite))
     )
-      inv("view.window", w, "[i0, i1] or [x0, x1, y0, y1] of finite numbers");
+      inv("view.window", win, "[i0, i1] or [x0, x1, y0, y1] of finite numbers");
   }
   if (
     sel !== undefined &&

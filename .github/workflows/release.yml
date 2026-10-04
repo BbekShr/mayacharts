@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # TODO pin to commit SHA
+
+      - uses: actions/setup-node@v4
+        # TODO pin to commit SHA
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci --ignore-scripts
+
+      - name: test and build
+        run: npm run typecheck && npm test && npm run build && npm run size
+
+      - name: publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: compute SRI
+        run: |
+          SRI=$(openssl dgst -sha384 -binary dist/maya.global.js | openssl base64 -A)
+          echo "## Release SRI" >> $GITHUB_STEP_SUMMARY
+          echo "dist/maya.global.js sha384-$SRI" >> $GITHUB_STEP_SUMMARY

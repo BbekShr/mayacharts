@@ -29,23 +29,51 @@
       "types": "./dist/element.d.ts",
       "default": "./dist/element.js"
     },
-    "./theme.css": "./dist/theme.css"
+    "./hierarchy": {
+      "types": "./dist/hierarchy.d.ts",
+      "default": "./dist/hierarchy.js"
+    },
+    "./flow": {
+      "types": "./dist/flow.d.ts",
+      "default": "./dist/flow.js"
+    },
+    "./geo": {
+      "types": "./dist/geo.d.ts",
+      "default": "./dist/geo.js"
+    },
+    "./global": "./dist/maya.global.js",
+    "./theme.css": "./dist/theme.css",
+    "./schema.json": "./schema.json",
+    "./jsx": {
+      "types": "./dist/jsx.d.ts"
+    }
   },
   "sideEffects": [
-    "./dist/element.js"
+    "./dist/element.js",
+    "./dist/hierarchy.js",
+    "./dist/flow.js",
+    "./dist/geo.js",
+    "./dist/maya.global.js",
+    "./src/element.ts",
+    "./src/hierarchy.ts",
+    "./src/flow.ts",
+    "./src/geo.ts",
+    "./src/global.ts"
   ],
   "files": [
-    "dist"
+    "dist",
+    "schema.json",
+    "llms.txt"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
-    "build": "vite build && vite build --mode element && tsc -p tsconfig.build.json",
+    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode global && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -56,9 +84,13 @@
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts"
   },
   "mayaSize": {
-    "dist/index.js": 12288,
-    "dist/element.js": 18432,
-    "dist/theme.css": 1200
+    "dist/index.js": 16384,
+    "dist/element.js": 22528,
+    "dist/theme.css": 2300,
+    "dist/hierarchy.js": 3072,
+    "dist/flow.js": 2560,
+    "dist/geo.js": 3584,
+    "dist/maya.global.js": 30720
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

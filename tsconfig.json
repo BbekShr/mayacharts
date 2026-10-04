@@ -16,7 +16,12 @@
     "skipLibCheck": true,
     "paths": {
       "mayacharts": ["./src/index.ts"],
-      "mayacharts/element": ["./src/element.ts"]
+      "mayacharts/element": ["./src/element.ts"],
+      "mayacharts/hierarchy": ["./src/hierarchy.ts"],
+      "mayacharts/flow": ["./src/flow.ts"],
+      "mayacharts/geo": ["./src/geo.ts"],
+      "mayacharts/global": ["./src/global.ts"],
+      "mayacharts/jsx": ["./src/jsx.d.ts"]
     },
     "noEmit": true
   },

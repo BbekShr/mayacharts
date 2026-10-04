@@ -407,6 +407,8 @@ export interface MarkCtx {
   label(x: number, y: number, text: string, place: LabelPlace): boolean;
   /** colorBy tone for a value: "good" | "bad", or null when colorBy is not sign/target. */
   tone(v: number): "good" | "bad" | null;
+  /** colorBy ramp bucket 0..9 for a value of the colorBy field; null when colorBy is not a field. */
+  q(v: number): number | null;
   /** Shared aggregation (same rules as shape: nulls skipped, count = non-null). */
   agg(kind: Aggregate): (values: readonly (number | null | undefined)[]) => number | null;
   fail: Fail;

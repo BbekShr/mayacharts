@@ -2,18 +2,18 @@
 
 Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.
 
-**Status:** early proof of concept — not yet published to npm.
+**Status:** Milestone 2 in progress. Not yet published to npm.
 
 ## Why
 
-Existing chart libraries were designed 2011–2016 and hand-roll animation, tooltip positioning, theming and framework wrappers. mayaCharts uses the modern platform instead: Custom Elements, Web Animations API, CSS Anchor Positioning + Popover, CSS custom properties with light-dark(), and container queries. This means it ships small, is accessible and SSR-safe by default, and stays low-maintenance. See the [full landscape research](docs/research/reports/Open%20source%20chart%20library%20landscape.md) for what exists.
+Existing chart libraries were designed 2011-2016 and hand-roll animation, tooltip positioning, theming and framework wrappers. mayaCharts uses the modern platform instead: Custom Elements, Web Animations API, CSS Anchor Positioning + Popover, CSS custom properties with light-dark(), and container queries. This means it ships small, is accessible and SSR-safe by default, and stays low-maintenance. See the [full landscape research](docs/research/reports/Open%20source%20chart%20library%20landscape.md) for what exists.
 
 ## Quick start
 
 HTML:
 
 ```html
-<script type="module" src="https://esm.sh/mayacharts/element"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/mayacharts/dist/element.js"></script>
 <maya-chart style="height: 300px">
   <script type="application/json">
     {
@@ -32,7 +32,7 @@ HTML:
 JavaScript:
 
 ```js
-import "mayacharts/element";
+import "mayacharts/dist/element.js";
 const chart = document.querySelector("maya-chart");
 chart.spec = { type: "bar", data, x: "month", y: "revenue", series: "region", stack: true };
 chart.data = newRows; // animates the update
@@ -46,41 +46,515 @@ const svg = render(spec, { width: 640, height: 320 }); // bare SVG string
 const html = renderShell(spec, { width: 640, height: 320 }); // full chart, works without JS
 ```
 
-## What you get by default
+## The spec
 
-- Tooltips that flip at viewport edges and work on touch
-- Animated data updates
-- Dark mode via `color-scheme`
-- Keyboard navigation
-- Screen-reader title, description and data table
-- Responsive via container size
-- Server rendering
+Rule: `x` is always the category, `y` is always the value, whatever the orientation. `yDomain` is always the value axis.
+
+### Data
+
+| Field       | Type                           | Default    | Meaning                                                                  |
+| ----------- | ------------------------------ | ---------- | ------------------------------------------------------------------------ |
+| `$schema`   | string                         | -          | Ignored; for editors and LLMs                                            |
+| `type`      | enum                           | required   | `bar line area scatter heatmap waterfall treemap sunburst sankey hexmap` |
+| `data`      | Row[]                          | required   | Row objects                                                              |
+| `aggregate` | sum / mean / count / min / max | sum        | How rows sharing a (category, series) combine                            |
+| `sort`      | asc / desc                     | data order | Categories by total across all series                                    |
+| `limit`     | number                         | -          | Keep top N categories; rest roll up into "Other"                         |
+
+### Encoding
+
+| Field        | Type             | Applies to                                        | Meaning                                   |
+| ------------ | ---------------- | ------------------------------------------------- | ----------------------------------------- |
+| `x`          | field            | all but path types                                | Category; scatter numeric x; hexmap state |
+| `y`          | field or field[] | all                                               | Value; array adds measure toggle          |
+| `series`     | field            | bar line area heatmap                             | Split into series; heatmap row category   |
+| `path`       | field[]          | treemap sunburst sankey; bar/line/area with drill | Hierarchy outer to inner; replaces `x`    |
+| `size`       | field            | scatter                                           | Bubble area (sqrt scale)                  |
+| `name`       | field            | scatter                                           | Point identity and tooltip title          |
+| `totals`     | string[]         | waterfall                                         | x values drawn as running-total bars      |
+| `stack`      | boolean          | bar area                                          | Stack series instead of grouping          |
+| `horizontal` | boolean          | bar                                               | Categories on the left axis               |
+
+### Formatting
+
+| Field         | Type              | Default                         | Meaning                                                 |
+| ------------- | ----------------- | ------------------------------- | ------------------------------------------------------- |
+| `format`      | preset or options | auto                            | Per field or one string for all measures; display only  |
+| `titles`      | {[field]: string} | field names                     | Display names everywhere (axis, tooltip, legend, table) |
+| `labels`      | boolean           | false (heatmap: true at ≥24 px) | Formatted value on marks                                |
+| `text`        | {[key]: string}   | English                         | Localisable UI strings with {0} placeholders            |
+| `locale`      | BCP 47            | en-US                           | Formatting locale                                       |
+| `currency`    | ISO 4217          | USD                             | Currency for the currency preset                        |
+| `title`       | string            | -                               | Visible heading and accessible name                     |
+| `description` | string            | auto                            | Accessible description                                  |
+| `yDomain`     | [min, max]        | -                               | Fixed value-axis domain                                 |
+| `xDomain`     | [min, max]        | -                               | Fixed x domain (scatter only)                           |
+
+### Interaction
+
+| Field     | Type           | Meaning                                                                  |
+| --------- | -------------- | ------------------------------------------------------------------------ |
+| `tooltip` | boolean        | Hover/keyboard tooltip (default true)                                    |
+| `legend`  | boolean        | Legend; clicking toggles series                                          |
+| `drill`   | boolean        | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop |
+| `select`  | true / "multi" | Click/Enter/legend selects marks; Escape clears. Not with drill          |
+| `zoom`    | boolean        | Drag to zoom (line, area, scatter); Reset, double-click, Escape restore  |
+| `animate` | boolean        | Animate updates (default true)                                           |
+
+### Style
+
+| Field     | Type                          | Meaning                                                      |
+| --------- | ----------------------------- | ------------------------------------------------------------ |
+| `colors`  | string[] or {[series]: color} | Max 8; slot assignment stable across updates                 |
+| `colorBy` | "sign" / {target: n} / field  | Tone by sign or target, or ramp by numeric field             |
+| `theme`   | {[token]: css}                | Theme token overrides (CSS values, allowlisted)              |
+| `grid`    | boolean                       | Grid lines perpendicular to the value axis (default true)    |
+| `xAxis`   | boolean                       | Bottom axis (default true)                                   |
+| `yAxis`   | boolean                       | Left axis (default true)                                     |
+| `table`   | boolean                       | Visually hidden data table for screen readers (default true) |
+
+## Canonical examples
+
+**Currency bar**
+
+```json
+{
+  "type": "bar",
+  "x": "month",
+  "y": "revenue",
+  "format": "currency",
+  "data": [{ "month": "Jan", "revenue": 10500 }]
+}
+```
+
+**Stacked bar**
+
+```json
+{
+  "type": "bar",
+  "x": "state",
+  "y": "units",
+  "series": "region",
+  "stack": true,
+  "data": [{ "state": "CA", "region": "West", "units": 120 }]
+}
+```
+
+**Horizontal sorted limited labelled bar**
+
+```json
+{
+  "type": "bar",
+  "horizontal": true,
+  "x": "product",
+  "y": "margin",
+  "sort": "desc",
+  "limit": 5,
+  "labels": true,
+  "data": [{ "product": "A", "margin": 22 }]
+}
+```
+
+**Sign-coloured percent bar**
+
+```json
+{
+  "type": "bar",
+  "x": "metric",
+  "y": "variance",
+  "format": "percent",
+  "colorBy": "sign",
+  "data": [{ "metric": "revenue", "variance": 0.15 }]
+}
+```
+
+**Multi-measure line with date format and zoom**
+
+```json
+{
+  "type": "line",
+  "x": "date",
+  "y": ["revenue", "units"],
+  "zoom": true,
+  "format": { "date": "date", "revenue": "currency" },
+  "data": [{ "date": "2024-01-01", "revenue": 10000, "units": 50 }]
+}
+```
+
+**Stacked area**
+
+```json
+{
+  "type": "area",
+  "x": "month",
+  "y": "sales",
+  "series": "region",
+  "stack": true,
+  "data": [{ "month": "Jan", "region": "North", "sales": 1500 }]
+}
+```
+
+**Waterfall with totals**
+
+```json
+{
+  "type": "waterfall",
+  "x": "stage",
+  "y": "amount",
+  "totals": ["Q1", "FY"],
+  "data": [{ "stage": "Q1", "amount": 100 }]
+}
+```
+
+**Bubble scatter with select**
+
+```json
+{
+  "type": "scatter",
+  "x": "population",
+  "y": "gdp",
+  "size": "area",
+  "name": "country",
+  "select": "multi",
+  "data": [{ "country": "USA", "population": 331, "gdp": 23, "area": 9.8 }]
+}
+```
+
+**Heatmap count**
+
+```json
+{
+  "type": "heatmap",
+  "x": "hour",
+  "y": "traffic",
+  "aggregate": "count",
+  "data": [{ "hour": "09", "traffic": "high" }]
+}
+```
+
+**Treemap drill**
+
+```json
+{
+  "type": "treemap",
+  "path": ["region", "state", "product"],
+  "y": "revenue",
+  "drill": true,
+  "data": [{ "region": "West", "state": "CA", "product": "A", "revenue": 5000 }]
+}
+```
+
+## Modules
+
+Each module extends the core with chart types and shares the same spec, theme, tooltip, a11y, and animation.
+
+| Module                 | Types                           | Size (gzip) |
+| ---------------------- | ------------------------------- | ----------- |
+| `mayacharts/hierarchy` | treemap, sunburst               | 3 KB        |
+| `mayacharts/flow`      | sankey                          | 2.5 KB      |
+| `mayacharts/geo`       | hexmap (50 US states + DC + PR) | 3.5 KB      |
+
+## Global build
+
+Paste this anywhere:
+
+```html
+<script
+  src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"
+  integrity="sha384-..."
+  crossorigin="anonymous"
+></script>
+<script>
+  const chart = document.createElement("maya-chart");
+  chart.spec = { type: "bar", data, x: "month", y: "revenue" };
+  document.body.appendChild(chart);
+</script>
+```
+
+Or inline it in a sandbox:
+
+```html
+<script type="text/javascript">
+  // (paste the entire maya.global.js here)
+</script>
+```
+
+The module is available as `globalThis.maya.render()`, `maya.renderShell()`, and the `<maya-chart>` element registers automatically.
+
+## Interactions
+
+Always on (opt out with `false`): tooltip, hover-dim, legend toggle, keyboard, crosshair on line/area.
+
+Opt-in: `drill`, `select`, `zoom`. Two-way: `el.view`, `el.selected`.
+
+### Keyboard
+
+| Key                      | Action                                   |
+| ------------------------ | ---------------------------------------- |
+| Tab                      | Navigate marks                           |
+| Arrow Up/Down/Left/Right | Navigate to adjacent mark                |
+| Enter                    | Activate drill or select on focused mark |
+| Space                    | Pin tooltip                              |
+| Escape                   | Clear drill, selection, or zoom          |
+
+Touch: show tooltip on pointerup if moved < 4 px.
+
+## Events and two-way sync
+
+Four events, all `bubbles: true, composed: true`:
+
+- `maya-select {selected: Sel[], target: (Sel & {value}) | null}` - mark selected
+- `maya-view {measure, drill, zoom, hidden}` - measure toggled, drilled, or zoomed
+- `maya-error {code, path, message}` - spec error (cancelable; preventDefault() hides error box)
+- `maya-render {}` - render complete (ThoughtSpot: call `viz.events.emitRenderCompletedEvent()`)
+
+Properties: `el.view` and `el.selected` (getters and setters; no events on set).
+
+Example: selecting in one chart drives another:
+
+```js
+chart1.addEventListener("maya-select", (e) => {
+  if (e.detail.target) {
+    chart2.selected = [e.detail.target];
+  }
+});
+```
+
+## Export
+
+```js
+const svg = el.toSVG(); // standalone SVG with CSS custom properties resolved
+```
+
+PNG via canvas:
+
+```js
+const svg = el.toSVG();
+const img = new Image();
+img.onload = () => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 320;
+  canvas.getContext("2d").drawImage(img, 0, 0);
+  canvas.toBlob((blob) => saveAs(blob, "chart.png"));
+};
+img.src = "data:image/svg+xml;base64," + btoa(svg);
+```
+
+## Frameworks
+
+**React 19**
+
+```jsx
+import "mayacharts/dist/element.js";
+export const Chart = (props) => (
+  <maya-chart onmaya-select={(e) => console.log(e.detail)} {...props} />
+);
+```
+
+**React 18**
+
+```jsx
+import { useRef } from "react";
+import "mayacharts/dist/element.js";
+export const Chart = ({ spec }) => {
+  const ref = useRef(null);
+  return <maya-chart ref={ref} spec={JSON.stringify(spec)} />;
+};
+```
+
+**Vue**
+
+```vue
+<script setup>
+import "mayacharts/dist/element.js";
+const spec = ref({ type: "bar", ... });
+</script>
+<template>
+  <maya-chart :spec.prop="spec" @maya-select="handle" />
+</template>
+```
+
+**Svelte 5**
+
+```svelte
+<script>
+  import "mayacharts/dist/element.js";
+  let spec = { type: "bar", ... };
+</script>
+<maya-chart {spec} onmaya-select={(e) => console.log(e.detail)} />
+```
+
+**Angular**
+
+```ts
+import { CUSTOM_ELEMENTS_SCHEMA, Component } from "@angular/core";
+@Component({
+  selector: "app-chart",
+  template: `<maya-chart [spec]="spec" (maya-select)="handle($event)"></maya-chart>`,
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+})
+export class ChartComponent { ... }
+```
+
+**Plain HTML**
+
+```html
+<maya-chart id="chart" style="height: 300px"></maya-chart>
+<script type="module">
+  const chart = document.getElementById("chart");
+  chart.spec = { type: "bar", ... };
+</script>
+```
+
+**Node SSR**
+
+```js
+import { renderShell } from "mayacharts";
+const html = renderShell(spec, { width: 640, height: 320 });
+res.send(html);
+```
+
+## Embedding in hosts
+
+Map columnar data `{schema, data}` to row objects, then call `render()` or set `el.spec`. Listen for `maya-render` to signal the host.
+
+Generic recipe:
+
+```js
+const columns = { month: ["Jan", "Feb"], revenue: [12, 19] };
+const data = Object.entries(columns).map(([field, values]) =>
+  Object.fromEntries(values.map((v, i) => [field, v])),
+);
+const spec = { type: "bar", x: "month", y: "revenue", data };
+chart.spec = spec;
+```
+
+**ThoughtSpot**: Call `viz.getDataFromSearchQuery().getData()` to get the columnar table, then `viz.events.emitRenderCompletedEvent()` on `maya-render`:
+
+```js
+const table = viz.getDataFromSearchQuery().getData();
+const rows = table.columns.map((col) =>
+  Object.fromEntries(col.values.map((v, i) => [col.name, v])),
+);
+chart.data = rows;
+chart.addEventListener("maya-render", () => {
+  viz.events.emitRenderCompletedEvent();
+});
+```
 
 ## Theming
 
-Everything is a CSS custom property:
+Every colour and font is a CSS custom property. Set them on the element or host:
 
 ```css
 maya-chart {
   --maya-accent: oklch(0.65 0.2 145);
   --maya-font: "Inter", sans-serif;
+  --maya-series-1: #2563eb;
 }
 ```
 
-## Chart types
+### Theme tokens
 
-v1: bar (grouped, stacked) now; line and area next. See [NON-FEATURES.md](NON-FEATURES.md) for what will not be added.
+| Token     | CSS variable                       | Light default         | Dark default          | Colours                   |
+| --------- | ---------------------------------- | --------------------- | --------------------- | ------------------------- |
+| font      | --maya-font                        | system-ui, sans-serif | system-ui, sans-serif | Axis labels, tooltip text |
+| fontSize  | --maya-font-size                   | 12px                  | 12px                  | All text                  |
+| fg        | --maya-fg                          | #1f2328               | #e6edf3               | Axis labels, legend       |
+| fgMuted   | --maya-fg-muted                    | #656d76               | #9198a1               | Grid, breadcrumb          |
+| grid      | --maya-grid                        | #1f2328 12%           | #e6edf3 12%           | Grid lines                |
+| bg        | --maya-bg                          | #fff                  | #0d1117               | Tooltip background        |
+| accent    | --maya-accent                      | oklch(.6 .17 255)     | oklch(.6 .17 255)     | Focus outline, series 1   |
+| radius    | --maya-radius                      | 2px                   | 2px                   | Mark border radius        |
+| tooltipBg | --maya-tooltip-bg                  | --maya-fg             | --maya-fg             | Tooltip background        |
+| tooltipFg | --maya-tooltip-fg                  | --maya-bg             | --maya-bg             | Tooltip text              |
+| focus     | --maya-focus                       | --maya-accent         | --maya-accent         | Keyboard focus ring       |
+| good      | --maya-good                        | oklch(.68 .15 160)    | oklch(.68 .15 160)    | colorBy: "sign" positive  |
+| bad       | --maya-bad                         | oklch(.68 .17 30)     | oklch(.68 .17 30)     | colorBy: "sign" negative  |
+| series1-8 | --maya-series-1 to --maya-series-8 | oklch presets         | oklch presets         | Series colours (max 8)    |
+
+Brand palette example:
+
+```css
+maya-chart {
+  --maya-accent: #7c3aed;
+  --maya-series-1: #7c3aed;
+  --maya-series-2: #ec4899;
+  --maya-series-3: #f59e0b;
+  --maya-good: #10b981;
+  --maya-bad: #ef4444;
+}
+```
+
+Dark mode is automatic via `color-scheme: light dark`. Override with `prefers-color-scheme`:
+
+```css
+@media (prefers-color-scheme: dark) {
+  maya-chart {
+    --maya-accent: #60a5fa;
+  }
+}
+```
+
+High contrast systems (forced-colors: active) are supported; outline tones instead of colour.
+
+## Security
+
+The chart spec is plain JSON generated by end users or LLMs, not trusted code. mayaCharts escapes all text, allowlists CSS values, and works inside Trusted Types policies.
+
+### Implementation
+
+- All text is HTML-escaped before rendering
+- CSS values for colors and theme are allowlisted (blocks url(), expression() and injection syntax)
+- `renderShell()` embeds only the spec fields actively used (data minimisation)
+- A11y table shows encoded fields only, capped at 1000 rows
+- No inline styles: Dynamic styles use CSSOM `setProperty()` or CSS custom properties
+- No network requests or telemetry
+- Compatible with Trusted Types policy `"mayacharts"` (call `trustedTypes.createPolicy("mayacharts", {createHTML: s => s})`)
+- Supports CSP `trusted-types mayacharts` and `nonce` on the shell style tag
+
+See [SECURITY.md](SECURITY.md) for the full security model.
+
+## Accessibility
+
+Fully conformant with WCAG 2.2 AA, verified by axe-core on every gallery tile in both light and dark modes.
+
+Implemented: semantic role and title, accessible description, data table for screen readers, keyboard navigation (Tab, arrows, Enter, Space, Escape), live region updates, focus management, forced-colors support, reduced motion support, ≥3:1 contrast in both light and dark modes, non-colour cues (text tone), 12 px touch target enlargement.
+
+Known ceilings: label truncation at 40% width; UTC dates unless Intl options say otherwise; scatter keyboard order follows draw order (not spatial); stacked bar labels show segments, not totals.
+
+See [STABILITY.md](STABILITY.md) for the full accessibility and performance envelope.
+
+## Performance
+
+| Scenario      | Marks | Render time | Output (gzip) |
+| ------------- | ----- | ----------- | ------------- |
+| 5k bars       | 5000  | ~40 ms      | ~2.5 KB       |
+| 5k scatter    | 5000  | ~50 ms      | ~3.5 KB       |
+| Heatmap 50x52 | 2600  | ~25 ms      | ~2 KB         |
+| Bar limit: 20 | 20    | ~5 ms       | ~1.5 KB       |
+
+Animation skips above 1500 marks. 5000-mark hard cap suggests `limit` or `aggregate`. Table capped at 1000 rows.
+
+## Errors
+
+Every error links to [errors.html](site/errors.html#<code>) with a one-paragraph cause and a fixed example. Error shape: `{code, path, message}`.
 
 ## Development
 
 ```bash
 npm install
-npm test
-npm run build
-npm run size
-npm run e2e
-npm run dev       # demo site
+npm test          # unit, property, fuzz, hostile-string, perf, leak tests
+npm run build     # dist/
+npm run size      # check budgets
+npm run e2e       # Playwright
+npm run dev       # demo site at localhost:5173
 ```
+
+## Versioning
+
+mayaCharts follows semantic versioning. Public API: spec keys and semantics, schema.json, error code/path, element properties/methods, event detail shapes, CSS custom property tokens, data-* attribute roles and values, .maya-* class names. See [STABILITY.md](STABILITY.md) for the full stability policy and pre-1.0 deprecation path via HINTS.
 
 ## License
 

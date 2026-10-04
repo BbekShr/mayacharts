@@ -21,6 +21,47 @@ const pair = (name: string): [string, string] => {
   return [l, m[2]!];
 };
 
+// oklch -> linear sRGB (clamped), and oklab mixing for the ramp.
+const oklab = (L: number, C: number, h: number) =>
+  [L, C * Math.cos((h * Math.PI) / 180), C * Math.sin((h * Math.PI) / 180)] as const;
+const toRgb = ([L, a, b]: readonly number[]) => {
+  const [l, m, s] = [
+    L! + 0.3963377774 * a! + 0.2158037573 * b!,
+    L! - 0.1055613458 * a! - 0.0638541728 * b!,
+    L! - 0.0894841775 * a! - 1.291485548 * b!,
+  ].map((v) => v ** 3) as [number, number, number];
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ].map((v) => Math.min(1, Math.max(0, v)));
+};
+const Y = (c: number[]) => 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+const rat = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+const lin = (hex: string) =>
+  [1, 3, 5].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+const toLab = ([r, g, b]: number[]) => {
+  const [l, m, s] = [
+    0.4122214708 * r! + 0.5363325363 * g! + 0.0514459929 * b!,
+    0.2119034982 * r! + 0.6806995451 * g! + 0.1073969566 * b!,
+    0.0883024619 * r! + 0.2817188376 * g! + 0.6299787005 * b!,
+  ].map(Math.cbrt) as [number, number, number];
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+};
+const oklch = (name: string) => {
+  const m = css.match(new RegExp(`--maya-${name}:oklch\\(([\\d.]+) ([\\d.]+) ([\\d.]+)\\)`));
+  if (!m) throw new Error(name);
+  return [+m[1]!, +m[2]!, +m[3]!] as const;
+};
+const BGS = [lin("#ffffff"), lin("#0d1117")] as const;
+
 describe("theme css", () => {
   it("defines tokens and series rules", () => {
     for (const t of [
@@ -50,7 +91,62 @@ describe("theme css", () => {
       expect(ratio(mu[i], bg[i])).toBeGreaterThanOrEqual(4.5);
     }
   });
-  it("gzips under 1200 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(1200);
+  it("series colours reach 3:1 on white and on dark", () => {
+    for (let n = 1; n <= 8; n++) {
+      const c = toRgb(oklab(...oklch(n === 1 ? "accent" : `series-${n}`)));
+      for (const bg of BGS) expect(rat(Y(c), Y(bg)), `series ${n}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+  it("good/bad tones reach 3:1 in both modes", () => {
+    for (const t of ["good", "bad"]) {
+      const [l, d] = pair(t);
+      expect(ratio(l, "#ffffff")).toBeGreaterThanOrEqual(3);
+      expect(ratio(d, "#0d1117")).toBeGreaterThanOrEqual(3);
+    }
+  });
+  it("ramp: 10 steps from a 20% floor; upper steps reach 3:1", () => {
+    const q = [...css.matchAll(/\[data-q="(\d)"\]\{--q:(\d+)%\}/g)].map((m) => +m[2]!);
+    expect(q).toHaveLength(10);
+    expect(q[0]).toBe(20);
+    expect(q[9]).toBe(100);
+    expect(css).toContain("color-mix(in oklab,var(--maya-accent) var(--q),var(--maya-bg))");
+    const acc = toLab(toRgb(oklab(...oklch("accent"))));
+    // ponytail: only steps >= 8 are asserted; lighter steps are never colour alone (labels, table).
+    for (const bg of BGS)
+      for (const n of [8, 9]) {
+        const b = toLab(bg as unknown as number[]);
+        const mix = acc.map((v, i) => (v * q[n]!) / 100 + b[i]! * (1 - q[n]! / 100));
+        const rgb = [0, 1, 2].map((i) => Math.min(1, Math.max(0, toRgb(mix)[i]!)));
+        expect(rat(Y(rgb), Y(bg as unknown as number[])), `step ${n}`).toBeGreaterThanOrEqual(3);
+      }
+  });
+  it("has the hooks, forced-colors, contrast and motion blocks", () => {
+    for (const h of [
+      "[data-tone=good]",
+      "[data-other]",
+      ".maya-ctl",
+      ".maya-crumbs",
+      ".maya-reset",
+      ".maya-err",
+      "[data-maya=brush]",
+      "[data-maya=cross] line",
+      "[data-maya=link]",
+      "[data-depth]",
+      "[data-selected]",
+      "[data-maya=labels],[data-maya=cross]{pointer-events:none}",
+      "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active])",
+      "@media (forced-colors:active)",
+      "@media (prefers-contrast:more)",
+      "@media (prefers-reduced-motion:reduce){*{transition:none!important}}",
+      ".maya-svg{direction:ltr",
+      "unicode-bidi:plaintext",
+      "tabular-nums",
+      "transition:opacity .2s",
+    ])
+      expect(css, h).toContain(h);
+    expect(css).not.toContain("style=");
+  });
+  it("gzips under 2300 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(2300);
   });
 });

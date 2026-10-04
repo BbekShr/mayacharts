@@ -25,17 +25,22 @@
       </section>
       <section id="missing-field">
         <h2><code>missing-field</code></h2>
-        <p>Every spec needs the four fields type, data, x and y. One of them is absent.</p>
+        <p>
+          Every spec needs the required fields type, data, and y. Some types also require x or path.
+          One of them is absent.
+        </p>
         <pre><code>{ "type": "bar", "x": "month", "y": "revenue",
   "data": [{ "month": "Jan", "revenue": 12 }] }</code></pre>
       </section>
       <section id="unknown-type">
         <h2><code>unknown-type</code></h2>
         <p>
-          spec.type must be one of bar, line or area. The message suggests the closest match when
-          there is one.
+          spec.type must be one of bar, line, area, scatter, heatmap, waterfall, treemap, sunburst,
+          sankey, or hexmap. The message suggests the closest match when there is one, or the module
+          to import for unloaded types.
         </p>
-        <pre><code>{ "type": "bar", ... }</code></pre>
+        <pre><code>{ "type": "bar", ... }
+// For treemap: import "mayacharts/hierarchy" first</code></pre>
       </section>
       <section id="data-not-array">
         <h2><code>data-not-array</code></h2>
@@ -43,7 +48,7 @@
           spec.data must be an array of row objects. An object keyed by category, or a JSON string,
           is not accepted.
         </p>
-        <pre><code>data: Object.entries(totals).map(([month, revenue]) =&gt; ({ month, revenue }))</code></pre>
+        <pre><code>data: Object.entries(totals).map(([month, revenue]) => ({ month, revenue }))</code></pre>
       </section>
       <section id="row-not-object">
         <h2><code>row-not-object</code></h2>
@@ -56,8 +61,9 @@
       <section id="unknown-field">
         <h2><code>unknown-field</code></h2>
         <p>
-          spec.x, spec.y or spec.series names a field that no row has. The message lists the fields
-          found in your data. Check spelling and case.
+          spec.x, spec.y, spec.series, spec.path, spec.size, spec.name, or spec.colorBy names a
+          field that no row has. The message lists the fields found in your data. Check spelling and
+          case.
         </p>
         <pre><code>// rows have "month" and "revenue"
 { "x": "month", "y": "revenue" }</code></pre>
@@ -68,7 +74,24 @@
           The y field must hold finite numbers. null and undefined are allowed and draw a gap.
           Numeric strings are rejected, so convert them first.
         </p>
-        <pre><code>data.map(r =&gt; ({ ...r, revenue: Number(r.revenue) }))</code></pre>
+        <pre><code>data.map(r => ({ ...r, revenue: Number(r.revenue) }))</code></pre>
+      </section>
+      <section id="non-numeric-field">
+        <h2><code>non-numeric-field</code></h2>
+        <p>
+          A numeric field (size for scatter, x for scatter, or colorBy when it names a field) must
+          hold finite numbers. null and undefined are allowed. Convert numeric strings first.
+        </p>
+        <pre><code>// for scatter x domain
+data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
+      </section>
+      <section id="non-positive-value">
+        <h2><code>non-positive-value</code></h2>
+        <p>
+          Hierarchy types (treemap, sunburst, sankey) require positive y values (> 0) because area
+          or width represents magnitude. Filter out zero and negative rows.
+        </p>
+        <pre><code>data: data.filter(r => r.revenue > 0)</code></pre>
       </section>
       <section id="unknown-option">
         <h2><code>unknown-option</code></h2>
@@ -86,6 +109,18 @@
         </p>
         <pre><code>{ "legend": true, "colors": ["#2563eb", "#f97316"] }</code></pre>
       </section>
+      <section id="option-unsupported">
+        <h2><code>option-unsupported</code></h2>
+        <p>
+          This option is not valid for the chosen chart type or in combination with other options.
+          For example, size applies only to scatter charts, path cannot be used with x, and drill
+          cannot be combined with select.
+        </p>
+        <pre><code>// scatter chart with size field
+{ "type": "scatter", "x": "x", "y": "y", "size": "population", ... }
+// bar chart with path instead of x
+{ "type": "bar", "path": ["region", "state"], "y": "revenue", ... }</code></pre>
+      </section>
       <section id="stack-unsupported">
         <h2><code>stack-unsupported</code></h2>
         <p>
@@ -95,22 +130,28 @@
       </section>
       <section id="invalid-domain">
         <h2><code>invalid-domain</code></h2>
-        <p>spec.yDomain must be [min, max] with two finite numbers and min less than max.</p>
+        <p>
+          spec.yDomain or spec.xDomain must be [min, max] with two finite numbers and min less than
+          max.
+        </p>
         <pre><code>{ "yDomain": [0, 100] }</code></pre>
       </section>
       <section id="invalid-format">
         <h2><code>invalid-format</code></h2>
         <p>
-          spec.yFormat must be one of auto, compact, percent or currency. Formatting is preset-based
-          because the spec is plain JSON and cannot hold functions.
+          spec.format has an invalid preset or Intl options. Valid presets are auto, integer,
+          decimal, compact, percent, currency, date, month, year, time, datetime. Intl options must
+          be valid Intl.NumberFormat or Intl.DateTimeFormat options.
         </p>
-        <pre><code>{ "yFormat": "compact" }</code></pre>
+        <pre><code>{ "format": "currency" }
+{ "format": { "revenue": { "style": "currency", "currency": "USD" } } }</code></pre>
       </section>
       <section id="invalid-theme">
         <h2><code>invalid-theme</code></h2>
         <p>
           spec.theme contains a key that is not a theme token. Valid tokens are font, fontSize, fg,
-          fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg and focus.
+          fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, bad, and series1
+          through series8.
         </p>
         <pre><code>{ "theme": { "accent": "#7c3aed" } }</code></pre>
       </section>
@@ -118,7 +159,7 @@
         <h2><code>unsafe-css-value</code></h2>
         <p>
           Theme and color values are written into CSS custom properties, so they must be plain CSS
-          values. Characters such as ; { } &lt; &gt; \ and url( or expression( are rejected.
+          values. Characters such as ; { } < > \ and url( or expression( are rejected for security.
         </p>
         <pre><code>{ "colors": ["#2563eb", "rgb(249 115 22)"] }</code></pre>
       </section>
@@ -126,6 +167,28 @@
         <h2><code>invalid-size</code></h2>
         <p>The width and height render options must be finite numbers greater than zero.</p>
         <pre><code>renderShell(spec, { width: 760, height: 320 })</code></pre>
+      </section>
+      <section id="unknown-state">
+        <h2><code>unknown-state</code></h2>
+        <p>
+          The hexmap type requires x to be a US state name or USPS code. The message suggests the
+          closest match. Valid values are the 50 state names, their 2-letter abbreviations, DC, and
+          PR.
+        </p>
+        <pre><code>{ "type": "hexmap", "x": "state", "y": "population",
+  "data": [{ "state": "CA", "population": 39 }] }</code></pre>
+      </section>
+      <section id="too-many-marks">
+        <h2><code>too-many-marks</code></h2>
+        <p>
+          The chart would render more than 5000 marks, which exceeds the performance limit. Reduce
+          the number of categories with the limit option, or aggregate rows with aggregate (e.g.,
+          "mean" instead of "sum").
+        </p>
+        <pre><code>// Limit to top 20 categories
+{ "type": "bar", "x": "product", "y": "sales", "limit": 20, ... }
+// Aggregate by day instead of hour
+{ "aggregate": "mean", ... }</code></pre>
       </section>
     </main>
   </body>

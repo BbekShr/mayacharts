@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mayaCharts spec</title>
+    <link rel="stylesheet" href="../site/site.css" />
+    <style>
+      .spec-anchor {
+        display: block;
+        position: relative;
+        top: -60px;
+        height: 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+      th {
+        font-weight: 600;
+        background: var(--code-bg);
+      }
+      code {
+        background: var(--code-bg);
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site">
+      <h1>Specification</h1>
+      <p class="tagline">
+        Complete API reference for the mayaCharts spec. Anchor links for error messages.
+      </p>
+      <nav><a href="../README.md">Back to README</a></nav>
+    </header>
+    <main>
+      <section>
+        <h2>Overview</h2>
+        <p>
+          The mayaCharts spec is plain JSON. Rule: <code>x</code> is always the category,
+          <code>y</code> is always the value, whatever the orientation. <code>yDomain</code> is
+          always the value axis.
+        </p>
+      </section>
+
+      <section>
+        <h2>Data fields</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a class="spec-anchor" id="$schema"></a><code>$schema</code></td>
+              <td>string</td>
+              <td>-</td>
+              <td>Ignored; for editors and LLMs</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="type"></a><code>type</code></td>
+              <td>enum</td>
+              <td>required</td>
+              <td>
+                <code>bar line area scatter heatmap waterfall treemap sunburst sankey hexmap</code>
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="data"></a><code>data</code></td>
+              <td>Row[]</td>
+              <td>required</td>
+              <td>Row objects</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="aggregate"></a><code>aggregate</code></td>
+              <td>sum / mean / count / min / max</td>
+              <td>sum</td>
+              <td>
+                How rows sharing a (category, series) combine. <code>count</code> = SQL COUNT(y) on
+                non-null rows
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="sort"></a><code>sort</code></td>
+              <td>asc / desc</td>
+              <td>data order</td>
+              <td>Categories by total across all series (hidden ones too)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="limit"></a><code>limit</code></td>
+              <td>number</td>
+              <td>-</td>
+              <td>
+                Keep top N categories by signed total; rest roll up into "Other" with re-aggregation
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Encoding fields</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Applies to</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a class="spec-anchor" id="x"></a><code>x</code></td>
+              <td>field</td>
+              <td>all but path types</td>
+              <td>
+                Category; scatter numeric x; hexmap state (USPS code or full name, case-insensitive)
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="y"></a><code>y</code></td>
+              <td>field or field[]</td>
+              <td>all</td>
+              <td>Value; array adds measure toggle, first active</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="series"></a><code>series</code></td>
+              <td>field</td>
+              <td>bar line area heatmap</td>
+              <td>Split into series; heatmap row category</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="path"></a><code>path</code></td>
+              <td>field[]</td>
+              <td>treemap sunburst sankey; bar/line/area with drill</td>
+              <td>Hierarchy outer to inner. On bar/line/area replaces <code>x</code></td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="size"></a><code>size</code></td>
+              <td>field</td>
+              <td>scatter</td>
+              <td>Bubble area (sqrt scale)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="name"></a><code>name</code></td>
+              <td>field</td>
+              <td>scatter</td>
+              <td>Point identity and tooltip title; duplicates become #2, #3...</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="totals"></a><code>totals</code></td>
+              <td>string[]</td>
+              <td>waterfall</td>
+              <td>x values drawn as running-total bars</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="stack"></a><code>stack</code></td>
+              <td>boolean</td>
+              <td>bar area</td>
+              <td>Stack series instead of grouping</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="horizontal"></a><code>horizontal</code></td>
+              <td>boolean</td>
+              <td>bar</td>
+              <td>Categories on the left axis</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Formatting fields</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a class="spec-anchor" id="format"></a><code>format</code></td>
+              <td>preset or {[field]: preset or options}</td>
+              <td>auto</td>
+              <td>
+                Bare string applies to every y. Presets: auto integer decimal compact percent
+                currency date month year time datetime. Or Intl options plus optional prefix/suffix.
+                Display only
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="titles"></a><code>titles</code></td>
+              <td>{[field]: string}</td>
+              <td>field names</td>
+              <td>Display names everywhere (axis, tooltip, legend, table)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="labels"></a><code>labels</code></td>
+              <td>boolean</td>
+              <td>false (heatmap: true at ≥24 px)</td>
+              <td>Formatted value on marks</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="text"></a><code>text</code></td>
+              <td>{[key]: string}</td>
+              <td>English</td>
+              <td>
+                Localised UI strings with {0} placeholders: noData other back reset total showing
+                drilledInto zoomedTo selected selectionCleared chartOf firstOf sampleData measures
+                crumbs positive negative above below
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="locale"></a><code>locale</code></td>
+              <td>BCP 47</td>
+              <td>en-US</td>
+              <td>Formatting locale</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="currency"></a><code>currency</code></td>
+              <td>ISO 4217</td>
+              <td>USD</td>
+              <td>Currency for the currency preset</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="title"></a><code>title</code></td>
+              <td>string</td>
+              <td>-</td>
+              <td>Visible heading and accessible name</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="description"></a><code>description</code></td>
+              <td>string</td>
+              <td>auto</td>
+              <td>Accessible description</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="yDomain"></a><code>yDomain</code></td>
+              <td>[min, max]</td>
+              <td>-</td>
+              <td>Fixed value-axis domain. Not allowed with y array</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="xDomain"></a><code>xDomain</code></td>
+              <td>[min, max]</td>
+              <td>-</td>
+              <td>Fixed x domain (scatter only)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Interaction fields</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a class="spec-anchor" id="tooltip"></a><code>tooltip</code></td>
+              <td>boolean</td>
+              <td>Hover/keyboard tooltip (default true)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="legend"></a><code>legend</code></td>
+              <td>boolean</td>
+              <td>Legend; clicking toggles series</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="drill"></a><code>drill</code></td>
+              <td>boolean</td>
+              <td>
+                Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop. Disabled
+                at last level
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="select"></a><code>select</code></td>
+              <td>true / "multi"</td>
+              <td>Click/Enter/legend selects marks; Escape clears. Not with drill</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="zoom"></a><code>zoom</code></td>
+              <td>boolean</td>
+              <td>Drag to zoom (line, area, scatter); Reset, double-click, Escape restore</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="animate"></a><code>animate</code></td>
+              <td>boolean</td>
+              <td>Animate updates (default true)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Style fields</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a class="spec-anchor" id="colors"></a><code>colors</code></td>
+              <td>string[] or {[series]: color}</td>
+              <td>Max 8; slot assignment stable across updates. 9+ series wrap slots</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="colorBy"></a><code>colorBy</code></td>
+              <td>"sign" / {target: n} / field</td>
+              <td>
+                Tone by sign of y, by a target value, or a ramp by a numeric field. Not with series
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="theme"></a><code>theme</code></td>
+              <td>{[token]: css}</td>
+              <td>Theme token overrides (CSS values, allowlisted)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="grid"></a><code>grid</code></td>
+              <td>boolean</td>
+              <td>Grid lines perpendicular to the value axis (default true)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="xAxis"></a><code>xAxis</code></td>
+              <td>boolean</td>
+              <td>Bottom axis (default true)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="yAxis"></a><code>yAxis</code></td>
+              <td>boolean</td>
+              <td>Left axis (default true)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="table"></a><code>table</code></td>
+              <td>boolean</td>
+              <td>Visually hidden data table for screen readers (default true)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Examples</h2>
+
+        <h3>1. Currency bar</h3>
+        <pre><code>{ "type": "bar", "x": "month", "y": "revenue", "format": "currency",
+  "data": [{ "month": "Jan", "revenue": 10500 }] }</code></pre>
+        <p>Vertical bar chart with currency-formatted values.</p>
+
+        <h3>2. Stacked bar</h3>
+        <pre><code>{ "type": "bar", "x": "state", "y": "units", "series": "region", "stack": true,
+  "data": [{ "state": "CA", "region": "West", "units": 120 }] }</code></pre>
+        <p>Horizontal regions, stacked per state.</p>
+
+        <h3>3. Horizontal sorted limited labelled bar</h3>
+        <pre><code>{ "type": "bar", "horizontal": true, "x": "product", "y": "margin",
+  "sort": "desc", "limit": 5, "labels": true,
+  "data": [{ "product": "A", "margin": 22 }] }</code></pre>
+        <p>Top 5 products by margin, descending, with on-bar labels.</p>
+
+        <h3>4. Sign-coloured percent bar</h3>
+        <pre><code>{ "type": "bar", "x": "metric", "y": "variance", "format": "percent",
+  "colorBy": "sign",
+  "data": [{ "metric": "revenue", "variance": 0.15 }] }</code></pre>
+        <p>Bars toned green (positive) or red (negative).</p>
+
+        <h3>5. Multi-measure line with date format and zoom</h3>
+        <pre><code>{ "type": "line", "x": "date", "y": ["revenue", "units"], "zoom": true,
+  "format": { "date": "date", "revenue": "currency" },
+  "data": [{ "date": "2024-01-01", "revenue": 10000, "units": 50 }] }</code></pre>
+        <p>Two measures on the y-axis with a measure toggle; drag to zoom, Reset to restore.</p>
+
+        <h3>6. Stacked area</h3>
+        <pre><code>{ "type": "area", "x": "month", "y": "sales", "series": "region", "stack": true,
+  "data": [{ "month": "Jan", "region": "North", "sales": 1500 }] }</code></pre>
+        <p>Regions stacked over time.</p>
+
+        <h3>7. Waterfall with totals</h3>
+        <pre><code>{ "type": "waterfall", "x": "stage", "y": "amount", "totals": ["Q1", "FY"],
+  "data": [{ "stage": "Q1", "amount": 100 }] }</code></pre>
+        <p>Flow chart with Q1 and FY marked as running totals.</p>
+
+        <h3>8. Bubble scatter with select</h3>
+        <pre><code>{ "type": "scatter", "x": "population", "y": "gdp", "size": "area", "name": "country",
+  "select": "multi",
+  "data": [{ "country": "USA", "population": 331, "gdp": 23, "area": 9.8 }] }</code></pre>
+        <p>Countries as bubbles; click to select multiple.</p>
+
+        <h3>9. Heatmap count</h3>
+        <pre><code>{ "type": "heatmap", "x": "hour", "y": "traffic", "aggregate": "count",
+  "data": [{ "hour": "09", "traffic": "high" }] }</code></pre>
+        <p>Count of observations per hour and traffic level.</p>
+
+        <h3>10. Treemap drill</h3>
+        <pre><code>{ "type": "treemap", "path": ["region", "state", "product"], "y": "revenue",
+  "drill": true,
+  "data": [{ "region": "West", "state": "CA", "product": "A", "revenue": 5000 }] }</code></pre>
+        <p>Hierarchical treemap; click to drill into regions, states, and products.</p>
+      </section>
+    </main>
+  </body>
+</html>
