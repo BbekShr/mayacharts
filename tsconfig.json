@@ -20,6 +20,7 @@
       "mayacharts/hierarchy": ["./src/hierarchy.ts"],
       "mayacharts/flow": ["./src/flow.ts"],
       "mayacharts/geo": ["./src/geo.ts"],
+      "mayacharts/radial": ["./src/radial.ts"],
       "mayacharts/global": ["./src/global.ts"],
       "mayacharts/jsx": ["./src/jsx.d.ts"]
     },
