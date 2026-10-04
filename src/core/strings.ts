@@ -18,6 +18,8 @@ export const TEXT = {
   selectionCleared: "Selection cleared",
   /** Auto description: {0} = noun, {1} = y title, {2} = x title. */
   chartOf: "{0} chart of {1} by {2}",
+  /** Auto description without a category field: {0} = noun, {1} = y title. */
+  chartOfAll: "{0} chart of {1}",
   /** Table caption when rows are capped: {0} = shown, {1} = total. */
   firstOf: "First {0} of {1} rows",
   /** aria-label of the measure radiogroup. */
@@ -31,6 +33,10 @@ export const TEXT = {
   below: "below target",
   /** kpi delta: {0} = signed change, {1} = previous period. */
   vs: "{0} vs {1}",
+  /** Live region after a table header click: {0} = column title, {1} = ascending/descending. */
+  sortedBy: "Sorted by {0}, {1}",
+  ascending: "ascending",
+  descending: "descending",
   /** kpi bullet: {0} = share of target, {1} = target. */
   ofTarget: "{0} of target {1}",
 } as const;

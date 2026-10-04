@@ -149,7 +149,7 @@ describe("theme css", () => {
       expect(css, h).toContain(h);
     expect(css).not.toContain("style=");
   });
-  it("gzips under 2450 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(2450);
+  it("gzips under 2560 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(2560);
   });
 });

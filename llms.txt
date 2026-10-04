@@ -6,10 +6,10 @@ HTML: <maya-chart><script type="application/json">{spec}</script></maya-chart>
 JavaScript: chart.spec = {type: "bar", data, x: "month", y: "revenue"}; chart.data = newRows;
 SSR: import {render, renderShell} from "mayacharts"; render(spec, {width, height});
 Global: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script>
-Modules: import "mayacharts/hierarchy" (treemap, sunburst); "mayacharts/flow" (sankey); "mayacharts/geo" (hexmap).
+Modules: import "mayacharts/hierarchy" (treemap, sunburst, marimekko, waffle); "mayacharts/flow" (sankey, chord); "mayacharts/radial" (radial); "mayacharts/geo" (hexmap).
 
 SPEC FIELDS:
-type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell treemap sunburst sankey hexmap
+type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial hexmap
 data: Row[] = required. Row objects with field values.
 y: field | field[] = required. Value field; array adds measure toggle.
 x: field = "". Category field (scatter: numeric x; hexmap: state).
@@ -32,7 +32,7 @@ locale: BCP47 = en-US. Formatting locale.
 currency: ISO4217 = USD. Currency for "currency" preset.
 title: string = "". Visible heading and accessible name.
 description: string = "". Accessible description; auto-generated when omitted.
-yDomain: [min, max] = null. Fixed value-axis domain. Not with y array.
+yDomain: [min, max] = null. Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). Not with y array.
 xDomain: [min, max] = null. Fixed x domain. scatter only.
 tooltip: boolean = true. Hover/keyboard tooltip.
 legend: boolean = true if series. Legend; clicking toggles series.
@@ -63,6 +63,14 @@ EXAMPLES:
 11. KPI with delta and sparkline: {type: "kpi", x: "month", y: "sales", format: "currency", data: [{month: "Mar", sales: 45000}, {month: "Apr", sales: 50700}, {month: "May", sales: 54500}]}
 12. Dumbbell horizontal: {type: "dumbbell", x: "region", y: "revenue", series: "year", horizontal: true, format: "currency", data: [{region: "North", year: "2024", revenue: 45000}, {region: "North", year: "2025", revenue: 52000}]}
 13. Bar with dual axis: {type: "bar", x: "month", y: "revenue", y2: "customers", format: {revenue: "currency", customers: "integer"}, data: [{month: "Jan", revenue: 10500, customers: 120}, {month: "Feb", revenue: 12000, customers: 145}]}
+14. Ridgeline: {type: "ridgeline", x: "year", y: "value", series: "product", data: [{year: 2020, product: "A", value: 100}, {year: 2021, product: "A", value: 120}]}
+15. Beeswarm: {type: "beeswarm", y: "value", series: "category", name: "id", data: [{id: "1", category: "A", value: 15}, {id: "2", category: "A", value: 18}]}
+16. Parallel coordinates: {type: "parallel", x: "item", y: ["revenue", "units", "margin"], series: "region", data: [{item: "1", region: "North", revenue: 1000, units: 50, margin: 0.25}]}
+17. Table: {type: "table", x: "product", y: ["revenue", "units"], sort: "desc", format: {revenue: "currency"}, data: [{product: "A", revenue: 5000, units: 100}]}
+18. Radial: {type: "radial", x: "month", y: "value", series: "product", data: [{month: "Jan", product: "A", value: 10}, {month: "Feb", product: "A", value: 15}]}
+19. Chord diagram: {type: "chord", path: ["from", "to"], y: "flow", data: [{from: "A", to: "B", flow: 100}]}
+20. Marimekko: {type: "marimekko", x: "category", y: "value", series: "segment", data: [{category: "A", segment: "X", value: 50}]}
+21. Waffle: {type: "waffle", x: "category", y: "value", data: [{category: "A", value: 45}, {category: "B", value: 30}]}
 
 ERROR CODES:
 spec-not-object: spec must be a plain object
@@ -89,11 +97,11 @@ too-many-marks: more than 5000 marks (suggest limit or aggregate)
 EVENTS AND STATE:
 Events (bubbles: true, composed: true):
   maya-select {selected: Sel[], target: (Sel & {value}) | null}
-  maya-view {measure, drill, window, hidden} (user actions only; window = zoom slice)
+  maya-view {measure, drill, window, hidden, sortBy} (user actions only; window = zoom slice; sortBy = table header click sort)
   maya-error {code, path, message} (cancelable with preventDefault())
   maya-render {} (signals host that render is complete)
 Two-way sync properties:
-  el.view: {measure?, drill?, window?, hidden?} - getter/setter (no events on set; {} resets)
+  el.view: {measure?, drill?, window?, hidden?, sortBy?} - getter/setter (no events on set; {} resets; sortBy = [field, "asc"|"desc"])
   el.selected: Sel[] - getter/setter (no events on set)
 
 RULES FOR AGENTS:

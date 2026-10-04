@@ -8,7 +8,7 @@
 import type { Mark } from "./types.ts";
 
 // ponytail: kept in sync with package.json by hand (one line, checked at release).
-export const VERSION = "0.1.1";
+export const VERSION = "0.2.0";
 // ponytail: keyed by major; pre-1.0 Mark-contract breaks must bump this by hand.
 export const MAJOR = "0";
 
@@ -29,13 +29,21 @@ export const CORE_TYPES = [
   "waterfall",
   "kpi",
   "dumbbell",
+  "ridgeline",
+  "beeswarm",
+  "parallel",
+  "table",
 ] as const;
 
 /** Module types and the import that provides them (for the unknown-type hint). */
 export const MODULE_OF: Readonly<Record<string, string>> = {
   treemap: "hierarchy",
   sunburst: "hierarchy",
+  marimekko: "hierarchy",
+  waffle: "hierarchy",
   sankey: "flow",
+  chord: "flow",
+  radial: "radial",
   hexmap: "geo",
 };
 

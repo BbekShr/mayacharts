@@ -1,6 +1,6 @@
 // treemap + sunburst. Importing this file registers both types.
 import { register } from "./core/registry.ts";
-import { el, hit, key, r } from "./core/svg.ts";
+import { el, esc, hit, key, r } from "./core/svg.ts";
 import type { Aggregate, Mark, MarkCtx, MarkOut, Row } from "./core/types.ts";
 
 interface Node {
@@ -207,5 +207,138 @@ const sunburst: Mark = {
 
 register("treemap", treemap);
 register("sunburst", sunburst);
+
+const pct = (p: number) => (p > 0 && p < 0.005 ? "<1%" : `${Math.round(p * 100)}%`);
+
+/** Column width ~ column total; segments are shares of the column total (visible series only). */
+export const marimekko: Mark = {
+  noun: "Marimekko",
+  draw(ctx): MarkOut {
+    const { plot, spec, shaped } = ctx;
+    const { categories, series, cells } = shaped;
+    // ponytail: negative and null values count as 0, a stack of shares cannot show them.
+    const val = new Map<string, number>();
+    const tot = categories.map(() => 0);
+    for (const c of cells) {
+      const v = Math.max(0, c.value ?? 0);
+      val.set(`${c.ci}/${c.si}`, v);
+      tot[c.ci] = (tot[c.ci] ?? 0) + v;
+    }
+    const grand = tot.reduce((a, b) => a + b, 0);
+    if (!grand) return { marks: "", hits: "" };
+    const gap = 4;
+    const [top, bot] = [plot.y + 2, plot.y + plot.h - 20];
+    const free = plot.w - gap * (categories.length - 1);
+    let marks = "";
+    let hits = "";
+    let x = plot.x;
+    categories.forEach((name, ci) => {
+      const t = tot[ci] ?? 0;
+      const w = (free * t) / grand;
+      let y = bot;
+      for (const si of shaped.visible) {
+        const v = val.get(`${ci}/${si}`);
+        if (!v) continue;
+        const h = ((bot - top) * v) / t;
+        const f = ctx.fmt(spec.y, v);
+        const a = {
+          "data-maya": "mark",
+          "data-key": key(series[si], name),
+          "data-c": ci,
+          "data-s": si % 8,
+          "data-x": name,
+          "data-series": series[si],
+          "data-y": v,
+          "data-f": `${f} (${pct(v / t)})`,
+        };
+        y -= h;
+        marks += el("rect", { ...a, x: r(x), y: r(y), width: r(w), height: r(h) });
+        hits += hit(a, x, y, w, h);
+        if (spec.labels && h >= 16) {
+          const share = pct(v / t);
+          ctx.label(
+            x + w / 2,
+            y + h / 2,
+            `${f} (${share})`.length * 7.2 + 4 <= w ? `${f} (${share})` : share,
+            "center",
+          );
+        }
+      }
+      if (w > 0) ctx.label(x + w / 2, plot.y + plot.h - 20, name, "below");
+      x += w + gap;
+    });
+    return { marks, hits };
+  },
+};
+
+/** 10x10 cells split between the x categories by largest remainder. */
+export const waffle: Mark = {
+  noun: "Waffle",
+  draw(ctx): MarkOut {
+    const { plot, spec, shaped } = ctx;
+    const vals = shaped.categories.map(() => 0);
+    for (const c of shaped.cells) vals[c.ci] = (vals[c.ci] ?? 0) + Math.max(0, c.value ?? 0);
+    const sum = vals.reduce((a, b) => a + b, 0);
+    if (!sum) return { marks: "", hits: "" };
+    const n = vals.map((v) => Math.floor((v / sum) * 100));
+    const left = 100 - n.reduce((a, b) => a + b, 0);
+    vals
+      .map((v, i) => [((v / sum) * 100) % 1, i] as const)
+      .sort((a, b) => b[0] - a[0] || a[1] - b[1])
+      .slice(0, left)
+      .forEach(([, i]) => (n[i] = (n[i] ?? 0) + 1));
+    const step = Math.min(plot.w, plot.h) / 10;
+    const [ox, oy] = [plot.x + (plot.w - step * 10) / 2, plot.y + (plot.h - step * 10) / 2];
+    const g = Math.min(3, step * 0.12);
+    let marks = "";
+    let hits = "";
+    let i = 0;
+    shaped.categories.forEach((name, ci) => {
+      const v = vals[ci] ?? 0;
+      for (let k = 0; k < (n[ci] ?? 0); k++, i++) {
+        const [cx, cy] = [ox + (i % 10) * step, oy + Math.floor(i / 10) * step];
+        const a = {
+          "data-maya": "mark",
+          "data-key": key("w", name, k),
+          "data-c": i,
+          "data-s": ci % 8,
+          "data-x": name,
+          "data-series": "",
+          "data-y": v,
+          "data-f": `${ctx.fmt(spec.y, v)} (${pct(v / sum)})`,
+        };
+        marks += el("rect", {
+          ...a,
+          x: r(cx + g / 2),
+          y: r(cy + g / 2),
+          width: r(step - g),
+          height: r(step - g),
+        });
+        // The hit covers the whole grid step so the gaps between cells still hit.
+        hits += el("rect", {
+          ...a,
+          "data-maya": "hit",
+          x: r(cx),
+          y: r(cy),
+          width: r(step),
+          height: r(step),
+          fill: "transparent",
+        });
+      }
+    });
+    const legend =
+      `<div class="maya-legend" data-maya="legend">` +
+      shaped.categories
+        .map(
+          (name, ci) =>
+            `<span data-s="${ci % 8}"><i></i>${esc(name)} ${pct((vals[ci] ?? 0) / sum)}</span>`,
+        )
+        .join("") +
+      `</div>`;
+    return { marks, hits, legend };
+  },
+};
+register("marimekko", marimekko);
+register("waffle", waffle);
 
 export {};

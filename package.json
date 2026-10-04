@@ -1,6 +1,6 @@
 {
   "name": "mayacharts",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.",
   "keywords": [
     "chart",
@@ -41,6 +41,10 @@
       "types": "./dist/geo.d.ts",
       "default": "./dist/geo.js"
     },
+    "./radial": {
+      "types": "./dist/radial.d.ts",
+      "default": "./dist/radial.js"
+    },
     "./global": "./dist/maya.global.js",
     "./theme.css": "./dist/theme.css",
     "./schema.json": "./schema.json",
@@ -53,10 +57,12 @@
     "./dist/hierarchy.js",
     "./dist/flow.js",
     "./dist/geo.js",
+    "./dist/radial.js",
     "./dist/maya.global.js",
     "./src/element.ts",
     "./src/hierarchy.ts",
     "./src/flow.ts",
+    "./src/radial.ts",
     "./src/geo.ts",
     "./src/global.ts"
   ],
@@ -73,7 +79,7 @@
   },
   "scripts": {
     "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
-    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode global && tsc -p tsconfig.build.json",
+    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode global && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -84,13 +90,14 @@
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts"
   },
   "mayaSize": {
-    "dist/index.js": 20480,
-    "dist/element.js": 28672,
-    "dist/theme.css": 2450,
-    "dist/hierarchy.js": 3072,
-    "dist/flow.js": 2560,
+    "dist/index.js": 24576,
+    "dist/element.js": 33792,
+    "dist/theme.css": 2560,
+    "dist/hierarchy.js": 3584,
+    "dist/flow.js": 3072,
     "dist/geo.js": 3584,
-    "dist/maya.global.js": 32768
+    "dist/radial.js": 3072,
+    "dist/maya.global.js": 39936
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

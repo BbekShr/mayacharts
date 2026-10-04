@@ -14,9 +14,17 @@ export type ChartType =
   | "waterfall"
   | "kpi"
   | "dumbbell"
+  | "ridgeline"
+  | "beeswarm"
+  | "parallel"
+  | "table"
   | "treemap"
   | "sunburst"
   | "sankey"
+  | "chord"
+  | "marimekko"
+  | "waffle"
+  | "radial"
   | "hexmap";
 
 export type Aggregate = "sum" | "mean" | "count" | "min" | "max";
@@ -72,7 +80,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Ignored; lets editors and LLMs find the JSON schema.
    * @example "$schema": "https://unpkg.com/mayacharts/schema.json" */
   $schema?: string;
-  /** Chart type. treemap/sunburst need `mayacharts/hierarchy`, sankey `flow`, hexmap `geo`.
+  /** Chart type. treemap/sunburst/marimekko/waffle need `mayacharts/hierarchy`, sankey/chord `flow`, radial `radial`, hexmap `geo`.
    * @example type: "bar" */
   type: ChartType;
   /** Row objects.
@@ -88,13 +96,13 @@ export interface ChartSpec<R extends object = Row> {
    * @example limit: 10 */
   limit?: number;
 
-  /** Category field (scatter: numeric x; hexmap: US state; kpi: optional period, last one is the headline). Not used by path types.
+  /** Category field (scatter: numeric x; hexmap: US state; kpi: optional period, last one is the headline; beeswarm: optional row; parallel: one line each; table: row label). Not used by path types.
    * @example x: "month" */
   x?: Field<R>;
-  /** Value field; an array adds a measure toggle, first one active.
+  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each).
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
-  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to). bar line area scatter heatmap dumbbell.
+  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial.
    * @example series: "region" */
   series?: Field<R>;
   /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with `drill` (replaces `x`).
@@ -103,7 +111,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Bubble area field (sqrt scale). scatter only.
    * @example size: "population" */
   size?: Field<R>;
-  /** Point identity and tooltip title. scatter only.
+  /** Point identity and tooltip title. scatter and beeswarm.
    * @example name: "country" */
   name?: Field<R>;
   /** x values drawn as running-total bars. waterfall only.
@@ -143,7 +151,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Accessible description; auto-generated when omitted.
    * @example description: "Revenue doubled from January to December." */
   description?: string;
-  /** Fixed value-axis domain. Not allowed with a `y` array.
+  /** Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). Not allowed with a `y` array.
    * @example yDomain: [0, 100] */
   yDomain?: readonly [number, number];
   /** Fixed x domain. scatter only.
@@ -209,6 +217,8 @@ export interface View {
   window?: readonly [number, number] | readonly [number, number, number, number];
   /** Series keys hidden by the legend. */
   hidden?: readonly string[];
+  /** Table column sort from a header click: [field, direction]. */
+  sortBy?: readonly [field: string, dir: "asc" | "desc"];
 }
 
 export interface RenderOptions {
@@ -288,6 +298,8 @@ export interface ResolvedSpec {
   horizontal: boolean;
   aggregate: Aggregate;
   sort: "asc" | "desc" | null;
+  /** Table header sort from the view; null when unset. */
+  sortBy: readonly [field: string, dir: "asc" | "desc"] | null;
   limit: number | null;
   /** Per-field format; a bare-string `spec.format` is expanded to every measure. */
   format: ReadonlyMap<string, FieldFormat>;

@@ -280,3 +280,36 @@ describe("patch ghosts", () => {
     expect(box.querySelectorAll("[data-maya=axis-y] text")).toHaveLength(3);
   });
 });
+
+describe("table header sort", () => {
+  const tbl = {
+    type: "table",
+    x: "q",
+    y: ["v", "w"],
+    data: [
+      { q: "A", v: 1, w: 5 },
+      { q: "B", v: 3, w: 2 },
+    ],
+  } as ChartSpec;
+  const first = (el: Element) => marks(el)[0]!.getAttribute("data-x");
+  const head = (el: Element, f: string) =>
+    el.shadowRoot!.querySelector<SVGElement>(`[data-maya=sort][data-field=${f}]`)!;
+
+  it("click sorts desc then asc, Enter works, spec change resets", async () => {
+    const el = await mount((e) => (e.spec = tbl));
+    expect(first(el)).toBe("A");
+    head(el, "v").dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await frame();
+    expect(first(el)).toBe("B");
+    expect(el.view.sortBy).toEqual(["v", "desc"]);
+    head(el, "v").dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, composed: true }),
+    );
+    await frame();
+    expect(first(el)).toBe("A");
+    expect(el.view.sortBy).toEqual(["v", "asc"]);
+    el.spec = { ...tbl, y: ["v"] };
+    await frame();
+    expect(el.view.sortBy).toBeUndefined();
+  });
+});

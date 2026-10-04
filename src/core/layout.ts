@@ -55,7 +55,9 @@ type Fmt = (field: string, v: unknown, step?: number) => string;
 /** Ticks of a linear axis; an explicit domain (yDomain, xDomain) replaces the nice one. */
 function ticks(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "linear" }>, fmt: Fmt) {
   const fixed = (a.field === spec.y ? spec.yDomain : spec.xDomain) ?? null;
-  const [lo, hi] = fixed ?? a.domain;
+  const [d0, d1] = fixed ?? a.domain;
+  // A reversed yDomain ([hi, lo]) keeps its order for the scale; ticks are computed low to high.
+  const [lo, hi] = d0 > d1 ? [d1, d0] : [d0, d1];
   const tk = niceTicks(lo, hi);
   const values = fixed ? tk.values.filter((v) => v >= lo && v <= hi) : tk.values;
   return {
@@ -83,7 +85,11 @@ export function frame(
   const rTitle = rt && ry && spec.titles.get(ry.field);
   const yTitle = ly && spec.titles.get(ly.field);
   const xTitle = bx && spec.titles.get(bx.field);
-  const left = (spec.yAxis && ly ? maxW(lLab) + 10 : 8) + (yTitle ? 18 : 0);
+  // Without a left axis, still leave room for half of the first bottom tick label.
+  const left = Math.max(
+    (spec.yAxis && ly ? maxW(lLab) + 10 : 8) + (yTitle ? 18 : 0),
+    bt ? tw(bt.labels[0] ?? "") / 2 + 2 : 0,
+  );
   const bottom = (spec.xAxis && bx ? 24 : 8) + (xTitle ? 18 : 0);
   const plot = {
     x: left,

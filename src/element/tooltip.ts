@@ -8,7 +8,8 @@ const h = (t: string, txt = "", at: Record<string, string> = {}) => {
   for (const k in at) e.setAttribute(k, at[k]!);
   return e;
 };
-const SEL = "[data-maya=hit],[data-maya=mark]";
+// Links (sankey flows, chord ribbons) carry the same payload as marks.
+const SEL = "[data-maya=hit],[data-maya=mark],[data-maya=link][data-key]";
 const FADE = 120;
 
 export interface Tooltip {
@@ -54,7 +55,17 @@ export function tooltip(
       byC.set(c, [...(byC.get(c) ?? []), m]);
     }
   };
-  const group = (m: Element) => (m.hasAttribute("data-c") && byC.get(a(m, "data-c"))) || [m];
+  const group = (m: Element) =>
+    (a(m, "data-maya") !== "link" && m.hasAttribute("data-c") && byC.get(a(m, "data-c"))) || [m];
+  // Lines that belong to one category (parallel coordinates) light up with it.
+  let lit: Element[] = [];
+  const light = (m: Element | undefined) => {
+    for (const l of lit) l.removeAttribute("data-active");
+    lit = m?.hasAttribute("data-c")
+      ? [...box.querySelectorAll(`[data-maya=line][data-c="${CSS.escape(a(m, "data-c"))}"]`)]
+      : [];
+    for (const l of lit) l.setAttribute("data-active", "");
+  };
 
   const cross = (m: Element | undefined) => {
     const g = box.querySelector<SVGElement>("[data-maya=cross]");
@@ -70,6 +81,7 @@ export function tooltip(
 
   const hide = () => {
     cur?.removeAttribute("data-active");
+    light(undefined);
     cur = undefined;
     pin = false;
     cross(undefined);
@@ -110,6 +122,7 @@ export function tooltip(
     cur?.removeAttribute("data-active");
     cur = m;
     m.setAttribute("data-active", "");
+    light(m);
     const g = group(m);
     tip.replaceChildren(
       h("b", a(m, "data-x")),

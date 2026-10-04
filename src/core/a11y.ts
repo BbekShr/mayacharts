@@ -4,7 +4,10 @@ import type { ResolvedSpec, Shaped } from "./types.ts";
 
 export const titleText = (spec: ResolvedSpec): string =>
   spec.title ??
-  `${spec.titles.get(spec.y) ?? spec.y} by ${spec.titles.get(spec.x) ?? (spec.x || spec.path.join(" / "))}`;
+  `${spec.titles.get(spec.y) ?? spec.y}` +
+    (spec.x || spec.path.length
+      ? ` by ${spec.titles.get(spec.x) ?? (spec.x || spec.path.join(" / "))}`
+      : "");
 
 /** Types whose a11y table lists the raw rows (no category x series grid). */
 const ROWS = ["scatter", "treemap", "sunburst", "sankey", "hexmap"];
@@ -15,7 +18,10 @@ export type Fmt = (field: string, v: unknown, step?: number) => string;
 export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: string): string {
   if (spec.description !== null) return spec.description;
   const ti = (f: string) => spec.titles.get(f) ?? f;
-  let s = t(spec, "chartOf", noun, ti(spec.y), spec.x ? ti(spec.x) : spec.path.join(" / "));
+  let s =
+    spec.x || spec.path.length
+      ? t(spec, "chartOf", noun, ti(spec.y), spec.x ? ti(spec.x) : spec.path.join(" / "))
+      : t(spec, "chartOfAll", noun, ti(spec.y));
   if (spec.series !== null && shaped.series.length)
     s += `, ${spec.stack ? "stacked" : "grouped"} by ${ti(spec.series)} (${shaped.series.join(", ")})`;
   if (ROWS.includes(spec.type)) return `${s}. ${spec.data.length} rows.`;

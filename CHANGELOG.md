@@ -4,6 +4,25 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## 0.2.0 - 2026-10-04
+
+### Added
+
+- Core types: `ridgeline` (one area row per series), `beeswarm` (one dot per row, dodged along the value axis), `parallel` (one axis per measure in a `y` array), `table` (one column per measure, inline bars, click a header to sort).
+- `mayacharts/radial`: `radial` bars around a circle, with series stacked outward.
+- `mayacharts/flow`: `chord`, ribbons between the two levels of `path`.
+- `mayacharts/hierarchy`: `marimekko` (column width by total, segments by share) and `waffle` (100 cells by share, legend on by default).
+- `view.sortBy` holds the table sort as `[field, "asc" | "desc"]`.
+- `yDomain` may be reversed (`[6, 1]`) to put rank 1 on top.
+- Text keys `chartOfAll`, `sortedBy`, `ascending`, `descending`.
+
+### Fixed
+
+- Tooltips now show on links (sankey flows and chord ribbons).
+- Hovering a parallel-coordinates point highlights its line and dims the others.
+- A chart without a left axis no longer clips its first bottom tick label.
+- The auto description no longer ends in "by" when there is no category field.
+
 ## 0.1.1 - 2026-10-04
 
 ### Added

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import "../src/hierarchy.ts";
 import "../src/flow.ts";
 import "../src/geo.ts";
+import "../src/radial.ts";
 import { render, renderShell } from "../src/core/render.ts";
 import { TEXT } from "../src/core/strings.ts";
 import { MayaSpecError } from "../src/core/validate.ts";
@@ -35,6 +36,27 @@ const BASE: Record<string, (c: unknown, s: unknown, n: unknown) => S> = {
   heatmap: (c, s, n) => ({ type: "heatmap", x: "c", y: "v", series: "s", data: D(c, s, n) }),
   kpi: (c, s, n) => ({ type: "kpi", x: "c", y: "v", colorBy: { target: 4 }, data: D(c, s, n) }),
   dumbbell: (c, s, n) => ({ type: "dumbbell", x: "c", y: "v", series: "s", data: D(c, s, n) }),
+  ridgeline: (c, s, n) => ({ type: "ridgeline", x: "c", y: "v", series: "s", data: D(c, s, n) }),
+  beeswarm: (c, s, n) => ({
+    type: "beeswarm",
+    x: "c",
+    y: "v",
+    name: "n",
+    series: "s",
+    data: D(c, s, n),
+  }),
+  parallel: (c, s, n) => ({
+    type: "parallel",
+    x: "c",
+    y: ["v", "v"],
+    series: "s",
+    data: D(c, s, n),
+  }),
+  table: (c, s, n) => ({ type: "table", x: "c", y: ["v"], data: D(c, s, n) }),
+  chord: (c, s, n) => ({ type: "chord", path: ["c", "s"], y: "v", data: D(c, s, n) }),
+  marimekko: (c, s, n) => ({ type: "marimekko", x: "c", y: "v", series: "s", data: D(c, s, n) }),
+  waffle: (c, s, n) => ({ type: "waffle", x: "c", y: "v", data: D(c, s, n) }),
+  radial: (c, s, n) => ({ type: "radial", x: "c", y: "v", series: "s", data: D(c, s, n) }),
   treemap: (c, s, n) => ({ type: "treemap", path: ["c", "s"], y: "v", data: D(c, s, n) }),
   sunburst: (c, s, n) => ({ type: "sunburst", path: ["c", "s"], y: "v", data: D(c, s, n) }),
   sankey: (c, s, n) => ({ type: "sankey", path: ["c", "s"], y: "v", data: D(c, s, n) }),

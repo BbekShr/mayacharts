@@ -11,6 +11,7 @@ const modeToEntry = {
   hierarchy: "src/hierarchy.ts",
   flow: "src/flow.ts",
   geo: "src/geo.ts",
+  radial: "src/radial.ts",
   global: "src/global.ts",
 };
 
@@ -36,6 +37,7 @@ export default defineConfig(({ mode }) => {
             hierarchy: "hierarchy.js",
             flow: "flow.js",
             geo: "geo.js",
+            radial: "radial.js",
           };
           return names[mode] || "index.js";
         },
@@ -59,6 +61,7 @@ export default defineConfig(({ mode }) => {
             "hierarchy.js",
             "flow.js",
             "geo.js",
+            "radial.js",
             "maya.global.js",
           ];
 

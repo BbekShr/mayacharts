@@ -52,44 +52,44 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Data
 
-| Field       | Type                           | Applies to            | Default    | Meaning                                                                               |
-| ----------- | ------------------------------ | --------------------- | ---------- | ------------------------------------------------------------------------------------- |
-| `$schema`   | string                         | all                   | -          | Ignored; for editors and LLMs                                                         |
-| `type`      | enum                           | all                   | required   | `bar line area scatter heatmap waterfall kpi dumbbell treemap sunburst sankey hexmap` |
-| `data`      | Row[]                          | all                   | required   | Row objects                                                                           |
-| `aggregate` | sum / mean / count / min / max | all                   | sum        | How rows sharing a (category, series) combine; `count` counts non-null y              |
-| `sort`      | asc / desc                     | bar line area heatmap | data order | Categories by total across all series                                                 |
-| `limit`     | positive integer               | bar line area heatmap | -          | Keep top N categories; rest roll up into "Other"                                      |
+| Field       | Type                           | Applies to            | Default    | Meaning                                                                                                                                               |
+| ----------- | ------------------------------ | --------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$schema`   | string                         | all                   | -          | Ignored; for editors and LLMs                                                                                                                         |
+| `type`      | enum                           | all                   | required   | `bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial hexmap` |
+| `data`      | Row[]                          | all                   | required   | Row objects                                                                                                                                           |
+| `aggregate` | sum / mean / count / min / max | all                   | sum        | How rows sharing a (category, series) combine; `count` counts non-null y                                                                              |
+| `sort`      | asc / desc                     | bar line area heatmap | data order | Categories by total across all series                                                                                                                 |
+| `limit`     | positive integer               | bar line area heatmap | -          | Keep top N categories; rest roll up into "Other"                                                                                                      |
 
 ### Encoding
 
-| Field        | Type             | Applies to                                                 | Meaning                                                                  |
-| ------------ | ---------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `x`          | field            | all but path types                                         | Category; scatter numeric x; hexmap state                                |
-| `y`          | field or field[] | all                                                        | Value; array adds measure toggle                                         |
-| `series`     | field            | bar line area scatter heatmap dumbbell                     | Split into series; heatmap row category; dumbbell exactly two (from, to) |
-| `path`       | field[]          | treemap sunburst sankey; bar/line/area/dumbbell with drill | Hierarchy outer to inner; replaces `x`                                   |
-| `size`       | field            | scatter                                                    | Bubble area (sqrt scale)                                                 |
-| `name`       | field            | scatter                                                    | Point identity and tooltip title                                         |
-| `totals`     | string[]         | waterfall                                                  | x values drawn as running-total bars                                     |
-| `stack`      | boolean          | bar area                                                   | Stack series instead of grouping                                         |
-| `horizontal` | boolean          | bar dumbbell                                               | Categories on the left axis                                              |
-| `y2`         | field            | bar                                                        | Second value field as a line on right axis (vertical bars only)          |
+| Field        | Type             | Applies to                                                                          | Meaning                                                                  |
+| ------------ | ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `x`          | field            | all but path types                                                                  | Category; scatter numeric x; hexmap state; beeswarm optional row         |
+| `y`          | field or field[] | all                                                                                 | Value; array adds measure toggle (all-y types: axes/columns)             |
+| `series`     | field            | bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial | Split into series; heatmap row category; dumbbell exactly two (from, to) |
+| `path`       | field[]          | treemap sunburst sankey chord; bar/line/area/dumbbell with drill                    | Hierarchy outer to inner; replaces `x`                                   |
+| `size`       | field            | scatter                                                                             | Bubble area (sqrt scale)                                                 |
+| `name`       | field            | scatter beeswarm                                                                    | Point identity and tooltip title                                         |
+| `totals`     | string[]         | waterfall                                                                           | x values drawn as running-total bars                                     |
+| `stack`      | boolean          | bar area                                                                            | Stack series instead of grouping                                         |
+| `horizontal` | boolean          | bar dumbbell                                                                        | Categories on the left axis                                              |
+| `y2`         | field            | bar                                                                                 | Second value field as a line on right axis (vertical bars only)          |
 
 ### Formatting
 
-| Field         | Type              | Default                         | Meaning                                                 |
-| ------------- | ----------------- | ------------------------------- | ------------------------------------------------------- |
-| `format`      | preset or options | auto                            | Per field or one string for all measures; display only  |
-| `titles`      | {[field]: string} | field names                     | Display names everywhere (axis, tooltip, legend, table) |
-| `labels`      | boolean           | false (heatmap: true at ≥24 px) | Formatted value on marks                                |
-| `text`        | {[key]: string}   | English                         | Localisable UI strings with {0} placeholders            |
-| `locale`      | BCP 47            | en-US                           | Formatting locale                                       |
-| `currency`    | ISO 4217          | USD                             | Currency for the currency preset                        |
-| `title`       | string            | -                               | Visible heading and accessible name                     |
-| `description` | string            | auto                            | Accessible description                                  |
-| `yDomain`     | [min, max]        | -                               | Fixed value-axis domain                                 |
-| `xDomain`     | [min, max]        | -                               | Fixed x domain (scatter only)                           |
+| Field         | Type              | Default                         | Meaning                                                             |
+| ------------- | ----------------- | ------------------------------- | ------------------------------------------------------------------- |
+| `format`      | preset or options | auto                            | Per field or one string for all measures; display only              |
+| `titles`      | {[field]: string} | field names                     | Display names everywhere (axis, tooltip, legend, table)             |
+| `labels`      | boolean           | false (heatmap: true at ≥24 px) | Formatted value on marks                                            |
+| `text`        | {[key]: string}   | English                         | Localisable UI strings with {0} placeholders                        |
+| `locale`      | BCP 47            | en-US                           | Formatting locale                                                   |
+| `currency`    | ISO 4217          | USD                             | Currency for the currency preset                                    |
+| `title`       | string            | -                               | Visible heading and accessible name                                 |
+| `description` | string            | auto                            | Accessible description                                              |
+| `yDomain`     | [min, max]        | -                               | Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top) |
+| `xDomain`     | [min, max]        | -                               | Fixed x domain (scatter only)                                       |
 
 ### Interaction
 
@@ -294,15 +294,136 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 }
 ```
 
+**Ridgeline**
+
+```json
+{
+  "type": "ridgeline",
+  "x": "year",
+  "y": "value",
+  "series": "product",
+  "data": [
+    { "year": 2020, "product": "A", "value": 100 },
+    { "year": 2021, "product": "A", "value": 120 }
+  ]
+}
+```
+
+**Beeswarm**
+
+```json
+{
+  "type": "beeswarm",
+  "y": "value",
+  "series": "category",
+  "name": "id",
+  "data": [
+    { "id": "1", "category": "A", "value": 15 },
+    { "id": "2", "category": "A", "value": 18 }
+  ]
+}
+```
+
+**Parallel coordinates**
+
+```json
+{
+  "type": "parallel",
+  "x": "item",
+  "y": ["revenue", "units", "margin"],
+  "series": "region",
+  "data": [
+    { "item": "1", "region": "North", "revenue": 1000, "units": 50, "margin": 0.25 },
+    { "item": "2", "region": "South", "revenue": 1200, "units": 60, "margin": 0.22 }
+  ]
+}
+```
+
+**Table**
+
+```json
+{
+  "type": "table",
+  "x": "product",
+  "y": ["revenue", "units"],
+  "sort": "desc",
+  "format": { "revenue": "currency", "units": "integer" },
+  "data": [
+    { "product": "A", "revenue": 5000, "units": 100 },
+    { "product": "B", "revenue": 3500, "units": 75 }
+  ]
+}
+```
+
+**Radial**
+
+```json
+{
+  "type": "radial",
+  "x": "month",
+  "y": "value",
+  "series": "product",
+  "data": [
+    { "month": "Jan", "product": "A", "value": 10 },
+    { "month": "Feb", "product": "A", "value": 15 }
+  ]
+}
+```
+
+**Chord diagram**
+
+```json
+{
+  "type": "chord",
+  "path": ["from", "to"],
+  "y": "flow",
+  "data": [
+    { "from": "A", "to": "B", "flow": 100 },
+    { "from": "B", "to": "C", "flow": 75 }
+  ]
+}
+```
+
+**Marimekko (treemap grid)**
+
+```json
+{
+  "type": "marimekko",
+  "x": "category",
+  "y": "value",
+  "series": "segment",
+  "data": [
+    { "category": "A", "segment": "X", "value": 50 },
+    { "category": "A", "segment": "Y", "value": 30 }
+  ]
+}
+```
+
+**Waffle**
+
+```json
+{
+  "type": "waffle",
+  "x": "category",
+  "y": "value",
+  "data": [
+    { "category": "A", "value": 45 },
+    { "category": "B", "value": 30 },
+    { "category": "C", "value": 25 }
+  ]
+}
+```
+
 ## Modules
 
 Each module extends the core with chart types and shares the same spec, theme, tooltip, a11y, and animation.
 
-| Module                 | Types                           | Size budget (gzip) |
-| ---------------------- | ------------------------------- | ------------------ |
-| `mayacharts/hierarchy` | treemap, sunburst               | 3 KB               |
-| `mayacharts/flow`      | sankey                          | 2.5 KB             |
-| `mayacharts/geo`       | hexmap (50 US states + DC + PR) | 3.5 KB             |
+| Module                 | Types                                | Size budget (gzip) |
+| ---------------------- | ------------------------------------ | ------------------ |
+| `mayacharts/hierarchy` | treemap, sunburst, marimekko, waffle | 3.5 KB             |
+| `mayacharts/flow`      | sankey, chord                        | 3 KB               |
+| `mayacharts/radial`    | radial                               | 2 KB               |
+| `mayacharts/geo`       | hexmap (50 US states + DC + PR)      | 3.5 KB             |
 
 ## Global build
 
