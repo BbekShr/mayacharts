@@ -50,6 +50,11 @@ nav {
 a {
   color: var(--accent);
 }
+nav a[aria-current="page"] {
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: none;
+}
 button {
   font: inherit;
   padding: 4px 12px;
@@ -84,11 +89,16 @@ section:target h2 {
 }
 maya-chart {
   display: block;
+  /* Follow the page's theme toggle instead of the element's OS-tracking default. */
+  color-scheme: inherit;
 }
 .controls {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
+}
+maya-chart + .controls {
+  margin: 12px 0 0;
 }
 pre {
   background: var(--code-bg);
@@ -104,4 +114,91 @@ code {
 }
 .ssr-chart {
   margin: 16px 0;
+}
+
+/* Gallery */
+body.wide main,
+body.wide header.site {
+  max-width: 1280px;
+}
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.92rem;
+}
+.toolbar button {
+  margin-left: auto;
+  flex: none;
+}
+#sample-note {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.group {
+  padding: 24px 0 8px;
+  scroll-margin-top: 56px;
+}
+.group-head h2 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+.group-head p {
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 540px), 1fr));
+  gap: 20px;
+}
+.tiles section {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-width: 0;
+}
+.tiles section:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.tile-head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.tile-head h2 {
+  font-size: 1.05rem;
+}
+.tile-head button {
+  flex: none;
+  font-size: 0.85rem;
+}
+.tiles section > p {
+  font-size: 0.92rem;
+}
+details {
+  margin-top: 12px;
+}
+summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+details pre {
+  max-height: 320px;
 }

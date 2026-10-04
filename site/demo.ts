@@ -1,4 +1,5 @@
 import "mayacharts/element";
+import { theme } from "./theme.ts";
 import type { ChartSpec, Row } from "../src/index.ts";
 
 type Chart = HTMLElement & { spec: ChartSpec; data: Row[] };
@@ -11,7 +12,8 @@ function show(id: string, spec: ChartSpec): void {
   const shown = JSON.stringify({ ...spec, data: [...spec.data.slice(0, 3), "…"] }, null, 2)
     .replace(/,\n\s*"…"/, ",\n    // … more rows")
     .replace(/\n\s*"…"/, "\n    // … more rows");
-  $(`${id}-code`).textContent = shown;
+  const code = document.getElementById(`${id}-code`);
+  if (code) code.textContent = shown;
 }
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -93,13 +95,19 @@ $("toggle-series").addEventListener("click", () => {
   live.data = liveSpec().data as Row[];
 });
 
-// Theme toggle: auto -> light -> dark.
-const modes = ["auto", "light", "dark"] as const;
-const css = { auto: "light dark", light: "light", dark: "dark" } as const;
-let mode = 0;
-$("theme").addEventListener("click", () => {
-  mode = (mode + 1) % modes.length;
-  const m = modes[mode] ?? "auto";
-  document.documentElement.style.colorScheme = css[m];
-  $("theme").textContent = `Theme: ${m}`;
+// Re-roll: scale each value of the first-drawn data by 0.4 to 1.6 so the change animates.
+const base = new Map<string, ChartSpec>();
+document.addEventListener("click", (e) => {
+  const id = (e.target as Element).closest<HTMLElement>("[data-reroll]")?.dataset.reroll;
+  if (!id) return;
+  const el = $<Chart>(id);
+  if (!base.has(id)) base.set(id, el.spec);
+  const spec = base.get(id)!;
+  const y = spec.y as string;
+  show(id, {
+    ...spec,
+    data: spec.data.map((r) => ({ ...r, [y]: Math.round(Number(r[y]) * (0.4 + rand() * 1.2)) })),
+  });
 });
+
+theme();

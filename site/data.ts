@@ -166,68 +166,6 @@ const MARGINS: Record<Family, number> = {
   Accessories: 0.25,
 };
 
-const rng = mulberry32(7);
-export const FACTS: Fact[] = [];
-
-for (let m = 0; m < 12; m++) {
-  const month = `2025-${String(m + 1).padStart(2, "0")}`;
-  const date = new Date(`${month}-01T00:00:00Z`);
-  const monthMs = date.getTime();
-
-  for (const state of STATES) {
-    const stateNameVal = STATE_NAME[state];
-    const regionVal = REGION_OF[state];
-    if (!stateNameVal || !regionVal) continue;
-
-    for (const family of FAMILIES) {
-      const m_base = MARGINS[family];
-      if (m_base === undefined) continue;
-      const margin = Math.max(-0.1, Math.min(0.4, m_base + (rng() - 0.5) * 0.1));
-
-      for (const item of ITEMS[family]) {
-        const p = PRICES[item];
-        if (p === undefined) continue;
-        const baseUnits = 100 + Math.floor(rng() * 400);
-        const variance = 0.8 + rng() * 0.4;
-        const units = Math.max(1, Math.floor(baseUnits * variance));
-        const sales = units * p;
-
-        FACTS.push({
-          month,
-          monthMs,
-          state,
-          stateName: stateNameVal,
-          region: regionVal as Region,
-          family,
-          item,
-          sales,
-          units,
-          price: p,
-          margin,
-        });
-
-        if (rng() < 0.15) {
-          const units2 = Math.max(1, Math.floor((baseUnits * 0.6 + rng() * 200) * variance));
-          const sales2 = units2 * p;
-          FACTS.push({
-            month,
-            monthMs,
-            state,
-            stateName: stateNameVal,
-            region: regionVal as Region,
-            family,
-            item,
-            sales: sales2,
-            units: units2,
-            price: p,
-            margin,
-          });
-        }
-      }
-    }
-  }
-}
-
 export type Daily = {
   day: string;
   dayMs: number;
@@ -236,21 +174,101 @@ export type Daily = {
   orders: number;
 };
 
-const dailyRng = mulberry32(7);
-export const DAILY: Daily[] = [];
-for (let d = 0; d < 365; d++) {
-  const date = new Date("2025-01-01T00:00:00Z");
-  date.setUTCDate(date.getUTCDate() + d);
-  const dow = date.getUTCDay();
-  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dow] as
-    "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
-  DAILY.push({
-    day: date.toISOString().slice(0, 10),
-    dayMs: date.getTime(),
-    weekday,
-    week: Math.floor(d / 7) + 1,
-    orders: (dow === 0 || dow === 6 ? 300 : 400) + Math.floor(dailyRng() * 200),
-  });
+export type Dataset = { FACTS: Fact[]; DAILY: Daily[] };
+
+/**
+ * One year of synthetic sales for `seed`. Each seed draws its own trend, seasonality and
+ * region, state, family and item strengths, so aggregates change visibly between seeds
+ * instead of averaging out.
+ */
+export function makeData(seed: number): Dataset {
+  const rng = mulberry32(seed);
+  const between = (lo: number, hi: number) => lo + rng() * (hi - lo);
+  const growth = between(-0.02, 0.06);
+  const swing = between(0.05, 0.35);
+  const peak = rng() * 12;
+  const monthMul = Array.from(
+    { length: 12 },
+    (_, m) =>
+      (1 + growth * m) *
+      (1 + swing * Math.cos(((m - peak) / 12) * 2 * Math.PI)) *
+      between(0.9, 1.1),
+  );
+  const mul = (keys: readonly string[], lo: number, hi: number) =>
+    new Map(keys.map((k) => [k, between(lo, hi)]));
+  const regionMul = mul(["Northeast", "Midwest", "South", "West"], 0.6, 1.5);
+  const stateMul = mul(STATES, 0.25, 1.8);
+  const itemMul = mul(Object.values(ITEMS).flat(), 0.4, 1.6);
+  const mixMul = mul(
+    ["Northeast", "Midwest", "South", "West"].flatMap((r) => FAMILIES.map((f) => `${r}|${f}`)),
+    0.5,
+    1.6,
+  );
+  const familyMargin = new Map(FAMILIES.map((f) => [f, MARGINS[f] + between(-0.08, 0.08)]));
+  const stateMargin = mul(STATES, -0.06, 0.06);
+
+  const FACTS: Fact[] = [];
+  for (let m = 0; m < 12; m++) {
+    const month = `2025-${String(m + 1).padStart(2, "0")}`;
+    const monthMs = Date.UTC(2025, m, 1);
+    for (const state of STATES) {
+      const stateName = STATE_NAME[state]!;
+      const region = REGION_OF[state] as Region;
+      for (const family of FAMILIES) {
+        const margin = Math.max(
+          -0.1,
+          Math.min(0.5, familyMargin.get(family)! + stateMargin.get(state)! + (rng() - 0.5) * 0.04),
+        );
+        for (const item of ITEMS[family]) {
+          const price = PRICES[item]!;
+          const units = Math.max(
+            1,
+            Math.round(
+              300 *
+                monthMul[m]! *
+                regionMul.get(region)! *
+                stateMul.get(state)! *
+                itemMul.get(item)! *
+                mixMul.get(`${region}|${family}`)! *
+                between(0.8, 1.2),
+            ),
+          );
+          FACTS.push({
+            month,
+            monthMs,
+            state,
+            stateName,
+            region,
+            family,
+            item,
+            sales: units * price,
+            units,
+            price,
+            margin,
+          });
+        }
+      }
+    }
+  }
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+  const weekend = between(0.55, 0.9);
+  const DAILY: Daily[] = [];
+  for (let d = 0; d < 365; d++) {
+    const date = new Date(Date.UTC(2025, 0, 1 + d));
+    const dow = date.getUTCDay();
+    const m = date.getUTCMonth();
+    DAILY.push({
+      day: date.toISOString().slice(0, 10),
+      dayMs: date.getTime(),
+      weekday: weekdays[dow]!,
+      week: Math.floor(d / 7) + 1,
+      orders: Math.round(
+        400 * monthMul[m]! * (dow === 0 || dow === 6 ? weekend : 1) * between(0.75, 1.25),
+      ),
+    });
+  }
+  return { FACTS, DAILY };
 }
 
 export function rollup<T extends object>(
@@ -288,19 +306,4 @@ export function mean<T extends object>(field: keyof T) {
     const s = sum(field)(rows);
     return rows.length > 0 ? s / rows.length : 0;
   };
-}
-
-export function count() {
-  return (rows: readonly any[]): number => rows.length;
-}
-
-export function selfCheck(): void {
-  if (FACTS.length < 8000 || FACTS.length > 14000)
-    throw new Error(`FACTS.length ${FACTS.length} not in [8000, 14000]`);
-  const validRegions = new Set(["Northeast", "Midwest", "South", "West"]);
-  for (const f of FACTS)
-    if (!validRegions.has(f.region)) throw new Error(`Invalid region: ${f.region}`);
-  if (DAILY.length !== 365) throw new Error(`DAILY.length ${DAILY.length} !== 365`);
-  const byRegion = rollup(FACTS, ["region"] as const, { n: count() });
-  if (byRegion.length !== 4) throw new Error(`rollup by region: ${byRegion.length} !== 4`);
 }

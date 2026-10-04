@@ -40,6 +40,9 @@ export default defineConfig({
     },
   ],
   build: {
+    // Browsers with native light-dark(). Older targets make the minifier lower it to a
+    // prefers-color-scheme polyfill, which ignores the theme toggle's color-scheme.
+    cssTarget: ["chrome123", "edge123", "firefox120", "safari17.5"],
     outDir: "dist",
     emptyOutDir: true,
     rollupOptions: {
