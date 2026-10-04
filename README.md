@@ -100,7 +100,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `drill`   | boolean        | treemap sunburst sankey; bar line area dumbbell with `path` | false                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop |
 | `select`  | true / "multi" | all but sankey                                              | off                       | Click/Enter/legend selects marks; Escape clears. Not with drill          |
 | `zoom`    | boolean        | line area scatter                                           | false                     | Drag to zoom; Reset, double-click, Escape restore                        |
-| `animate` | boolean        | all (element only)                                          | true                      | Animate updates                                                          |
+| `animate` | boolean        | all (element only)                                          | true                      | Animate the first draw and every update                                  |
 
 ### Style
 
@@ -458,6 +458,8 @@ The module is available as `globalThis.maya.render()`, `maya.renderShell()`, and
 
 Always on (opt out with `false`): tooltip, hover-dim, legend toggle, keyboard, crosshair on line/area.
 
+Motion: the first draw plays an entrance (bars rise in a stagger, lines and flows wipe in, radial charts bloom, kpi numbers count up) and every update animates from the old state. Line and area paths morph in Chromium and Firefox and crossfade in Safari. `animate: false` or `prefers-reduced-motion: reduce` turns all of it off. Transitions in the stylesheet use the `--maya-ease` custom property.
+
 Opt-in: `drill`, `select`, `zoom`. Two-way: `el.view`, `el.selected`.
 
 ### Keyboard
@@ -636,16 +638,16 @@ maya-chart {
 
 | Token     | CSS variable                       | Light default                        | Dark default          | Colours                         |
 | --------- | ---------------------------------- | ------------------------------------ | --------------------- | ------------------------------- |
-| font      | --maya-font                        | system-ui, sans-serif                | system-ui, sans-serif | Axis labels, tooltip text       |
+| font      | --maya-font                        | ui-sans-serif, system-ui, sans-serif | same as light         | Axis labels, tooltip text       |
 | fontSize  | --maya-font-size                   | 12px                                 | 12px                  | All text                        |
 | fg        | --maya-fg                          | #1f2328                              | #e6edf3               | Title, value labels             |
 | fgMuted   | --maya-fg-muted                    | #656d76                              | #9198a1               | Axis text, legend, breadcrumb   |
-| grid      | --maya-grid                        | fg at 12% (color-mix)                | fg at 12% (color-mix) | Grid lines                      |
+| grid      | --maya-grid                        | fg at 10% (color-mix)                | fg at 10% (color-mix) | Grid lines                      |
 | bg        | --maya-bg                          | #fff                                 | #0d1117               | Background, tooltip text        |
 | accent    | --maya-accent                      | oklch(.6 .17 255)                    | oklch(.6 .17 255)     | Focus outline, series 1         |
-| radius    | --maya-radius                      | 2px                                  | 2px                   | Mark border radius              |
-| tooltipBg | --maya-tooltip-bg                  | --maya-fg                            | --maya-fg             | Tooltip background              |
-| tooltipFg | --maya-tooltip-fg                  | --maya-bg                            | --maya-bg             | Tooltip text                    |
+| radius    | --maya-radius                      | 3px                                  | 3px                   | Mark border radius              |
+| tooltipBg | --maya-tooltip-bg                  | --maya-bg at 92% (color-mix)         | same as light         | Tooltip card background         |
+| tooltipFg | --maya-tooltip-fg                  | --maya-fg                            | --maya-fg             | Tooltip text                    |
 | focus     | --maya-focus                       | --maya-accent                        | --maya-accent         | Keyboard focus ring             |
 | good      | --maya-good                        | #1a7f37                              | #3fb950               | colorBy positive / above target |
 | bad       | --maya-bad                         | #cf222e                              | #f85149               | colorBy negative / below target |

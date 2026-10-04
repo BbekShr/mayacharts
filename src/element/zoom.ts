@@ -238,7 +238,7 @@ export const mount = (host: Host): Handlers => {
       lastSaid = key;
       if (w.length === 4) host.announce(t(spec, "zoomedTo", fmt(w[0]), fmt(w[1])));
       else {
-        const xs = [...root.querySelectorAll("[data-maya=mark][data-x]")].map((m) =>
+        const xs = [...root.querySelectorAll("[data-maya=mark][data-key][data-x]")].map((m) =>
           m.getAttribute("data-x")!,
         );
         if (xs.length) host.announce(t(spec, "zoomedTo", xs[0]!, xs[xs.length - 1]!));

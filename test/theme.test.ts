@@ -136,8 +136,8 @@ describe("theme css", () => {
       "[data-maya=link]",
       "[data-depth]",
       "[data-selected]",
-      "[data-maya=labels],[data-maya=cross]{pointer-events:none}",
-      "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],text)",
+      "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}",
+      "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text)",
       "@media (forced-colors:active)",
       "@media (prefers-contrast:more)",
       "@media (prefers-reduced-motion:reduce){*{transition:none!important}}",
@@ -149,8 +149,8 @@ describe("theme css", () => {
       expect(css, h).toContain(h);
     expect(css).not.toContain("style=");
   });
-  it("gzips under 2560 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(2560);
+  it("gzips under 3328 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(3328);
   });
   it("narrow containers hide only toggle legends, not key-only legends", () => {
     expect(css).toContain("@container (max-width:320px){.maya-legend:has(button){display:none}");

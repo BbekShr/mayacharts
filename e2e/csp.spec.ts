@@ -73,6 +73,12 @@ for (const [name, path] of [
     await setup(page, path);
     const marks = page.locator("maya-chart [data-maya=mark]");
     await expect.poll(() => marks.count()).toBeGreaterThan(0);
+    // Let the entrance finish so the mark's box is final before hovering it.
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll("maya-chart")].every(
+        (h) => h.shadowRoot!.getAnimations().length === 0,
+      ),
+    );
 
     // Interact: hover a mark, toggle a legend entry, keyboard.
     const b = (await marks.nth(2).boundingBox())!;
@@ -95,7 +101,8 @@ for (const [name, path] of [
         ),
       ),
     );
-    const allowed = /maya-probe|\[cross\]|maya-tip/;
+    // CSSOM writes: tooltip probe and card, crosshair, hover band, bloom origin of the marks group.
+    const allowed = /maya-probe|\[cross\]|maya-tip|\[band\]|\[marks\]/;
     expect(
       styled.filter((s) => !allowed.test(s)),
       "unexpected [style] elements",

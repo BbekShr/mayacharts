@@ -1,6 +1,6 @@
 {
   "name": "mayacharts",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.",
   "keywords": [
     "chart",
@@ -90,14 +90,14 @@
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts"
   },
   "mayaSize": {
-    "dist/index.js": 24576,
-    "dist/element.js": 33792,
-    "dist/theme.css": 2560,
+    "dist/index.js": 25600,
+    "dist/element.js": 36864,
+    "dist/theme.css": 3328,
     "dist/hierarchy.js": 3584,
     "dist/flow.js": 3072,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 39936
+    "dist/maya.global.js": 43008
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

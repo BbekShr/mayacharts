@@ -4,7 +4,9 @@ import { MayaChart } from "../src/element/maya-chart.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 const frame = () => new Promise((r) => setTimeout(r, 20));
-const marks = (el: Element) => el.shadowRoot!.querySelectorAll("[data-maya=mark]");
+// Leaving marks keep data-maya (so they stay styled) but are flagged data-ghost until removed.
+const marks = (el: Element) =>
+  el.shadowRoot!.querySelectorAll("[data-maya=mark]:not([data-ghost])");
 const mkRows = (n: number) => Array.from({ length: n }, (_, i) => ({ q: "Q" + i, v: i + 1 }));
 const spec = (data: object[]): ChartSpec =>
   ({ type: "bar", x: "q", y: "v", data }) as unknown as ChartSpec;
@@ -130,6 +132,9 @@ describe("<maya-chart> leaks", () => {
     expect(marks(el)).toHaveLength(7);
     expect(el.shadowRoot!.querySelectorAll("[data-maya=mark][data-key]")).toHaveLength(7);
     expect(running).toBeLessThanOrEqual(7);
+    // Ghosts leave on their own timer even when no finish event ever fires (hidden tabs).
+    await new Promise((r) => setTimeout(r, 800));
+    expect(el.shadowRoot!.querySelectorAll("[data-ghost]")).toHaveLength(0);
     void peak;
   });
 

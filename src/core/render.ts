@@ -112,13 +112,36 @@
  *
  * Animation contract (element/animate.ts): marks get
  *   `transform-box: fill-box; transform-origin: 0 0` from CSS. The element commits new
- *   geometry attributes immediately and animates ONLY transform/opacity:
- *     update: from translate(oldX-newX, oldY-newY) scale(oldW/newW, oldH/newH) to none
+ *   geometry attributes immediately and animates transform/opacity, plus two exceptions:
+ *     update: from translate(oldX-newX, oldY-newY) scale(oldW/newW, oldH/newH) to none,
+ *             delayed by data-c (stagger, at most 320 ms across all categories)
  *     enter:  positive bar from translate(0, h) scale(1, 0); negative from scale(1, 0);
- *             plus opacity 0 -> 1
- *     exit:   reverse of enter, then remove on finish
+ *             circles pop from their centre; other paths scale from 0.6 about their own
+ *             centre; plus opacity 0 -> 1
+ *     exit:   reverse of enter, then remove on finish. Leaving nodes lose data-key and get
+ *             data-ghost (styled, not hit-testable) until removed.
+ *     paths:  a path whose `d` changed morphs through CSS `d` when the browser interpolates
+ *             it and the command letters are unchanged (exception 1); else the old outline
+ *             crossfades out over the new one.
+ *     text:   a text mark whose number changed counts to it with rAF, replacing digits in
+ *             place so the formatter's separators survive (exception 2).
+ *     first draw (no server-rendered svg): grid and axes fade in; marks enter by kind:
+ *             "wipe" (clip-path inset on the marks group: line, area, sankey, ridgeline,
+ *             parallel), "bloom" (rotate + scale of the marks group about the plot centre:
+ *             sunburst, chord, radial) or per mark (everything else); labels fade in last.
  *   Guard zero sizes (use 1e-6). Skip entirely under prefers-reduced-motion or
  *   spec.animate === false.
+ *
+ * Hover (element/tooltip.ts): the active mark gets data-active and the marks of its
+ *   category (its tooltip rows, plus hierarchy ancestors) data-lit; CSS dims the rest.
+ *   Bar types get an element-owned `<rect data-maya="band">` before the marks group,
+ *   moved with a CSSOM transform; it and the crosshair glide once they carry data-on.
+ *   Charts with a crosshair anchor the tooltip beside it (data-side on .maya-tip).
+ *   The tooltip glides between marks (FLIP on its own box, transform only).
+ *
+ * Fills: non-stacked area and kpi carry `<defs>` in the grid group with one
+ *   linearGradient per visible slot (`maya-a0`..`maya-a7`, data-s for its colour). The svg
+ *   carries data-stack when stacked (separated bar segments, opaque stacked areas).
  *
  * Layout (layout.ts frame()): no text measurement exists in Node, so axis label widths are
  *   estimated as 0.6 em per code point (1 em for East-Asian-wide) * 12 + 8, value labels
@@ -316,8 +339,26 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     const m = mark.draw(ctx);
     cap(m.marks.split(' data-maya="mark"').length - 1); // scatter and modules draw per row/node
     markLegend = m.legend ?? null;
+    // Area fills fade toward the baseline: one gradient per visible slot, kept in the grid group
+    // (the marks group holds keyed marks only). ponytail: fixed ids, see NON-FEATURES.
+    const fades =
+      (s.type === "area" && !s.stack) || s.type === "kpi"
+        ? el(
+            "defs",
+            {},
+            [...new Set(shaped.visible.map((i) => i % 8))]
+              .map((n) =>
+                el(
+                  "linearGradient",
+                  { id: `maya-a${n}`, "data-s": n, x1: 0, y1: 0, x2: 0, y2: 1 },
+                  `<stop offset="0" stop-opacity=".34"/><stop offset="1" stop-opacity=".02"/>`,
+                ),
+              )
+              .join(""),
+          )
+        : "";
     body =
-      g("grid", m.grid ?? f?.grid ?? "") +
+      g("grid", fades + (m.grid ?? f?.grid ?? "")) +
       g("axis-y", f?.ay ?? "") +
       g("axis-x", f?.ax ?? "") +
       g("marks", m.marks) +
@@ -346,7 +387,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       viewBox: `0 0 ${W} ${H}`,
       width: W,
       height: H,
-      role: "img",
+      // A table has focusable sort headers, which an img role would hide (children presentational).
+      role: s.type === "table" ? "figure" : "img",
       // Standalone SVGs may share a page, so they can't use fixed ids; shadow roots scope them.
       "aria-label": sheet === null ? null : titleText(s),
       "aria-labelledby": sheet === null ? "maya-t" : null,
@@ -356,6 +398,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       "data-plot": `${r(plot.x)} ${r(plot.y)} ${r(plot.w)} ${r(plot.h)}`,
       ...f?.attrs,
       "data-dir": s.horizontal ? "h" : null,
+      "data-stack": s.stack || null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
       el("title", { id: sheet === null ? "maya-t" : null }, esc(titleText(s))) +

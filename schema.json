@@ -290,7 +290,7 @@
     "animate": {
       "type": "boolean",
       "default": true,
-      "description": "Animate updates (element only)."
+      "description": "Animate the first draw and every update (element only; off under reduced motion)."
     },
     "colors": {
       "oneOf": [

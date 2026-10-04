@@ -37,6 +37,7 @@ async function open(page: Page, path: string): Promise<number> {
 for (const path of PAGES) {
   for (const scheme of ["light", "dark"] as const) {
     test(`axe WCAG 2.x AA: ${path} ${scheme}`, async ({ page }) => {
+      test.slow(); // one axe run per chart; the gallery has every type
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
       const n = await open(page, path);
       expect(n).toBeGreaterThan(0);
@@ -93,8 +94,11 @@ for (const path of PAGES) {
         const b = svg.getBoundingClientRect();
         const vb = svg.viewBox.baseVal;
         const k = b.width / (vb.width || b.width);
-        const plotLeft = b.left + Number(svg.getAttribute("data-plot")!.split(" ")[0]) * k;
+        const [px, , pw] = svg.getAttribute("data-plot")!.split(" ").map(Number) as number[];
+        const plotLeft = b.left + px! * k;
         for (const t of svg.querySelectorAll("[data-maya=axis-y] text")) {
+          // The y2 axis (bar + y2) sits right of the plot by design.
+          if (Number(t.getAttribute("x")) > px! + pw!) continue;
           seen++;
           const r = t.getBoundingClientRect();
           if (r.right > plotLeft + 1)

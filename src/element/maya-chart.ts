@@ -14,7 +14,7 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Box, boxOf, patch } from "./animate.ts";
+import { type Box, boxOf, type Intro, patch } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import * as measure from "./measure.ts";
@@ -207,7 +207,9 @@ export class MayaChart extends HTMLElement {
     const c = svg.cloneNode(true) as SVGSVGElement;
     c.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     c.removeAttribute("tabindex");
-    for (const e of c.querySelectorAll("[data-active]")) e.removeAttribute("data-active");
+    for (const e of c.querySelectorAll("[data-active],[data-lit]"))
+      (e.removeAttribute("data-active"), e.removeAttribute("data-lit"));
+    for (const e of c.querySelectorAll("[data-ghost],[data-maya=band]")) e.remove();
     const st = document.createElementNS("http://www.w3.org/2000/svg", "style");
     st.textContent = `${css}.maya-svg{${decl}}`;
     c.prepend(st);
@@ -291,17 +293,24 @@ export class MayaChart extends HTMLElement {
       );
       this.#seen = spec;
     }
-    const width = box.clientWidth || 640,
-      height = box.clientHeight || 320;
-    this.#size = [box.clientWidth, box.clientHeight];
-    let parts;
-    try {
-      parts = renderParts(spec, {
-        width,
-        height,
+    const draw = () => {
+      this.#size = [box.clientWidth, box.clientHeight];
+      return renderParts(spec, {
+        width: box.clientWidth || 640,
+        height: box.clientHeight || 320,
         view: this.#state.view,
         selected: this.#state.selected,
       });
+    };
+    // Before #slots: a focused legend button or crumb may be replaced.
+    const focus = this.#focusId();
+    let parts;
+    try {
+      parts = draw();
+      // A title, legend or control that just appeared shrinks the box: fit it in this frame.
+      const [w, h] = this.#size;
+      if (this.#slots(root, parts) && (box.clientWidth !== w || box.clientHeight !== h))
+        parts = draw();
     } catch (e) {
       this.#tip?.hide();
       const d: MayaErrorDetail | null =
@@ -322,22 +331,7 @@ export class MayaChart extends HTMLElement {
       return;
     }
     this.#err = "";
-    const focus = this.#focusId();
     const maya = root.querySelector<HTMLElement>(".maya")!;
-    // Slots in shell order; each is replaced only when its markup changed.
-    const slots: [keyof Parts, string][] = [
-      ["title", ".maya-title"],
-      ["controls", ".maya-ctl"],
-      ["legend", ".maya-legend"],
-      ["crumbs", ".maya-crumbs"],
-    ];
-    slots.forEach(([k, sel], i) => {
-      if (this.#last[k] === parts[k]) return;
-      this.#last[k] = parts[k] as string;
-      root.querySelector(sel)?.remove();
-      const next = slots.slice(i + 1).map(([, s]) => root.querySelector(s));
-      (next.find(Boolean) ?? box).insertAdjacentHTML("beforebegin", html(parts[k] as string));
-    });
     if (this.#last["table"] !== parts.table) {
       this.#last["table"] = parts.table;
       root.querySelector("table.maya-sr")?.remove();
@@ -350,9 +344,14 @@ export class MayaChart extends HTMLElement {
     this.#vars = new Set(parts.vars.map(([k]) => k));
     // Nothing animates on resize: geometry must track the container immediately.
     const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    maya.toggleAttribute("data-still", spec.animate === false); // CSS transitions off too
     const resized = this.#resized;
     this.#resized = false;
-    patch(box, parts.svg, this.#drawn && !still, {
+    // First draw plays an entrance, unless the chart arrived server-rendered (already on screen).
+    const intro: Intro | undefined =
+      this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
+    patch(box, parts.svg, (this.#drawn || !!intro) && !still, {
+      intro,
       origin: this.#origin,
       after: () => this.#tip?.refresh(),
       instant: resized,
@@ -362,6 +361,21 @@ export class MayaChart extends HTMLElement {
     this.#restore(focus);
     for (const h of Object.values(this.#ix ?? {})) h.painted?.();
     this.#emit("maya-render", {});
+  }
+
+  /** Slots in shell order; each is replaced only when its markup changed. True if any was. */
+  #slots(root: ShadowRoot, parts: Parts): boolean {
+    const box = root.querySelector(".maya-box")!;
+    let changed = false;
+    SLOTS.forEach(([k, sel], i) => {
+      if (this.#last[k] === parts[k]) return;
+      changed = true;
+      this.#last[k] = parts[k] as string;
+      root.querySelector(sel)?.remove();
+      const next = SLOTS.slice(i + 1).map(([, s]) => root.querySelector(s));
+      (next.find(Boolean) ?? box).insertAdjacentHTML("beforebegin", html(parts[k] as string));
+    });
+    return changed;
   }
 
   /** Stable id of the focused control: svg, legend:i, measure:i, crumb:i or reset. */
@@ -383,6 +397,24 @@ export class MayaChart extends HTMLElement {
     root.querySelectorAll<HTMLElement>(sel)[+i!]?.focus({ preventScroll: true });
   }
 }
+
+const SLOTS: [keyof Parts, string][] = [
+  ["title", ".maya-title"],
+  ["controls", ".maya-ctl"],
+  ["legend", ".maya-legend"],
+  ["crumbs", ".maya-crumbs"],
+];
+
+const INTRO: Record<string, Intro> = {
+  line: "wipe",
+  area: "wipe",
+  sankey: "wipe",
+  ridgeline: "wipe",
+  parallel: "wipe",
+  sunburst: "bloom",
+  chord: "bloom",
+  radial: "bloom",
+};
 
 const FOCUS: [string, string][] = [
   ["svg", ".maya-svg"],

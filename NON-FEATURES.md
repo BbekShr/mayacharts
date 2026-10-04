@@ -32,6 +32,10 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **SSR width**: `renderShell` lays out at `width` x `height` (default 640 x 320); pass the container's size or the first client paint re-lays out visibly.
 - **Colour slots by first appearance**: a series keeps its palette slot while row order is stable; reordering rows can move colours (use `colors: { value: color }` to pin them). Nine or more series wrap the 8 slots.
 - **Animation cap**: updates with more than 1500 marks are drawn without animation.
+- **Path morph browsers**: line and area updates morph only where the browser interpolates CSS `d` (Chromium, Firefox) and the path keeps its command sequence; Safari, and paths that gain or lose points, crossfade instead.
+- **Gradient ids in standalone SVG**: area fills reference `#maya-a0`..`#maya-a7`. Several `render()` SVGs inlined in one page share those ids, so a chart with custom `colors` may show another chart's gradient colours (the element's shadow root scopes them; the flat fallback tint is used if the reference fails).
+- **Bar width**: bars stop growing at 72 px and sit centred in their slot.
+- **Entrance**: the first draw animates once; server-rendered charts never replay it.
 - **Measure toggle up to 4 options**: a `y` array works with more measures, but the sliding indicator is styled for 2 to 4.
 - **kpi in a short box**: the sparkline needs about 28 px of free height; with a target bullet and too little room, the bullet stays and the sparkline is dropped.
 - **kpi delta is against the previous period only**: compare with a year earlier by passing two rows (for example "2025 YTD" and "2026 YTD") as the x periods.
