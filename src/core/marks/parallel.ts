@@ -1,0 +1,122 @@
+import { el, esc, key, OTHER, r } from "../svg.ts";
+import { niceTicks } from "../ticks.ts";
+import type { Mark, Row } from "../types.ts";
+
+const TOP = 26;
+const BOTTOM = 12;
+const LEFT = 48;
+const RIGHT = 14;
+
+/**
+ * One polyline per x category across one vertical axis per measure (`spec.measures`), each with its
+ * own linear scale. No Mark.axes: axes, ticks and titles are drawn here (grid + labels).
+ */
+export const parallel: Mark = {
+  noun: "Parallel coordinates",
+  draw(ctx) {
+    const { spec, shaped, width: W, height: H } = ctx;
+    const ms = spec.measures;
+    const rows = new Map<string, Row[]>();
+    for (const row of spec.data) {
+      const c = String(row[spec.x]);
+      (rows.get(c) ?? rows.set(c, []).get(c)!).push(row);
+    }
+    const reduce = ctx.agg(spec.aggregate);
+    const lines = shaped.categories.flatMap((cat, ci) => {
+      const rs = rows.get(cat);
+      if (!rs || cat === OTHER) return []; // ponytail: the limit roll-up has no single line, it is skipped.
+      const vals = ms.map((m) => reduce(rs.map((row) => row[m] as number | null)));
+      const si =
+        spec.series === null ? 0 : Math.max(0, shaped.series.indexOf(String(rs[0]![spec.series])));
+      return shaped.visible.includes(si) ? [{ cat, ci, vals, si }] : [];
+    });
+
+    const x0 = LEFT;
+    const x1 = Math.max(x0 + 1, W - RIGHT);
+    const [y0, y1] = [TOP, Math.max(TOP + 1, H - BOTTOM)];
+    const at = (i: number) => r(ms.length < 2 ? x0 : x0 + ((x1 - x0) * i) / (ms.length - 1));
+    let grid = "";
+    let labels = "";
+    const scales = ms.map((m, i) => {
+      const all = lines.map((l) => l.vals[i]).filter((v): v is number => v !== null);
+      const t = niceTicks(Math.min(0, ...all), Math.max(0, ...all), 4);
+      const [lo, hi] = t.domain;
+      const of = (v: number) => r(y1 - ((v - lo) / (hi - lo || 1)) * (y1 - y0));
+      const x = at(i);
+      grid += el("line", { x1: x, x2: x, y1: r(y0), y2: r(y1) });
+      for (const v of t.values) {
+        const y = of(v);
+        grid += el("line", { x1: x - 3, x2: x, y1: y, y2: y });
+        labels += el(
+          "text",
+          { x: x - 6, y, "text-anchor": "end", "dominant-baseline": "middle", "data-in": true },
+          esc(ctx.fmt(m, v, t.step)),
+        );
+      }
+      labels += el(
+        "text",
+        {
+          x,
+          y: 12,
+          "text-anchor": i === 0 ? "start" : i === ms.length - 1 ? "end" : "middle",
+          "font-weight": 600,
+          "data-in": true,
+        },
+        esc(spec.titles.get(m) ?? m),
+      );
+      return of;
+    });
+
+    let dots = "";
+    let paths = "";
+    let hits = "";
+    for (const { cat, ci, vals, si } of lines) {
+      const x = ctx.fmt(spec.x, cat);
+      let d = "";
+      let gap = true;
+      vals.forEach((v, i) => {
+        if (v === null) {
+          gap = true;
+          return;
+        }
+        const [cx, cy] = [at(i), scales[i]!(v)];
+        d += `${gap ? "M" : "L"}${cx} ${cy}`;
+        gap = false;
+        dots += el("circle", {
+          "data-maya": "mark",
+          "data-key": key(cat, ms[i]),
+          "data-c": ci,
+          "data-s": si % 8,
+          "data-x": x,
+          "data-series": spec.titles.get(ms[i]!) ?? ms[i],
+          "data-y": v,
+          "data-f": ctx.fmt(ms[i]!, v),
+          "data-neg": v < 0,
+          r: 3.5,
+          cx,
+          cy,
+        });
+      });
+      if (!d) continue;
+      paths += el("path", {
+        "data-maya": "line",
+        "data-key": key("l", cat),
+        "data-c": ci,
+        "data-s": si % 8,
+        pathLength: 1,
+        d,
+      });
+      hits += el("path", {
+        "data-maya": "hit",
+        "data-c": ci,
+        d,
+        fill: "none",
+        stroke: "transparent",
+        "stroke-width": 16,
+        "stroke-linejoin": "round",
+      });
+    }
+    // Points first: the line~circle CSS rule (hide points until active) only matches circles after a line.
+    return { marks: dots + paths, hits, grid, labels };
+  },
+};

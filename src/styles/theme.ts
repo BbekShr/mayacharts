@@ -72,6 +72,11 @@ export const css =
   "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
   "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of]){fill:var(--maya-fg-muted)}" +
   "[data-line] i{height:2px;border-radius:1px}" +
+  // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.
+  "[data-ridge]{fill:color-mix(in oklab,var(--c) 40%,var(--maya-bg))}[data-maya=grid] circle{fill:none;shape-rendering:auto}" +
+  "[data-maya=labels] [data-ring]{fill:var(--maya-fg-muted)}[data-maya=marks] text{fill:var(--maya-fg)}" +
+  "[data-maya=sort]{cursor:pointer}[data-maya=sort] rect{fill:transparent}[data-maya=sort] text{font-weight:600}[data-maya=sort]:focus-visible{outline:2px solid var(--maya-focus)}" +
+  "[data-maya=line]{transition:opacity .2s}[data-maya=marks]:has(path[data-active]) path[data-maya=line]:not([data-active]){opacity:.25}" +
   "[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
   "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],text){opacity:.55}" +
   "[data-maya=marks]:has([data-selected]) [data-maya=mark]:not([data-selected]){opacity:.35}" +

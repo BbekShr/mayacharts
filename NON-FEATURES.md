@@ -37,6 +37,14 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **kpi delta is against the previous period only**: compare with a year earlier by passing two rows (for example "2025 YTD" and "2026 YTD") as the x periods.
 - **One y2 line**: `y2` takes one field, aggregated per category across every series, on a 0-anchored right axis.
 - **Dumbbell sort**: `sort` orders categories by the total of both values, not by the gap between them.
+- **Ridgeline scale**: rows share one value scale with no per-row axis; peaks overlap the row above by at most 40%.
+- **Beeswarm height**: a swarm taller than its row is clamped to the row, so overflow points overlap.
+- **Parallel axes**: every axis runs from 0 (or the minimum) to a nice maximum; no per-axis domain, and nulls break a line.
+- **Table height**: rows that do not fit the chart's height are not drawn (no scroll or paging); `limit` cuts to the top N with no Other row.
+- **Chord layout**: from-nodes on the left half, to-nodes on the right; labels are cut at 14 characters.
+- **Marimekko values**: null and negative values count as 0; there is no percentage axis.
+- **Waffle resolution**: 100 cells, so a share under 0.5% gets no cell (it still shows in the legend).
+- **Radial labels**: no value labels on bars; category labels are cut at 11 characters and thinned when they collide.
 
 ## What you can do instead
 

@@ -21,12 +21,20 @@
         "waterfall",
         "kpi",
         "dumbbell",
+        "ridgeline",
+        "beeswarm",
+        "parallel",
+        "table",
         "treemap",
         "sunburst",
         "sankey",
+        "chord",
+        "marimekko",
+        "waffle",
+        "radial",
         "hexmap"
       ],
-      "description": "Chart type. treemap/sunburst need `mayacharts/hierarchy`, sankey `flow`, hexmap `geo`."
+      "description": "Chart type. ridgeline, beeswarm, parallel, table are core. treemap, sunburst, marimekko, waffle need `mayacharts/hierarchy`; sankey, chord need `mayacharts/flow`; radial needs `mayacharts/radial`; hexmap needs `mayacharts/geo`."
     },
     "data": {
       "type": "array",
@@ -197,6 +205,7 @@
           "selected",
           "selectionCleared",
           "chartOf",
+          "chartOfAll",
           "firstOf",
           "measures",
           "crumbs",
@@ -205,7 +214,10 @@
           "above",
           "below",
           "vs",
-          "ofTarget"
+          "ofTarget",
+          "sortedBy",
+          "ascending",
+          "descending"
         ]
       }
     },

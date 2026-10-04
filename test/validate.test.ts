@@ -86,7 +86,7 @@ describe("one snapshot per error code", () => {
     expect([e.code, e.path]).toEqual(["unknown-type", "type"]);
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.type = "lin" is not a chart type.
-        Valid types: bar, line, area, scatter, heatmap, waterfall, kpi, dumbbell, treemap, sunburst.
+        Valid types: bar, line, area, scatter, heatmap, waterfall, kpi, dumbbell, ridgeline, beeswarm, parallel, table, treemap, sunburst, marimekko, waffle.
         Did you mean "line"?
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-type"
     `);

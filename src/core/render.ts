@@ -133,17 +133,21 @@ import { dataTable, describe, titleText } from "./a11y.ts";
 import { formatter } from "./format.ts";
 import { frame } from "./layout.ts";
 import { bar } from "./marks/bar.ts";
+import { beeswarm } from "./marks/beeswarm.ts";
 import { dumbbell } from "./marks/dumbbell.ts";
 import { heatmap } from "./marks/heatmap.ts";
 import { kpi } from "./marks/kpi.ts";
+import { parallel } from "./marks/parallel.ts";
+import { ridgeline } from "./marks/ridgeline.ts";
 import { area, line } from "./marks/line.ts";
 import { scatter } from "./marks/scatter.ts";
+import { table } from "./marks/table.ts";
 import { MODULES } from "./registry.ts";
 import { agg, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
 import { el, esc, OTHER, r } from "./svg.ts";
-import { fail, MAX_MARKS, resolve, validateOptions, validateSpec } from "./validate.ts";
+import { ALL_Y, fail, MAX_MARKS, resolve, validateOptions, validateSpec } from "./validate.ts";
 import type {
   Aggregate,
   ChartSpec,
@@ -164,6 +168,10 @@ const CORE: Readonly<Record<string, Mark>> = {
   heatmap,
   kpi,
   dumbbell,
+  ridgeline,
+  beeswarm,
+  parallel,
+  table,
 };
 
 const kebab = (s: string) => s.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase());
@@ -403,7 +411,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     svg,
     legend,
     controls:
-      s.measures.length > 1
+      s.measures.length > 1 && !ALL_Y.includes(s.type)
         ? `<div class="maya-ctl" role="radiogroup" aria-label="${esc(t(s, "measures"))}" data-n="${s.measures.length}" data-i="${s.measure}">` +
           s.measures
             .map(

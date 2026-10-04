@@ -3,6 +3,7 @@ import * as maya from "./element.ts";
 import "./hierarchy.ts";
 import "./flow.ts";
 import "./geo.ts";
+import "./radial.ts";
 
 (globalThis as { maya?: typeof maya }).maya = maya;
 

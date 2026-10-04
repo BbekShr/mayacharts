@@ -76,9 +76,12 @@
               <td>required</td>
               <td>
                 <code
-                  >bar line area scatter heatmap waterfall kpi dumbbell treemap sunburst sankey
-                  hexmap</code
+                  >bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel
+                  table treemap sunburst sankey chord marimekko waffle radial hexmap</code
                 >
+                Core: ridgeline, beeswarm, parallel, table; Modules:
+                treemap/sunburst/marimekko/waffle (hierarchy), sankey/chord (flow), radial (radial),
+                hexmap (geo)
               </td>
             </tr>
             <tr>
@@ -232,8 +235,8 @@
               <td>English</td>
               <td>
                 Localised UI strings with {0} placeholders: noData other back reset showing
-                drilledInto zoomedTo selected selectionCleared chartOf firstOf measures crumbs
-                positive negative above below
+                drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
+                crumbs positive negative above below vs ofTarget sortedBy ascending descending
               </td>
             </tr>
             <tr>
@@ -264,7 +267,10 @@
               <td><a class="spec-anchor" id="yDomain"></a><code>yDomain</code></td>
               <td>[min, max]</td>
               <td>-</td>
-              <td>Fixed value-axis domain. Not allowed with y array</td>
+              <td>
+                Fixed value-axis domain. Pass [hi, lo] to reverse it (ranks with 1 on top). Not
+                allowed with y array
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="xDomain"></a><code>xDomain</code></td>

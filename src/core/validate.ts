@@ -71,13 +71,15 @@ export const KEYS = [
 const CART = ["bar", "line", "area"];
 /** Types whose x can come from path with drill (the current level is the category). */
 const PATHX = [...CART, "dumbbell"];
-const PATH = ["treemap", "sunburst", "sankey"];
+const PATH = ["treemap", "sunburst", "sankey", "chord"];
+/** y arrays on these types are shown together (axes, columns), never a measure toggle. */
+export const ALL_Y = ["parallel", "table"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
-const PTH = "treemap,sunburst,sankey";
+const PTH = "treemap,sunburst,sankey,chord";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell sort:${CPA},heatmap,dumbbell limit:${CPA},heatmap,dumbbell stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,treemap,sunburst,hexmap zoom:line,area,scatter`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -319,6 +321,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       "spec.path needs at least two levels for a sankey.",
       'Example: path: ["region", "family"]',
     );
+  if (t === "chord" && Array.isArray(pth) && pth.length !== 2)
+    fail(
+      "invalid-option",
+      "path",
+      "spec.path needs exactly two levels for a chord: from and to.",
+      'Example: path: ["region", "family"]',
+    );
   const missing = (f: string) =>
     fail(
       "missing-field",
@@ -346,11 +355,20 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (
     s[need] === undefined &&
     t !== "kpi" &&
+    t !== "beeswarm" &&
     !(need === "x" && PATHX.includes(t) && s.path !== undefined)
   )
     missing(need);
   if (s.y === undefined) missing("y");
-  if (t === "dumbbell" && s.series === undefined) missing("series");
+  if ((t === "dumbbell" || t === "ridgeline" || t === "marimekko") && s.series === undefined)
+    missing("series");
+  if (t === "parallel" && !(Array.isArray(s.y) && s.y.length >= 2))
+    fail(
+      "invalid-option",
+      "y",
+      'spec.y on "parallel" needs an array of at least 2 measures, one axis each.',
+      'Example: y: ["sales", "units", "price"]',
+    );
 
   for (const k in S) if (s[k] !== undefined && typeof s[k] !== S[k]) bad(k, s[k], `a ${S[k]}`);
   for (const [k, want, ok] of CHECKS) if (s[k] !== undefined && !ok(s[k])) bad(k, s[k], want);
@@ -378,14 +396,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         d.length === 2 &&
         Number.isFinite(d[0]) &&
         Number.isFinite(d[1]) &&
-        d[0]! < d[1]!
+        (k === "yDomain" ? d[0] !== d[1] : d[0]! < d[1]!)
       )
     )
       fail(
         "invalid-domain",
         k,
         `spec.${k} = ${show(d)} is not a valid domain.`,
-        "Expected [min, max] with finite numbers and min < max, e.g. [0, 100].",
+        k === "yDomain"
+          ? "Expected [min, max] (or [max, min] to reverse) with two different finite numbers."
+          : "Expected [min, max] with finite numbers and min < max, e.g. [0, 100].",
       );
   }
 
@@ -641,9 +661,19 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   const { view: v, selected: sel, nonce } = o;
   if (v !== undefined) {
     if (!isObj(v)) inv("view", v, "an object");
-    const vk = w("measure drill window hidden");
+    const vk = w("measure drill window hidden sortBy");
     for (const k of Object.keys(v as object)) if (!vk.includes(k)) unknown("options.view", k, vk);
-    const { measure, drill, window: win, hidden } = v as Record<string, unknown>;
+    const { measure, drill, window: win, hidden, sortBy } = v as Record<string, unknown>;
+    if (
+      sortBy !== undefined &&
+      !(
+        Array.isArray(sortBy) &&
+        sortBy.length === 2 &&
+        typeof sortBy[0] === "string" &&
+        (sortBy[1] === "asc" || sortBy[1] === "desc")
+      )
+    )
+      inv("view.sortBy", sortBy, '[field, "asc" | "desc"]');
     if (measure !== undefined && !(Number.isInteger(measure) && (measure as number) >= 0))
       inv("view.measure", measure, "an index (integer >= 0)");
     if (drill !== undefined && !strs(drill)) inv("view.drill", drill, "an array of strings");
@@ -701,6 +731,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     horizontal: spec.horizontal ?? false,
     aggregate: spec.aggregate ?? "sum",
     sort: spec.sort ?? null,
+    sortBy: view.sortBy ?? null,
     limit: spec.limit ?? null,
     format: new Map(typeof f === "string" ? measures.map((m) => [m, f]) : entries<FieldFormat>(f)),
     titles: new Map(entries<string>(spec.titles)),
@@ -708,7 +739,8 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     text: { ...spec.text },
     title: spec.title ?? null,
     description: spec.description ?? null,
-    legend: spec.legend ?? (spec.series !== undefined || spec.y2 !== undefined),
+    legend:
+      spec.legend ?? (spec.series !== undefined || spec.y2 !== undefined || spec.type === "waffle"),
     tooltip: spec.tooltip ?? true,
     drill: spec.drill ?? false,
     select: spec.select ?? false,
