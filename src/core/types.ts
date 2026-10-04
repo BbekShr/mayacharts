@@ -138,7 +138,7 @@ export interface ChartSpec<R extends object = Row> {
 
   /** A preset for every `y`, or a preset / Intl options per field. Display only.
    * @example format: { revenue: "currency", month: "month", margin: { style: "percent", suffix: " gm" } } */
-  format?: FormatPreset | Readonly<Partial<Record<Field<R>, FieldFormat>>>;
+  format?: FormatPreset | FormatTemplate | Readonly<Partial<Record<Field<R>, FieldFormat>>>;
   /** Display names by field: axis titles (shown only when set), tooltip, legend, table.
    * @example titles: { revenue: "Revenue ($)" } */
   titles?: Readonly<Partial<Record<Field<R>, string>>>;
@@ -378,6 +378,8 @@ export interface Shaped {
   time: number[] | null;
   /** Downsampled: [categories kept, categories before]; null when nothing was dropped. */
   reduced: [kept: number, total: number] | null;
+  /** Time axis: each category's index in the time-ordered list before window and reduction (view.window's space); null otherwise. */
+  index: number[] | null;
 }
 
 export interface BandScale {

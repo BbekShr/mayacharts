@@ -33,7 +33,15 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
     if (c.value !== null) (n++, (lo = Math.min(lo, c.value)), (hi = Math.max(hi, c.value)));
   const f = (v: number) => fmt(spec.y, v);
   if (!n) return s + ". No data.";
-  return n === 1 ? `${s}. 1 value: ${f(lo)}.` : `${s}. ${n} values from ${f(lo)} to ${f(hi)}.`;
+  const tm = shaped.time;
+  if (tm?.length)
+    s +=
+      ", " +
+      t(spec, "fromTo", fmt(spec.x, shaped.categories[0]), fmt(spec.x, shaped.categories.at(-1)));
+  const cut = shaped.reduced ? " " + t(spec, "reduced", ...shaped.reduced) + "." : "";
+  return (
+    (n === 1 ? `${s}. 1 value: ${f(lo)}.` : `${s}. ${n} values from ${f(lo)} to ${f(hi)}.`) + cut
+  );
 }
 
 /**
@@ -84,7 +92,7 @@ export function dataTable(
     const by = new Map(shaped.cells.map((c) => [c.ci + "," + c.si, c.value]));
     rows = "";
     for (let i = 0; i < Math.min(n, CAP); i++) {
-      rows += `<tr><th scope="row">${esc(shaped.categories[i]!)}</th>`;
+      rows += `<tr><th scope="row">${esc(shaped.time ? fmt(spec.x, shaped.categories[i]) : shaped.categories[i]!)}</th>`;
       for (const j of shaped.visible) rows += `<td>${cell(spec.y, by.get(i + "," + j))}</td>`;
       rows += "</tr>";
     }

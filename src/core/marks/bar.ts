@@ -52,7 +52,9 @@ export const bar: Mark = {
       for (const i of steps(shaped))
         ((lo = Math.min(lo, i.y0, i.y1)), (hi = Math.max(hi, i.y0, i.y1)));
     }
-    const cat: Axis = { kind: "band", field: spec.x, domain: shaped.categories };
+    const cat: Axis = shaped.time
+      ? { kind: "time", field: spec.x, domain: shaped.categories, t: shaped.time }
+      : { kind: "band", field: spec.x, domain: shaped.categories };
     const val: Axis = { kind: "linear", field: spec.y, domain: [lo, hi] };
     if (spec.y2 !== null) {
       const v2 = shaped.y2.filter((v): v is number => v !== null);
@@ -94,6 +96,7 @@ export const bar: Mark = {
       const d = {
         "data-key": key(ser, cname),
         "data-c": c.ci,
+        "data-i": shaped.index?.[c.ci],
         "data-s": c.s,
         "data-x": ctx.fmt(spec.x, cname),
         "data-series": ser,
@@ -151,6 +154,7 @@ export const bar: Mark = {
         const p = {
           "data-key": key("\u0000y2", cname),
           "data-c": ci,
+          "data-i": shaped.index?.[ci],
           "data-s": slot,
           "data-x": ctx.fmt(spec.x, cname),
           "data-series": name,

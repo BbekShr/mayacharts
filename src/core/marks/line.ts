@@ -3,7 +3,9 @@ import { el, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, Cell, LinearScale, Mark, MarkCtx, MarkOut } from "../types.ts";
 
 const axes: Mark["axes"] = (spec, shaped) => [
-  { kind: "band", field: spec.x, domain: shaped.categories } satisfies Axis,
+  shaped.time
+    ? ({ kind: "time", field: spec.x, domain: shaped.categories, t: shaped.time } satisfies Axis)
+    : ({ kind: "band", field: spec.x, domain: shaped.categories } satisfies Axis),
   // ponytail: 0-anchored via shape's extent (also for line); yDomain overrides in layout.
   { kind: "linear", field: spec.y, domain: shaped.extent } satisfies Axis,
 ];
@@ -89,13 +91,22 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   }
 
   let hits = "";
+  // Time axis: each hit runs from the midpoint with the previous category to the one with the next.
+  const mid = (ci: number, d: number) => {
+    if (ci + d < 0 || ci + d >= shaped.categories.length) return d < 0 ? plot.x : plot.x + plot.w;
+    return (cat.at(ci) + cat.at(ci + d)) / 2 + cat.bandwidth / 2;
+  };
   shaped.categories.forEach((_, ci) => {
+    const [x0, x1] = shaped.time
+      ? [mid(ci, -1), mid(ci, 1)]
+      : [cat.at(ci), cat.at(ci) + cat.bandwidth];
     hits += el("rect", {
       "data-maya": "hit",
       "data-c": ci,
-      x: r(cat.at(ci)),
+      "data-i": shaped.index?.[ci],
+      x: r(x0),
       y: r(plot.y),
-      width: r(cat.bandwidth),
+      width: r(x1 - x0),
       height: r(plot.h),
       fill: "transparent",
     });

@@ -37,7 +37,7 @@ async function open(page: Page, path: string): Promise<number> {
 for (const path of PAGES) {
   for (const scheme of ["light", "dark"] as const) {
     test(`axe WCAG 2.x AA: ${path} ${scheme}`, async ({ page }) => {
-      test.slow(); // one axe run per chart; the gallery has every type
+      test.setTimeout(180_000); // one axe run per chart; the gallery has 31 (about 60 s in Firefox)
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
       const n = await open(page, path);
       expect(n).toBeGreaterThan(0);

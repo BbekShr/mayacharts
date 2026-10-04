@@ -42,6 +42,15 @@ export const reduce = (s: State, e: ZoomEvent): State => {
   return s;
 };
 
+/** Category centres (viewBox x, absolute data-i) -> the window whose ends sit nearest the brush ends. */
+export const span = (cs: [number, number][], a: number, b: number): [number, number] => {
+  const near = (x: number) =>
+    cs.reduce((p, q) => (Math.abs(q[0] - x) < Math.abs(p[0] - x) ? q : p))[1];
+  const i = near(a),
+    j = near(b);
+  return [Math.min(i, j), Math.max(i, j)];
+};
+
 const MIN_START = 4; // px of movement before a brush starts (tooltip taps stay < 4)
 const MIN_SPAN = 2; // px a brush must span to commit
 const NS = "http://www.w3.org/2000/svg";
@@ -160,7 +169,16 @@ export const mount = (host: Host): Handlers => {
       spanY = Math.abs(a.y - b.y) / g.ky;
     if (band ? spanX < MIN_SPAN : spanX < MIN_SPAN || spanY < MIN_SPAN) return;
     const s = host.state();
-    if (band) {
+    const cs: [number, number][] = [];
+    if (band && svg.hasAttribute("data-t")) {
+      const hits = svg.querySelectorAll("[data-maya=hit][data-i]");
+      for (const m of hits.length ? hits : svg.querySelectorAll("[data-maya=mark][data-i]")) {
+        const [x, w, cx] = ["x", "width", "cx"].map((k) => +m.getAttribute(k)!);
+        cs.push([m.hasAttribute("width") ? x! + w! / 2 : cx!, +m.getAttribute("data-i")!]);
+      }
+    }
+    if (cs.length) host.commit(reduce(s, { type: "zoom", window: span(cs, a.x, b.x) }), null);
+    else if (band) {
       const n = Math.max(1, +(svg.getAttribute("data-n") ?? 1));
       const off = s.view.window?.[0] ?? 0;
       const idx = (x: number) => clampTo(Math.floor(((x - g.px) / g.pw) * n), 0, n - 1);

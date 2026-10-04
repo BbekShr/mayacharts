@@ -1,4 +1,4 @@
-import type { Ticks, TimeTicks } from "./types.ts";
+import type { Ticks, TimeTicks, TimeUnit } from "./types.ts";
 
 const clean = (n: number) => parseFloat(n.toPrecision(12));
 
@@ -57,8 +57,58 @@ export function toTime(v: unknown, ms = true): number | null {
  * domains get the single tick at min. Pure, UTC, no Date mutation leaks.
  */
 export function timeTicks(min: number, max: number, target = 6): TimeTicks {
-  void min;
-  void max;
-  void target;
-  throw new Error("timeTicks: not implemented");
+  const H = 3600e3;
+  // [unit, every, approximate ms]; quarter is its own unit (3 months, Jan/Apr/Jul/Oct).
+  const D = 864e5;
+  const Y = 365.25 * D;
+  const M = Y / 12;
+  const cand: [TimeUnit, number, number][] = [
+    ...[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000].map((e): [TimeUnit, number, number] => [
+      "year",
+      e,
+      e * Y,
+    ]),
+    ["quarter", 1, 3 * M],
+    ...[1, 2, 6].map((e): [TimeUnit, number, number] => ["month", e, e * M]),
+    ["week", 1, 7 * D],
+    ...[1, 2].map((e): [TimeUnit, number, number] => ["day", e, e * D]),
+    ...[1, 3, 6, 12].map((e): [TimeUnit, number, number] => ["hour", e, e * H]),
+    ...[1, 5, 15, 30].map((e): [TimeUnit, number, number] => ["minute", e, e * 6e4]),
+    ...[1, 5, 15, 30].map((e): [TimeUnit, number, number] => ["second", e, e * 1e3]),
+  ];
+  const span = max - min;
+  if (!(span > 0)) return { values: [min], unit: "day", every: 1 };
+  const score = (c: (typeof cand)[number]) => Math.abs(span / c[2] - target);
+  const at = (y: number, m: number) => {
+    const d = new Date(0);
+    d.setUTCFullYear(y, m, 1);
+    return d.getTime();
+  };
+  const gen = (unit: TimeUnit, every: number, ms: number): number[] => {
+    const out: number[] = [];
+    if (unit === "year" || unit === "quarter" || unit === "month") {
+      // Count months since year 0 so every N aligns the same way across years.
+      const step = unit === "year" ? 12 * every : unit === "quarter" ? 3 : every;
+      const d = new Date(min);
+      let k = Math.ceil((d.getUTCFullYear() * 12 + d.getUTCMonth()) / step) * step;
+      for (; ; k += step) {
+        const t = at(Math.floor(k / 12), k % 12);
+        if (t > max) break;
+        if (t >= min) out.push(t);
+      }
+    } else {
+      const step = unit === "week" ? 7 * D : ms;
+      // Epoch day 4 (1970-01-05) is a Monday.
+      const off = unit === "week" ? 4 * D : 0;
+      for (let t = Math.ceil((min - off) / step) * step + off; t <= max; t += step) out.push(t);
+    }
+    return out;
+  };
+  const best = cand.sort((a, b) => score(a) - score(b)).slice(0, 4);
+  for (const [unit, every, ms] of best) {
+    const values = gen(unit, every, ms);
+    if (values.length >= 2) return { values, unit, every };
+  }
+  const [unit, every] = best[0]!;
+  return { values: [min], unit, every };
 }

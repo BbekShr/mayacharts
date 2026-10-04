@@ -1,5 +1,6 @@
-import { el, key, r } from "../svg.ts";
-import type { Mark, ResolvedSpec, Row, Shaped } from "../types.ts";
+import { el, esc, key, r } from "../svg.ts";
+import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
+import { MAX_MARKS } from "../validate.ts";
 
 const MIN = 24;
 
@@ -47,6 +48,71 @@ function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
   return out;
 }
 
+/**
+ * Density cells for more than MAX_MARKS visible points: a grid over the plot (cells >= 6 px, at
+ * most MAX_MARKS of them), non-empty cells only, ramp by sqrt(count). The grid is a function of
+ * the axis domains and the plot size, so the same window gives the same cells.
+ * ponytail: square cells, series merged (no per-series colour), no size or name; hexes and
+ * per-series stacks if anyone needs them.
+ */
+function bins(ctx: MarkCtx, pts: Pt[]) {
+  const { spec, plot } = ctx;
+  const [sx, sy] = [ctx.x as LinearScale, ctx.y as LinearScale];
+  const cell = Math.max(6, Math.sqrt((plot.w * plot.h) / MAX_MARKS));
+  const nx = Math.max(1, Math.floor(plot.w / cell));
+  const ny = Math.max(1, Math.floor(plot.h / cell));
+  const [cw, ch] = [plot.w / nx, plot.h / ny];
+  const at = (v: number, s: LinearScale, o: number, n: number) =>
+    Math.min(n - 1, Math.max(0, Math.floor((s.of(v) - o) / (n === nx ? cw : ch))));
+  const grid = new Map<number, number>();
+  for (const p of pts) {
+    const k = at(p.x, sx, plot.x, nx) * ny + at(p.y, sy, plot.y, ny);
+    grid.set(k, (grid.get(k) ?? 0) + 1);
+  }
+  const max = Math.max(...grid.values());
+  // Pixel to data, from the scale's own endpoints.
+  const inv = (s: LinearScale, px: number) =>
+    s.domain[0] + ((px - s.range[0]) / (s.range[1] - s.range[0])) * (s.domain[1] - s.domain[0]);
+  const span = (s: LinearScale, f: string, a: number, b: number) =>
+    `${ctx.fmt(f, inv(s, a))} – ${ctx.fmt(f, inv(s, b))}`;
+  let marks = "";
+  [...grid]
+    .sort((a, b) => a[0] - b[0])
+    .forEach(([k, n], c) => {
+      const [i, j] = [Math.floor(k / ny), k % ny];
+      const [x, y] = [plot.x + i * cw, plot.y + j * ch];
+      marks += el("rect", {
+        "data-maya": "mark",
+        "data-key": key("b", i, j),
+        "data-c": c,
+        "data-s": 0,
+        "data-x": span(sx, spec.x, x, x + cw),
+        "data-y": n,
+        "data-f": ctx.t("points", ctx.fmt("", n)),
+        "data-gx": span(sx, spec.x, x, x + cw),
+        "data-gy": span(sy, spec.y, y + ch, y),
+        "data-q": Math.min(9, Math.floor(Math.sqrt(n / max) * 10)),
+        x: r(x + 0.5),
+        y: r(y + 0.5),
+        width: r(cw - 1),
+        height: r(ch - 1),
+      });
+    });
+  const legend = `<div class="maya-legend" data-maya="ramp"><span>1</span><i></i><span>${esc(ctx.fmt("", max))}</span></div>`;
+  return { marks, hits: "", cross: cross(ctx, true), legend };
+}
+
+/** Hover guides: element-owned, moved to the hovered point (tooltip.ts); pills carry its x and y. */
+function cross({ plot }: MarkCtx, any: boolean) {
+  const [l, t, b] = [plot.x, plot.y, plot.y + plot.h];
+  return any
+    ? el("line", { "data-g": "x", x1: 0, x2: 0, y1: r(t), y2: r(b) }) +
+        el("line", { "data-g": "y", x1: r(l), x2: r(l + plot.w), y1: 0, y2: 0 }) +
+        el("text", { "data-g": "x", y: r(b - 6), "text-anchor": "middle" }, "") +
+        el("text", { "data-g": "y", x: r(l + 6), y: -6 }, "")
+    : "";
+}
+
 export const scatter: Mark = {
   noun: "Scatter",
   axes(spec, shaped) {
@@ -76,6 +142,7 @@ export const scatter: Mark = {
     const sx = ctx.x as { of(v: number): number };
     const sy = ctx.y as { of(v: number): number };
     const pts = points(spec, shaped);
+    if (pts.length > MAX_MARKS) return bins(ctx, pts);
     let max = 0;
     for (const p of pts) if (p.sz !== null) max = Math.max(max, Math.abs(p.sz));
     const scale = Math.min(plot.w, plot.h) / 16;
@@ -139,14 +206,7 @@ export const scatter: Mark = {
         });
       if (spec.labels) ctx.label(cx, cy - rad, ctx.fmt(spec.y, p.y), "above");
     }
-    // Hover guides: element-owned, moved to the hovered point (tooltip.ts); pills carry its x and y.
-    const [l, t, b] = [plot.x, plot.y, plot.y + plot.h];
-    const cross = pts.length
-      ? el("line", { "data-g": "x", x1: 0, x2: 0, y1: r(t), y2: r(b) }) +
-        el("line", { "data-g": "y", x1: r(l), x2: r(l + plot.w), y1: 0, y2: 0 }) +
-        el("text", { "data-g": "x", y: r(b - 6), "text-anchor": "middle" }, "") +
-        el("text", { "data-g": "y", x: r(l + 6), y: -6 }, "")
-      : "";
-    return { marks, hits, cross };
+    const cross_ = cross(ctx, pts.length > 0);
+    return { marks, hits, cross: cross_ };
   },
 };

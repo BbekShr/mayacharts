@@ -123,7 +123,6 @@ export function tooltip(
     }
     const [px, py, pw, ph] = a(svg, "data-plot").split(" ").map(Number) as number[];
     const hz = svg.hasAttribute("data-dir");
-    const step = (hz ? ph! : pw!) / Math.max(1, +a(svg, "data-n") || 1);
     let lo = Infinity,
       hi = -Infinity;
     for (const k of group(m)) {
@@ -131,6 +130,10 @@ export function tooltip(
         q = p + +a(k, hz ? "height" : "width");
       ((lo = Math.min(lo, p)), (hi = Math.max(hi, q)));
     }
+    // Time axis: bars are not evenly spaced; the column is the group's own span plus its 10% pads.
+    const step = svg.hasAttribute("data-t")
+      ? (hi - lo) / 0.8
+      : (hz ? ph! : pw!) / Math.max(1, +a(svg, "data-n") || 1);
     const c = (lo + hi) / 2 - step / 2;
     const fresh = !band?.isConnected;
     if (fresh) {

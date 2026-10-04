@@ -121,4 +121,64 @@ describe("scatter", () => {
     expect(circles(renderParts(base).svg).join("")).toMatchInlineSnapshot(
       `"<circle data-maya="mark" data-key="~0" data-c="0" data-s="0" data-x="1" data-series="" data-y="2" data-f="2" data-gx="1" data-gy="2" r="5" cx="39.6" cy="296"/><circle data-maya="mark" data-key="~1" data-c="1" data-s="0" data-x="2" data-series="" data-y="4" data-f="4" data-gx="2" data-gy="4" r="5" cx="333.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-s="0" data-x="3" data-series="" data-y="3" data-f="3" data-gx="3" data-gy="3" r="5" cx="628" cy="153"/>"`,
     ));
+
+  describe("density bins", () => {
+    const rng = (seed: number) => () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32;
+    const mk = (n: number, extra: Partial<ChartSpec> = {}): ChartSpec => {
+      const r = rng(7);
+      return {
+        ...base,
+        series: "g",
+        data: Array.from({ length: n }, (_, i) => ({
+          a: Math.round(r() * 1000) / 100, // ~1000 distinct x: shaped.cells stays under the pre-draw cap until render skips it for scatter
+
+          b: r() * r() * 10,
+          g: i % 2 ? "p" : "q",
+        })),
+        ...extra,
+      };
+    };
+    const rects = (svg: string) =>
+      [...svg.matchAll(/<rect data-maya="mark"[^>]*\/>/g)].map((m) => m[0]);
+    const sum = (svg: string) => rects(svg).reduce((t, c) => t + Number(attr(c, "data-y")), 0);
+
+    it("20 000 points draw at most MAX_MARKS cells whose counts sum to the points", () => {
+      const svg = renderParts(mk(20000)).svg;
+      expect(circles(svg)).toHaveLength(0);
+      expect(rects(svg).length).toBeGreaterThan(0);
+      expect(rects(svg).length).toBeLessThanOrEqual(5000);
+      expect(sum(svg)).toBe(20000);
+      const c = rects(svg)[0]!;
+      expect(attr(c, "data-f")).toMatch(/ points$/);
+      expect(attr(c, "data-gx")).toContain(" – ");
+      expect(attr(c, "data-s")).toBe("0");
+    });
+
+    it("is deterministic and keys are unique", () => {
+      const a = renderParts(mk(6000)).svg;
+      expect(renderParts(mk(6000)).svg).toBe(a);
+      const keys = rects(a).map((c) => attr(c, "data-key"));
+      expect(new Set(keys).size).toBe(keys.length);
+    });
+
+    it("window recomputes, and real circles return under the cap", () => {
+      const spec = mk(20000);
+      const w = renderParts(spec, { view: { window: [0, 5, 0, 10] } }).svg;
+      const inside = (spec.data as { a: number }[]).filter((d) => d.a <= 5).length;
+      expect(sum(w)).toBe(inside);
+      const z = renderParts(spec, { view: { window: [0, 0.2, 0, 10] } }).svg;
+      expect(rects(z)).toHaveLength(0);
+      expect(circles(z).length).toBeGreaterThan(0);
+    });
+
+    it("hidden series are excluded", () => {
+      const svg = renderParts(mk(20000), { view: { hidden: ["p"] } }).svg;
+      expect(sum(svg)).toBe(10000);
+    });
+
+    it("has the ramp legend, not the series legend", () => {
+      const p = renderParts(mk(20000));
+      expect(p.legend).toContain('data-maya="ramp"');
+    });
+  });
 });

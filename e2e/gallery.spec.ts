@@ -29,6 +29,9 @@ const TILES = [
   "chord",
   "beeswarm",
   "kpi",
+  "time-line",
+  "time-bar",
+  "scatter-dense",
 ];
 
 test("gallery: every tile renders marks, no errors, spec shown as JSON", async ({ page }) => {

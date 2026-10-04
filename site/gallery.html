@@ -32,6 +32,7 @@
           <li><a href="#part">Part to whole</a></li>
           <li><a href="#flow">Flow and geography</a></li>
           <li><a href="#summary">Summary</a></li>
+          <li><a href="#scale">Time and large data</a></li>
         </ul>
         <button type="button" data-reroll="">Re-roll all</button>
       </div>
@@ -425,6 +426,56 @@
             <details>
               <summary>Spec</summary>
               <pre><code id="table-code"></code></pre>
+            </details>
+          </section>
+        </div>
+      </div>
+      <div class="group" id="scale">
+        <div class="group-head">
+          <h2>Time and large data</h2>
+          <p>ISO dates get a time axis; long series are downsampled and dense scatters binned.</p>
+        </div>
+        <div class="tiles">
+          <section>
+            <div class="tile-head">
+              <h2>Load, 20 000 readings</h2>
+              <button type="button" data-reroll="time-line">Re-roll</button>
+            </div>
+            <p>
+              Irregular timestamps with two gaps, drawn from at most 1000 points. Drag to zoom and
+              the detail comes back.
+            </p>
+            <maya-chart id="time-line" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="time-line-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Orders by month</h2>
+              <button type="button" data-reroll="time-bar">Re-roll</button>
+            </div>
+            <p>ISO months sit at their dates, so the missing month leaves a gap.</p>
+            <maya-chart id="time-bar" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="time-bar-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>50 000 points</h2>
+              <button type="button" data-reroll="scatter-dense">Re-roll</button>
+            </div>
+            <p>
+              Too many points to draw one by one, so they become density cells. Drag to zoom until
+              single points return.
+            </p>
+            <maya-chart id="scatter-dense" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="scatter-dense-code"></code></pre>
             </details>
           </section>
         </div>

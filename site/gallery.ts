@@ -4,7 +4,16 @@ import "mayacharts/flow";
 import "mayacharts/geo";
 import "mayacharts/radial";
 import type { ChartSpec, Row } from "../src/index.ts";
-import { makeData, mean, rollup, sum, type Dataset } from "./data.ts";
+import {
+  makeData,
+  makeMonths,
+  makePoints,
+  makeReadings,
+  mean,
+  rollup,
+  sum,
+  type Dataset,
+} from "./data.ts";
 import { theme } from "./theme.ts";
 
 type Chart = HTMLElement & { spec: ChartSpec; data: Row[] };
@@ -403,9 +412,45 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     format: { monthMs: "month", units: "compact" },
     data: rollup(FACTS, ["monthMs"], { units: sum("units") }) as Row[],
   });
+
+  // 29. Scatter past the mark cap: 50 000 points become density cells; zoom brings circles back.
+  tile("scatter-dense", {
+    type: "scatter",
+    title: "50 000 points",
+    legend: true,
+    x: "spend",
+    y: "revenue",
+    zoom: true,
+    titles: { spend: "Spend", revenue: "Revenue" },
+    format: { spend: "compact", revenue: "compact" },
+    data: makePoints(seedOf(FACTS)),
+  });
+
+  // 30. Time axis: 20 000 irregular ISO timestamps with two gaps.
+  tile("time-line", {
+    type: "line",
+    title: "Load, 20 000 readings",
+    x: "time",
+    y: "load",
+    zoom: true,
+    titles: { load: "Load" },
+    data: makeReadings(seedOf(FACTS)),
+  });
+
+  // 31. Time axis on bars: ISO months, one missing.
+  tile("time-bar", {
+    type: "bar",
+    title: "Orders by month",
+    x: "month",
+    y: "orders",
+    format: { orders: "compact" },
+    data: makeMonths(seedOf(FACTS)),
+  });
   return out;
 }
 
+/** A seed derived from the dataset so a re-roll redraws the synthetic points too. */
+const seedOf = (f: Dataset["FACTS"]) => Math.round(f.reduce((a, r) => a + r.sales, 0)) >>> 0;
 const seed = () => (Math.random() * 2 ** 32) >>> 0;
 for (const [id, spec] of Object.entries(specs(makeData(7)))) show(id, spec);
 
