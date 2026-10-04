@@ -18,11 +18,11 @@
       "library": "mayacharts",
       "chart": "bar",
       "supported": true,
-      "gzipBytes": 38016,
+      "gzipBytes": 40477,
       "ssr": {
         "noDom": true,
         "svg": true,
-        "bytes": 34191
+        "bytes": 34249
       },
       "rendered": true,
       "renders": true,
@@ -45,17 +45,17 @@
           "right": 0.27703993055555554
         }
       },
-      "ttfpMs": 31.6
+      "ttfpMs": 34.5
     },
     {
       "library": "mayacharts",
       "chart": "line",
       "supported": true,
-      "gzipBytes": 38016,
+      "gzipBytes": 40477,
       "ssr": {
         "noDom": true,
         "svg": true,
-        "bytes": 37862
+        "bytes": 38245
       },
       "rendered": true,
       "renders": true,
@@ -70,45 +70,58 @@
       "rtl": {
         "yAxisMovedRight": true,
         "inkLtr": {
-          "left": 0.046723090277777775,
-          "right": 0.020638020833333333
+          "left": 0.04635416666666667,
+          "right": 0.014908854166666667
         },
         "inkRtl": {
-          "left": 0.020746527777777777,
-          "right": 0.04559461805555556
+          "left": 0.020377604166666667,
+          "right": 0.03982204861111111
         }
       },
-      "ttfpMs": 34.9
+      "ttfpMs": 38
     },
     {
       "library": "mayacharts",
       "chart": "scatter",
       "supported": true,
-      "gzipBytes": 38016,
+      "gzipBytes": 40477,
       "ssr": {
         "noDom": true,
-        "svg": false,
-        "bytes": 0,
-        "note": "could not render without a DOM: mayacharts: 9929 marks exceed the limit of 5000.\n  Use spec.limit to keep the top N categories, or aggregate the rows fi"
+        "svg": true,
+        "bytes": 486622
       },
-      "rendered": false,
-      "renders": false,
-      "firstViolation": "mayacharts: 9929 marks exceed the limit of 5000.",
-      "axeSeriousCritical": null,
-      "keyboard": null,
-      "rtl": null,
-      "ttfpMs": null,
-      "note": "did not render, so the remaining measures do not apply"
+      "rendered": true,
+      "renders": true,
+      "firstViolation": "",
+      "axeSeriousCritical": 0,
+      "axeRules": [],
+      "ariaSnapshotLines": 3009,
+      "keyboard": {
+        "tabStops": 1,
+        "arrowStates": 40
+      },
+      "rtl": {
+        "yAxisMovedRight": true,
+        "inkLtr": {
+          "left": 0.2269314236111111,
+          "right": 0.2439670138888889
+        },
+        "inkRtl": {
+          "left": 0.19535590277777778,
+          "right": 0.2752821180555556
+        }
+      },
+      "ttfpMs": 129.8
     },
     {
       "library": "mayacharts",
       "chart": "heatmap",
       "supported": true,
-      "gzipBytes": 38016,
+      "gzipBytes": 40477,
       "ssr": {
         "noDom": true,
         "svg": true,
-        "bytes": 81012
+        "bytes": 81070
       },
       "rendered": true,
       "renders": true,
@@ -131,7 +144,7 @@
           "right": 0.41423611111111114
         }
       },
-      "ttfpMs": 32.1
+      "ttfpMs": 21.3
     },
     {
       "library": "chartjs",
@@ -165,7 +178,7 @@
           "right": 0.2879557291666667
         }
       },
-      "ttfpMs": 28.9
+      "ttfpMs": 23.9
     },
     {
       "library": "chartjs",
@@ -199,7 +212,7 @@
           "right": 0.040125868055555555
         }
       },
-      "ttfpMs": 31.1
+      "ttfpMs": 26
     },
     {
       "library": "chartjs",
@@ -233,7 +246,7 @@
           "right": 0.2789279513888889
         }
       },
-      "ttfpMs": 150.3
+      "ttfpMs": 123.5
     },
     {
       "library": "chartjs",
