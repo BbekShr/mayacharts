@@ -93,9 +93,11 @@ export const hexmap: Mark = {
     let grid = "";
     for (const st of STATES) grid += el("path", { d: hex(st), fill: "none" });
     let marks = "";
+    let labels = "";
     let n = 0;
     for (const [st, v] of sum) {
       const [cx, cy] = at(st) as [number, number];
+      const q = hi > lo ? Math.min(9, Math.floor(((v - lo) / (hi - lo)) * 10)) : 9;
       marks += el("path", {
         "data-maya": "mark",
         "data-key": key("g", st.code),
@@ -107,16 +109,28 @@ export const hexmap: Mark = {
         "data-y": v,
         "data-neg": v < 0,
         "data-tone": ctx.tone(v),
-        "data-q": hi > lo ? Math.min(9, Math.floor(((v - lo) / (hi - lo)) * 10)) : 9,
+        "data-q": q,
         d: hex(st),
       });
-      ctx.label(cx, cy, st.code, "center");
+      // Drawn here (not ctx.label) so labels on the dark ramp steps can carry data-dark.
+      labels += el(
+        "text",
+        {
+          x: r(cx),
+          y: r(cy),
+          "text-anchor": "middle",
+          "dominant-baseline": "middle",
+          "data-in": true,
+          "data-dark": q >= 6,
+        },
+        esc(st.code),
+      );
     }
     const legend =
       hi > lo
         ? `<div class="maya-legend" data-maya="ramp"><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
         : "";
-    return { marks, hits: "", grid, legend };
+    return { marks, hits: "", labels, grid, legend };
   },
 };
 

@@ -107,6 +107,8 @@ function setup(ctx: MarkCtx) {
   });
   const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
   const root = tree(spec.data, spec.path, spec.y, ctx.agg(spec.aggregate as Aggregate), cb);
+  // Drilling: draw only the next level; a click pushes it, so each click goes one level deeper.
+  if (spec.drill) for (const n of root.children) n.children = [];
   let c = 0;
   const tops = root.children;
   const attrs = (n: Node) => {
@@ -143,9 +145,11 @@ const treemap: Mark = {
       const g = n.depth > 1 ? 0.5 : 0;
       const [bx, by, bw, bh] = [x + g, y + g, Math.max(0, w - 2 * g), Math.max(0, h - 2 * g)];
       if (!n.children.length) {
+        if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
         const a = attrs(n);
         marks += el("rect", { ...a, x: r(bx), y: r(by), width: r(bw), height: r(bh) });
-        hits += hit(a, bx, by, bw, bh);
+        // No data-depth on the hit: [data-depth] strokes would outline every grown target.
+        hits += hit({ ...a, "data-depth": null }, bx, by, bw, bh);
         // Name over value when both fit, else "name · value" on one line, else the value.
         const [lx, ly, f, one] = [
           bx + bw / 2,
@@ -177,7 +181,7 @@ const sunburst: Mark = {
   draw(ctx): MarkOut {
     const { plot, spec } = ctx;
     const { root, attrs } = setup(ctx);
-    const D = spec.path.length;
+    const D = spec.drill ? 1 : spec.path.length;
     const R = Math.min(plot.w, plot.h) / 2;
     const [cx, cy] = [plot.x + plot.w / 2, plot.y + plot.h / 2];
     const pt = (rad: number, a: number) =>
@@ -186,12 +190,20 @@ const sunburst: Mark = {
     const walk = (n: Node, a0: number, a1: number): void => {
       if (n.depth) {
         const [r0, r1] = [(n.depth * R) / (D + 1), ((n.depth + 1) * R) / (D + 1)];
+        if ((a1 - a0) * r1 < 2) return; // ponytail: arcs under 2 px are not drawn (nor their children)
         const e = Math.min(a1, a0 + (TAU * 359.99) / 360);
         const big = e - a0 > Math.PI ? 1 : 0;
         const d =
           `M${pt(r1, a0)}A${r(r1)} ${r(r1)} 0 ${big} 1 ${pt(r1, e)}` +
           `L${pt(r0, e)}A${r(r0)} ${r(r0)} 0 ${big} 0 ${pt(r0, a0)}Z`;
         marks += el("path", { ...attrs(n), d });
+        // Horizontal name if it fits the wedge: arc length near the top/bottom, ring thickness at the sides.
+        const [mid, rm, arc] = [(a0 + e) / 2, (r0 + r1) / 2, (e - a0) * ((r0 + r1) / 2)];
+        const room = Math.abs(Math.sin(mid)) * (r1 - r0) + Math.abs(Math.cos(mid)) * arc;
+        if (spec.labels && arc >= 14 && text(n.name) <= room) {
+          const [lx, ly] = pt(rm, mid).split(" ") as [string, string];
+          ctx.label(+lx, +ly, n.name, "center");
+        }
       }
       let a = a0;
       for (const c of n.children) {

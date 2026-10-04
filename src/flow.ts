@@ -88,16 +88,21 @@ export const sankey: Mark = {
 
     // ponytail: no crossing minimisation; columns sorted by value only.
     const col = (lv: number) => nodes.filter((n) => n.lv === lv).sort((a, b) => b.v - a.v);
+    // Inset 8 px (half a label) so edge nodes keep their labels; padding shrinks so it never
+    // takes more than a quarter of the height, then the scale is what is left over.
+    const [top, avail] = [plot.y + 8, Math.max(0, plot.h - 16)];
+    const most = Math.max(...Array.from({ length: cols }, (_, lv) => col(lv).length));
+    const pad = most > 1 ? Math.min(PAD, avail / 4 / (most - 1)) : 0;
     let k = Infinity;
     for (let lv = 0; lv < cols; lv++) {
       const c = col(lv);
       const sum = c.reduce((a, n) => a + n.v, 0);
-      if (sum > 0) k = Math.min(k, (plot.h - PAD * (c.length - 1)) / sum);
+      if (sum > 0) k = Math.min(k, (avail - pad * (c.length - 1)) / sum);
     }
     if (!(k > 0 && k < Infinity)) k = 0;
     for (let lv = 0; lv < cols; lv++) {
-      let y = plot.y;
-      for (const n of col(lv)) ((n.y = y), (y += n.v * k + PAD));
+      let y = top;
+      for (const n of col(lv)) ((n.y = y), (y += n.v * k + pad));
     }
     const x = (n: N) => plot.x + (n.lv * (plot.w - W)) / (cols - 1);
     for (const n of nodes) {
@@ -155,9 +160,9 @@ register("sankey", sankey);
 
 const TAU = Math.PI * 2;
 const RING = 8;
-const clip = (s: string) => {
+const clip = (s: string, max: number) => {
   const c = [...s];
-  return c.length > 14 ? c.slice(0, 13).join("") + "\u2026" : s;
+  return c.length > max ? c.slice(0, max - 1).join("") + "\u2026" : s;
 };
 
 interface CN {
@@ -238,12 +243,20 @@ export const chord: Mark = {
       let a = lv ? SIDE / 2 : Math.PI + SIDE / 2;
       for (const n of c) ((n.a = a), (a += n.v * k + GAP));
     }
-    const lw = Math.min(
-      Math.max(...nodes.map((n) => clip(n.name).length)) * 7.2 + 4,
-      plot.w * 0.28,
+    // Label room per side from the longest label (at most 20 characters, at most 36% of the
+    // width), so the ring grows to what is left; the pair is then centred as a whole.
+    const maxCh = Math.min(20, Math.floor((plot.w * 0.36 - 4) / 7.2));
+    const lw = [0, 1].map(
+      (lv) => Math.max(0, ...sides[lv]!.map((n) => [...clip(n.name, maxCh)].length)) * 7.2 + 4,
+    ) as [number, number];
+    const gutter = RING + 4;
+    const R = Math.max(
+      12,
+      Math.min(plot.h / 2 - RING - 20, (plot.w - lw[0] - lw[1] - 2 * gutter - 4) / 2),
     );
-    const R = Math.max(12, Math.min(plot.h / 2 - RING - 22, plot.w / 2 - RING - lw - 10));
-    const [cx, cy] = [plot.x + plot.w / 2, plot.y + plot.h / 2];
+    const spare = plot.w - lw[0] - lw[1] - 2 * (R + gutter);
+    const cx = plot.x + spare / 2 + lw[0] + R + gutter;
+    const cy = plot.y + plot.h / 2;
     const pt = (a: number, rad: number) =>
       `${r(cx + rad * Math.sin(a))} ${r(cy - rad * Math.cos(a))}`;
     const arc = (a0: number, a1: number, rad: number, sweep: 0 | 1) =>
@@ -298,13 +311,13 @@ export const chord: Mark = {
         d,
       });
     }
-    // ponytail: labels are clipped to 14 characters; ones that still collide are dropped by ctx.label.
+    // ponytail: labels are clipped to 20 characters; ones that still collide are dropped by ctx.label.
     for (const n of nodes) {
       const m = n.a + (n.v * k) / 2;
       const [sn, cs] = [Math.sin(m), Math.cos(m)];
       const rad = R + RING + 4;
       const [lx, ly] = [cx + rad * sn, cy - rad * cs];
-      const text = clip(n.name);
+      const text = clip(n.name, maxCh);
       ctx.label(
         lx,
         ly,

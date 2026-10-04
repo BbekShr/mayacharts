@@ -68,4 +68,19 @@ describe("chord", () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect([...g.matchAll(/<\w+ /g)]).toHaveLength(keys.length);
   });
+  it("grows the ring in a narrow tile and keeps long labels readable", () => {
+    const names = ["Tops and dresses", "A very long label name indeed"];
+    const rows = names.flatMap((to, i) =>
+      ["Online", "Store"].map((from, j) => ({ from, to, v: 5 + i + j })),
+    );
+    const s = renderParts(
+      { type: "chord", path: ["from", "to"], y: "v", data: rows },
+      { width: 390, height: 420 },
+    ).svg;
+    expect(s).toContain(">Tops and dresses<");
+    expect(s).toContain(">A very long label\u2026<"); // clipped to 18 characters
+    const arc = tags(s, 'path data-maya="mark"')[0]!;
+    const ys = [...arc.matchAll(/([ML])(-?[\d.]+) (-?[\d.]+)/g)].map((m) => +m[3]!);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(10);
+  });
 });

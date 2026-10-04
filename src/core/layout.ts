@@ -60,6 +60,12 @@ function ticks(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "linear
   const [lo, hi] = d0 > d1 ? [d1, d0] : [d0, d1];
   const tk = niceTicks(lo, hi);
   const values = fixed ? tk.values.filter((v) => v >= lo && v <= hi) : tk.values;
+  // A fixed domain end at the top of the axis (rank 1 on [15, 1]) gets its tick when it is not
+  // within half a step of a neighbour.
+  if (fixed && !values.some((v) => Math.abs(v - d1) < tk.step / 2)) {
+    values.push(d1);
+    values.sort((a, b) => a - b);
+  }
   return {
     domain: fixed ?? tk.domain,
     values,

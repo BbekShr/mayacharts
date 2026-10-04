@@ -52,4 +52,8 @@ describe("waffle", () => {
   it("is deterministic", () => {
     expect(render(spec)).toBe(render(spec));
   });
+  it("colors keyed by category map to category slots", () => {
+    const v = renderParts({ ...spec, colors: { B: "#123456" } } as unknown as ChartSpec).vars;
+    expect(v).toEqual([["--maya-series-2", "#123456"]]);
+  });
 });

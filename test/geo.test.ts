@@ -83,4 +83,9 @@ describe("hexmap", () => {
     <path data-maya="mark" data-key="g~TX" data-c="1" data-s="0" data-x="Texas" data-series="" data-f="50" data-y="50" data-q="9" d="M269.33 252.11L269.33 273.6L250.72 284.34L232.11 273.6L232.11 252.11L250.72 241.37Z"/>
     <path data-maya="mark" data-key="g~NY" data-c="2" data-s="0" data-x="New York" data-series="" data-f="30" data-y="30" data-q="5" d="M447.48 80.69L447.48 102.17L428.87 112.91L410.26 102.17L410.26 80.69L428.87 69.94Z"/>"
   `));
+  it("marks state labels on dark ramp steps with data-dark", () => {
+    const t = render(base).match(/<text [^>]*data-in[^>]*>[A-Z]{2}</g) ?? [];
+    expect(t).toHaveLength(3);
+    expect(t.map((x) => x.includes("data-dark"))).toEqual([false, true, false]);
+  });
 });

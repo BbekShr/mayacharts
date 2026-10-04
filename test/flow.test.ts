@@ -83,15 +83,37 @@ describe("sankey", () => {
     );
     expect([...tags(s, "link"), ...tags(s, "mark")]).toMatchInlineSnapshot(`
       [
-        "<path data-maya="link" data-key="k~0~A~B" data-c="0" data-s="0" data-x="A → B" data-series="" data-y="2" data-f="2" d="M12 0C53 0 53 0 94 0L94 61.33C53 61.33 53 61.33 12 61.33Z"/>",
-        "<path data-maya="link" data-key="k~1~B~C" data-c="1" data-s="1" data-x="B → C" data-series="" data-y="2" data-f="2" d="M106 0C147 0 147 0 188 0L188 61.33C147 61.33 147 61.33 106 61.33Z"/>",
-        "<path data-maya="link" data-key="k~0~A~D" data-c="2" data-s="0" data-x="A → D" data-series="" data-y="1" data-f="1" d="M12 61.33C53 61.33 53 69.33 94 69.33L94 100C53 100 53 92 12 92Z"/>",
-        "<path data-maya="link" data-key="k~1~D~C" data-c="3" data-s="3" data-x="D → C" data-series="" data-y="1" data-f="1" d="M106 69.33C147 69.33 147 61.33 188 61.33L188 92C147 92 147 100 106 100Z"/>",
-        "<rect data-maya="mark" data-key="n~0~A" data-c="4" data-s="0" data-x="A" data-series="" data-y="3" data-f="3" data-depth="0" x="0" y="0" width="12" height="92"/>",
-        "<rect data-maya="mark" data-key="n~1~B" data-c="5" data-s="1" data-x="B" data-series="" data-y="2" data-f="2" data-depth="1" x="94" y="0" width="12" height="61.33"/>",
-        "<rect data-maya="mark" data-key="n~2~C" data-c="6" data-s="2" data-x="C" data-series="" data-y="3" data-f="3" data-depth="2" x="188" y="0" width="12" height="92"/>",
-        "<rect data-maya="mark" data-key="n~1~D" data-c="7" data-s="3" data-x="D" data-series="" data-y="1" data-f="1" data-depth="1" x="94" y="69.33" width="12" height="30.67"/>",
+        "<path data-maya="link" data-key="k~0~A~B" data-c="0" data-s="0" data-x="A → B" data-series="" data-y="2" data-f="2" d="M12 8C53 8 53 8 94 8L94 58.67C53 58.67 53 58.67 12 58.67Z"/>",
+        "<path data-maya="link" data-key="k~1~B~C" data-c="1" data-s="1" data-x="B → C" data-series="" data-y="2" data-f="2" d="M106 8C147 8 147 8 188 8L188 58.67C147 58.67 147 58.67 106 58.67Z"/>",
+        "<path data-maya="link" data-key="k~0~A~D" data-c="2" data-s="0" data-x="A → D" data-series="" data-y="1" data-f="1" d="M12 58.67C53 58.67 53 66.67 94 66.67L94 92C53 92 53 84 12 84Z"/>",
+        "<path data-maya="link" data-key="k~1~D~C" data-c="3" data-s="3" data-x="D → C" data-series="" data-y="1" data-f="1" d="M106 66.67C147 66.67 147 58.67 188 58.67L188 84C147 84 147 92 106 92Z"/>",
+        "<rect data-maya="mark" data-key="n~0~A" data-c="4" data-s="0" data-x="A" data-series="" data-y="3" data-f="3" data-depth="0" x="0" y="8" width="12" height="76"/>",
+        "<rect data-maya="mark" data-key="n~1~B" data-c="5" data-s="1" data-x="B" data-series="" data-y="2" data-f="2" data-depth="1" x="94" y="8" width="12" height="50.67"/>",
+        "<rect data-maya="mark" data-key="n~2~C" data-c="6" data-s="2" data-x="C" data-series="" data-y="3" data-f="3" data-depth="2" x="188" y="8" width="12" height="76"/>",
+        "<rect data-maya="mark" data-key="n~1~D" data-c="7" data-s="3" data-x="D" data-series="" data-y="1" data-f="1" data-depth="1" x="94" y="66.67" width="12" height="25.33"/>",
       ]
     `);
+  });
+  it("keeps every node inside the plot with 15 nodes in 300 px", () => {
+    const types = Array.from({ length: 15 }, (_, i) => `T${i}`);
+    const data = ["N", "S", "E", "W", "C"].flatMap((a, j) =>
+      types.map((b, i) => ({ a, b, v: 1 + ((i * 7 + j * 3) % 11) })),
+    );
+    const s = render(spec(data, { path: ["a", "b"] }), { width: 780, height: 300 });
+    const ns = tags(s, "mark");
+    expect(ns).toHaveLength(20);
+    for (const n of ns) {
+      const [y, h] = [+at(n, "y")!, +at(n, "height")!];
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y + h).toBeLessThanOrEqual(300);
+    }
+  });
+  it("shrinks padding instead of collapsing with 60 nodes in 200 px", () => {
+    const data = Array.from({ length: 60 }, (_, i) => ({ a: "X", b: `T${i}`, v: 1 }));
+    const ns = tags(render(spec(data, { path: ["a", "b"] }), { width: 600, height: 200 }), "mark");
+    for (const n of ns) {
+      expect(+at(n, "height")!).toBeGreaterThan(0);
+      expect(+at(n, "y")! + +at(n, "height")!).toBeLessThanOrEqual(200);
+    }
   });
 });

@@ -11,6 +11,7 @@ const h = (t: string, txt = "", at: Record<string, string> = {}) => {
 // Links (sankey flows, chord ribbons) carry the same payload as marks.
 const SEL = "[data-maya=hit],[data-maya=mark],[data-maya=link][data-key]";
 const FADE = 120;
+const FIXED = ["position", "position-area", "left", "top", "margin"];
 
 export interface Tooltip {
   off(): void;
@@ -40,6 +41,7 @@ export function tooltip(
   let cur: Element | undefined,
     open = false,
     pin = false,
+    clamped = false,
     kb = false,
     timer: ReturnType<typeof setTimeout> | undefined,
     down0: [number, number] | undefined;
@@ -152,13 +154,26 @@ export function tooltip(
     clearTimeout(timer);
     if (!open) (tip.showPopover(), (open = true));
     tip.classList.add("maya-open");
-    if (!anchored) {
-      const t = tip.getBoundingClientRect(),
-        w = globalThis.visualViewport?.width ?? innerWidth;
+    // Anchored placement can overflow a tile-sized viewport: measure, then clamp with fixed.
+    const vv = globalThis.visualViewport,
+      vw = vv?.width ?? innerWidth,
+      vh = vv?.height ?? innerHeight;
+    if (clamped) for (const k of FIXED) tip.style.removeProperty(k);
+    clamped = false;
+    let t = tip.getBoundingClientRect();
+    if (!anchored || t.left < 0 || t.top < 0 || t.right > vw || t.bottom > vh) {
+      // Leave the anchor (position-area would resolve insets against the anchor area).
+      for (const k of ["left", "top", "margin"]) tip.style.setProperty(k, "0px");
+      tip.style.setProperty("position", "fixed");
+      tip.style.setProperty("position-area", "none");
+      t = tip.getBoundingClientRect();
       let y = r.top - t.height - 8;
       if (y < 8) y = r.bottom + 8;
-      const x = Math.min(Math.max(r.left + r.width / 2 - t.width / 2, 8), w - t.width - 8);
-      Object.assign(tip.style, { position: "fixed", left: x + "px", top: y + "px" });
+      y = Math.max(8, Math.min(y, vh - t.height - 8));
+      const x = Math.max(8, Math.min(r.left + r.width / 2 - t.width / 2, vw - t.width - 8));
+      tip.style.setProperty("left", x + "px");
+      tip.style.setProperty("top", y + "px");
+      clamped = true;
     }
     if (say)
       announce(
