@@ -6,16 +6,16 @@
     <title>mayaCharts comparison</title>
     <meta
       name="description"
-      content="mayaCharts, Chart.js and ECharts drawing the same four charts under the same strict Content Security Policy, as measured by one script."
+      content="mayaCharts and its rivals drawing the same charts, measured by one script: support, speed, size, ease, CSP, accessibility, keyboard, RTL and SSR."
     />
     <link rel="stylesheet" href="./site.css" />
   </head>
-  <body>
+  <body class="wide">
     <header class="site">
       <h1>Comparison</h1>
       <p class="tagline">
-        The same four charts in three libraries, measured by one script. Every value on this page is
-        read from the file that script wrote.
+        The same charts in every library, measured by scripts in the repository. Every value on this
+        page is read from the files they wrote, and a loss is shown as a loss.
       </p>
       <nav>
         <a href="./index.html">Home</a>
@@ -28,12 +28,16 @@
       <section>
         <h2>Method</h2>
         <p id="method"></p>
-        <p>
-          The CSP is
-          <code id="csp"></code>
-        </p>
       </section>
       <div id="tables"></div>
+      <section id="looks">
+        <h2>Looks</h2>
+        <p>
+          How a chart looks is judgment, not measurement, so it has no score here. A table of
+          reviewed looks scores will be added below when they exist.
+        </p>
+        <div id="looks-table"></div>
+      </section>
       <section id="llm" hidden>
         <h2>LLM-written specs</h2>
         <p id="llm-note"></p>
@@ -42,7 +46,8 @@
     </main>
     <footer class="site">
       <p id="foot"></p>
-      <p>Highcharts is not included because of its licence.</p>
+      <p>Not benchmarked:</p>
+      <ul id="excluded"></ul>
       <p>
         Harness source:
         <a href="https://github.com/BbekShr/mayacharts/blob/main/e2e/compare.spec.ts"

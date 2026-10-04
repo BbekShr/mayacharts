@@ -5,6 +5,7 @@
   --muted: light-dark(#5b6472, #9aa3b2);
   --line: light-dark(#e3e6ec, #2a2f3a);
   --code-bg: light-dark(#f5f6f9, #181b22);
+  --warn: light-dark(#b42318, #ff8a80);
   --accent: var(--maya-accent, light-dark(#2563eb, #6ea0ff));
   font-family: var(--maya-font, system-ui, -apple-system, "Segoe UI", sans-serif);
 }
@@ -239,4 +240,26 @@ footer.site {
 }
 [hidden] {
   display: none;
+}
+td.win {
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+td.loss {
+  box-shadow: inset 3px 0 0 var(--warn);
+}
+.tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+section h3 {
+  font-size: 1rem;
+  margin: 16px 0 6px;
+}
+section ul {
+  color: var(--muted);
 }
