@@ -96,7 +96,7 @@ export const css =
   ".maya-tip div{display:flex;align-items:center;gap:6px}.maya-tip i{outline:1px solid}" +
   ".maya-tip [data-on]{font-weight:600}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
-  "@container (max-width:320px){.maya-legend{display:none}.maya-title{font-size:12px}}" +
+  "@container (max-width:320px){.maya-legend:has(button){display:none}.maya-title{font-size:12px}}" +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +
   "@media (forced-colors:active){.maya-svg,i{forced-color-adjust:none}[data-maya=mark]{stroke:CanvasText;stroke-width:1}[data-tone=bad]{stroke-dasharray:4 2}}" +
   "@media (prefers-reduced-motion:reduce){*{transition:none!important}}";

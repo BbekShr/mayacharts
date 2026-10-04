@@ -79,3 +79,17 @@ describe("formatter fallbacks", () => {
     expect(f("compact")(98765)).toBe(g(98765));
   });
 });
+
+describe("percent ticks and small values", () => {
+  it("decimals follow the tick step", () => {
+    expect(f("percent", "v", 0.0025)(0.0025)).toBe("0.25%");
+    expect(f("percent", "v", 0.001)(0.003)).toBe("0.3%");
+    expect(f("percent", "v", 0.25)(0.5)).toBe("50%");
+  });
+  it("step-less values under 1% keep two decimals", () => {
+    const g = f("percent");
+    expect(g(0.0025)).toBe("0.25%");
+    expect(g(0.123)).toBe("12.3%");
+    expect(g(0)).toBe("0%");
+  });
+});

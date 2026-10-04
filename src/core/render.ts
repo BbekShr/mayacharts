@@ -331,8 +331,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     (s.colors as readonly string[]).forEach((c, i) => vars.push([`--maya-series-${i + 1}`, c]));
   else if (s.colors)
     // ponytail: slot = the series' first-appearance index, so reordered rows move colours.
+    // Waffle slots follow categories (data-s = category index), so its keys map against those.
     for (const [k, c] of s.colors as ReadonlyMap<string, string>) {
-      const j = shaped.series.indexOf(k);
+      const j = (s.type === "waffle" ? shaped.categories : shaped.series).indexOf(k);
       if (j >= 0) vars.push([`--maya-series-${(j % 8) + 1}`, c]);
     }
   for (const k in s.theme) vars.push([`--maya-${kebab(k)}`, s.theme[k as keyof typeof s.theme]!]);

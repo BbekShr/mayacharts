@@ -233,3 +233,41 @@ test.describe("touch", () => {
     await ctx.close();
   });
 });
+
+test.describe("tooltip clamp", () => {
+  test("stays inside a narrow viewport at the right edge", async ({
+    browser,
+    browserName,
+    baseURL,
+  }) => {
+    test.skip(browserName !== "chromium", "chromium only");
+    const ctx = await browser.newContext({
+      baseURL: baseURL!,
+      viewport: { width: 360, height: 700 },
+    });
+    const page = await ctx.newPage();
+    await open(page);
+    const bubble = page.locator("#bubble");
+    await bubble.scrollIntoViewIfNeeded();
+    // The mark whose centre is furthest right.
+    const marks = await bubble.locator("[data-maya=mark]").all();
+    let best = marks[0]!,
+      bx = -1;
+    for (const m of marks) {
+      const b = await m.boundingBox();
+      if (b && b.x + b.width / 2 > bx) ((bx = b.x + b.width / 2), (best = m));
+    }
+    const { x, y } = await center(best);
+    await page.mouse.move(x, y);
+    await expect(page.locator("#bubble .maya-tip.maya-open")).toBeVisible();
+    const r = await page.locator("#bubble .maya-tip").evaluate((e) => {
+      const b = e.getBoundingClientRect();
+      return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: innerWidth, h: innerHeight };
+    });
+    expect(r.l).toBeGreaterThanOrEqual(0);
+    expect(r.r).toBeLessThanOrEqual(r.w);
+    expect(r.t).toBeGreaterThanOrEqual(0);
+    expect(r.b).toBeLessThanOrEqual(r.h);
+    await ctx.close();
+  });
+});

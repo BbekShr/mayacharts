@@ -152,4 +152,7 @@ describe("theme css", () => {
   it("gzips under 2560 bytes", () => {
     expect(gzipSync(css).length).toBeLessThan(2560);
   });
+  it("narrow containers hide only toggle legends, not key-only legends", () => {
+    expect(css).toContain("@container (max-width:320px){.maya-legend:has(button){display:none}");
+  });
 });

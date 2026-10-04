@@ -384,3 +384,28 @@ describe("axes attributes", () => {
     expect(attr(svg, "data-plot")[0]!.split(" ")).toHaveLength(4);
   });
 });
+
+describe("fixed yDomain ticks", () => {
+  const yl = (d: [number, number]) => {
+    const svg = renderParts({
+      type: "line",
+      x: "m",
+      y: "v",
+      yDomain: d,
+      data: [
+        { m: "a", v: 3 },
+        { m: "b", v: 9 },
+      ],
+    } as ChartSpec).svg;
+    return [...svg.match(/data-maya="axis-y"[\s\S]*?<\/g>/)![0].matchAll(/>(\d+)<\/text>/g)].map(
+      (m) => m[1],
+    );
+  };
+  it("labels the top end of a reversed domain", () => {
+    expect(yl([15, 1])).toEqual(["1", "5", "10", "15"]);
+  });
+  it("does not duplicate an end that already has a tick", () => {
+    expect(yl([0, 20])).toEqual(["0", "5", "10", "15", "20"]);
+    expect(yl([20, 0])).toEqual(["0", "5", "10", "15", "20"]);
+  });
+});

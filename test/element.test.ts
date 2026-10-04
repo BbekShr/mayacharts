@@ -312,4 +312,22 @@ describe("table header sort", () => {
     await frame();
     expect(el.view.sortBy).toBeUndefined();
   });
+
+  it("heatmap measure toggle replaces the ramp legend", async () => {
+    const data = [
+      { m: "x", y: "p", a: 1, b: 100 },
+      { m: "y", y: "p", a: 2, b: 900 },
+    ];
+    const el = await mount((e) => {
+      e.spec = { type: "heatmap", x: "m", series: "y", y: ["a", "b"], data } as ChartSpec;
+    });
+    const ramps = () => el.shadowRoot!.querySelectorAll(".maya-legend");
+    expect(ramps()).toHaveLength(1);
+    const before = ramps()[0]!.textContent;
+    el.shadowRoot!.querySelectorAll<HTMLElement>(".maya-ctl [role=radio]")[1]!.click();
+    await frame();
+    expect(ramps()).toHaveLength(1);
+    expect(ramps()[0]!.textContent).not.toBe(before);
+    expect(ramps()[0]!.textContent).toContain("900");
+  });
 });

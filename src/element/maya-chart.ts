@@ -328,7 +328,7 @@ export class MayaChart extends HTMLElement {
     const slots: [keyof Parts, string][] = [
       ["title", ".maya-title"],
       ["controls", ".maya-ctl"],
-      ["legend", "[data-maya=legend]"],
+      ["legend", ".maya-legend"],
       ["crumbs", ".maya-crumbs"],
     ];
     slots.forEach(([k, sel], i) => {
