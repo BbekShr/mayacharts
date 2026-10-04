@@ -1,0 +1,42 @@
+name: Compare
+
+# Re-measures mayaCharts, Chart.js and ECharts and commits site/compare.json when it changed.
+# The LLM eval (eval/run.mjs) calls a paid API and never runs here.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.63.0-noble
+    env:
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - run: npm ci
+
+      - run: npm run compare
+
+      - name: Commit site/compare.json if it changed
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- site/compare.json; then
+            echo "site/compare.json unchanged"
+          else
+            git add site/compare.json
+            git commit -m "Update site/compare.json"
+            git push origin HEAD:main
+          fi

@@ -87,6 +87,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "e2e": "playwright test",
+    "compare": "npm run build && E2E_NO_SERVER=1 playwright test --project=compare",
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts"
   },
   "mayaSize": {
@@ -100,9 +101,12 @@
     "dist/maya.global.js": 47104
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4",
+    "chart.js": "4.5.1",
+    "echarts": "6.1.0",
     "happy-dom": "^20.14.5",
     "prettier": "^3.9.9",
     "typescript": "^7.0.2",
