@@ -167,13 +167,15 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const W = opts?.width ?? 640;
   const H = opts?.height ?? 320;
   const shaped = shape(s, opts?.view ?? {});
-  if (shaped.cells.length > MAX_MARKS)
+  const cap = (n: number) =>
+    n > MAX_MARKS &&
     fail(
       "too-many-marks",
       "data",
-      `${shaped.cells.length} marks exceed the limit of ${MAX_MARKS}.`,
+      `${n} marks exceed the limit of ${MAX_MARKS}.`,
       "Use spec.limit to keep the top N categories, or aggregate the rows first.",
     );
+  cap(shaped.cells.length);
 
   // Formatters are cached per (field, step): marks call fmt once per value.
   const fmts = new Map<string, (v: unknown) => string>();
@@ -293,6 +295,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
     const m = mark.draw(ctx);
+    cap(m.marks.split(' data-maya="mark"').length - 1); // scatter and modules draw per row/node
     markLegend = m.legend ?? null;
     body =
       g("grid", m.grid ?? f?.grid ?? "") +
@@ -388,18 +391,18 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           s.measures
             .map(
               (m, i) =>
-                `<button type="button" role="radio" aria-checked="${i === s.measure}" data-i="${i}" data-focus="measure:${i}" tabindex="${i === s.measure ? 0 : -1}">${esc(s.titles.get(m) ?? m)}</button>`,
+                `<button type="button" role="radio" aria-checked="${i === s.measure}" data-i="${i}" tabindex="${i === s.measure ? 0 : -1}">${esc(s.titles.get(m) ?? m)}</button>`,
             )
             .join("") +
           `</div>`
         : "",
     crumbs:
       s.drilled.length > 0
-        ? `<nav class="maya-crumbs" aria-label="${esc(t(s, "crumbs"))}"><button type="button" data-depth="0" data-focus="crumb:0">${esc(t(s, "back"))}</button>` +
+        ? `<nav class="maya-crumbs" aria-label="${esc(t(s, "crumbs"))}"><button type="button" data-depth="0">${esc(t(s, "back"))}</button>` +
           s.drilled
             .map(
               (v, i) =>
-                `<span aria-hidden="true">›</span><button type="button" data-depth="${i + 1}" data-focus="crumb:${i + 1}"${i === s.drilled.length - 1 ? ' aria-current="page"' : ""}>${esc(String(v))}</button>`,
+                `<span aria-hidden="true">›</span><button type="button" data-depth="${i + 1}"${i === s.drilled.length - 1 ? ' aria-current="page"' : ""}>${esc(String(v))}</button>`,
             )
             .join("") +
           `</nav>`

@@ -1,6 +1,6 @@
 // treemap + sunburst. Importing this file registers both types.
 import { register } from "./core/registry.ts";
-import { el, key, r } from "./core/svg.ts";
+import { el, hit, key, r } from "./core/svg.ts";
 import type { Aggregate, Mark, MarkCtx, MarkOut, Row } from "./core/types.ts";
 
 interface Node {
@@ -129,7 +129,6 @@ function setup(ctx: MarkCtx) {
   return { root, tops, attrs };
 }
 
-const MIN = 24;
 const text = (s: string) => s.length * 7.2 + 4;
 
 const treemap: Mark = {
@@ -146,20 +145,19 @@ const treemap: Mark = {
       if (!n.children.length) {
         const a = attrs(n);
         marks += el("rect", { ...a, x: r(bx), y: r(by), width: r(bw), height: r(bh) });
-        if (bw < MIN || bh < MIN) {
-          const [gw, gh] = [Math.max(bw, MIN), Math.max(bh, MIN)];
-          hits += el("rect", {
-            ...a,
-            "data-maya": "hit",
-            x: r(bx - (gw - bw) / 2),
-            y: r(by - (gh - bh) / 2),
-            width: r(gw),
-            height: r(gh),
-            fill: "transparent",
-          });
-        }
-        if (spec.labels && text(a["data-f"]) <= bw && bh >= 16)
-          ctx.label(bx + bw / 2, by + bh / 2, a["data-f"], "center");
+        hits += hit(a, bx, by, bw, bh);
+        // Name over value when both fit, else "name · value" on one line, else the value.
+        const [lx, ly, f, one] = [
+          bx + bw / 2,
+          by + bh / 2,
+          a["data-f"],
+          `${n.name} · ${a["data-f"]}`,
+        ];
+        if (!spec.labels || bh < 16) return;
+        if (bh >= 34 && text(n.name) <= bw && text(f) <= bw)
+          ctx.label(lx, ly - 8, n.name, "center") && ctx.label(lx, ly + 8, f, "center");
+        else if (text(one) <= bw) ctx.label(lx, ly, one, "center");
+        else if (text(f) <= bw) ctx.label(lx, ly, f, "center");
         return;
       }
       if (n.depth === 1 && text(n.name) <= bw && bh >= 30)

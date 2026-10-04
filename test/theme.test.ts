@@ -109,7 +109,10 @@ describe("theme css", () => {
     expect(q).toHaveLength(10);
     expect(q[0]).toBe(20);
     expect(q[9]).toBe(100);
-    expect(css).toContain("color-mix(in oklab,var(--maya-accent) var(--q),var(--maya-bg))");
+    expect(css).toContain("color-mix(in oklab,var(--maya-accent) var(--q),var(--b))");
+    expect(css).toContain(
+      "--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))",
+    );
     const acc = toLab(toRgb(oklab(...oklch("accent"))));
     // ponytail: only steps >= 8 are asserted; lighter steps are never colour alone (labels, table).
     for (const bg of BGS)
@@ -146,7 +149,7 @@ describe("theme css", () => {
       expect(css, h).toContain(h);
     expect(css).not.toContain("style=");
   });
-  it("gzips under 2300 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(2300);
+  it("gzips under 2400 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(2400);
   });
 });

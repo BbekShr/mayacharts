@@ -40,3 +40,21 @@ export const key = (...parts: unknown[]): string =>
   parts
     .map((p) => encodeURIComponent(String(p).replace(/\p{Cs}/gu, "�")).replace(/~/g, "%7E"))
     .join("~");
+
+/** Invisible target grown to >= 24 px around a small rect mark; "" when it is big enough. */
+export function hit(d: Parameters<typeof el>[1], x: number, y: number, w: number, h: number) {
+  const [gw, gh] = [Math.max(w, 24), Math.max(h, 24)];
+  return w < 24 || h < 24
+    ? el(
+        "rect",
+        Object.assign({ "data-maya": "hit" }, d, {
+          "data-maya": "hit",
+          x: r(x - (gw - w) / 2),
+          y: r(y - (gh - h) / 2),
+          width: r(gw),
+          height: r(gh),
+          fill: "transparent",
+        }),
+      )
+    : "";
+}

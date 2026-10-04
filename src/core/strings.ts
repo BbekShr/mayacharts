@@ -7,7 +7,6 @@ export const TEXT = {
   other: "Other",
   back: "Back",
   reset: "Reset zoom",
-  total: "Total",
   /** Live region after a measure toggle: {0} = measure title. */
   showing: "Showing {0}",
   /** Live region after drill: {0} = branch path joined with " / ". */
@@ -21,7 +20,6 @@ export const TEXT = {
   chartOf: "{0} chart of {1} by {2}",
   /** Table caption when rows are capped: {0} = shown, {1} = total. */
   firstOf: "First {0} of {1} rows",
-  sampleData: "Sample data",
   /** aria-label of the measure radiogroup. */
   measures: "Measure",
   /** aria-label of the breadcrumb nav. */

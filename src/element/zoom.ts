@@ -230,7 +230,6 @@ export const mount = (host: Host): Handlers => {
         chip = document.createElement("button");
         chip.type = "button";
         chip.className = "maya-reset";
-        chip.setAttribute("data-focus", "reset");
         box.append(chip);
       }
       if (chip) chip.textContent = t(spec, "reset");

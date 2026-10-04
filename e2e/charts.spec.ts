@@ -229,8 +229,11 @@ test.describe("SSR", () => {
     await page.goto("ssr.html");
     await expect(page.locator("maya-chart [data-maya=mark]").first()).toBeAttached();
     await settle(page);
-    await hoverMark(page, page.locator("maya-chart [data-maya=mark]").nth(2));
-    await expect(page.locator("maya-chart .maya-tip")).toBeVisible();
+    // Hydration may swap the SSR marks under the pointer: retry the hover until the tip shows.
+    await expect(async () => {
+      await hoverMark(page, page.locator("maya-chart [data-maya=mark]").nth(2));
+      await expect(page.locator("maya-chart .maya-tip")).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 10000 });
   });
 });
 

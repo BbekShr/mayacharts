@@ -16,7 +16,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 ## Known ceilings
 
-- **Y-domain origin**: value axes are 0-anchored. Negative values are supported; domain overrides are not (use `yDomain` which applies linear scaling).
+- **Y-domain origin**: value axes (lines included) are 0-anchored. Negative values are supported; set `yDomain` to override the origin.
 - **Ramp depth**: 10-step sequential ramp for colorBy numeric fields (not user-tunable).
 - **Label truncation**: long x labels are thinned by code point; text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
 - **Dates without time scale**: dates are formatted via Intl.DateTimeFormat, never spaced on the axis. A categorical "date" field looks like any other category.
@@ -28,6 +28,11 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **5000-mark hard cap**: `MAX_MARKS = 5000`. Above it, render fails with `too-many-marks` error suggesting `limit` or `aggregate`.
 - **US-only hexmap**: hexmap covers the 50 states plus DC and PR; world maps are out of scope.
 - **Sankey without crossing minimisation**: sankey forces nodes per level without reordering to minimise link crossings (fast, deterministic, sufficient for publication).
+- **UTC dates**: date presets format in `timeZone: "UTC"` so server and client agree; pass Intl options with a `timeZone` for local time.
+- **SSR width**: `renderShell` lays out at `width` x `height` (default 640 x 320); pass the container's size or the first client paint re-lays out visibly.
+- **Colour slots by first appearance**: a series keeps its palette slot while row order is stable; reordering rows can move colours (use `colors: { value: color }` to pin them). Nine or more series wrap the 8 slots.
+- **Animation cap**: updates with more than 1500 marks are drawn without animation.
+- **Measure toggle up to 4 options**: a `y` array works with more measures, but the sliding indicator is styled for 2 to 4.
 
 ## What you can do instead
 
@@ -35,4 +40,4 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Time series without time scale**: use a "date" field as the x category. Frame the data with `aggregate: "mean"` or `"count"` if you want to coalesce timestamps.
 - **Diverging bar chart**: use `colorBy: { target: 0 }` to tone positive and negative bars differently.
 - **Complex drill UI**: listen to `maya-select` and `maya-view` events and control `el.view` and `el.selected` from your app.
-- **Stacked negative bars**: not supported; waterfall is the alternative for flow visualisation.
+- **Stacked negative bars**: supported (negatives stack below zero); for a running total use `waterfall`.

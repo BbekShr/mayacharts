@@ -1,3 +1,4 @@
+import { colorVals } from "../shape.ts";
 import { el, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, Cell, LinearScale, Mark, MarkCtx, MarkOut } from "../types.ts";
 
@@ -11,16 +12,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   const { spec, shaped, plot } = ctx;
   const cat = ctx.x as BandScale;
   const val = ctx.y as LinearScale;
-  const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
-  const rows = new Map<string, number[]>();
-  if (cb)
-    for (const row of spec.data) {
-      const v = row[cb];
-      if (typeof v !== "number") continue;
-      const k = String(row[spec.x]) + "\0" + (spec.series === null ? "" : String(row[spec.series]));
-      (rows.get(k) ?? rows.set(k, []).get(k)!).push(v);
-    }
-  const red = ctx.agg(spec.aggregate);
+  const cvOf = colorVals(spec);
   const px = (ci: number) => r(cat.at(ci) + cat.bandwidth / 2);
 
   let areas = "";
@@ -44,7 +36,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
       gap = false;
 
       const cname = shaped.categories[c.ci]!;
-      const cv = cb ? red(rows.get(cname + "\0" + ser) ?? []) : null;
+      const cv = cvOf(cname, ser);
       const other = cname === OTHER;
       const x = ctx.fmt(spec.x, cname); // display label: month presets, "Other"
       dots += el("circle", {

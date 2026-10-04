@@ -9,11 +9,20 @@ export function niceTicks(min: number, max: number, target = 5): Ticks {
   const base = 10 ** Math.floor(Math.log10((max - min) / target));
   let step = base;
   let best = Infinity;
+  // Crossing zero, a coarse step pads the short side by a whole step (stacked negatives
+  // reaching -200 for -40), so take the tightest domain with up to target + 3 ticks instead.
+  const cross = min < 0 && max > 0;
   for (const m of [1, 2, 2.5, 5, 10]) {
     const s = base * m;
-    const n = Math.ceil(max / s - 1e-9) - Math.floor(min / s + 1e-9) + 1;
-    if (Math.abs(n - target) < best) {
-      best = Math.abs(n - target);
+    const lo = Math.floor(min / s + 1e-9);
+    const n = Math.ceil(max / s - 1e-9) - lo + 1;
+    const score = cross
+      ? n > target + 3
+        ? Infinity
+        : (n - 1 + Math.abs(n - target) / 1e3) * s
+      : Math.abs(n - target);
+    if (score < best - 1e-9 * Math.abs(score)) {
+      best = score;
       step = s;
     }
   }

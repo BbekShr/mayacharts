@@ -127,7 +127,7 @@ export const mount = (host: Host): Handlers => {
       }
       // Keyboard must keep working after a pointer drill: fall back to the chart itself.
       if (!host.root.activeElement || !host.root.contains(host.root.activeElement))
-        host.root.querySelector<HTMLElement>("[data-focus=svg]")?.focus({ preventScroll: true });
+        host.root.querySelector<HTMLElement>(".maya-svg")?.focus({ preventScroll: true });
     },
     off: () => host.root.removeEventListener("click", click),
   };

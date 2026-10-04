@@ -192,13 +192,4 @@ describe("shape", () => {
     expect(s.series).toEqual(["constructor", "__proto__"]);
     expect(s.cells.find((c) => c.ci === 0 && c.si === 0)!.value).toBe(4);
   });
-  it("raw keeps the first raw x", () => {
-    const s = shape(
-      sp([
-        { m: 1, s: "A", v: 1 },
-        { m: "1", s: "A", v: 1 },
-      ]),
-    );
-    expect(s.raw).toEqual([1]);
-  });
 });

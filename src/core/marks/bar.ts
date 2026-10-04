@@ -1,8 +1,7 @@
 import { bandScale } from "../scale.ts";
-import { el, key, OTHER, r } from "../svg.ts";
+import { colorVals } from "../shape.ts";
+import { el, hit, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
-
-const MIN = 24;
 
 interface Item {
   ci: number;
@@ -62,19 +61,7 @@ export const bar: Mark = {
     const val = (hz ? ctx.x : ctx.y) as LinearScale;
     const keys = shaped.visible.map((j) => shaped.series[j]!);
     const inner = bandScale(keys, [0, cat.bandwidth], 0.1, 0);
-    // colorBy numeric field: aggregate it per (category, series) like the bars, bucket via ctx.q.
-    const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
-    const q = (ctx as unknown as { q?(v: number): number | null }).q;
-    const rows = new Map<string, number[]>();
-    if (cb)
-      for (const row of spec.data) {
-        const v = row[cb];
-        if (typeof v !== "number") continue;
-        const k =
-          String(row[spec.x]) + "\0" + (spec.series === null ? "" : String(row[spec.series]));
-        (rows.get(k) ?? rows.set(k, []).get(k)!).push(v);
-      }
-    const red = ctx.agg(spec.aggregate);
+    const cvOf = colorVals(spec);
     let marks = "";
     let hits = "";
     for (const c of items(spec, shaped)) {
@@ -87,7 +74,7 @@ export const bar: Mark = {
       const [x, y, w, h] = hz ? [lo, pos, len, th] : [pos, lo, th, len];
       const cname = shaped.categories[c.ci]!;
       const ser = shaped.series[c.si]!;
-      const cv = cb ? red(rows.get(cname + "\0" + ser) ?? []) : null;
+      const cv = cvOf(cname, ser);
       const d = {
         "data-key": key(ser, cname),
         "data-c": c.ci,
@@ -98,8 +85,9 @@ export const bar: Mark = {
         "data-y": c.v,
         "data-neg": c.v < 0,
         "data-tone": ctx.tone(c.v),
-        "data-q": cv === null || !q ? null : q(cv),
+        "data-q": cv === null ? null : ctx.q(cv),
         "data-other": cname === OTHER,
+        "data-total": shaped.totals[c.ci], // waterfall running total: neutral colour
       };
       marks += el("rect", {
         "data-maya": "mark",
@@ -109,19 +97,7 @@ export const bar: Mark = {
         width: r(w),
         height: r(h),
       });
-      if (w < MIN || h < MIN) {
-        const gw = Math.max(w, MIN);
-        const gh = Math.max(h, MIN);
-        hits += el("rect", {
-          "data-maya": "hit",
-          ...d,
-          x: r(x - (gw - w) / 2),
-          y: r(y - (gh - h) / 2),
-          width: r(gw),
-          height: r(gh),
-          fill: "transparent",
-        });
-      }
+      hits += hit(d, x, y, w, h);
       if (spec.labels) {
         // Inside when it fits, else outside the bar end (collisions are dropped by ctx.label).
         const text = ctx.fmt(spec.y, c.v);

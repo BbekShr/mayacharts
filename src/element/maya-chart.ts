@@ -259,7 +259,7 @@ export class MayaChart extends HTMLElement {
     if (this.spec?.select) return;
     const b = (e.target as Element).closest("[data-maya=legend] button");
     if (!b) return;
-    const k = b.getAttribute("data-key") ?? b.textContent ?? ""; // ponytail: textContent fallback until core emits data-key
+    const k = b.getAttribute("data-key") ?? "";
     const hidden = new Set(this.#state.view.hidden);
     if (hidden.has(k)) hidden.delete(k);
     else if (this.shadowRoot!.querySelectorAll("[data-maya=legend] [aria-pressed=true]").length > 1)

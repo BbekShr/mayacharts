@@ -6,7 +6,7 @@ const rng = (n: number, from = 0) => Array.from({ length: n }, (_, i) => i + fro
 const S = rng(8)
   .map((n) => `[data-s="${n}"]{--c:var(--maya-series-${n + 1})}`)
   .join("");
-// Ramp: 10 steps, 20% floor. ponytail: only steps >= 8 reach 3:1; values are also text everywhere.
+// Ramp: 10 steps, 20% floor (about 32% in dark mode, see --b). ponytail: only steps >= 8 reach 3:1; values are also text everywhere.
 const Q = rng(10)
   .map((n) => `[data-q="${n}"]{--q:${Math.round(20 + (n * 80) / 9)}%}`)
   .join("");
@@ -37,7 +37,9 @@ export const css =
   ":is(.maya-legend,.maya-crumbs) button:focus-visible,.maya-reset:focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
   "i{width:10px;height:10px;border-radius:3px;background:var(--c)}" +
   "[data-maya=ramp]{display:flex;align-items:center;gap:6px}" +
-  "[data-maya=ramp] i{width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 20%,var(--maya-bg)),var(--maya-accent))}" +
+  "[data-maya=ramp] i{width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 20%,var(--b)),var(--maya-accent))}" +
+  // Ramp floor: the background, lifted toward the accent in dark mode so low steps stay visible.
+  "[data-q],[data-maya=ramp] i{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
   "[data-maya=tone] span{display:inline-flex;align-items:center;gap:6px}" +
   ".maya-reset{position:absolute;top:4px;right:4px;border:1px solid var(--maya-grid);border-radius:99px;padding:2px 10px;background:var(--maya-bg)}" +
   ".maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;align-self:flex-start;margin:0 0 8px;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
@@ -52,9 +54,9 @@ export const css =
   ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}" +
   "[data-maya=grid] *{stroke:var(--maya-grid);shape-rendering:crispEdges}" +
   S +
-  "[data-other]{--c:var(--maya-fg-muted)}" +
+  "[data-other],[data-total]{--c:var(--maya-fg-muted)}" +
   "[data-tone=good]{--c:var(--maya-good)}[data-tone=bad]{--c:var(--maya-bad)}" +
-  "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--maya-bg))}" +
+  "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0}" +
   "[data-dir=h] [data-neg]{transform-origin:100% 0}" +

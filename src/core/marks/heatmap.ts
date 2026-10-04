@@ -1,7 +1,5 @@
-import { el, esc, key, r } from "../svg.ts";
+import { el, esc, hit, key, r } from "../svg.ts";
 import type { BandScale, Mark } from "../types.ts";
-
-const MIN = 24;
 
 /** x = column category, series = row category; ramp legend; labels default on at >= 24 px. */
 export const heatmap: Mark = {
@@ -34,7 +32,7 @@ export const heatmap: Mark = {
       const d = {
         "data-key": key(ser, col),
         "data-c": n,
-        "data-x": col,
+        "data-x": ctx.fmt(spec.x, col),
         "data-series": ser,
         "data-y": v,
         "data-f": ctx.fmt(spec.y, v),
@@ -48,20 +46,8 @@ export const heatmap: Mark = {
         width: r(w),
         height: r(h),
       });
-      if (w < MIN || h < MIN) {
-        const gw = Math.max(w, MIN);
-        const gh = Math.max(h, MIN);
-        hits += el("rect", {
-          "data-maya": "hit",
-          ...d,
-          x: r(x - (gw - w) / 2),
-          y: r(y - (gh - h) / 2),
-          width: r(gw),
-          height: r(gh),
-          fill: "transparent",
-        });
-      }
-      if (spec.labels !== false && w >= MIN && h >= MIN)
+      hits += hit(d, x, y, w, h);
+      if (spec.labels !== false && w >= 24 && h >= 24)
         ctx.label(x + w / 2, y + h / 2, ctx.fmt(spec.y, v), "center");
     }
     const legend =

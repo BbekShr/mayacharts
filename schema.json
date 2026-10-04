@@ -45,7 +45,8 @@
       "description": "Order categories by total across all series (hidden ones too)."
     },
     "limit": {
-      "type": "number",
+      "type": "integer",
+      "minimum": 1,
       "description": "Keep the top N categories by total; the rest roll up into a final \"Other\"."
     },
     "x": {
@@ -70,7 +71,7 @@
     },
     "series": {
       "type": "string",
-      "description": "Splits rows into series (heatmap: the row category). bar line area heatmap."
+      "description": "Splits rows into series (heatmap: the row category). bar line area scatter heatmap."
     },
     "path": {
       "type": "array",
@@ -177,7 +178,28 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Localised UI strings with `{0}` placeholders."
+      "description": "Localised UI strings with `{0}` placeholders.",
+      "propertyNames": {
+        "enum": [
+          "noData",
+          "other",
+          "back",
+          "reset",
+          "showing",
+          "drilledInto",
+          "zoomedTo",
+          "selected",
+          "selectionCleared",
+          "chartOf",
+          "firstOf",
+          "measures",
+          "crumbs",
+          "positive",
+          "negative",
+          "above",
+          "below"
+        ]
+      }
     },
     "locale": {
       "type": "string",
@@ -265,13 +287,14 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Colours by series value."
+          "description": "Colours by series value.",
+          "maxProperties": 8
         }
       ],
       "description": "Palette or colours by series value."
     },
     "colorBy": {
-      "oneOf": [
+      "anyOf": [
         {
           "type": "string",
           "enum": ["sign"]
@@ -288,7 +311,8 @@
         },
         {
           "type": "string",
-          "description": "A numeric field."
+          "description": "A numeric field.",
+          "minLength": 1
         }
       ],
       "description": "Tone by sign of y, by a target, or a ramp by a numeric field. Not with `series`."
@@ -298,7 +322,32 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Theme token overrides (CSS values, allowlisted)."
+      "description": "Theme token overrides (CSS values, allowlisted).",
+      "propertyNames": {
+        "enum": [
+          "font",
+          "fontSize",
+          "fg",
+          "fgMuted",
+          "grid",
+          "bg",
+          "accent",
+          "radius",
+          "tooltipBg",
+          "tooltipFg",
+          "focus",
+          "good",
+          "bad",
+          "series1",
+          "series2",
+          "series3",
+          "series4",
+          "series5",
+          "series6",
+          "series7",
+          "series8"
+        ]
+      }
     },
     "grid": {
       "type": "boolean",

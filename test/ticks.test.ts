@@ -21,7 +21,7 @@ describe("niceTicks", () => {
     it(`[${a}, ${b}]`, () => {
       const t = niceTicks(a, b);
       expect(t.values.length).toBeGreaterThanOrEqual(3);
-      expect(t.values.length).toBeLessThanOrEqual(7);
+      expect(t.values.length).toBeLessThanOrEqual(8);
       expect(t.domain[0]).toBeLessThanOrEqual(a);
       expect(t.domain[1]).toBeGreaterThanOrEqual(b);
       expect(t.values[0]).toBe(t.domain[0]);
@@ -32,5 +32,11 @@ describe("niceTicks", () => {
   }
   it("crossing zero includes 0", () => {
     expect(niceTicks(-37, 82).values).toContain(0);
+  });
+});
+
+describe("niceTicks crossing zero", () => {
+  it("pads the short side by less than a step (stacked negatives)", () => {
+    expect(niceTicks(-40, 510).domain).toEqual([-100, 600]);
   });
 });

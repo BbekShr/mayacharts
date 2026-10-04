@@ -80,4 +80,11 @@ describe("performance envelope", () => {
     expect(err).toBeInstanceOf(MayaSpecError);
     expect((err as MayaSpecError).code).toBe("too-many-marks");
   });
+
+  it("too-many-marks counts drawn marks (scatter: one per row)", () => {
+    const data = Array.from({ length: 6000 }, (_, i) => ({ x: i % 3, y: i }));
+    expect(() => renderParts({ type: "scatter", x: "x", y: "y", data } as never)).toThrow(
+      /6000 marks/,
+    );
+  });
 });

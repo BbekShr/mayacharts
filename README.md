@@ -32,7 +32,7 @@ HTML:
 JavaScript:
 
 ```js
-import "mayacharts/dist/element.js";
+import "mayacharts/element";
 const chart = document.querySelector("maya-chart");
 chart.spec = { type: "bar", data, x: "month", y: "revenue", series: "region", stack: true };
 chart.data = newRows; // animates the update
@@ -52,14 +52,14 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Data
 
-| Field       | Type                           | Default    | Meaning                                                                  |
-| ----------- | ------------------------------ | ---------- | ------------------------------------------------------------------------ |
-| `$schema`   | string                         | -          | Ignored; for editors and LLMs                                            |
-| `type`      | enum                           | required   | `bar line area scatter heatmap waterfall treemap sunburst sankey hexmap` |
-| `data`      | Row[]                          | required   | Row objects                                                              |
-| `aggregate` | sum / mean / count / min / max | sum        | How rows sharing a (category, series) combine                            |
-| `sort`      | asc / desc                     | data order | Categories by total across all series                                    |
-| `limit`     | number                         | -          | Keep top N categories; rest roll up into "Other"                         |
+| Field       | Type                           | Applies to            | Default    | Meaning                                                                  |
+| ----------- | ------------------------------ | --------------------- | ---------- | ------------------------------------------------------------------------ |
+| `$schema`   | string                         | all                   | -          | Ignored; for editors and LLMs                                            |
+| `type`      | enum                           | all                   | required   | `bar line area scatter heatmap waterfall treemap sunburst sankey hexmap` |
+| `data`      | Row[]                          | all                   | required   | Row objects                                                              |
+| `aggregate` | sum / mean / count / min / max | all                   | sum        | How rows sharing a (category, series) combine; `count` counts non-null y |
+| `sort`      | asc / desc                     | bar line area heatmap | data order | Categories by total across all series                                    |
+| `limit`     | positive integer               | bar line area heatmap | -          | Keep top N categories; rest roll up into "Other"                         |
 
 ### Encoding
 
@@ -67,7 +67,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | ------------ | ---------------- | ------------------------------------------------- | ----------------------------------------- |
 | `x`          | field            | all but path types                                | Category; scatter numeric x; hexmap state |
 | `y`          | field or field[] | all                                               | Value; array adds measure toggle          |
-| `series`     | field            | bar line area heatmap                             | Split into series; heatmap row category   |
+| `series`     | field            | bar line area scatter heatmap                     | Split into series; heatmap row category   |
 | `path`       | field[]          | treemap sunburst sankey; bar/line/area with drill | Hierarchy outer to inner; replaces `x`    |
 | `size`       | field            | scatter                                           | Bubble area (sqrt scale)                  |
 | `name`       | field            | scatter                                           | Point identity and tooltip title          |
@@ -92,26 +92,26 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Interaction
 
-| Field     | Type           | Meaning                                                                  |
-| --------- | -------------- | ------------------------------------------------------------------------ |
-| `tooltip` | boolean        | Hover/keyboard tooltip (default true)                                    |
-| `legend`  | boolean        | Legend; clicking toggles series                                          |
-| `drill`   | boolean        | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop |
-| `select`  | true / "multi" | Click/Enter/legend selects marks; Escape clears. Not with drill          |
-| `zoom`    | boolean        | Drag to zoom (line, area, scatter); Reset, double-click, Escape restore  |
-| `animate` | boolean        | Animate updates (default true)                                           |
+| Field     | Type           | Applies to                                         | Default                   | Meaning                                                                  |
+| --------- | -------------- | -------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------ |
+| `tooltip` | boolean        | all                                                | true                      | Hover/keyboard tooltip                                                   |
+| `legend`  | boolean        | all                                                | true when `series` is set | Legend; clicking toggles series                                          |
+| `drill`   | boolean        | treemap sunburst sankey; bar line area with `path` | false                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop |
+| `select`  | true / "multi" | all but sankey                                     | off                       | Click/Enter/legend selects marks; Escape clears. Not with drill          |
+| `zoom`    | boolean        | line area scatter                                  | false                     | Drag to zoom; Reset, double-click, Escape restore                        |
+| `animate` | boolean        | all (element only)                                 | true                      | Animate updates                                                          |
 
 ### Style
 
-| Field     | Type                          | Meaning                                                      |
-| --------- | ----------------------------- | ------------------------------------------------------------ |
-| `colors`  | string[] or {[series]: color} | Max 8; slot assignment stable across updates                 |
-| `colorBy` | "sign" / {target: n} / field  | Tone by sign or target, or ramp by numeric field             |
-| `theme`   | {[token]: css}                | Theme token overrides (CSS values, allowlisted)              |
-| `grid`    | boolean                       | Grid lines perpendicular to the value axis (default true)    |
-| `xAxis`   | boolean                       | Bottom axis (default true)                                   |
-| `yAxis`   | boolean                       | Left axis (default true)                                     |
-| `table`   | boolean                       | Visually hidden data table for screen readers (default true) |
+| Field     | Type                          | Applies to                 | Default       | Meaning                                                             |
+| --------- | ----------------------------- | -------------------------- | ------------- | ------------------------------------------------------------------- |
+| `colors`  | string[] or {[series]: color} | all                        | theme palette | Max 8; slot assignment stable across updates                        |
+| `colorBy` | "sign" / {target: n} / field  | all but heatmap and sankey | -             | Tone by sign or target, or ramp by numeric field. Not with `series` |
+| `theme`   | {[token]: css}                | all                        | {}            | Theme token overrides (CSS values, allowlisted)                     |
+| `grid`    | boolean                       | all                        | true          | Grid lines perpendicular to the value axis                          |
+| `xAxis`   | boolean                       | all                        | true          | Bottom axis                                                         |
+| `yAxis`   | boolean                       | all                        | true          | Left axis                                                           |
+| `table`   | boolean                       | all                        | true          | Visually hidden data table for screen readers                       |
 
 ## Canonical examples
 
@@ -248,11 +248,11 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 Each module extends the core with chart types and shares the same spec, theme, tooltip, a11y, and animation.
 
-| Module                 | Types                           | Size (gzip) |
-| ---------------------- | ------------------------------- | ----------- |
-| `mayacharts/hierarchy` | treemap, sunburst               | 3 KB        |
-| `mayacharts/flow`      | sankey                          | 2.5 KB      |
-| `mayacharts/geo`       | hexmap (50 US states + DC + PR) | 3.5 KB      |
+| Module                 | Types                           | Size budget (gzip) |
+| ---------------------- | ------------------------------- | ------------------ |
+| `mayacharts/hierarchy` | treemap, sunburst               | 3 KB               |
+| `mayacharts/flow`      | sankey                          | 2.5 KB             |
+| `mayacharts/geo`       | hexmap (50 US states + DC + PR) | 3.5 KB             |
 
 ## Global build
 
@@ -261,7 +261,7 @@ Paste this anywhere:
 ```html
 <script
   src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"
-  integrity="sha384-..."
+  integrity="sha384-REPLACE_AT_RELEASE"
   crossorigin="anonymous"
 ></script>
 <script>
@@ -270,6 +270,8 @@ Paste this anywhere:
   document.body.appendChild(chart);
 </script>
 ```
+
+The `integrity` value above is a placeholder: the real SRI hash is published with each release. Pin the version in the URL when you use it.
 
 Or inline it in a sandbox:
 
@@ -289,13 +291,15 @@ Opt-in: `drill`, `select`, `zoom`. Two-way: `el.view`, `el.selected`.
 
 ### Keyboard
 
-| Key                      | Action                                   |
-| ------------------------ | ---------------------------------------- |
-| Tab                      | Navigate marks                           |
-| Arrow Up/Down/Left/Right | Navigate to adjacent mark                |
-| Enter                    | Activate drill or select on focused mark |
-| Space                    | Pin tooltip                              |
-| Escape                   | Clear drill, selection, or zoom          |
+| Key              | Action                                                                                                     |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| Tab              | Move focus between the chart, legend buttons, measure toggle, breadcrumb and Reset chip                    |
+| Arrow Left/Right | Previous/next category (same series); on the measure toggle, previous/next measure                         |
+| Arrow Up/Down    | Previous/next series in the same category; on the measure toggle, previous/next measure                    |
+| Home / End       | First/last measure (measure toggle)                                                                        |
+| Enter            | Drill into the focused mark, else select it                                                                |
+| Space            | Pin or unpin the tooltip on the focused mark                                                               |
+| Escape           | First of: unpin tooltip, cancel brush in progress, clear selection, reset zoom window, pop one drill level |
 
 Touch: show tooltip on pointerup if moved < 4 px.
 
@@ -304,7 +308,7 @@ Touch: show tooltip on pointerup if moved < 4 px.
 Four events, all `bubbles: true, composed: true`:
 
 - `maya-select {selected: Sel[], target: (Sel & {value}) | null}` - mark selected
-- `maya-view {measure, drill, window, hidden}` - measure toggled, drilled, or zoomed
+- `maya-view {measure, drill, window, hidden}` - measure toggled, drilled, zoomed, or a legend series hidden (user actions only; `window` is the zoom slice)
 - `maya-error {code, path, message}` - spec error (cancelable; preventDefault() hides error box)
 - `maya-render {}` - render complete (ThoughtSpot: call `viz.events.emitRenderCompletedEvent()`)
 
@@ -338,7 +342,7 @@ img.onload = () => {
   canvas.getContext("2d").drawImage(img, 0, 0);
   canvas.toBlob((blob) => saveAs(blob, "chart.png"));
 };
-img.src = "data:image/svg+xml;base64," + btoa(svg);
+img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 ```
 
 ## Frameworks
@@ -346,7 +350,7 @@ img.src = "data:image/svg+xml;base64," + btoa(svg);
 **React 19**
 
 ```jsx
-import "mayacharts/dist/element.js";
+import "mayacharts/element";
 export const Chart = (props) => (
   <maya-chart onmaya-select={(e) => console.log(e.detail)} {...props} />
 );
@@ -356,7 +360,7 @@ export const Chart = (props) => (
 
 ```jsx
 import { useRef } from "react";
-import "mayacharts/dist/element.js";
+import "mayacharts/element";
 export const Chart = ({ spec }) => {
   const ref = useRef(null);
   return <maya-chart ref={ref} spec={JSON.stringify(spec)} />;
@@ -367,7 +371,9 @@ export const Chart = ({ spec }) => {
 
 ```vue
 <script setup>
-import "mayacharts/dist/element.js";
+// vite.config: vue({ template: { compilerOptions: { isCustomElement: (t) => t === "maya-chart" } } })
+import { ref } from "vue";
+import "mayacharts/element";
 const spec = ref({ type: "bar", ... });
 </script>
 <template>
@@ -379,7 +385,7 @@ const spec = ref({ type: "bar", ... });
 
 ```svelte
 <script>
-  import "mayacharts/dist/element.js";
+  import "mayacharts/element";
   let spec = { type: "bar", ... };
 </script>
 <maya-chart {spec} onmaya-select={(e) => console.log(e.detail)} />
@@ -457,22 +463,22 @@ maya-chart {
 
 ### Theme tokens
 
-| Token     | CSS variable                       | Light default         | Dark default          | Colours                   |
-| --------- | ---------------------------------- | --------------------- | --------------------- | ------------------------- |
-| font      | --maya-font                        | system-ui, sans-serif | system-ui, sans-serif | Axis labels, tooltip text |
-| fontSize  | --maya-font-size                   | 12px                  | 12px                  | All text                  |
-| fg        | --maya-fg                          | #1f2328               | #e6edf3               | Axis labels, legend       |
-| fgMuted   | --maya-fg-muted                    | #656d76               | #9198a1               | Grid, breadcrumb          |
-| grid      | --maya-grid                        | #1f2328 12%           | #e6edf3 12%           | Grid lines                |
-| bg        | --maya-bg                          | #fff                  | #0d1117               | Tooltip background        |
-| accent    | --maya-accent                      | oklch(.6 .17 255)     | oklch(.6 .17 255)     | Focus outline, series 1   |
-| radius    | --maya-radius                      | 2px                   | 2px                   | Mark border radius        |
-| tooltipBg | --maya-tooltip-bg                  | --maya-fg             | --maya-fg             | Tooltip background        |
-| tooltipFg | --maya-tooltip-fg                  | --maya-bg             | --maya-bg             | Tooltip text              |
-| focus     | --maya-focus                       | --maya-accent         | --maya-accent         | Keyboard focus ring       |
-| good      | --maya-good                        | oklch(.68 .15 160)    | oklch(.68 .15 160)    | colorBy: "sign" positive  |
-| bad       | --maya-bad                         | oklch(.68 .17 30)     | oklch(.68 .17 30)     | colorBy: "sign" negative  |
-| series1-8 | --maya-series-1 to --maya-series-8 | oklch presets         | oklch presets         | Series colours (max 8)    |
+| Token     | CSS variable                       | Light default                        | Dark default          | Colours                         |
+| --------- | ---------------------------------- | ------------------------------------ | --------------------- | ------------------------------- |
+| font      | --maya-font                        | system-ui, sans-serif                | system-ui, sans-serif | Axis labels, tooltip text       |
+| fontSize  | --maya-font-size                   | 12px                                 | 12px                  | All text                        |
+| fg        | --maya-fg                          | #1f2328                              | #e6edf3               | Title, value labels             |
+| fgMuted   | --maya-fg-muted                    | #656d76                              | #9198a1               | Axis text, legend, breadcrumb   |
+| grid      | --maya-grid                        | fg at 12% (color-mix)                | fg at 12% (color-mix) | Grid lines                      |
+| bg        | --maya-bg                          | #fff                                 | #0d1117               | Background, tooltip text        |
+| accent    | --maya-accent                      | oklch(.6 .17 255)                    | oklch(.6 .17 255)     | Focus outline, series 1         |
+| radius    | --maya-radius                      | 2px                                  | 2px                   | Mark border radius              |
+| tooltipBg | --maya-tooltip-bg                  | --maya-fg                            | --maya-fg             | Tooltip background              |
+| tooltipFg | --maya-tooltip-fg                  | --maya-bg                            | --maya-bg             | Tooltip text                    |
+| focus     | --maya-focus                       | --maya-accent                        | --maya-accent         | Keyboard focus ring             |
+| good      | --maya-good                        | #1a7f37                              | #3fb950               | colorBy positive / above target |
+| bad       | --maya-bad                         | #cf222e                              | #f85149               | colorBy negative / below target |
+| series1-8 | --maya-series-1 to --maya-series-8 | 1: --maya-accent; 2-8: oklch presets | same as light         | Series colours (max 8)          |
 
 Brand palette example:
 
@@ -528,12 +534,14 @@ See [STABILITY.md](STABILITY.md) for the full accessibility and performance enve
 
 ## Performance
 
-| Scenario      | Marks | Render time | Output (gzip) |
-| ------------- | ----- | ----------- | ------------- |
-| 5k bars       | 5000  | ~40 ms      | ~2.5 KB       |
-| 5k scatter    | 5000  | ~50 ms      | ~3.5 KB       |
-| Heatmap 50x52 | 2600  | ~25 ms      | ~2 KB         |
-| Bar limit: 20 | 20    | ~5 ms       | ~1.5 KB       |
+Upper bounds asserted by `test/perf.test.ts` for `render()` in Node (test thresholds, not measured timings; output is uncompressed SVG string length):
+
+| Scenario                 | Marks | Render time threshold | Output threshold |
+| ------------------------ | ----- | --------------------- | ---------------- |
+| 5k-category bar          | 5000  | < 400 ms              | < 2.2 MB         |
+| 5k-point scatter         | 5000  | < 200 ms              | -                |
+| Heatmap 50x52            | 2600  | < 100 ms              | -                |
+| 20k-row bar, `limit: 20` | 21    | < 400 ms              | < 200 KB         |
 
 Animation skips above 1500 marks. 5000-mark hard cap suggests `limit` or `aggregate`. Table capped at 1000 rows.
 

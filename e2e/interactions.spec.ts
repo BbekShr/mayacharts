@@ -78,15 +78,13 @@ const radios = (page: Page) => page.locator("#monthly-line .maya-ctl [role=radio
 test.describe("measure toggle", () => {
   test("click morphs marks and fires maya-view {measure:1}", async ({ page }) => {
     await open(page);
+    // Timing-free: the marks' committed geometry changes (the morph itself is WAAPI on top).
+    const dot = page.locator("#monthly-line [data-maya=mark]").first();
+    const before = await dot.getAttribute("cy");
     await radios(page).nth(1).scrollIntoViewIfNeeded();
     await radios(page).nth(1).click();
     await expect(radios(page).nth(1)).toHaveAttribute("aria-checked", "true");
-    await expect
-      .poll(() => animating(page.locator("#monthly-line [data-maya=mark]")), {
-        intervals: [0, 10, 10, 20],
-        timeout: 1500,
-      })
-      .toBeGreaterThan(0);
+    await expect(dot).not.toHaveAttribute("cy", before!);
     const ev = await events(page, "monthly-line", "maya-view");
     expect(ev).toHaveLength(1);
     expect(ev[0].detail.measure).toBe(1);

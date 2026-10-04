@@ -92,7 +92,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Value field; an array adds a measure toggle, first one active.
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
-  /** Splits rows into series (heatmap: the row category). bar line area heatmap.
+  /** Splits rows into series (heatmap: the row category). bar line area scatter heatmap.
    * @example series: "region" */
   series?: Field<R>;
   /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area with `drill` (replaces `x`).
@@ -325,8 +325,6 @@ export interface Cell {
 export interface Shaped {
   /** Category labels (String of the raw value; `OTHER` for the limit roll-up). */
   categories: string[];
-  /** Raw category values, parallel to `categories` (event payloads, keys). */
-  raw: unknown[];
   /** Waterfall: true where the category is in `spec.totals`. Parallel to `categories`. */
   totals: boolean[];
   /** Series keys in first-appearance order ([""] when there is no series field). */

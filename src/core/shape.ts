@@ -24,7 +24,6 @@ export function agg(kind: Aggregate): { add(v: number): void; value(): number | 
 type R = readonly [si: number, v: unknown];
 interface Cat {
   label: string;
-  raw: unknown;
   rows: R[];
   vals: (number | null)[];
 }
@@ -45,7 +44,7 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
     let j = si.get(sk);
     if (j === undefined) si.set(sk, (j = series.push(sk) - 1));
     let cat = ci.get(c);
-    if (!cat) ci.set(c, (cat = { label: c, raw: row[s.x], rows: [], vals: [] }));
+    if (!cat) ci.set(c, (cat = { label: c, rows: [], vals: [] }));
     cat.rows.push([j, row[s.y]]);
   }
   // aggregate: one reducer per (category, series); pairs with no row stay null.
@@ -80,7 +79,6 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
     const rest = cats.filter((c) => !top.has(c));
     const other: Cat = {
       label: OTHER,
-      raw: rest[0]!.raw,
       rows: rest.flatMap((c) => c.rows),
       vals: [],
     };
@@ -127,11 +125,24 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
   });
   return {
     categories: cats.map((c) => c.label),
-    raw: cats.map((c) => c.raw),
     totals: cats.map((c) => s.totals.includes(c.label)),
     series,
     visible,
     cells,
     extent: [lo, hi],
   };
+}
+
+/** colorBy field aggregated per (category, series) like the marks; null without a field colorBy. */
+export function colorVals(s: ResolvedSpec): (c: string, ser: string) => number | null {
+  const cb = typeof s.colorBy === "string" && s.colorBy !== "sign" ? s.colorBy : null;
+  const m = new Map<string, ReturnType<typeof agg>>();
+  if (cb)
+    for (const row of s.data) {
+      const v = row[cb];
+      if (typeof v !== "number") continue;
+      const k = String(row[s.x]) + "\0" + (s.series === null ? "" : String(row[s.series]));
+      (m.get(k) ?? m.set(k, agg(s.aggregate)).get(k)!).add(v);
+    }
+  return (c, ser) => m.get(c + "\0" + ser)?.value() ?? null;
 }
