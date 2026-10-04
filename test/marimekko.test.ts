@@ -21,6 +21,28 @@ describe("marimekko", () => {
     expect(m[0]).toContain('data-y="10"');
     expect(m[0]).toContain("(33%)");
   });
+  it("shows each segment's share of its column, with the series name when tall", () => {
+    const s = svg(spec);
+    expect(s).toMatch(/data-ink="">33%</);
+    expect(s).toMatch(/data-ink="">67%</);
+    expect(s).toMatch(/data-ink="n">Tools</);
+  });
+  it("labels columns with name and share of the grand total", () => {
+    const s = svg(spec);
+    expect(s).toMatch(/data-col="">North · 17%</);
+    expect(s).toMatch(/data-col="">East · 50%</);
+  });
+  it("draws a 0 to 100% scale with gridlines inside the plot", () => {
+    const s = svg(spec);
+    for (const t of ["0%", "25%", "50%", "75%", "100%"]) expect(s).toContain(`data-ax="">${t}<`);
+    const g = s.match(/<g data-maya="grid"[^>]*>(.*?)<\/g>/)![1]!;
+    expect(g.match(/<line /g)).toHaveLength(5);
+  });
+  it("drops labels gracefully when narrow or turned off", () => {
+    const narrow = renderParts(spec, { width: 120, height: 200 }).svg;
+    expect(narrow).not.toMatch(/data-col="">North/);
+    expect(svg({ ...spec, labels: false })).not.toContain("data-ink");
+  });
   it("column width follows column total, segments fill the height", () => {
     const m = marks(svg(spec));
     expect(num(m[2]!, "width") / num(m[0]!, "width")).toBeCloseTo(2, 1);

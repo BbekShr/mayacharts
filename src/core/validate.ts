@@ -58,9 +58,9 @@ export const MAX_MARKS = 5000;
 const w = (s: string) => s.split(" ");
 const S: Record<string, "string" | "boolean"> = Object.fromEntries([
   ...w("$schema x y2 series size name title description locale currency").map((k) => [k, "string"]),
-  ...w("stack horizontal labels legend tooltip drill zoom grid xAxis yAxis table animate").map(
-    (k) => [k, "boolean"],
-  ),
+  ...w(
+    "stack horizontal labels legend tooltip drill drillOut zoom grid xAxis yAxis table animate",
+  ).map((k) => [k, "boolean"]),
 ]);
 /** Every spec key (schema.json is tested against this). */
 export const KEYS = [
@@ -79,7 +79,7 @@ const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} drillOut:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -705,7 +705,9 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const measures = typeof spec.y === "string" ? [spec.y] : [...spec.y];
   const measure = Math.min(view.measure ?? 0, measures.length - 1);
   const full = [...(spec.path ?? [])];
-  const drilled = spec.drill ? (view.drill ?? []).slice(0, Math.max(0, full.length - 1)) : [];
+  // Flows need two levels left to draw, everything else one.
+  const keep = spec.type === "sankey" || spec.type === "chord" ? 2 : 1;
+  const drilled = spec.drill ? (view.drill ?? []).slice(0, Math.max(0, full.length - keep)) : [];
   const path = full.slice(drilled.length);
   const f = spec.format;
   const entries = <T>(o: Readonly<Partial<Record<string, T>>> | undefined) =>
@@ -723,6 +725,9 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     y2: spec.y2 ?? null,
     path,
     drilled,
+    hue: drilled.length
+      ? [...new Set(spec.data.map((r) => String(r[full[0]!])))].indexOf(drilled[0]!)
+      : null,
     window: view.window && view.window.length === 4 ? view.window : null,
     size: spec.size ?? null,
     name: spec.name ?? null,
@@ -740,7 +745,11 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     title: spec.title ?? null,
     description: spec.description ?? null,
     legend:
-      spec.legend ?? (spec.series !== undefined || spec.y2 !== undefined || spec.type === "waffle"),
+      spec.legend ??
+      (spec.series !== undefined ||
+        spec.y2 !== undefined ||
+        spec.type === "waffle" ||
+        spec.type === "hexmap"),
     tooltip: spec.tooltip ?? true,
     drill: spec.drill ?? false,
     select: spec.select ?? false,

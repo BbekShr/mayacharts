@@ -35,9 +35,9 @@ describe("scatter", () => {
     expect(circles(renderParts(s).svg)).toHaveLength(3);
   });
 
-  it("default radius is 4 and every small point gets a 12px hit", () => {
+  it("default radius is 5 and every small point gets a 12px hit", () => {
     const svg = renderParts(base).svg;
-    expect(circles(svg).map((c) => attr(c, "r"))).toEqual(["4", "4", "4"]);
+    expect(circles(svg).map((c) => attr(c, "r"))).toEqual(["5", "5", "5"]);
     expect(circles(svg, "hit").map((c) => attr(c, "r"))).toEqual(["12", "12", "12"]);
   });
 
@@ -108,8 +108,17 @@ describe("scatter", () => {
     expect(circles(renderParts(s).svg).map((c) => attr(c, "data-q"))).toEqual(["0", "9"]);
   });
 
+  it("hover guides: a cross group with two lines and two value pills; none without points", () => {
+    const svg = renderParts(base).svg;
+    const g = /<g data-maya="cross">(.*?)<\/g>/.exec(svg)![1]!;
+    expect(g.match(/<line data-g=/g)).toHaveLength(2);
+    expect(g.match(/<text data-g=/g)).toHaveLength(2);
+    expect(attr(circles(svg)[1]!, "data-gx")).toBe("2");
+    expect(renderParts({ ...base, data: [] }).svg).not.toContain("data-g=");
+  });
+
   it("snapshot", () =>
     expect(circles(renderParts(base).svg).join("")).toMatchInlineSnapshot(
-      `"<circle data-maya="mark" data-key="~0" data-c="0" data-s="0" data-x="1" data-series="" data-y="2" data-f="2" r="4" cx="39.6" cy="296"/><circle data-maya="mark" data-key="~1" data-c="1" data-s="0" data-x="2" data-series="" data-y="4" data-f="4" r="4" cx="333.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-s="0" data-x="3" data-series="" data-y="3" data-f="3" r="4" cx="628" cy="153"/>"`,
+      `"<circle data-maya="mark" data-key="~0" data-c="0" data-s="0" data-x="1" data-series="" data-y="2" data-f="2" data-gx="1" data-gy="2" r="5" cx="39.6" cy="296"/><circle data-maya="mark" data-key="~1" data-c="1" data-s="0" data-x="2" data-series="" data-y="4" data-f="4" data-gx="2" data-gy="4" r="5" cx="333.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-s="0" data-x="3" data-series="" data-y="3" data-f="3" data-gx="3" data-gy="3" r="5" cx="628" cy="153"/>"`,
     ));
 });

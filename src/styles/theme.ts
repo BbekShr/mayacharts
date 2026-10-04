@@ -34,6 +34,66 @@ const C =
     .join("");
 const B =
   "border:0;background:none;padding:0;font:inherit;color:var(--maya-fg-muted);cursor:pointer";
+// radial
+const RADIAL =
+  ":where(path[data-polar]){stroke:var(--maya-bg);stroke-width:1.5;stroke-linejoin:round}" +
+  "[data-maya=grid] circle[data-disc]{fill:var(--maya-fg);fill-opacity:.035;stroke:none}" +
+  "text[data-total]{font-variant-numeric:tabular-nums;pointer-events:none}" +
+  "[data-maya=labels] [data-tip]{fill:var(--maya-fg-muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}" +
+  "[data-maya=labels] [data-name]{font-size:11px;font-weight:600}";
+
+// marimekko
+const MEKKO =
+  "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600;font-variant-numeric:tabular-nums}[data-maya=labels] [data-ink=n]{font-weight:500;opacity:.78}" +
+  "[data-maya=labels] [data-ax]{fill:var(--maya-fg-muted);stroke:none;font-size:11px}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
+  "[data-maya=marks]:has([data-active]) [data-mm]:not([data-active],[data-lit]){opacity:.62}";
+
+// flow
+// Sankey and chord: the outer column is neutral slate (`data-neu` 0..3, no `data-s`), links take a
+// palette colour. Hovering a node (`data-n`) lights every link and node on a path through it
+// (`data-a` lists the node numbers whose hover lights it) and dims the rest; hovering a link lifts
+// it and keeps every node bright.
+// ponytail: path lighting covers the first 32 nodes.
+const lift = rng(32)
+  .map((i) => `M:has([data-n="${i}"][data-active]) [data-a~="${i}"]{opacity:var(--l,1)}`)
+  .join("");
+const FLOW =
+  [55, 42, 30, 20]
+    .map((p, i) => `[data-neu="${i}"]{--c:color-mix(in oklab,var(--maya-fg) ${p}%,var(--maya-bg))}`)
+    .join("") +
+  (
+    "[data-maya=link]{opacity:.45;--l:.85}" +
+    "M:has([data-active]) [data-maya=link]{opacity:.08}" +
+    lift +
+    "M [data-maya=link][data-active]{opacity:.85}M:has([data-maya=link][data-active]) [data-maya=mark]{opacity:1}"
+  ).replaceAll("M", "[data-maya=marks]") +
+  "rect[data-n]{rx:4px}" +
+  "path[data-maya][data-arc]{stroke:var(--c);stroke-width:4;stroke-linejoin:round}path[data-arc][data-active]{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 12%)}" +
+  "[data-maya=labels] [data-nm]{font-weight:600}[data-maya=labels] [data-v]{fill:var(--maya-fg-muted);font-weight:400;font-size:.9em}";
+
+// hexmap
+// Hexes: stronger ramp (36% floor), same-colour round-join stroke for soft corners, ring on hover.
+const HEX = 'path[data-key^="g~"]';
+const HEXMAP =
+  `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--c);stroke-width:1.5;stroke-linejoin:round}` +
+  `${HEX}:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2.5}` +
+  // Dimmed cells lose their fill, so their dark-step labels revert to the normal text colour.
+  `svg:has(${HEX}[data-active]) [data-dark]{fill:var(--maya-fg)}` +
+  "[data-maya=grid] [data-none]{stroke-opacity:.7;shape-rendering:auto}" +
+  "[data-hex] i{width:120px;height:10px;border-radius:3px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}";
+
+// scatter
+// SCAT = a chart whose cross group holds guide text (scatter only).
+const SCAT = "svg:has([data-maya=cross] text) ";
+const SCATTER =
+  `${SCAT}circle[data-maya=mark]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 58%,transparent);stroke:color-mix(in oklab,var(--c,var(--maya-series-1)) 70%,var(--maya-fg));stroke-width:1.25;transform-origin:center;transition:opacity .25s var(--maya-ease),fill .2s,stroke-width .2s,transform .2s var(--maya-ease)}` +
+  `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
+  `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
+  "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
+  "[data-on][data-maya=cross] [data-g]{transition:transform .25s var(--maya-ease)}" +
+  "[data-maya=cross] line[data-g]{stroke-dasharray:3 3;stroke-opacity:.7}" +
+  "[data-maya=cross] text{font-size:11px;font-weight:600;fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:4;stroke-linejoin:round}";
+
 export const css =
   L +
   `@supports not (color:light-dark(#000,#fff)){:host,.maya-root{${D}}@media (prefers-color-scheme:dark){:host,.maya-root{${N}}}}` +
@@ -47,7 +107,7 @@ export const css =
   ".maya-legend [aria-pressed=false]{opacity:.5}.maya-legend [aria-pressed=false] i{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}" +
   ":is(.maya-legend,.maya-crumbs) button:focus-visible,.maya-reset:focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
   "i{width:10px;height:10px;border-radius:3px;background:var(--c)}" +
-  "[data-maya=ramp]{display:flex;align-items:center;gap:6px}" +
+  "[data-maya=ramp]{display:flex;align-items:center;gap:6px}[data-maya=ramp] b{font-weight:500;color:var(--maya-fg);margin-inline-end:4px}" +
   "[data-maya=ramp] i{width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 20%,var(--b)),var(--maya-accent))}" +
   // Ramp floor: the background, lifted toward the accent in dark mode so low steps stay visible.
   "[data-q],[data-maya=ramp] i{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
@@ -81,7 +141,7 @@ export const css =
   "[data-maya=area]{fill:color-mix(in oklab,var(--c) 18%,transparent);stroke:none}[data-stack] [data-maya=area]{fill:color-mix(in oklab,var(--c) 45%,var(--maya-bg))}" +
   A +
   "stop{stop-color:var(--c)}" +
-  "[data-maya=link]{fill:var(--c);opacity:.3}[data-maya=link][data-active]{opacity:.6}" +
+  "[data-maya=link]{fill:var(--c)}" + // opacity: see FLOW
   // Dumbbell connector, kpi parts, y2 legend swatch.
   "line[data-maya=link]{stroke:var(--c,var(--maya-fg-muted));opacity:1}" +
   "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
@@ -92,8 +152,16 @@ export const css =
   "[data-maya=labels] [data-ring]{fill:var(--maya-fg-muted)}[data-maya=marks] text{fill:var(--maya-fg)}" +
   "[data-maya=sort]{cursor:pointer}[data-maya=sort] rect{fill:transparent}[data-maya=sort] text{font-weight:600}[data-maya=sort]:focus-visible{outline:2px solid var(--maya-focus)}" +
   ":is([data-maya=line],[data-maya=area]){transition:opacity .25s}[data-maya=marks]:has(path[data-active]) path[data-maya=line]:not([data-active]){opacity:.25}" +
-  "[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
+  ":not(circle)[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
+  // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
+  // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.
+  "circle[data-depth][data-maya]{fill:none;stroke:color-mix(in oklab,var(--c) var(--t,100%),var(--maya-bg));transition:stroke .5s}" +
+  'circle[data-tint="2"]{--t:70%}circle[data-tint="3"]{--t:48%}' +
+  "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
+  'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
   "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text){opacity:.4}" +
+  '[data-maya=marks]:has(circle[data-depth="0"][data-active]) [data-maya=mark]{opacity:1}' +
+  'svg[data-drill] :is([data-maya=mark],[data-maya=hit]),circle[data-depth="0"][data-s]{cursor:pointer}' +
   "[data-maya=marks]:has([data-selected]) [data-maya=mark]:not([data-selected]){opacity:.35}" +
   "[data-selected]{stroke:var(--maya-fg);stroke-width:2}" +
   H +
@@ -102,7 +170,7 @@ export const css =
   "[data-maya=labels] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}[data-maya=labels] [data-dark]{fill:var(--maya-bg)}[data-maya=hit]{stroke:none}" +
   "[data-maya=cross] line{stroke:var(--maya-fg-muted);stroke-opacity:.55}" +
   "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke;pointer-events:none}" +
-  ".maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +
+  ".maya-svg:focus{outline:none}.maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +
   ".maya-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}" +
   ".maya-probe{position:absolute;width:0;height:0;pointer-events:none;anchor-name:--maya-probe}" +
   ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none}" +
@@ -113,6 +181,11 @@ export const css =
   ".maya-tip [data-v]{margin-inline-start:auto;padding-inline-start:12px;font-weight:600;color:var(--maya-tooltip-fg)}.maya-tip [data-on]{color:var(--maya-tooltip-fg)}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
   "@container (max-width:320px){.maya-legend:has(button){display:none}.maya-title{font-size:12px}}" +
+  RADIAL +
+  MEKKO +
+  FLOW +
+  HEXMAP +
+  SCATTER +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +
-  "@media (forced-colors:active){.maya-svg,i{forced-color-adjust:none}[data-maya=mark]{stroke:CanvasText;stroke-width:1}[data-tone=bad]{stroke-dasharray:4 2}}" +
+  "@media (forced-colors:active){.maya-svg,i{forced-color-adjust:none}[data-maya=mark]:not(circle[data-depth]){stroke:CanvasText;stroke-width:1}[data-tone=bad]{stroke-dasharray:4 2}}" +
   "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}";

@@ -4,6 +4,47 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## 0.3.1 - Unreleased
+
+Smooth drilling on every drillable chart, an easier way back up, and a redesign of the sunburst, radial, marimekko, sankey, chord, hexmap and scatter charts. One new spec field (`drillOut`); everything else is a new default.
+
+### Added
+
+- `drillOut` (default true): with `drill`, a click on empty chart space goes back up one level. Set it to false to pop only with the breadcrumb, Back and Escape.
+- Sunburst centre disk with the current branch's name and total (`text.total` at the root). Clicking it, or Enter on it, goes back up one level.
+- Sunburst tooltip shows each slice's share of its parent (`text.shareOf`), and the top ring's share of the total.
+
+### Changed
+
+- Sunburst draws every level, sorted largest first, and a drill zooms: the clicked branch becomes the centre and its descendants sweep around to fill the circle while the rest fold away at its edges. Clicking a slice drills straight to it, however deep.
+- Sunburst slices are stroked circles whose dash is the arc, so drill and data updates animate in angle space through WAAPI in every engine (no path morph or crossfade).
+- Deeper sunburst rings are lighter tints of their branch's colour, with a 1 px gap between slices.
+- Sunburst names are on by default (`labels: false` hides them) and turn to run along the radius when they do not fit across the ring. Labels fade in after a drill lands.
+- `ctx.label` takes an optional rotation for marks that fit their own labels.
+- Drilling zooms on every rect chart: on a drill the branch's bar, stack or tile grows to fill the plot while its children grow out of it and the rest is pushed off the edges, clipped to the plot; going back up reverses it. Value labels fade in once the marks land; axes swap at once.
+- Treemap names are on by default (`labels: false` hides them), and a drilled treemap keeps its branch's colour.
+- Drillable marks show a pointer cursor; the svg carries `data-drill` while a click can go one level deeper.
+- Sankey node and link keys hold the level in the whole path, so nodes and links that survive a drill move and morph instead of being redrawn.
+- Path pop-in (links, ribbons, hexes) lands on the mark's CSS opacity instead of flashing to full opacity.
+
+- Size budgets (gzip): global 46 KB (was 42), element 37.5 KB (was 36), theme.css 4 KB (was 3.25), hierarchy 3.75 KB (was 3.5), flow 3.5 KB (was 3). The redesigned charts and drill motion account for the growth.
+
+- Chart redesign, defaults only (no spec changes):
+  - Radial: the centre shows the measure and its grand total (counting up), grid rings with labels in a clear wedge, rounded bar ends, hairline gaps between stacked segments, bar totals at the tips and names inside long bars; a whole stack lights on hover.
+  - Marimekko: each segment shows its share of the column (and the series name when there is room), columns read "West · 25%", and a 0 to 100% scale with gridlines sits on the left. Labels are on unless `labels: false`.
+  - Sankey: the outermost column is neutral grey, the next column carries the palette and every flow takes the colour of its branch; labels show the value and sit outside the outer columns; nodes are ordered to reduce crossings; hovering a node lights every flow on a path through it.
+  - Chord: the same colour rule (sources grey, targets coloured), thicker rounded group arcs, labels with values, ribbons that follow the rim (no more pinched notches), and hover lights a group's ribbons.
+  - Hexmap: a colour legend by default (`legend: false` hides it), a stronger ramp, values under the state codes when they fit, a ring on hover, and states without data as dashed outlines.
+  - Scatter: larger translucent points with a ring, bubbles drawn largest first, and dashed hover guides to both axes with the values at the axes.
+  - Colour ramp legends (scatter `colorBy`, hexmap) start with the field's title.
+
+### Fixed
+
+- Sankey: clicking a node drilled into its level number and showed "No data". Only the outermost nodes and their links drill, by name.
+- Sankey and chord never drill to a single level they cannot draw (chord, with its two levels, does not drill).
+- Line and area: a click on a category drilled nothing, because the band hit has no key. It now drills that category.
+- A pointer drill no longer moves focus onto a mark (which drew a focus box); the chart keeps focus, so Escape still works. Keyboard drills still focus the first mark.
+
 ## 0.3.0 - 2026-10-04
 
 Motion and interaction polish. No spec changes; every existing spec renders as before, with new defaults for look and feel.

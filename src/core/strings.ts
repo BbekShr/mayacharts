@@ -39,6 +39,10 @@ export const TEXT = {
   descending: "descending",
   /** kpi bullet: {0} = share of target, {1} = target. */
   ofTarget: "{0} of target {1}",
+  /** Sunburst centre at the root. */
+  total: "Total",
+  /** Sunburst tooltip share: {0} = percent, {1} = parent name. */
+  shareOf: "{0} of {1}",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

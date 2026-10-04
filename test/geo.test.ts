@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MayaSpecError } from "../src/core/validate.ts";
-import { render } from "../src/index.ts";
+import { render, renderShell } from "../src/index.ts";
 import "../src/geo.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
@@ -20,11 +20,39 @@ const marks = (svg: string) =>
 const attr = (s: string, a: string) => new RegExp(` ${a}="([^"]*)"`).exec(s)?.[1];
 
 describe("hexmap", () => {
-  it("draws 52 backdrop hexes and a mark per state present", () => {
+  it("draws a dashed empty hex for each missing state and a mark per state present", () => {
     const svg = render(base);
     const g = /<g data-maya="grid">(.*?)<\/g>/.exec(svg)![1]!;
-    expect(g.match(/<path /g)).toHaveLength(52);
+    expect(g.match(/<path /g)).toHaveLength(49);
+    expect(g).toContain("data-none");
     expect(marks(svg).map((m) => attr(m, "data-key"))).toEqual(["g~CA", "g~TX", "g~NY"]);
+  });
+  it("labels each hex with code and value, and flips dark steps", () => {
+    const svg = render(base);
+    const l = /<g data-maya="labels">(.*?)<\/g>/.exec(svg)![1]!;
+    expect(l).toMatch(/>TX<\/text>/);
+    expect(l).toMatch(/>50<\/text>/);
+    expect(l).toMatch(/data-dark=""[^>]*>TX</);
+  });
+  it("drops values then codes on a tiny map", () => {
+    const big = spec([
+      { s: "CA", v: 3_900_000 },
+      { s: "TX", v: 4_300_000 },
+    ]);
+    const l = (w: number) =>
+      /<g data-maya="labels">(.*?)<\/g>/.exec(
+        render({ ...big, format: "compact" }, { width: w, height: w / 2 }),
+      )![1]!;
+    expect(l(900)).toMatch(/>4.3M<\/text>/);
+    expect(l(300)).not.toMatch(/>[0-9.]+M<\/text>/);
+    expect(l(100)).not.toMatch(/>TX<\/text>/);
+  });
+  it("shows a ramp legend by default, off with legend:false", () => {
+    expect(render(base)).not.toContain('data-maya="ramp"');
+    expect(renderShell(base)).toMatch(
+      /data-maya="ramp"[^>]*><b>v<\/b><span>10<\/span><i><\/i><span>50<\/span>/,
+    );
+    expect(renderShell({ ...base, legend: false })).not.toContain('data-maya="ramp"');
   });
   it("merges code and full-name duplicates by summing", () => {
     const m = marks(
@@ -79,12 +107,14 @@ describe("hexmap", () => {
   });
   it("snapshot", () =>
     expect(marks(render(base)).join("\n")).toMatchInlineSnapshot(`
-    "<path data-maya="mark" data-key="g~CA" data-c="0" data-s="0" data-x="California" data-series="" data-f="10" data-y="10" data-q="0" d="M130.76 149.26L130.76 170.74L112.15 181.49L93.55 170.74L93.55 149.26L112.15 138.51Z"/>
-    <path data-maya="mark" data-key="g~TX" data-c="1" data-s="0" data-x="Texas" data-series="" data-f="50" data-y="50" data-q="9" d="M269.33 252.11L269.33 273.6L250.72 284.34L232.11 273.6L232.11 252.11L250.72 241.37Z"/>
-    <path data-maya="mark" data-key="g~NY" data-c="2" data-s="0" data-x="New York" data-series="" data-f="30" data-y="30" data-q="5" d="M447.48 80.69L447.48 102.17L428.87 112.91L410.26 102.17L410.26 80.69L428.87 69.94Z"/>"
-  `));
+      "<path data-maya="mark" data-key="g~CA" data-c="0" data-s="0" data-x="California" data-series="" data-f="10" data-y="10" data-q="0" d="M129.87 149.77L129.87 170.23L112.15 180.46L94.44 170.23L94.44 149.77L112.15 139.54Z"/>
+      <path data-maya="mark" data-key="g~TX" data-c="1" data-s="0" data-x="Texas" data-series="" data-f="50" data-y="50" data-q="9" d="M268.43 252.63L268.43 273.09L250.72 283.31L233 273.09L233 252.63L250.72 242.4Z"/>
+      <path data-maya="mark" data-key="g~NY" data-c="2" data-s="0" data-x="New York" data-series="" data-f="30" data-y="30" data-q="5" d="M446.59 81.2L446.59 101.66L428.87 111.89L411.16 101.66L411.16 81.2L428.87 70.97Z"/>"
+    `));
   it("marks state labels on dark ramp steps with data-dark", () => {
-    const t = render(base).match(/<text [^>]*data-in[^>]*>[A-Z]{2}</g) ?? [];
+    const t = (render(base).match(/<text [^>]*data-in[^>]*>[A-Z]{2}</g) ?? []).filter(
+      (x) => !x.includes("opacity"),
+    );
     expect(t).toHaveLength(3);
     expect(t.map((x) => x.includes("data-dark"))).toEqual([false, true, false]);
   });

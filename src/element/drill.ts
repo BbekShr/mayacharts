@@ -1,7 +1,8 @@
 /*
  * Drill (T10b). Same reduce/mount contract as measure.ts.
- * Click/Enter on a mark pushes its branch; breadcrumb (Parts.crumbs, `.maya-crumbs`), Back
- * and Escape (priority 5) pop. Persistence: resets when type/x/path change, popping to the
+ * Click/Enter on a mark pushes its branch (a sunburst slice: every level down to it); the
+ * sunburst centre, a click on empty chart space (unless `drillOut: false`), breadcrumb
+ * (Parts.crumbs, `.maya-crumbs`), Back and Escape (priority 5) pop. Persistence: resets when type/x/path change, popping to the
  * deepest branch that still exists in the data.
  */
 import { t } from "../core/strings.ts";
@@ -17,12 +18,15 @@ const same = (a: readonly string[] = [], b: readonly string[] = []) =>
 const withDrill = (s: State, drill: readonly string[]): State =>
   same(s.view.drill, drill) ? s : { view: { ...s.view, drill }, selected: [] };
 
+/** Flows (sankey, chord) need two levels left to draw; everything else one. */
+const FLOW = ["sankey", "chord"];
+
 export const reduce = (s: State, e: DrillEvent): State => {
   const cur = s.view.drill ?? [];
   if (e.type === "pop") return withDrill(s, cur.slice(0, Math.max(0, e.depth)));
   if (e.type === "drill") {
-    const n = e.spec?.path?.length ?? 0;
-    return e.spec?.drill && cur.length < n - 1 ? withDrill(s, [...cur, e.value]) : s;
+    const n = (e.spec?.path?.length ?? 0) - (FLOW.includes(e.spec?.type ?? "") ? 2 : 1);
+    return e.spec?.drill && cur.length < n ? withDrill(s, [...cur, e.value]) : s;
   }
   if (e.type !== "spec" || !cur.length) return s;
   const { prev, next } = e;
@@ -43,11 +47,7 @@ export const reduce = (s: State, e: DrillEvent): State => {
   return withDrill(s, keep);
 };
 
-/** Raw category the mark stands for, decoded from its data-key (grammar: core/svg.ts). */
-const branchOf = (key: string, depth: number): string | undefined => {
-  const p = key.split("~");
-  const raw = p[0] === "h" ? (p[1 + depth] ?? p[p.length - 1]) : p[1];
-  if (raw === undefined) return;
+const decode = (raw: string) => {
   try {
     return decodeURIComponent(raw);
   } catch {
@@ -55,9 +55,32 @@ const branchOf = (key: string, depth: number): string | undefined => {
   }
 };
 
+/**
+ * Raw category the mark stands for, decoded from its data-key (grammar: core/svg.ts).
+ * Flow keys are `n~level~name` and `k~level~source~target` (level in the whole path); only
+ * the outermost level on screen drills.
+ */
+const branchOf = (key: string, depth: number, type = ""): string | undefined => {
+  const p = key.split("~");
+  const raw = FLOW.includes(type)
+    ? p[1] === String(depth) && (p[0] === "n" || p[0] === "k")
+      ? p[2]
+      : undefined
+    : p[0] === "h"
+      ? (p[1 + depth] ?? p[p.length - 1])
+      : p[1];
+  return raw === undefined ? undefined : decode(raw);
+};
+
+/** Not a target of its own: a click here means "go back up" (drillOut). */
+const BUSY =
+  "[data-maya=mark],[data-maya=hit],[data-maya=link],[data-maya=legend],button,a,input,select,.maya-ctl,.maya-tip,.maya-table";
+
 export const mount = (host: Host): Handlers => {
-  /** After the next paint: focus the first mark (push) or the parent mark (pop). */
-  let want: { first: true } | { value: string } | undefined;
+  /** After the next paint: focus the first mark (push) or the parent mark (pop); after a
+   * pointer drill only the chart, so Escape works without a focus ring jumping onto a mark. */
+  let want: { first: true } | { value: string } | { svg: true } | undefined;
+  let ptr = false;
 
   const marks = () =>
     [...host.root.querySelectorAll<SVGElement>("[data-maya=mark][data-key]")].filter(
@@ -76,22 +99,38 @@ export const mount = (host: Host): Handlers => {
     if (depth >= cur.length) return false;
     const next = reduce(s, { type: "pop", depth });
     if (next === s) return false;
-    want = { value: cur[depth]! };
+    want = ptr ? { svg: true } : { value: cur[depth]! };
     host.commit(next);
     say(next);
     return true;
   };
 
-  const push = (mark: Element): boolean => {
+  const push = (m: Element): boolean => {
     const spec = host.spec();
-    const key = mark.getAttribute("data-key");
+    // A keyless band hit (line, area) stands for its category's first keyed mark.
+    const c = m.getAttribute("data-c");
+    const mark = m.hasAttribute("data-key")
+      ? m
+      : c === null
+        ? null
+        : host.root.querySelector(`[data-maya=mark][data-key][data-c="${CSS.escape(c)}"]`);
+    const key = mark?.getAttribute("data-key");
+    if (!mark) return false;
     if (!spec?.drill || !key || mark.hasAttribute("data-other")) return false;
     const s = host.state();
-    const value = branchOf(key, (s.view.drill ?? []).length);
-    if (value === undefined) return false;
-    const next = reduce(s, { type: "drill", value, spec });
+    const depth = (s.view.drill ?? []).length;
+    // Sunburst centre: the current branch; activating it goes back up.
+    if (spec.type === "sunburst" && mark.getAttribute("data-depth") === "0") return pop(depth - 1);
+    // A hierarchy key holds the whole branch: push every level down to the mark.
+    const p = key.split("~");
+    const values = p[0] === "h" ? p.slice(1 + depth).map(decode) : [];
+    const first = branchOf(key, depth, spec.type);
+    if (first === undefined) return false;
+    let next = s;
+    for (const value of values.length ? values : [first])
+      next = reduce(next, { type: "drill", value, spec });
     if (next === s) return false;
-    want = { first: true };
+    want = ptr ? { svg: true } : { first: true };
     host.commit(next);
     say(next);
     return true;
@@ -100,9 +139,15 @@ export const mount = (host: Host): Handlers => {
   const click = (e: Event) => {
     const el = e.target as Element | null;
     const crumb = el?.closest(".maya-crumbs [data-depth]");
-    if (crumb) return void pop(Number(crumb.getAttribute("data-depth")));
-    const m = el?.closest("[data-maya=mark],[data-maya=hit]");
-    if (m) push(m);
+    ptr = (e as MouseEvent).detail > 0; // 0: a keyboard-activated crumb button
+    if (crumb) pop(Number(crumb.getAttribute("data-depth")));
+    else {
+      const m = el?.closest("[data-maya=mark],[data-maya=hit]");
+      if (m) push(m);
+      else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false)
+        pop((host.state().view.drill ?? []).length - 1);
+    }
+    ptr = false;
   };
   host.root.addEventListener("click", click);
 
@@ -113,13 +158,18 @@ export const mount = (host: Host): Handlers => {
       if (!want) return;
       const all = marks();
       const m =
-        "first" in want
-          ? all[0]
-          : all.find(
-              (x) =>
-                branchOf(x.getAttribute("data-key")!, host.state().view.drill?.length ?? 0) ===
-                (want as { value: string }).value,
-            );
+        "svg" in want
+          ? undefined
+          : "first" in want
+            ? all[0]
+            : all.find(
+                (x) =>
+                  branchOf(
+                    x.getAttribute("data-key")!,
+                    host.state().view.drill?.length ?? 0,
+                    host.spec()?.type,
+                  ) === (want as { value: string }).value,
+              );
       want = undefined;
       if (m) {
         if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");

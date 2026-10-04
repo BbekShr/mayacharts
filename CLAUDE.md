@@ -32,7 +32,7 @@ Screenshot baselines live in `e2e/__screenshots__/{darwin,linux}/<browser>/`. CI
 - `src/core/marks/*.ts` - bar (also waterfall), line (also area), scatter, heatmap, kpi, dumbbell, ridgeline, beeswarm, parallel, table. Each is a `Mark { noun, axes?, check?, draw }` using only `MarkCtx` closures (`fmt label tone q agg fail t`).
 - `src/hierarchy.ts`, `flow.ts`, `geo.ts`, `radial.ts` - optional modules (treemap/sunburst/marimekko/waffle, sankey/chord, US hexmap, radial bars). They may import only `registry.ts`, `svg.ts`, `scale.ts`, `ticks.ts` and types; never render/validate/shape/format (they are bundled separately).
 - `src/element/` - `maya-chart.ts` (element, events, `view`/`selected`, keydown dispatcher), `animate.ts` (key diff, WAAPI entrance/update/exit, stagger, path morph), `tooltip.ts`, `html.ts` (Trusted Types policy `mayacharts`), and the interactions `measure.ts`, `drill.ts`, `select.ts`, `zoom.ts` as pure reducers plus `mount(host)` handlers.
-- `src/styles/theme.ts` - the whole stylesheet as one string (budget 3.25 KB gzip). Tokens `--maya-*`.
+- `src/styles/theme.ts` - the whole stylesheet as one string (budget 4 KB gzip). Tokens `--maya-*`.
 - `site/` - demo and gallery (synthetic data in `site/data.ts`; never copy data from elsewhere). `docs/spec.html`, `site/errors.html` (one anchor per error code; error messages link here).
 - `schema.json`, `llms.txt` - kept in sync with `types.ts` by `test/schema.test.ts`.
 
@@ -41,7 +41,7 @@ Screenshot baselines live in `e2e/__screenshots__/{darwin,linux}/<browser>/`. CI
 - Ponytail: smallest mechanism that works; no abstraction with one implementation; mark every deliberate ceiling with `// ponytail:` and a line in NON-FEATURES.md "Known ceilings".
 - No runtime dependencies. No function-valued spec options. No inline `style=` attributes in the element path (CSSOM property writes are fine). Every HTML sink goes through `html()`.
 - Every value that reaches markup goes through `esc()`. Data-keyed structures use `Map`; spec-map lookups use `Object.hasOwn`. CSS values from the spec pass the allowlist in `validate.ts`.
-- Animation is transform/opacity only, keyed by `data-key`; never tween SVG geometry attributes. Two exceptions, both in `animate.ts`: a changed path morphs through CSS `d` where the browser interpolates it (else crossfade), and a changed number in a text mark counts up. See the render.ts DESIGN NOTE.
+- Animation is transform/opacity only, keyed by `data-key`; never tween SVG geometry attributes. Three exceptions, all in `animate.ts`: a changed path morphs through CSS `d` where the browser interpolates it (else crossfade), a changed number in a text mark counts up, and sunburst slices (stroked circles, `pathLength` 360) tween `r`, `stroke-width` and the stroke dash as CSS properties so a drill sweeps in angle space. See the render.ts DESIGN NOTE.
 - Core stays pure: no `window`/`document` (a test deletes them and imports core).
 - `x` is always the category and `y` the value, whatever the orientation. `format` and `titles` are keyed by field.
 - Changing the spec means updating, together: `types.ts` JSDoc, `validate.ts` (`ONLY`/`HINTS`), README spec tables, `schema.json`, `llms.txt`, `docs/spec.html`, CHANGELOG. `test/schema.test.ts` catches drift.

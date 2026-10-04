@@ -43,9 +43,50 @@ describe("radial", () => {
   });
   it("draws rings and a label per month at 390x300", () => {
     const s = renderParts(spec, { width: 390, height: 300 }).svg;
-    expect(tags(s, "circle").length).toBeGreaterThan(0);
-    expect(tags(s, "circle").length).toBeLessThanOrEqual(3);
+    const rings = tags(s, "circle").filter((c) => !c.includes("data-disc"));
+    expect(rings.length).toBeGreaterThan(0);
+    expect(rings.length).toBeLessThanOrEqual(3);
     expect(tags(s, "text[^>]*data-cat").length).toBe(12);
+  });
+  it("centre shows the title and the grand total", () => {
+    const s = renderParts({ ...spec, titles: { v: "Volume" } }, { width: 600, height: 480 }).svg;
+    const t = s.match(/<text[^>]*data-total[^>]*>([^<]*)</)![1];
+    expect(t).toBe(String(data.reduce((a, d) => a + d.v, 0)));
+    expect(s).toMatch(/data-ring[^>]*>Volume</);
+    expect(svg(plain([{ m: "A", v: 5 }]))).toMatch(/data-ring[^>]*>v</);
+  });
+  it("categories share data-c so a stack lights together", () => {
+    const m = marks(svg(spec));
+    expect(m[0]).toContain('data-c="0"');
+    expect(m[1]).toContain('data-c="0"');
+    expect(m[2]).toContain('data-c="1"');
+  });
+  it("outermost ring is labelled and clear of the bars' angular span", () => {
+    const s = renderParts(spec, { width: 600, height: 480 }).svg;
+    expect(tags(s, "text[^>]*data-ring").length).toBeGreaterThan(1);
+  });
+  it("many categories run labels along the radius", () => {
+    const many = Array.from({ length: 24 }, (_, i) => ({ m: `Category ${i}`, v: 1 + i }));
+    const s = svg(plain(many.concat(many.map((d) => ({ ...d, r: "b" }))), { series: "r" }));
+    expect(tags(s, "text[^>]*data-cat")[0]).toContain("rotate(");
+    expect(s).not.toContain("NaN");
+  });
+  it("stack totals sit at the tips; one series names its bars inside", () => {
+    const s = renderParts(spec, { width: 600, height: 480 }).svg;
+    expect(tags(s, "text[^>]*data-(tip|name)")).toHaveLength(12);
+    expect(s).toContain("data-tip");
+    const one = renderParts(plain(data.filter((d) => d.r === "N")), {
+      width: 600,
+      height: 480,
+    }).svg;
+    expect(tags(one, "text[^>]*data-cat")).toHaveLength(0);
+    expect(tags(one, "text[^>]*data-name").length).toBeGreaterThan(0);
+  });
+  it("the centre total is a keyed text mark that is not a category", () => {
+    const t = tags(svg(spec), 'text data-maya="mark"');
+    expect(t).toHaveLength(1);
+    expect(t[0]).toContain('data-key="t"');
+    expect(t[0]).not.toContain("data-c=");
   });
   it("thin sectors get hit paths", () => {
     const tiny = { ...spec, data: [...data, { m: "Z", r: "N", v: 0.001 }] };

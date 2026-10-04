@@ -14,7 +14,7 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Box, boxOf, type Intro, patch } from "./animate.ts";
+import { type Intro, patch, type PatchOptions } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import * as measure from "./measure.ts";
@@ -42,7 +42,7 @@ export class MayaChart extends HTMLElement {
   #resized = false;
   #off: (() => void) | undefined;
   #tip: Tooltip | undefined;
-  #origin: Box | undefined;
+  #zoom: PatchOptions["zoom"];
   #vars = new Set<string>();
   #err = "";
   #drawn = false;
@@ -225,10 +225,13 @@ export class MayaChart extends HTMLElement {
   /** User-initiated state change: re-render, then tell the page what changed. */
   #commit(next: State, target: MayaSelectDetail["target"]): void {
     const prev = this.#state;
-    // Drilling: the clicked mark is where entering marks start from.
-    const am = this.#tip?.active();
-    if (am && JSON.stringify(prev.view.drill) !== JSON.stringify(next.view.drill))
-      this.#origin = boxOf(am);
+    // Drilling zooms into the branch entered, or out of the branch left. Flows keep their
+    // nodes in place across a drill (stable keys), so they morph instead.
+    const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
+    const flow = this.spec?.type === "sankey" || this.spec?.type === "chord";
+    if (flow) this.#zoom = undefined;
+    else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
+    else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
     this.#state = next;
     this.#schedule();
     if (JSON.stringify(prev.view) !== JSON.stringify(next.view)) this.#emit("maya-view", next.view);
@@ -352,11 +355,11 @@ export class MayaChart extends HTMLElement {
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
     patch(box, parts.svg, (this.#drawn || !!intro) && !still, {
       intro,
-      origin: this.#origin,
+      zoom: this.#zoom,
       after: () => this.#tip?.refresh(),
       instant: resized,
     });
-    this.#origin = undefined;
+    this.#zoom = undefined;
     this.#drawn = true;
     this.#restore(focus);
     for (const h of Object.values(this.#ix ?? {})) h.painted?.();

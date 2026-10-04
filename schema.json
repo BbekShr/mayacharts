@@ -215,6 +215,8 @@
           "below",
           "vs",
           "ofTarget",
+          "total",
+          "shareOf",
           "sortedBy",
           "ascending",
           "descending"
@@ -269,6 +271,10 @@
     "drill": {
       "type": "boolean",
       "description": "Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop."
+    },
+    "drillOut": {
+      "type": "boolean",
+      "description": "With `drill`: a click on empty chart space goes back up one level. Default true."
     },
     "select": {
       "oneOf": [

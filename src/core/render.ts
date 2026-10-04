@@ -19,7 +19,7 @@
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
  *   (hierarchy, flow, geo) call registry.register() on import. A Mark is
  *   { noun, axes?(spec, shaped): [bottom, left], check?(spec, fail), draw(ctx) }.
- *   MarkCtx closures: fmt(field, v, step?), label(x, y, text, place), tone(v), agg(kind),
+ *   MarkCtx closures: fmt(field, v, step?), label(x, y, text, place, rotate?), tone(v), agg(kind),
  *   fail(code, path, headline, ...details), t(key, ...args); plus spec, shaped, width,
  *   height, plot, x (bottom-axis scale), y (left-axis scale). Modules import only
  *   registry.ts, svg.ts, scale.ts, ticks.ts and types.
@@ -50,7 +50,8 @@
  *   <svg class="maya-svg" viewBox="0 0 W H" width="W" height="H" role="img"
  *        aria-labelledby="maya-t" aria-describedby="maya-d" [tabindex="0" in parts only]
  *        data-plot="x y w h" data-n="categories" [data-xd="lo hi" data-yd="lo hi" for
- *        linear-x types instead of data-n] [data-dir="h" when horizontal]>
+ *        linear-x types instead of data-n] [data-dir="h" when horizontal]
+ *        [data-drill when a click can drill one level further]>
  *     <title id="maya-t">  <desc id="maya-d">
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
@@ -74,6 +75,12 @@
  *                       y2 title; hits are 24px squares round each point.
  *                       Line: point circles are marks (hidden until active) plus one
  *                       keyless full-height band hit per category.
+ *                       Radial: data-c is the category (a stack lights together); the
+ *                       centre total is a text mark keyed `t` with no data-c (counts up).
+ *                       Scatter: data-gx/data-gy (formatted x, y) fill the hover guides in
+ *                       the cross group. Sankey/chord: data-n (node index), data-a (node
+ *                       indices whose hover lights this link or node), data-neu (neutral
+ *                       outer-level step, no data-s).
  *   [data-maya="hit"]   same payload as its mark (incl. data-key). Emitted only when the
  *                       mark is narrower or shorter than 24px: the mark's rect grown to
  *                       >= 24px in that dimension, centered. fill="transparent".
@@ -89,14 +96,15 @@
  * Key grammar (svg.ts key(...parts)): each part encodeURIComponent'ed with `~` -> %7E,
  *   joined by `~`. Band `S~C`; line/area `l~S`/`a~S`; scatter `S~name(#n)` or index;
  *   bar y2 line `l~\u0000y2`, its points `\u0000y2~C` (NUL cannot be a series key prefix);
- *   hierarchy `h~p0~p1…`; sankey node `n~depth~name`, link `k~depth~src~dst`; hexmap
+ *   hierarchy `h~p0~p1…`; sankey node `n~depth~name`, link `k~depth~src~dst` (depth in the whole path, so a drill keeps them); hexmap
  *   `g~CODE`; limit roll-up category is the sentinel OTHER ("\u0000other").
  *   The element diffs marks by data-key (and tagName), never by index.
  *
  * CSS hooks theme.ts styles (interaction modules never touch theme.ts):
  *   .maya-ctl [role=radio][aria-checked]  .maya-crumbs  .maya-reset  .maya-err
- *   [data-maya=brush]  [data-maya=cross]  [data-maya=link]  [data-depth]  [data-selected]
- *   [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
+ *   [data-maya=brush]  [data-maya=cross] (scatter: guide lines + text pills, --x/--y)
+ *   [data-maya=link]  [data-depth]  [data-selected]
+ *   svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
  *   indicator; line point circles are hidden until active under `svg[data-n]`.
  *
@@ -112,7 +120,7 @@
  *
  * Animation contract (element/animate.ts): marks get
  *   `transform-box: fill-box; transform-origin: 0 0` from CSS. The element commits new
- *   geometry attributes immediately and animates transform/opacity, plus two exceptions:
+ *   geometry attributes immediately and animates transform/opacity, plus three exceptions:
  *     update: from translate(oldX-newX, oldY-newY) scale(oldW/newW, oldH/newH) to none,
  *             delayed by data-c (stagger, at most 320 ms across all categories)
  *     enter:  positive bar from translate(0, h) scale(1, 0); negative from scale(1, 0);
@@ -125,6 +133,14 @@
  *             crossfades out over the new one.
  *     text:   a text mark whose number changed counts to it with rAF, replacing digits in
  *             place so the formatter's separators survive (exception 2).
+ *     drill:  rect marks zoom (transform/opacity): in, the branch's marks map onto the plot,
+ *             children start inside the branch's box, the rest is pushed out; out reverses
+ *             it. The marks group is clipped to the plot meanwhile. Flows morph instead.
+ *     rings:  sunburst slices are `circle[pathLength=360]` whose stroke dash is the arc; they
+ *             tween the CSS properties r, stroke-width, stroke-dasharray and
+ *             stroke-dashoffset, which sweeps in angle space (exception 3). On a drill the
+ *             centre disk carries the drilled branch's key, so the clicked slice grows into
+ *             it; slices outside that branch fold to its nearer edge, entering ones unfold.
  *     first draw (no server-rendered svg): grid and axes fade in; marks enter by kind:
  *             "wipe" (clip-path inset on the marks group: line, area, sankey, ridgeline,
  *             parallel), "bloom" (rotate + scale of the marks group about the plot centre:
@@ -145,7 +161,8 @@
  *
  * Layout (layout.ts frame()): no text measurement exists in Node, so axis label widths are
  *   estimated as 0.6 em per code point (1 em for East-Asian-wide) * 12 + 8, value labels
- *   (ctx.label) as chars * 7.2 + 4. Labels are never rotated; band axes draw every nth label
+ *   (ctx.label) as chars * 7.2 + 4. Only a mark that fits its own label may rotate it (sunburst,
+ *   along the radius); axis labels are never rotated. Band axes draw every nth label
  *   (bottom: by width, left: 14 px per step); left band labels are cut at 40% of the width.
  *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
  *
@@ -266,7 +283,23 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
   const boxes: number[][] = [];
   let labels = "";
-  const label = (x: number, y: number, text: string, place: LabelPlace) => {
+  const label = (x: number, y: number, text: string, place: LabelPlace, rotate?: number) => {
+    // Rotated labels skip the overlap scan: the mark has already fitted them inside itself.
+    if (rotate !== undefined) {
+      labels += el(
+        "text",
+        {
+          x: r(x),
+          y: r(y),
+          transform: `rotate(${r(rotate)} ${r(x)} ${r(y)})`,
+          "text-anchor": "middle",
+          "dominant-baseline": "middle",
+          "data-in": true,
+        },
+        esc(text),
+      );
+      return true;
+    }
     const w = text.length * 7.2 + 4;
     const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
     const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
@@ -399,6 +432,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       ...f?.attrs,
       "data-dir": s.horizontal ? "h" : null,
       "data-stack": s.stack || null,
+      // A click can drill further (pointer cursor on marks).
+      "data-drill":
+        (s.drill && s.path.length > (s.type === "sankey" || s.type === "chord" ? 2 : 1)) || null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
       el("title", { id: sheet === null ? "maya-t" : null }, esc(titleText(s))) +
@@ -449,7 +485,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
             .join("") +
           `</div>`
         : hi > lo
-          ? `<div class="maya-legend" data-maya="ramp"><span>${esc(fmt(cb, lo))}</span><i></i><span>${esc(fmt(cb, hi))}</span></div>`
+          ? `<div class="maya-legend" data-maya="ramp"><b>${esc(s.titles.get(cb) ?? cb)}</b><span>${esc(fmt(cb, lo))}</span><i></i><span>${esc(fmt(cb, hi))}</span></div>`
           : "";
   return {
     svg,

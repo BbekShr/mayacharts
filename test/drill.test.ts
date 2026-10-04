@@ -3,6 +3,8 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import { reduce } from "../src/element/drill.ts";
 import { MODULES } from "../src/core/registry.ts";
+import "../src/hierarchy.ts";
+import "../src/flow.ts";
 import type { ChartSpec, State } from "../src/core/types.ts";
 
 const data = [
@@ -60,6 +62,16 @@ describe("drill reducer", () => {
     expect(reduce(s, ev(a, gone)).view.drill).toEqual(["West"]);
     const none = { ...a, data: [{ region: "East", state: "NY", city: "X", v: 1 }] };
     expect(reduce(s, ev(a, none)).view.drill).toEqual([]);
+  });
+  it("flows keep two levels on screen", () => {
+    const three = spec({ type: "sankey", path: ["region", "state", "city"] });
+    expect(reduce(st(), { type: "drill", value: "West", spec: three }).view.drill).toEqual([
+      "West",
+    ]);
+    const s1 = st(["West"]);
+    expect(reduce(s1, { type: "drill", value: "CA", spec: three })).toBe(s1);
+    const s0 = st();
+    expect(reduce(s0, { type: "drill", value: "West", spec: spec({ type: "chord" }) })).toBe(s0);
   });
   it("resets when drill is turned off", () => {
     expect(reduce(st(["West"]), ev(spec(), spec({ drill: false }))).view.drill).toEqual([]);
@@ -155,5 +167,57 @@ describe("drill in <maya-chart>", () => {
     marks(el)[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
     await frame();
     expect(el.view?.drill?.length).toBe(1);
+  });
+  const click = (e: Element) =>
+    e.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 }));
+  it("a click on empty chart space pops one level, unless drillOut is false", async () => {
+    const el = await mount(spec());
+    click(byCat(el, "West"));
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+    click(el.shadowRoot!.querySelector(".maya-svg")!);
+    await frame();
+    expect(el.view?.drill ?? []).toEqual([]);
+    el.spec = spec({ drillOut: false });
+    await frame();
+    click(byCat(el, "West"));
+    await frame();
+    click(el.shadowRoot!.querySelector(".maya-svg")!);
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+  });
+  it("line: a click on a category's band drills", async () => {
+    const el = await mount(spec({ type: "line" }));
+    const band = [...el.shadowRoot!.querySelectorAll("[data-maya=hit]")].find(
+      (h) => !h.hasAttribute("data-key") && h.getAttribute("data-c") === "0",
+    )!;
+    click(band);
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+  });
+  it("sunburst: a slice drills to its branch, the centre pops", async () => {
+    const el = await mount(spec({ type: "sunburst" }));
+    click(marks(el).find((m) => m.getAttribute("data-key") === "h~West~CA")!);
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+    click(marks(el).find((m) => m.getAttribute("data-depth") === "0")!);
+    await frame();
+    expect(el.view?.drill ?? []).toEqual([]);
+  });
+  it("sankey: an outer node drills by name, an inner one does not", async () => {
+    const rows = [
+      { region: "West", state: "CA", city: "LA", v: 5 },
+      { region: "West", state: "OR", city: "PDX", v: 3 },
+      { region: "East", state: "NY", city: "NYC", v: 4 },
+    ];
+    const el = await mount(spec({ type: "sankey", path: ["region", "state", "city"], data: rows }));
+    click(marks(el).find((m) => m.getAttribute("data-key") === "n~1~CA")!);
+    await frame();
+    expect(el.view?.drill ?? []).toEqual([]);
+    click(marks(el).find((m) => m.getAttribute("data-key") === "n~0~West")!);
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+    // Keys keep the level in the whole path, so the state nodes survive the drill.
+    expect(marks(el).some((m) => m.getAttribute("data-key") === "n~1~CA")).toBe(true);
   });
 });

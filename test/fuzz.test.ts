@@ -200,7 +200,7 @@ describe("fuzz: validateSpec and renderParts", () => {
           throw new Error(`mutation #${i} ${JSON.stringify(s)} threw ${(e as Error).stack}`);
       }
     }
-    expect(okCount).toBeGreaterThan(20);
+    expect(okCount).toBeGreaterThan(15); // seeded: shifts whenever KEYS grows
   });
 
   it("__proto__/constructor/toString as category and series values render safely", () => {

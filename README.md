@@ -78,29 +78,30 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Formatting
 
-| Field         | Type              | Default                         | Meaning                                                             |
-| ------------- | ----------------- | ------------------------------- | ------------------------------------------------------------------- |
-| `format`      | preset or options | auto                            | Per field or one string for all measures; display only              |
-| `titles`      | {[field]: string} | field names                     | Display names everywhere (axis, tooltip, legend, table)             |
-| `labels`      | boolean           | false (heatmap: true at ≥24 px) | Formatted value on marks                                            |
-| `text`        | {[key]: string}   | English                         | Localisable UI strings with {0} placeholders                        |
-| `locale`      | BCP 47            | en-US                           | Formatting locale                                                   |
-| `currency`    | ISO 4217          | USD                             | Currency for the currency preset                                    |
-| `title`       | string            | -                               | Visible heading and accessible name                                 |
-| `description` | string            | auto                            | Accessible description                                              |
-| `yDomain`     | [min, max]        | -                               | Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top) |
-| `xDomain`     | [min, max]        | -                               | Fixed x domain (scatter only)                                       |
+| Field         | Type              | Default                                                                            | Meaning                                                             |
+| ------------- | ----------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `format`      | preset or options | auto                                                                               | Per field or one string for all measures; display only              |
+| `titles`      | {[field]: string} | field names                                                                        | Display names everywhere (axis, tooltip, legend, table)             |
+| `labels`      | boolean           | false (heatmap: true at ≥24 px; treemap, sunburst: names; marimekko: shares; true) | Formatted value on marks                                            |
+| `text`        | {[key]: string}   | English                                                                            | Localisable UI strings with {0} placeholders                        |
+| `locale`      | BCP 47            | en-US                                                                              | Formatting locale                                                   |
+| `currency`    | ISO 4217          | USD                                                                                | Currency for the currency preset                                    |
+| `title`       | string            | -                                                                                  | Visible heading and accessible name                                 |
+| `description` | string            | auto                                                                               | Accessible description                                              |
+| `yDomain`     | [min, max]        | -                                                                                  | Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top) |
+| `xDomain`     | [min, max]        | -                                                                                  | Fixed x domain (scatter only)                                       |
 
 ### Interaction
 
-| Field     | Type           | Applies to                                                  | Default                   | Meaning                                                                  |
-| --------- | -------------- | ----------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------ |
-| `tooltip` | boolean        | all                                                         | true                      | Hover/keyboard tooltip                                                   |
-| `legend`  | boolean        | all                                                         | true when `series` is set | Legend; clicking toggles series                                          |
-| `drill`   | boolean        | treemap sunburst sankey; bar line area dumbbell with `path` | false                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop |
-| `select`  | true / "multi" | all but sankey                                              | off                       | Click/Enter/legend selects marks; Escape clears. Not with drill          |
-| `zoom`    | boolean        | line area scatter                                           | false                     | Drag to zoom; Reset, double-click, Escape restore                        |
-| `animate` | boolean        | all (element only)                                          | true                      | Animate the first draw and every update                                  |
+| Field      | Type           | Applies to                                                  | Default                            | Meaning                                                                  |
+| ---------- | -------------- | ----------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| `tooltip`  | boolean        | all                                                         | true                               | Hover/keyboard tooltip                                                   |
+| `legend`   | boolean        | all                                                         | true with `series`, waffle, hexmap | Legend; clicking toggles series                                          |
+| `drill`    | boolean        | treemap sunburst sankey; bar line area dumbbell with `path` | false                              | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop |
+| `drillOut` | boolean        | types that take `drill`                                     | true                               | With drill, a click on empty chart space goes back up one level          |
+| `select`   | true / "multi" | all but sankey                                              | off                                | Click/Enter/legend selects marks; Escape clears. Not with drill          |
+| `zoom`     | boolean        | line area scatter                                           | false                              | Drag to zoom; Reset, double-click, Escape restore                        |
+| `animate`  | boolean        | all (element only)                                          | true                               | Animate the first draw and every update                                  |
 
 ### Style
 
