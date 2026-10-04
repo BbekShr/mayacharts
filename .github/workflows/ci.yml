@@ -41,17 +41,14 @@ jobs:
   e2e-chromium:
     needs: check
     runs-on: ubuntu-latest
+    # Same image the Linux screenshot baselines were generated in, so fonts match exactly.
+    container: mcr.microsoft.com/playwright:v1.63.0-noble
+    env:
+      HOME: /root
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
       - run: npm ci
-
-      - run: npx playwright install --with-deps chromium
 
       - run: npm run build
 
