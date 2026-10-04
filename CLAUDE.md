@@ -52,6 +52,8 @@ Screenshot baselines live in `e2e/__screenshots__/{darwin,linux}/<browser>/`. CI
 
 Milestones are planned in `~/.claude/plans/` and executed by parallel sub-agents with one owner per file. Contracts (types, validate, registry, stubs) are written first by one serial task so fan-out never edits the same file. Model routing the owner prefers: Opus for contracts and reviews, Sonnet for implementation and tests, Haiku for docs and config (verify Haiku's facts).
 
+The standing team lives in `.claude/agents/` (chart designer, core engineer, element engineer as editors; design critic, motion critic, security engineer, release manager as report-only), run by `/maya-ceo` (`audit`, `light`, `deep`, `gallery`). Its memory is `.claude/ceo/` (backlog, learnings, dated reports). Two skills set the bar: `anthropic-skills:taste-skill` for how charts look, `ponytail` (and `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt`) for how little code they take. `/maya-release <version>` cuts an npm release, only when the owner asks. `.claude/hooks/guard.mjs` blocks edits to quality-gate files and size budgets, and typechecks once per edit batch.
+
 ## Release
 
 Tags `v*` trigger `.github/workflows/release.yml`: typecheck, test, build, size, `npm publish --provenance`, SRI hash of `dist/maya.global.js` in the step summary. Not yet published to npm. Deploy of `site/` to GitHub Pages happens on every push to main.
