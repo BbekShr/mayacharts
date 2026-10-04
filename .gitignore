@@ -12,3 +12,4 @@ site/ssr.html
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+eval/results-*.json

@@ -2,11 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 import { existsSync } from "node:fs";
 
-const PAGES = [
-  "index.html",
-  ...(existsSync("site/gallery.html") ? ["gallery.html"] : []),
-  ...(existsSync("site/compare.html") ? ["compare.html"] : []),
-];
+const PAGES = ["index.html", ...(existsSync("site/gallery.html") ? ["gallery.html"] : [])];
 // `page#chart-id` -> axe rule id: a real library violation, tracked as fixme.
 const FIXME: Record<string, string> = {};
 test.use({ reducedMotion: "reduce" });
@@ -148,3 +144,15 @@ test("keyboard: Tab reaches the chart, ArrowRight activates and announces", asyn
   await expect(host.locator("[data-maya=mark][data-active]")).toHaveCount(1);
   await expect(host.locator("[data-maya=live]")).not.toBeEmpty({ timeout: 400 });
 });
+
+// compare.html has no charts: one page-level axe run per scheme.
+for (const scheme of ["light", "dark"] as const) {
+  test(`axe WCAG 2.x AA: compare.html ${scheme}`, async ({ page }) => {
+    test.skip(!existsSync("site/compare.html"), "no compare page");
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto("compare.html");
+    await expect(page.locator("table").first()).toBeVisible();
+    const r = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+    expect(r.violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+  });
+}

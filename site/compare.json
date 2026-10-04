@@ -3,26 +3,28 @@
   "versions": {
     "mayacharts": "0.3.0",
     "chartjs": "4.5.1",
-    "echarts": "6.1.0"
+    "echarts": "6.1.0",
+    "commit": "fadd08c"
   },
+  "arrowCap": 40,
   "browser": "Chromium 153.0.8010.12",
   "csp": "default-src 'self'; style-src 'self'; require-trusted-types-for 'script'; trusted-types mayacharts",
   "notes": [
-    "Chart.js loads chart.umd.min.js and ECharts loads echarts.min.js, the full builds, not tree-shaken. mayacharts loads dist/element.js.",
+    "Chart.js loads chart.umd.min.js and ECharts loads echarts.min.js, the full builds, not tree-shaken. mayaCharts loads dist/element.js.",
     "Chart.js and ECharts draw to canvas in the browser. ECharts SSR uses its SVG renderer.",
     "Chart.js has no heatmap type in core, and its time scale needs a separate date adapter, so months are category labels.",
-    "Accessibility setup: Chart.js canvas gets role=img and an aria-label, ECharts gets aria.enabled. mayacharts runs with defaults."
+    "Accessibility setup: Chart.js canvas gets role=img and an aria-label, ECharts gets aria.enabled. mayaCharts runs with defaults."
   ],
   "results": [
     {
       "library": "mayacharts",
       "chart": "bar",
       "supported": true,
-      "gzipBytes": 40477,
+      "gzipBytes": 41327,
       "ssr": {
         "noDom": true,
         "svg": true,
-        "bytes": 34249
+        "bytes": 35191
       },
       "rendered": true,
       "renders": true,
@@ -45,17 +47,17 @@
           "right": 0.27703993055555554
         }
       },
-      "ttfpMs": 34.5
+      "ttfpMs": 33.6
     },
     {
       "library": "mayacharts",
       "chart": "line",
       "supported": true,
-      "gzipBytes": 40477,
+      "gzipBytes": 41327,
       "ssr": {
         "noDom": true,
         "svg": true,
-        "bytes": 38245
+        "bytes": 39244
       },
       "rendered": true,
       "renders": true,
@@ -70,25 +72,25 @@
       "rtl": {
         "yAxisMovedRight": true,
         "inkLtr": {
-          "left": 0.04635416666666667,
-          "right": 0.014908854166666667
+          "left": 0.04609375,
+          "right": 0.018337673611111112
         },
         "inkRtl": {
-          "left": 0.020377604166666667,
-          "right": 0.03982204861111111
+          "left": 0.02013888888888889,
+          "right": 0.04327256944444444
         }
       },
-      "ttfpMs": 38
+      "ttfpMs": 35.7
     },
     {
       "library": "mayacharts",
       "chart": "scatter",
       "supported": true,
-      "gzipBytes": 40477,
+      "gzipBytes": 41327,
       "ssr": {
         "noDom": true,
         "svg": true,
-        "bytes": 486622
+        "bytes": 533754
       },
       "rendered": true,
       "renders": true,
@@ -103,25 +105,25 @@
       "rtl": {
         "yAxisMovedRight": true,
         "inkLtr": {
-          "left": 0.2269314236111111,
-          "right": 0.2439670138888889
+          "left": 0.22756076388888888,
+          "right": 0.24867621527777778
         },
         "inkRtl": {
-          "left": 0.19535590277777778,
-          "right": 0.2752821180555556
+          "left": 0.20112847222222222,
+          "right": 0.27493489583333336
         }
       },
-      "ttfpMs": 129.8
+      "ttfpMs": 122.7
     },
     {
       "library": "mayacharts",
       "chart": "heatmap",
       "supported": true,
-      "gzipBytes": 40477,
+      "gzipBytes": 41327,
       "ssr": {
         "noDom": true,
         "svg": true,
-        "bytes": 81070
+        "bytes": 82012
       },
       "rendered": true,
       "renders": true,
@@ -144,7 +146,7 @@
           "right": 0.41423611111111114
         }
       },
-      "ttfpMs": 21.3
+      "ttfpMs": 20.4
     },
     {
       "library": "chartjs",
@@ -178,7 +180,7 @@
           "right": 0.2879557291666667
         }
       },
-      "ttfpMs": 23.9
+      "ttfpMs": 23.8
     },
     {
       "library": "chartjs",
@@ -212,7 +214,7 @@
           "right": 0.040125868055555555
         }
       },
-      "ttfpMs": 26
+      "ttfpMs": 26.8
     },
     {
       "library": "chartjs",
@@ -246,7 +248,7 @@
           "right": 0.2789279513888889
         }
       },
-      "ttfpMs": 123.5
+      "ttfpMs": 125.6
     },
     {
       "library": "chartjs",
