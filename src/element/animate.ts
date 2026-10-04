@@ -37,7 +37,14 @@ const tf = (g: Box, b: Box) =>
 
 const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () => void) => {
   const a = e.animate?.(k, o);
-  if (then) a ? (a.addEventListener("finish", then), a.addEventListener("cancel", then)) : then();
+  if (!then) return;
+  if (!a) return then();
+  let done = false;
+  const once = () => done || ((done = true), then());
+  a.addEventListener("finish", once);
+  a.addEventListener("cancel", once);
+  // Hidden tabs freeze animation timelines; ghosts must still leave.
+  setTimeout(once, Number(o.duration ?? 0) + 100);
 };
 
 function sync(o: Element, w: Element): void {
