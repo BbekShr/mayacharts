@@ -80,3 +80,31 @@ describe("dumbbell", () => {
     expect(s).not.toContain("<script>");
   });
 });
+
+describe("dumbbell drill", () => {
+  const data = [
+    { region: "West", state: "CA", year: "2024", v: 5 },
+    { region: "West", state: "OR", year: "2024", v: 2 },
+    { region: "West", state: "CA", year: "2025", v: 3 },
+    { region: "West", state: "OR", year: "2025", v: 4 },
+    { region: "East", state: "NY", year: "2024", v: 6 },
+    { region: "East", state: "NY", year: "2025", v: 7 },
+  ];
+  const spec = {
+    type: "dumbbell",
+    data,
+    path: ["region", "state"],
+    drill: true,
+    y: "v",
+    series: "year",
+  } as const;
+  it("draws the outer level, then the drilled branch", () => {
+    const top = renderParts(spec as never).svg;
+    expect(top).toContain('data-x="West"');
+    expect(top).not.toContain('data-x="CA"');
+    const down = renderParts(spec as never, { view: { drill: ["West"] } });
+    expect(down.svg).toContain('data-x="CA"');
+    expect(down.svg).not.toContain('data-x="NY"');
+    expect(down.crumbs).toContain("West");
+  });
+});

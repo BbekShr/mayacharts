@@ -97,7 +97,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to). bar line area scatter heatmap dumbbell.
    * @example series: "region" */
   series?: Field<R>;
-  /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area with `drill` (replaces `x`).
+  /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with `drill` (replaces `x`).
    * @example path: ["region", "state"] */
   path?: readonly Field<R>[];
   /** Bubble area field (sqrt scale). scatter only.

@@ -4,6 +4,12 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## 0.1.1 - 2026-10-04
+
+### Added
+
+- `dumbbell` takes `path` with `drill: true`, like bar: click a category to split it into the next level, for example region into states.
+
 ## 0.1.0 - 2026-10-04
 
 ### Added

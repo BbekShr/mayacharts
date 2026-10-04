@@ -85,7 +85,7 @@
         "type": "string"
       },
       "minItems": 1,
-      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area with `drill` (replaces `x`)."
+      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with `drill` (replaces `x`)."
     },
     "size": {
       "type": "string",
