@@ -35,11 +35,13 @@
  *   index space of view.window). Without spec.format for x, labels use a preset from
  *   the smallest gap (year, month, date, datetime); tick labels use per-unit defaults.
  *   Downsampling: line and area on a time axis with more categories than min(MAX_POINTS,
- *   4000 / series) run largest-triangle-three-buckets per series (keeping first, last, min, max
+ *   floor(plot width / 2), 4000 / series) (one point per 2 px: a narrower band cannot be
+ *   hovered) run largest-triangle-three-buckets per series (keeping first, last, min, max
  *   and one marker per gap), after the window; a union still over the target is thinned to
  *   first, last and evenly spaced indexes. Kept categories keep their keys; Shaped.reduced
  *   = [kept, before], and the description says so. view.window indexes the time-ordered list
  *   before reduction. Scatter is exempt from the pre-draw mark cap (it bins its own rows).
+ *   Scatter's Shaped has empty categories and cells: its marks draw from rows.
  *
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
  *   (hierarchy, flow, geo) call registry.register() on import. A Mark is
@@ -59,6 +61,8 @@
  *                           titles keys). `opts.nonce` lands on the shell's <style>.
  *   renderParts(spec, opts) the pieces (svg without <style>, legend, controls, crumbs, table,
  *                           title, override style + vars, warnings).
+ *   The element renders in a microtask after a property set, and in the next frame after a
+ *   resize or while it waits for its JSON spec child.
  *
  * Shadow content (identical from renderShell and the element, built by `shellInner`).
  * Slot order is fixed:
@@ -110,6 +114,8 @@
  *   [data-maya="hit"]   same payload as its mark (incl. data-key). Emitted only when the
  *                       mark is narrower or shorter than 24px: the mark's rect grown to
  *                       >= 24px in that dimension, centered. fill="transparent".
+ *                       Scatter emits none: the tooltip and select pick the nearest mark
+ *                       centre within 12px of the pointer.
  *   [data-maya="probe"] / .maya-tip  tooltip anchor probe + popover (shell only).
  *   [data-maya="live"]  the static polite live region; written via textContent only.
  *   [data-maya="legend"] buttons: <button type="button" data-si="i" data-s="i%8"

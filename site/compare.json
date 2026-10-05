@@ -1,20 +1,20 @@
 {
   "generated": "2026-10-05",
   "versions": {
-    "commit": "a4ffc6f",
+    "commit": "b92488b",
     "maya": null,
     "chartjs": "4.5.1",
     "echarts": "6.1.0",
-    "plot": null,
-    "vegalite": null,
-    "recharts": null,
-    "nivo": null,
-    "plotly": null
+    "plot": "0.6.17",
+    "vegalite": "6.4.3",
+    "recharts": "3.10.1",
+    "nivo": "0.99.0",
+    "plotly": "4.1.1"
   },
   "browser": "Chromium 153.0.8010.12",
   "csp": "default-src 'self'; style-src 'self'; require-trusted-types-for 'script'; trusted-types mayacharts",
   "arrowCap": 40,
-  "speedDefinition": "First paint is the draw call to the next animation frame. Update is 10 calls of the redraw function with fresh rows, each timed to the next animation frame, p50 and p95 per load. Heap is JS heap after a forced GC and 10 updates. Median of 5 fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle 4x in the second column. A cell that crashes or passes 90 s is recorded with its reason.",
+  "speedDefinition": "First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink), plus one frame. Update is 10 calls of the redraw function with fresh rows, each timed until the chart DOM changed (one frame for canvas libraries), plus one frame; p50 and p95 per load. Heap is JS heap after a forced GC and 10 updates. Median of 5 fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle 4x in the second column. A cell that crashes or passes 90 s is recorded with its reason.",
   "notes": [
     "Each library draws the same data through its own reference module in e2e/compare/ref, written the way its documentation shows, with defaults and no theming.",
     "The CSP row is its own test: a chart that is blocked by the policy is recorded as failing there, and the speed suite runs with no CSP so those numbers survive.",
@@ -406,7 +406,7 @@
             "right": 0.3898871527777778
           }
         },
-        "ttfpMs": 21.1
+        "ttfpMs": 20.9
       },
       "grouped": {
         "supported": true,
@@ -436,7 +436,7 @@
             "right": 0.27734375
           }
         },
-        "ttfpMs": 23.4
+        "ttfpMs": 25.8
       },
       "stacked": {
         "supported": true,
@@ -466,7 +466,7 @@
             "right": 0.3541232638888889
           }
         },
-        "ttfpMs": 23
+        "ttfpMs": 25.6
       },
       "horizontal": {
         "supported": true,
@@ -496,7 +496,7 @@
             "right": 0.11966145833333333
           }
         },
-        "ttfpMs": 21.8
+        "ttfpMs": 32.2
       },
       "line": {
         "supported": true,
@@ -526,7 +526,7 @@
             "right": 0.023524305555555555
           }
         },
-        "ttfpMs": 26
+        "ttfpMs": 36.1
       },
       "multiline": {
         "supported": true,
@@ -556,7 +556,7 @@
             "right": 0.04236111111111111
           }
         },
-        "ttfpMs": 27.5
+        "ttfpMs": 37.5
       },
       "area": {
         "supported": true,
@@ -586,7 +586,7 @@
             "right": 0.5168836805555556
           }
         },
-        "ttfpMs": 27.9
+        "ttfpMs": 37.7
       },
       "scatter": {
         "supported": true,
@@ -616,7 +616,7 @@
             "right": 0.1666015625
           }
         },
-        "ttfpMs": 50.3
+        "ttfpMs": 60.5
       },
       "bubble": {
         "supported": true,
@@ -646,7 +646,7 @@
             "right": 0.04924045138888889
           }
         },
-        "ttfpMs": 23.8
+        "ttfpMs": 30.7
       },
       "heatmap": {
         "supported": true,
@@ -676,7 +676,7 @@
             "right": 0.41423611111111114
           }
         },
-        "ttfpMs": 28.9
+        "ttfpMs": 31.6
       },
       "treemap": {
         "supported": true,
@@ -706,7 +706,7 @@
             "right": 0.9200303819444444
           }
         },
-        "ttfpMs": 22.6
+        "ttfpMs": 23.6
       },
       "sankey": {
         "supported": true,
@@ -736,7 +736,7 @@
             "right": 0.3541449652777778
           }
         },
-        "ttfpMs": 23.7
+        "ttfpMs": 23.5
       }
     },
     "chartjs": {
@@ -757,15 +757,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.31851128472222223,
-            "right": 0.33708767361111114
+            "left": 0.3152994791666667,
+            "right": 0.3330295138888889
           },
           "inkRtl": {
-            "left": 0.2848090277777778,
-            "right": 0.2992621527777778
+            "left": 0.28799913194444443,
+            "right": 0.3021050347222222
           }
         },
-        "ttfpMs": 28.1
+        "ttfpMs": 29.5
       },
       "grouped": {
         "supported": true,
@@ -784,15 +784,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.2970052083333333,
-            "right": 0.28389756944444444
+            "left": 0.29672309027777777,
+            "right": 0.28294270833333335
           },
           "inkRtl": {
-            "left": 0.2676866319444444,
-            "right": 0.25386284722222224
+            "left": 0.2663845486111111,
+            "right": 0.25240885416666664
           }
         },
-        "ttfpMs": 27.8
+        "ttfpMs": 27.7
       },
       "stacked": {
         "supported": true,
@@ -811,15 +811,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.352734375,
-            "right": 0.3376519097222222
+            "left": 0.3519748263888889,
+            "right": 0.33763020833333335
           },
           "inkRtl": {
-            "left": 0.3209418402777778,
-            "right": 0.30625
+            "left": 0.3145833333333333,
+            "right": 0.30052083333333335
           }
         },
-        "ttfpMs": 28.4
+        "ttfpMs": 30.8
       },
       "horizontal": {
         "supported": true,
@@ -839,14 +839,14 @@
           "yAxisMovedRight": false,
           "inkLtr": {
             "left": 0.377734375,
-            "right": 0.07892795138888889
+            "right": 0.07680121527777778
           },
           "inkRtl": {
             "left": 0.377734375,
-            "right": 0.024153645833333334
+            "right": 0.019401041666666667
           }
         },
-        "ttfpMs": 26.5
+        "ttfpMs": 27.2
       },
       "line": {
         "supported": true,
@@ -865,15 +865,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.05147569444444444,
+            "left": 0.051497395833333334,
             "right": 0.034678819444444446
           },
           "inkRtl": {
-            "left": 0.05082465277777778,
-            "right": 0.03376736111111111
+            "left": 0.05075954861111111,
+            "right": 0.03383246527777778
           }
         },
-        "ttfpMs": 27.6
+        "ttfpMs": 29.8
       },
       "multiline": {
         "supported": true,
@@ -892,15 +892,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.06067708333333333,
-            "right": 0.04526909722222222
+            "left": 0.0607421875,
+            "right": 0.044835069444444445
           },
           "inkRtl": {
             "left": 0.06050347222222222,
-            "right": 0.04440104166666667
+            "right": 0.04485677083333333
           }
         },
-        "ttfpMs": 29.1
+        "ttfpMs": 29
       },
       "area": {
         "supported": true,
@@ -919,15 +919,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.27643229166666666,
-            "right": 0.5212673611111112
+            "left": 0.27567274305555556,
+            "right": 0.5196397569444444
           },
           "inkRtl": {
-            "left": 0.253515625,
-            "right": 0.47280815972222223
+            "left": 0.2523003472222222,
+            "right": 0.4703776041666667
           }
         },
-        "ttfpMs": 30.9
+        "ttfpMs": 31.3
       },
       "scatter": {
         "supported": true,
@@ -946,15 +946,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.08118489583333334,
-            "right": 0.07649739583333333
+            "left": 0.08157552083333333,
+            "right": 0.07660590277777778
           },
           "inkRtl": {
-            "left": 0.0796875,
-            "right": 0.074609375
+            "left": 0.07964409722222222,
+            "right": 0.07469618055555556
           }
         },
-        "ttfpMs": 39.4
+        "ttfpMs": 41.8
       },
       "bubble": {
         "supported": true,
@@ -973,15 +973,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.14155815972222222,
-            "right": 0.031575520833333336
+            "left": 0.13973524305555557,
+            "right": 0.03131510416666667
           },
           "inkRtl": {
-            "left": 0.10334201388888889,
-            "right": 0.02749565972222222
+            "left": 0.10407986111111112,
+            "right": 0.027625868055555555
           }
         },
-        "ttfpMs": 29.7
+        "ttfpMs": 28.7
       },
       "heatmap": {
         "supported": false,
@@ -1190,6 +1190,426 @@
         "note": "did not render, so the remaining measures do not apply"
       }
     },
+    "plot": {
+      "bar": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 3,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.29945031163434904,
+            "right": 0.30793369113573404
+          },
+          "inkRtl": {
+            "left": 0.2708189058171745,
+            "right": 0.33321069944598336
+          }
+        },
+        "ttfpMs": 8
+      },
+      "grouped": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 9,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.2732860110803324,
+            "right": 0.1764196675900277
+          },
+          "inkRtl": {
+            "left": 0.22119546398891968,
+            "right": 0.22565356648199447
+          }
+        },
+        "ttfpMs": 10.3
+      },
+      "stacked": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 9,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.34273286011080334,
+            "right": 0.25307306094182824
+          },
+          "inkRtl": {
+            "left": 0.29014456371191133,
+            "right": 0.3030860457063712
+          }
+        },
+        "ttfpMs": 9.3
+      },
+      "horizontal": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 3,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.374523891966759,
+            "right": 0.10240650969529086
+          },
+          "inkRtl": {
+            "left": 0.3301159972299169,
+            "right": 0.1242858379501385
+          }
+        },
+        "ttfpMs": 7.5
+      },
+      "line": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 3,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.050792070637119116,
+            "right": 0.011794494459833795
+          },
+          "inkRtl": {
+            "left": 0.02174948060941828,
+            "right": 0.03737448060941828
+          }
+        },
+        "ttfpMs": 7.6
+      },
+      "multiline": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 7,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.07396987534626039,
+            "right": 0.01395862188365651
+          },
+          "inkRtl": {
+            "left": 0.02449792243767313,
+            "right": 0.05752250692520776
+          }
+        },
+        "ttfpMs": 8.2
+      },
+      "area": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 9,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.3064404432132964,
+            "right": 0.4624740304709141
+          },
+          "inkRtl": {
+            "left": 0.25101713988919666,
+            "right": 0.5116862880886427
+          }
+        },
+        "ttfpMs": 10.3
+      },
+      "scatter": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 3,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.09258137119113573,
+            "right": 0.0687110457063712
+          },
+          "inkRtl": {
+            "left": 0.06581111495844875,
+            "right": 0.09340373961218837
+          }
+        },
+        "ttfpMs": 8.5
+      },
+      "bubble": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 3,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.05271814404432133,
+            "right": 0.010041551246537396
+          },
+          "inkRtl": {
+            "left": 0.02570983379501385,
+            "right": 0.03250519390581717
+          }
+        },
+        "ttfpMs": 8.6
+      },
+      "heatmap": {
+        "supported": true,
+        "rendered": true,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plot needs a document to build its SVG.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["aria-prohibited-attr (serious)"],
+        "ariaSnapshotLines": 4,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.33492036011080334,
+            "right": 0.3573623614958449
+          },
+          "inkRtl": {
+            "left": 0.2995368767313019,
+            "right": 0.38675121191135736
+          }
+        },
+        "ttfpMs": 9.2
+      },
+      "treemap": {
+        "supported": false,
+        "note": "Plot has no treemap mark (Plot.tree draws node-link trees, not area-proportional rectangles)."
+      },
+      "sankey": {
+        "supported": false,
+        "note": "Plot has no sankey or flow-diagram mark."
+      }
+    },
+    "vegalite": {
+      "bar": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "grouped": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "stacked": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "horizontal": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "line": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "multiline": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "area": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "scatter": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "bubble": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "heatmap": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML|.vega-embed {\n  position: relative;\n  di",
+        "ssr": null,
+        "ssrNote": "Vega can render SVG in node, but it is a separate compile and view step, not measured here.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "treemap": {
+        "supported": false,
+        "note": "Vega-Lite has no treemap mark; treemaps need the layout transforms of full Vega."
+      },
+      "sankey": {
+        "supported": false,
+        "note": "Vega-Lite has no sankey mark; sankeys need custom layout in full Vega."
+      }
+    },
     "recharts": {
       "bar": {
         "supported": true,
@@ -1216,7 +1636,7 @@
             "right": 0.3693299861495845
           }
         },
-        "ttfpMs": 29.2
+        "ttfpMs": 29.6
       },
       "grouped": {
         "supported": true,
@@ -1243,7 +1663,7 @@
             "right": 0.26192434210526316
           }
         },
-        "ttfpMs": 45.2
+        "ttfpMs": 46.8
       },
       "stacked": {
         "supported": true,
@@ -1270,7 +1690,7 @@
             "right": 0.3726411011080332
           }
         },
-        "ttfpMs": 46.2
+        "ttfpMs": 44.1
       },
       "horizontal": {
         "supported": true,
@@ -1297,7 +1717,7 @@
             "right": 0.12036876731301939
           }
         },
-        "ttfpMs": 30
+        "ttfpMs": 29.3
       },
       "line": {
         "supported": true,
@@ -1324,7 +1744,7 @@
             "right": 0.04423476454293629
           }
         },
-        "ttfpMs": 31
+        "ttfpMs": 32.8
       },
       "multiline": {
         "supported": true,
@@ -1351,7 +1771,7 @@
             "right": 0.049385387811634346
           }
         },
-        "ttfpMs": 40.9
+        "ttfpMs": 41.7
       },
       "area": {
         "supported": true,
@@ -1378,7 +1798,7 @@
             "right": 0.6455375692520776
           }
         },
-        "ttfpMs": 40
+        "ttfpMs": 38.9
       },
       "scatter": {
         "supported": true,
@@ -1405,7 +1825,7 @@
             "right": 0.14298389889196675
           }
         },
-        "ttfpMs": 59.1
+        "ttfpMs": 60.9
       },
       "bubble": {
         "supported": true,
@@ -1432,7 +1852,7 @@
             "right": 0.033955159279778394
           }
         },
-        "ttfpMs": 32.1
+        "ttfpMs": 38
       },
       "heatmap": {
         "supported": false,
@@ -1490,81 +1910,495 @@
             "right": 0.2833275623268698
           }
         },
-        "ttfpMs": 17.4
+        "ttfpMs": 19.4
+      }
+    },
+    "nivo": {
+      "bar": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.20509435595567868,
+            "right": 0.2976757271468144
+          },
+          "inkRtl": {
+            "left": 0.18057479224376732,
+            "right": 0.30914560249307477
+          }
+        },
+        "ttfpMs": 28.1
+      },
+      "grouped": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.2571849030470914,
+            "right": 0.05354051246537396
+          },
+          "inkRtl": {
+            "left": 0.23456977146814403,
+            "right": 0.06955505540166206
+          }
+        },
+        "ttfpMs": 30.5
+      },
+      "stacked": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.2960742728531856,
+            "right": 0.07464075484764543
+          },
+          "inkRtl": {
+            "left": 0.26694511772853186,
+            "right": 0.08972472299168975
+          }
+        },
+        "ttfpMs": 30.9
+      },
+      "horizontal": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.3573190789473684,
+            "right": 0.07751904432132964
+          },
+          "inkRtl": {
+            "left": 0.31319252077562326,
+            "right": 0.08589421745152355
+          }
+        },
+        "ttfpMs": 24
+      },
+      "line": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.06076869806094183,
+            "right": 0.014889196675900277
+          },
+          "inkRtl": {
+            "left": 0.03657375346260388,
+            "right": 0.036011080332409975
+          }
+        },
+        "ttfpMs": 25.8
+      },
+      "multiline": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.05592105263157895,
+            "right": 0.01928237534626039
+          },
+          "inkRtl": {
+            "left": 0.03259175900277008,
+            "right": 0.03692001385041551
+          }
+        },
+        "ttfpMs": 27.1
+      },
+      "area": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.19418715373961218,
+            "right": 0.08429276315789473
+          },
+          "inkRtl": {
+            "left": 0.16994892659279778,
+            "right": 0.10136772853185595
+          }
+        },
+        "ttfpMs": 28.6
+      },
+      "scatter": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.1021900969529086,
+            "right": 0.09719096260387812
+          },
+          "inkRtl": {
+            "left": 0.07989958448753462,
+            "right": 0.11744719529085873
+          }
+        },
+        "ttfpMs": 71
+      },
+      "bubble": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.08981128808864267,
+            "right": 0.017529432132963988
+          },
+          "inkRtl": {
+            "left": 0.06957669667590027,
+            "right": 0.03891101108033241
+          }
+        },
+        "ttfpMs": 26.5
+      },
+      "heatmap": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.27707323407202217,
+            "right": 0.4445117728531856
+          },
+          "inkRtl": {
+            "left": 0.251428324099723,
+            "right": 0.46539560249307477
+          }
+        },
+        "ttfpMs": 58.4
+      },
+      "treemap": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.8062023891966759,
+            "right": 0.7321459487534626
+          },
+          "inkRtl": {
+            "left": 0.7821589335180056,
+            "right": 0.7530081371191135
+          }
+        },
+        "ttfpMs": 24.2
+      },
+      "sankey": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Nivo server rendering needs React and a fixed size, not measured here.",
+        "axeSeriousCritical": 1,
+        "axeRules": ["svg-img-alt (serious)"],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.10188711911357341,
+            "right": 0.0804406163434903
+          },
+          "inkRtl": {
+            "left": 0.08658673822714681,
+            "right": 0.10931007617728532
+          }
+        },
+        "ttfpMs": 22.6
+      }
+    },
+    "plotly": {
+      "bar": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "grouped": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "stacked": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "horizontal": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "line": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "multiline": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "area": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "scatter": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "bubble": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "heatmap": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "treemap": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
+      },
+      "sankey": {
+        "supported": true,
+        "rendered": false,
+        "renders": false,
+        "firstViolation": "style-src-elem: inline",
+        "ssr": null,
+        "ssrNote": "Plotly needs a DOM to draw.",
+        "axeSeriousCritical": null,
+        "keyboard": null,
+        "rtl": null,
+        "ttfpMs": null,
+        "note": "did not render, so the remaining measures do not apply"
       }
     }
   },
   "speed": {
-    "maya": {
-      "scatter": {
-        "1000": {
-          "normal": {
-            "firstPaintMs": 90.4,
-            "updateP50Ms": 65.1,
-            "updateP95Ms": 70.5,
-            "heapMB": 2.4,
-            "runs": 5
-          },
-          "throttled": {
-            "firstPaintMs": 347.2,
-            "updateP50Ms": 225.9,
-            "updateP95Ms": 250.7,
-            "heapMB": 2.4,
-            "runs": 5
-          }
-        },
-        "10000": {
-          "normal": {
-            "firstPaintMs": 108.5,
-            "updateP50Ms": 78.3,
-            "updateP95Ms": 93.1,
-            "heapMB": 3,
-            "runs": 5
-          },
-          "throttled": {
-            "firstPaintMs": 438.3,
-            "updateP50Ms": 294.3,
-            "updateP95Ms": 371.8,
-            "heapMB": 3,
-            "runs": 5
-          }
-        }
-      },
-      "line": {
-        "1000": {
-          "normal": {
-            "firstPaintMs": 88.8,
-            "updateP50Ms": 63.4,
-            "updateP95Ms": 67.1,
-            "heapMB": 2.7,
-            "runs": 5
-          },
-          "throttled": {
-            "firstPaintMs": 353.1,
-            "updateP50Ms": 202.2,
-            "updateP95Ms": 218.5,
-            "heapMB": 2.7,
-            "runs": 5
-          }
-        },
-        "10000": {
-          "normal": {
-            "firstPaintMs": 102.8,
-            "updateP50Ms": 62.1,
-            "updateP95Ms": 71,
-            "heapMB": 3.3,
-            "runs": 5
-          },
-          "throttled": {
-            "firstPaintMs": 420.7,
-            "updateP50Ms": 240.5,
-            "updateP95Ms": 262.3,
-            "heapMB": 3.3,
-            "runs": 5
-          }
-        }
-      }
-    },
     "chartjs": {
       "scatter": {
         "1000": {
@@ -1771,6 +2605,141 @@
             "updateP95Ms": 938.8,
             "heapMB": 29.8,
             "runs": 5
+          }
+        }
+      }
+    },
+    "maya": {
+      "scatter": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 86.4,
+            "updateP50Ms": 65.6,
+            "updateP95Ms": 68.5,
+            "heapMB": 2.4,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 342,
+            "updateP50Ms": 225,
+            "updateP95Ms": 256.1,
+            "heapMB": 2.4,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 110.3,
+            "updateP50Ms": 80.7,
+            "updateP95Ms": 93.6,
+            "heapMB": 3,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 471,
+            "updateP50Ms": 318.5,
+            "updateP95Ms": 381.2,
+            "heapMB": 3,
+            "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 193.3,
+            "updateP50Ms": 114.5,
+            "updateP95Ms": 135.6,
+            "heapMB": 7.4,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 812.4,
+            "updateP50Ms": 492.8,
+            "updateP95Ms": 560.6,
+            "heapMB": 7.3,
+            "runs": 5
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 1054.4,
+            "updateP50Ms": 529.1,
+            "updateP95Ms": 590.4,
+            "heapMB": 50.5,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 5418.1,
+            "updateP50Ms": 2758.5,
+            "updateP95Ms": 3162.1,
+            "heapMB": 50.5,
+            "runs": 2
+          }
+        }
+      },
+      "line": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 85.8,
+            "updateP50Ms": 59.2,
+            "updateP95Ms": 66.7,
+            "heapMB": 2.7,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 354.5,
+            "updateP50Ms": 207,
+            "updateP95Ms": 225.8,
+            "heapMB": 2.7,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 107.3,
+            "updateP50Ms": 62.6,
+            "updateP95Ms": 75.9,
+            "heapMB": 3.3,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 456.6,
+            "updateP50Ms": 275,
+            "updateP95Ms": 321.7,
+            "heapMB": 3.3,
+            "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 257.8,
+            "updateP50Ms": 130.3,
+            "updateP95Ms": 147.8,
+            "heapMB": 10.1,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 943,
+            "updateP50Ms": 563,
+            "updateP95Ms": 706,
+            "heapMB": 9.8,
+            "runs": 5
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 1766.1,
+            "updateP50Ms": 1145.6,
+            "updateP95Ms": 1472.6,
+            "heapMB": 90.6,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 6883.9,
+            "updateP50Ms": 5014,
+            "updateP95Ms": 5994.7,
+            "heapMB": 90.6,
+            "runs": 1,
+            "note": "page.waitForFunction: Timeout 8407ms exceeded."
           }
         }
       }

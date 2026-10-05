@@ -4,8 +4,9 @@
 // library lacks the chart type. ttfp is the time from before draw() until #chart holds marks (an
 // svg with a path, rect or circle, or a canvas with ink, crossing shadow roots), polled per frame,
 // plus one more frame. React libraries commit after draw() returns, so draw() alone is not a paint.
-// window.__update(rows) redraws; window.__timedUpdate(rows) returns the ms until the DOM changed
-// (canvas libraries draw synchronously, so they wait one frame) plus one frame.
+// window.__update(rows) redraws; window.__timedUpdate(rows) returns the ms until the chart changed
+// (a DOM mutation, or different canvas pixels) plus one frame. Every check is the same for every
+// library and stops early, so the probe itself costs little.
 // Speed suite: ?n=<rows> (chart=scatter|line) draws n generated rows; window.__rows(seed) makes more.
 import { refData, speedRows } from "/.build/data.js";
 
@@ -16,40 +17,46 @@ if (q.get("dir")) document.documentElement.dir = q.get("dir");
 const root = document.getElementById("chart");
 const frame = () => new Promise((r) => requestAnimationFrame(r));
 
-/** Every element under `n`, crossing shadow roots. */
-const deep = (n, out = []) => {
+/** First element under `n` (crossing shadow roots) for which `test` is true, or null. Stops early. */
+const find = (n, test) => {
   for (const e of n.querySelectorAll("*")) {
-    out.push(e);
-    if (e.shadowRoot) deep(e.shadowRoot, out);
+    if (test(e)) return e;
+    const hit = e.shadowRoot && find(e.shadowRoot, test);
+    if (hit) return hit;
   }
-  return out;
+  return null;
 };
+const canvasOf = () => find(root, (e) => e instanceof HTMLCanvasElement && e.width && e.height);
+// A 16x16 thumbnail of the canvas: cheap to read back every frame, for every canvas library alike.
+const thumb = document.createElement("canvas");
+thumb.width = thumb.height = 16;
+const tg = thumb.getContext("2d", { willReadFrequently: true });
+const pixels = (c) => {
+  tg.clearRect(0, 0, 16, 16);
+  tg.drawImage(c, 0, 0, 16, 16);
+  return tg.getImageData(0, 0, 16, 16).data.join();
+};
+const BLANK = pixels(thumb);
 const hasMarks = () => {
-  for (const e of deep(root)) {
-    if (/^(path|rect|circle)$/.test(e.tagName) && e.closest("svg")) return true;
-    if (e instanceof HTMLCanvasElement && e.width && e.height) {
-      const g = e.getContext("2d");
-      if (!g) return true;
-      const d = g.getImageData(0, 0, e.width, e.height).data;
-      for (let i = 3; i < d.length; i += 4) if (d[i]) return true;
-    }
-  }
-  return false;
+  const c = canvasOf();
+  if (c) return pixels(c) !== BLANK;
+  return !!find(root, (e) => /^(path|rect|circle)$/.test(e.tagName) && e.closest("svg"));
 };
 
-/** Run `fn`, then wait until #chart's DOM changed (or one frame when it holds a canvas). */
+/** Run `fn`, then wait until #chart changed (DOM mutation, or new canvas pixels), plus one frame. */
 const timedUpdate = async (fn) => {
-  const canvas = deep(root).some((e) => e instanceof HTMLCanvasElement);
+  const c = canvasOf();
+  const before = c && pixels(c);
   let changed = false;
   const mo = new MutationObserver(() => (changed = true));
   const opts = { subtree: true, childList: true, attributes: true, characterData: true };
   mo.observe(root, opts);
-  for (const e of deep(root)) if (e.shadowRoot) mo.observe(e.shadowRoot, opts);
+  find(root, (e) => (e.shadowRoot && mo.observe(e.shadowRoot, opts), false));
   const t0 = performance.now();
   await fn();
+  const done = () => (c ? pixels(c) !== before : changed);
   const end = t0 + 5000;
-  if (canvas) await frame();
-  else while (!changed && performance.now() < end) await frame();
+  while (!done() && performance.now() < end) await frame();
   await frame();
   mo.disconnect();
   return performance.now() - t0;
