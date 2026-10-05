@@ -66,6 +66,19 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Marimekko values**: null and negative values count as 0; there is no percentage axis.
 - **Waffle resolution**: 100 cells, so a share under 0.5% gets no cell (it still shows in the legend).
 - **Radial labels**: no value labels on bars; category labels are cut at 11 characters and thinned when they collide.
+- **Parallel and limit**: the Other row that `limit` rolls up has no single line in a parallel chart, so it is not drawn.
+- **Treemap slivers**: leaves under about 2 px a side are not drawn; their rows stay in the data table.
+- **Flow label length**: sankey labels are cut at 20 characters, and one that would overlap its neighbour on the same side is dropped after a one-line try.
+- **Link keyboard reach**: arrow keys walk sankey and chord nodes, not links; the hidden data table carries the same rows for screen readers.
+- **Formatting speed path**: only en-US numbers with `maximumFractionDigits` and the built-in date presets skip `Intl`; any other locale or option set builds an `Intl` formatter once per page.
+- **Formatter cache**: formatters are cached per locale and options for the page, and the cache is emptied when it passes 200 entries, not trimmed by use.
+- **Label overlap scan**: in-chart value labels are checked against each other pairwise, which the 5000-mark cap bounds.
+- **Legend for many series**: a multi-series legend needs the data, so the first paint of such a chart draws twice.
+- **Version constant**: `version` is written by hand in `registry.ts` and a test fails when it differs from `package.json`.
+- **Beeswarm dodge**: each point checks only the 50 most recently placed neighbours, so a very dense tie cluster can overlap a little; the swarm is clamped to its row past about 25 points anyway.
+- **Bubble legend**: a scatter with a `size` field shows the size key in place of the series or colour legend.
+- **Sunburst names**: a name runs straight along its arc, upright, cut so its chord stays inside the ring; it is never curved, and a slice too short for 4 characters has no name (the tooltip names it).
+- **Treemap ramp ink**: treemap tiles coloured by a `colorBy` ramp use dark ink on every step, so the darkest steps can fall under 4.5 to 1.
 
 ## What you can do instead
 

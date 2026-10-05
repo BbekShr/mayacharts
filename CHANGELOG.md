@@ -11,10 +11,35 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - Downsampling a long time axis no longer drops a series' first point, last point, minimum or maximum when many series or sparse runs overshoot the budget. A one-point spike in a gappy line, or a kpi sparkline's extremes, now survive.
 - The exported `version` and `<maya-chart>.version` now read 0.5.0 instead of 0.3.0, so the double-registration warning can fire between versions. A test compares it with package.json so the next release cannot drift.
 - Scatter and beeswarm marks with names like "3", "3" and "3#2" no longer share a `data-key`.
-- Format options are copied to a fresh object of known Intl option names before they are cached or passed to Intl. A BigInt or unknown option no longer throws a raw TypeError, and the formatter cache is cleared past 200 entries.
+- Format options keep only primitive values before they are cached or passed to Intl, so a BigInt or object option no longer throws a raw TypeError, and the formatter cache is cleared past 200 entries.
 - `renderShell` and `shellInner` put `theme` and `colors` overrides in a rule inside the nonce'd style element instead of a style attribute, so they apply under a strict CSP without `style-src-attr`.
 - `drill` and `drillOut` on a chord chart are now rejected with `option-unsupported`. A chord has two levels, so a drill never went anywhere.
 - The release workflow is split into a `gate` job that runs the repository scripts with no credentials and a `publish` job that alone holds the npm token and `id-token: write`, installs nothing and publishes the built artifact. The gate fails when the tag and package.json version differ. Every action in every workflow is pinned to a commit SHA.
+- A click on a dumbbell connector no longer fires `maya-select` or shows an empty tooltip.
+- A numeric selection such as `x: 2024` now toggles off and no longer duplicates, because selections compare as strings.
+- A spec, view or selected change made while a resize frame is pending renders in the same microtask and animates.
+- With the pointer resting on a mark, the tooltip and crosshair follow the mark to its new place after a data update.
+- With `tooltip: false`, arrow keys, keyboard select and keyboard drill work, and the live region still announces the active mark.
+- After a spec error the old data table is removed, so screen readers no longer read data the chart is not showing.
+- Translucent sankey and chord links no longer flash to full opacity in Safari during updates and drills; fades end on the CSS opacity.
+- Interrupting a drill or update no longer makes label groups flash.
+- On a line or area first draw, value labels appear after the line has finished drawing.
+- Drilling a line, area or dumbbell chart moves points and connectors with the zoom instead of popping them, and line and area paths crossfade rather than morph between different categories.
+- The old sunburst centre stays until the clicked slice reaches it.
+- The hidden data table caption no longer shows over the chart title in Firefox.
+- Series legends are compacted instead of hidden in containers under 320 px.
+- Value labels on bars, heatmap cells, marimekko, treemap tiles and the first sunburst ring pass 4.5 to 1 contrast in light and dark mode.
+- Dimmed heatmap cells keep a readable label on hover.
+- A scatter without a size field shows its colour ramp and series legend again.
+- Heatmap labels that do not fit fall back to two significant digits before being dropped.
+- Beeswarm dodging no longer slows down on thousands of tied values (5000 ties took 3.7 s).
+- Sunburst names run along the arc, stay upright and are cut with an ellipsis, so every region and large family is labelled at gallery size.
+- A drilled treemap steps its tiles through three tints of the branch colour.
+- The sunburst "Other (n)" slice no longer gets a series slot, and its key leaves out the count so a changed count sweeps instead of re-entering.
+- Narrow sankey labels no longer overprint: the last two columns share label slots.
+- Sankey and chord outer columns use one neutral, the muted foreground, instead of a grey ramp that fell to 1.58 to 1.
+- Hexmap labels on ramp steps 7 and 8 use the theme foreground in both modes.
+- The gallery radial tile is single series so its tip totals show, the horizontal bar tile drills, and tiles show display titles instead of raw field names.
 
 ## 0.5.0 - 2026-10-05
 
