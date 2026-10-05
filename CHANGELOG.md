@@ -4,7 +4,7 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
-## 0.5.0 - Unreleased
+## 0.5.0 - 2026-10-05
 
 A measured scoreboard against seven other chart libraries, and speed: large data renders several times faster than before.
 
