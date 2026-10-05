@@ -367,8 +367,8 @@ export class MayaChart extends HTMLElement {
       // ponytail: a screen reader sees the table a moment after the marks.
       const n = ++this.#tbl;
       const late = () => n === this.#tbl && put();
-      if ("requestIdleCallback" in window) requestIdleCallback(late, { timeout: 2000 });
-      else setTimeout(late, 100);
+      // Without requestIdleCallback (Safari) the options coerce to a 0 ms timeout: the next task.
+      (globalThis.requestIdleCallback ?? setTimeout)(late, { timeout: 2000 } as never);
     }
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
