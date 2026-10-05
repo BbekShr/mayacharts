@@ -4,7 +4,7 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
-## 0.4.0 - Unreleased
+## 0.4.0 - 2026-10-04
 
 A time axis, large data (downsampled lines, density scatter), format templates and a measured comparison page; plus smooth drilling and a redesign of seven chart types. New spec fields: `xType` and `drillOut`.
 
