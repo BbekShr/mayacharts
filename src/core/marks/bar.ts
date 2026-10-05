@@ -1,9 +1,29 @@
 import { bandScale } from "../scale.ts";
 import { colorVals } from "../shape.ts";
-import { el, hit, key, OTHER, r } from "../svg.ts";
+import { el, esc, hit, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
 
 const MAX_BAR = 72;
+
+/** A value label over a mark's own fill (no halo); `a` carries the ink (theme.ts). Also used by heatmap. */
+export const inText = (
+  x: number,
+  y: number,
+  text: string,
+  a: Record<string, string | boolean | null>,
+) =>
+  el(
+    "text",
+    {
+      x: r(x),
+      y: r(y),
+      "text-anchor": "middle",
+      "dominant-baseline": "middle",
+      "data-in": true,
+      ...a,
+    },
+    esc(text),
+  );
 
 interface Item {
   ci: number;
@@ -77,6 +97,7 @@ export const bar: Mark = {
     const cvOf = colorVals(spec);
     let marks = "";
     let hits = "";
+    let labels = "";
     for (const c of items(spec, shaped)) {
       const k = shaped.visible.indexOf(c.si);
       const full = spec.stack || spec.type === "waterfall" ? cat.bandwidth : inner.bandwidth;
@@ -123,14 +144,20 @@ export const bar: Mark = {
         const est = text.length * 7.2 + 4;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;
-        if (hz)
-          est <= w && h >= 14
-            ? ctx.label(cx, cy, text, "center")
-            : ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start");
-        else
-          est <= w && h >= 16
-            ? ctx.label(cx, cy, text, "center")
-            : ctx.label(cx, neg ? y + h : y, text, neg ? "below" : "above");
+        if (est <= w && h >= (hz ? 14 : 16))
+          // Over the bar's own fill: ink picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps).
+          labels += inText(cx, cy, text, {
+            "data-ink":
+              d["data-q"] === null
+                ? d["data-other"] || d["data-total"] || d["data-tone"]
+                  ? "b"
+                  : ""
+                : d["data-q"] >= 6
+                  ? ""
+                  : null,
+          });
+        else if (hz) ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start");
+        else ctx.label(cx, neg ? y + h : y, text, neg ? "below" : "above");
       }
     }
     if (ctx.y2 && spec.y2 !== null && shaped.y2.length) {
@@ -175,6 +202,6 @@ export const bar: Mark = {
           d: d || null,
         }) + dots;
     }
-    return { marks, hits };
+    return { marks, hits, labels };
   },
 };

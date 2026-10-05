@@ -30,6 +30,19 @@ describe("heatmap", () => {
       /data-maya="labels"><\/g>/,
     );
   });
+  it("a value too wide for its cell falls back to 2 significant digits", () => {
+    const wide: ChartSpec = {
+      ...spec,
+      format: "compact",
+      data: data.map((d) => ({ ...d, v: d.v * 1e6 + 234567 })),
+    };
+    const labels = (w: number) =>
+      render(wide, { width: w, height: 200 }).match(/<text[^>]*data-in[^>]*>([^<]*)</g) ?? [];
+    expect(labels(520).some((t) => /\d\.\d+M</.test(t))).toBe(true);
+    const tight = labels(200);
+    expect(tight.length).toBeGreaterThan(0);
+    expect(tight.every((t) => !/\d\.\d+M</.test(t))).toBe(true);
+  });
   it("renders a ramp legend with formatted extent", () => {
     const html = renderParts(spec).legend;
     expect(html).toContain("data-maya");

@@ -68,11 +68,11 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
   const ny = Math.max(1, Math.min(Math.floor(plot.h / cell), MAX_MARKS));
   const nx = Math.max(1, Math.min(Math.floor(plot.w / cell), Math.floor(MAX_MARKS / ny)));
   const [cw, ch] = [plot.w / nx, plot.h / ny];
-  const at = (v: number, s: LinearScale, o: number, n: number) =>
-    Math.min(n - 1, Math.max(0, Math.floor((s.of(v) - o) / (n === nx ? cw : ch))));
+  const at = (v: number, s: LinearScale, o: number, c: number, n: number) =>
+    Math.min(n - 1, Math.max(0, Math.floor((s.of(v) - o) / c)));
   const grid = new Map<number, number>();
   for (const p of pts) {
-    const k = at(p.x, sx, plot.x, nx) * ny + at(p.y, sy, plot.y, ny);
+    const k = at(p.x, sx, plot.x, cw, nx) * ny + at(p.y, sy, plot.y, ch, ny);
     grid.set(k, (grid.get(k) ?? 0) + 1);
   }
   const max = Math.max(...grid.values());
@@ -223,10 +223,12 @@ export const scatter: Mark = {
       const d = r(q * 2 + 2);
       return `<svg width="${d}" height="${d}" aria-hidden="true"><circle cx="${r(q + 1)}" cy="${r(q + 1)}" r="${r(q)}"/></svg><span>${esc(ctx.fmt(spec.size!, v))}</span>`;
     };
+    // No size field: no legend here, so the series or colour legend renders.
+    // ponytail: with a size field the size key replaces the series/colour legend (render.ts takes a mark legend whole).
     const legend =
       max > 0
         ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.size!) ?? spec.size!)}</b>${ref.map(key3).join("")}</div>`
-        : "";
-    return { marks, hits: "", cross: pts.length ? cross(ctx) : "", legend };
+        : null;
+    return { marks, hits: "", cross: pts.length ? cross(ctx) : "", ...(legend && { legend }) };
   },
 };
