@@ -122,7 +122,7 @@ Dates in x values are automatically detected and placed on a proportional time a
 
 ### Large data
 
-Line and area charts on a time axis automatically reduce long time series to at most 1000 categories using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. The data table and screen reader description indicate how many points are displayed. Scatter charts above 5000 visible points are drawn as density cells to reduce rendering cost; bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest using `limit` or `aggregate` when exceeded.
+Line and area charts on a time axis automatically reduce long time series to about one point per 2 px of plot width (at most 1000 categories, and 4000 shared between series) using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. The data table and screen reader description indicate how many points are displayed. Scatter charts above 5000 visible points are drawn as density cells to reduce rendering cost; bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest using `limit` or `aggregate` when exceeded.
 
 ## Canonical examples
 

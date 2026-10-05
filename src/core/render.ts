@@ -36,7 +36,7 @@
  *   the smallest gap (year, month, date, datetime); tick labels use per-unit defaults.
  *   Downsampling: line and area on a time axis with more categories than min(MAX_POINTS,
  *   floor(plot width / 2), 4000 / series) (one point per 2 px: a narrower band cannot be
- *   hovered) run largest-triangle-three-buckets per series (keeping first, last, min, max
+ *   hovered; the plot width is estimated as width - 56 because shape runs before layout) run largest-triangle-three-buckets per series (keeping first, last, min, max
  *   and one marker per gap), after the window; a union still over the target is thinned to
  *   first, last and evenly spaced indexes. Kept categories keep their keys; Shaped.reduced
  *   = [kept, before], and the description says so. view.window indexes the time-ordered list
@@ -283,13 +283,22 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const fmts = new Map<string, (v: unknown) => string>();
   // Time categories are strings: format them from their parsed ms (a bare date-time is UTC).
   const ms = new Map(shaped.time?.map((v, i) => [shaped.categories[i]!, v]));
-  const fmt = (field: string, v: unknown, step?: number) => {
+  // Category labels repeat across marks, table, description and axis: format each once.
+  const xs = new Map<string, string>();
+  const fmt = (field: string, v: unknown, step?: number): string => {
     if (v === OTHER) return t(s, "other");
-    if (field === s.x && typeof v === "string") v = ms.get(v) ?? v;
+    const cat = field === s.x && typeof v === "string" && step === undefined;
+    if (cat) {
+      const hit = xs.get(v as string);
+      if (hit !== undefined) return hit;
+    }
+    const raw = field === s.x && typeof v === "string" ? (ms.get(v) ?? v) : v;
     const k = field + "\0" + step;
     let f = fmts.get(k);
     if (!f) fmts.set(k, (f = formatter(s, field, step)));
-    return f(v);
+    const out = f(raw);
+    if (cat) xs.set(v as string, out);
+    return out;
   };
 
   // colorBy: sign/target give tone; a numeric field gives a 0..9 bucket over its extent.

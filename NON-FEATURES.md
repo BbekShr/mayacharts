@@ -23,7 +23,9 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Time line gaps**: a line breaks where the gap between readings exceeds 5 times the series' median step (fixed factor); use null rows for gaps it should not guess.
 - **Time bar width**: bars on a time axis take 0.8 of the smallest gap between dates, so one close pair makes every bar thin.
 - **Time tick labels**: a `format` entry for x replaces the per-unit tick labels entirely.
-- **Downsampling**: line and area on a time axis only, a fixed target of 1000 categories (fewer with many series; more than about 100 series or many gaps can exceed it). LTTB runs per series over all series, hidden ones included. Bars on a time axis are not reduced and stop at 5000 marks.
+- **Downsampling**: line and area on a time axis only, a target of one point per 2 px of plot width, at most 1000 categories (fewer with many series; more than about 100 series or many gaps can exceed it). LTTB runs per series over all series, hidden ones included. Bars on a time axis are not reduced and stop at 5000 marks.
+- **Point budget width**: the plot width the downsampling target uses is estimated as chart width minus 56 px, because shape runs before layout fixes the margins; a very wide y axis keeps a few points more than one per 2 px.
+- **Scatter hits**: scatter draws no hit elements; the element picks the nearest mark centre within 12 px, so a dense plot picks by distance, not by drawn circle.
 - **Density cells**: scatter past 5000 visible points draws square cells (not hexagons), merges series into one ramp, drops `size` and `name`, and scales colour by the square root of the count against the visible maximum.
 - **Format templates**: one `{value}` or `{value:<preset>}` per template, at most 80 characters; no other placeholders such as the series or category name.
 - **Drill engine**: `drill: true` + `path` for navigation. No custom drill templates, custom breadcrumb shapes, or drilling by a measure-derived category (use `path` and `aggregate`).

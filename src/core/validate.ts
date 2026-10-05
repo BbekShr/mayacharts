@@ -625,13 +625,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         "Rename that field (e.g. data.map(({ sign, ...r }) => ({ ...r, signValue: sign }))) to colour by it.",
       );
 
-    // The path string is built by the callback, only when a row fails.
-    const scan = (f: string, g: (v: unknown, p: () => string) => void) =>
-      rows.forEach((r, i) => g(r[f], () => `data[${i}].${f}`));
+    // Callbacks build the data[i].field path themselves, only when a row fails.
+    const scan = (f: string, g: (v: unknown, i: number) => void) =>
+      rows.forEach((r, i) => g(r[f], i));
     const numeric = (f: string, code: ErrorCode, opt: string) =>
-      scan(f, (v, path) => {
+      scan(f, (v, i) => {
         if (v == null || (typeof v === "number" && Number.isFinite(v))) return;
-        const p = path();
+        const p = `data[${i}].${f}`;
         fail(
           code,
           p,
@@ -656,9 +656,9 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     }
     if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
     if (s.xType === "time" && typeof s.x === "string")
-      scan(s.x, (v, path) => {
+      scan(s.x, (v, i) => {
         if (v == null || toTime(v) !== null) return;
-        const p = path();
+        const p = `data[${i}].${s.x}`;
         fail(
           "invalid-date",
           p,
@@ -670,9 +670,9 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       numeric(colorBy, "non-numeric-field", "colorBy");
     if (isPath)
       for (const f of ys)
-        scan(f, (v, path) => {
+        scan(f, (v, i) => {
           if (typeof v === "number" && v <= 0) {
-            const p = path();
+            const p = `data[${i}].${f}`;
             fail(
               "non-positive-value",
               p,
