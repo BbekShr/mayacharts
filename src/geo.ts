@@ -145,7 +145,8 @@ export const hexmap: Mark = {
         d: hex(st),
       });
       // Drawn here (not ctx.label) so labels on the dark ramp steps can carry data-dark.
-      const o = { "data-in": true, "data-dark": q >= 7 };
+      // "l": steps 7 and 8 are light text in light mode only; the top step is in both.
+      const o = { "data-in": true, "data-dark": q >= 9 ? true : q >= 7 ? "l" : null };
       if (showC)
         labels += text(cx, cy - dy, st.code, { ...o, "font-size": r(fc), "font-weight": 600 });
       if (showV)

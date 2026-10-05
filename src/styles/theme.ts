@@ -1,3 +1,5 @@
+import { HIER } from "./wip-hier.ts";
+
 const L =
   ":host,.maya-root{--maya-font:system-ui,sans-serif;--maya-font-size:12px;--maya-fg:light-dark(#1f2328,#e6edf3);--maya-fg-muted:light-dark(#656d76,#9198a1);--maya-grid:color-mix(in oklab,var(--maya-fg) 10%,transparent);--maya-bg:light-dark(#fff,#0d1117);--maya-accent:oklch(.6 .17 255);--maya-radius:3px;--maya-ease:cubic-bezier(.22,1,.36,1);--maya-tooltip-bg:color-mix(in oklab,var(--maya-bg) 92%,transparent);--maya-tooltip-fg:var(--maya-fg);--maya-focus:var(--maya-accent);--maya-good:light-dark(#1a7f37,#3fb950);--maya-bad:light-dark(#cf222e,#f85149);--maya-series-1:var(--maya-accent);--maya-series-2:oklch(.66 .16 50);--maya-series-3:oklch(.62 .15 160);--maya-series-4:oklch(.66 .17 330);--maya-series-5:oklch(.62 .14 90);--maya-series-6:oklch(.62 .12 205);--maya-series-7:oklch(.64 .19 22);--maya-series-8:oklch(.62 .16 295);color-scheme:light dark}";
 const D = "--maya-fg:#1f2328;--maya-fg-muted:#656d76;--maya-bg:#fff";
@@ -51,14 +53,12 @@ const MEKKO =
   "[data-maya=marks]:has([data-active]) [data-mm]:not([data-active],[data-lit]){opacity:.62}";
 
 // flow
-// Sankey and chord: the outer column is neutral slate (`data-neu` 0..3, no `data-s`), links take a
+// Sankey and chord: the outer column is one neutral (`data-neu`, no `data-s`), links take a
 // palette colour. Hovering a node (`data-n`) lights every link and node on a path through it
 // (the tooltip sets data-lit where `data-a` lists the node) and dims the rest; hovering a link
 // lifts it and keeps every node bright.
 const FLOW =
-  [55, 42, 30, 20]
-    .map((p, i) => `[data-neu="${i}"]{--c:color-mix(in oklab,var(--maya-fg) ${p}%,var(--maya-bg))}`)
-    .join("") +
+  "[data-neu]{--c:var(--maya-fg-muted)}" +
   (
     "[data-maya=link]{opacity:.45;fill:var(--c)}" +
     "M:has([data-active]) [data-maya=link]{opacity:.08}" +
@@ -167,7 +167,7 @@ export const css =
   // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
   // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.
   "circle[data-depth][data-maya]{fill:none;stroke:color-mix(in oklab,var(--c) var(--t,100%),var(--maya-bg));transition:stroke .5s}" +
-  'circle[data-tint="2"]{--t:70%}circle[data-tint="3"]{--t:48%}' +
+  '[data-tint="2"]{--t:70%}[data-tint="3"]{--t:48%}' +
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
   "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text){opacity:.4}" +
@@ -195,6 +195,7 @@ export const css =
   RADIAL +
   MEKKO +
   FLOW +
+  HIER +
   HEXMAP +
   SCATTER +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +
