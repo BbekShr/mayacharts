@@ -4,13 +4,9 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
-## 0.4.0 - Unreleased
+## 0.5.0 - Unreleased
 
-A time axis, large data (downsampled lines, density scatter), format templates and a measured comparison page; plus smooth drilling and a redesign of seven chart types. New spec fields: `xType` and `drillOut`.
-
-### Breaking
-
-- Line, area and vertical bar charts whose x values are ISO 8601 dates now get a time axis (sorted by time, proportional spacing). Set `xType: "category"` to keep the old axis.
+A measured scoreboard against seven other chart libraries, and speed: large data renders several times faster than before.
 
 ### Changed
 
@@ -20,6 +16,26 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 - Speed: the default `--maya-font` is `system-ui, sans-serif` (was `ui-sans-serif, system-ui, sans-serif`). Chromium does not know `ui-sans-serif`, and the failed lookup cost about 2 ms on a page's first chart; every engine resolved the old stack to the same system font. A chart with no rows skips the axis layout.
 - Speed: line, area, kpi and ridgeline charts draw one hit rect over the plot instead of one per category; hover, tap, click, select and drill pick the point at the nearest category (then the nearest series). Time-axis points carry `data-i` for the zoom brush, which the per-category hits carried before.
 - Speed: kpi sparklines and ridgelines draw at most one hover point per 4 px (kpi) or 6 px (ridgeline) of width, keeping the shape of the line (the time-axis downsampling pick, with each series' minimum, maximum and gap edges), and no longer fail with `too-many-marks` on long series. Beeswarm draws no hit rects (the tooltip and click pick the nearest dot within 12 px, as for scatter). Parallel shares its hit stroke on a group. At 1k rows the svg is 43 KB (kpi, was 289), 32 KB (ridgeline, was 305), 139 KB (beeswarm, was 334) and 859 KB (parallel, was 934).
+- Looks: a scatter titles its axes with the field names by default (`titles` still wins), a bubble scatter gets a size key of three reference circles, and a non-binned scatter over 100 points shrinks and thins its fill so density shows. The shared colour ramp starts at 35% (was 20%) so the lowest heatmap cells stay visible.
+- Speed: a line or area with one series and sorted, distinct ISO dates skips the category Map and per-category reducers (typed arrays; 1M rows render in about 300 ms, was 2 s). Plain ISO dates parse by arithmetic, field checks stop at the first row that has the field, and `esc()` skips the regex when nothing needs escaping.
+- Line and area downsampling targets one point per 2 px of plot width (at most 1000, and 4000 shared between series), so a 640 px chart draws about 290 points and its svg is about a third of the size. The look of a long line is the same; its hover bands are no narrower than 2 px.
+- Scatter charts no longer draw `data-maya="hit"` circles: the svg is smaller and a 1M-row scatter renders in about 300 ms (was 1.9 s). The element picks the nearest mark within 12 px instead.
+
+### Fixed
+
+- Sunburst with many small slices: once a slice would be under 4 px across, it and its smaller siblings draw as one grey "Other (n)" slice with a tooltip, instead of hairline slices and white gaps where slivers were skipped.
+- Sunburst names cross the ring only when their box fits inside the slice (else they turn along the radius, else they are left to the tooltip), so neighbouring names no longer overlap.
+- Treemap and sunburst colour slots follow size, largest first, so neighbouring slices differ until the 8-colour palette wraps. A `colors` array now maps to that order.
+- Parallel coordinates: hovering near a line showed no tooltip, because the theme cleared the stroke of every hit shape and so of the wide transparent hit paths. The rule is gone (no other hit shape gets a stroke).
+- Sankey: the longest left-column label (`Referral`) was cut to `Referr…` by a rounding error in its reserved room.
+
+## 0.4.0 - 2026-10-04
+
+A time axis, large data (downsampled lines, density scatter), format templates and a measured comparison page; plus smooth drilling and a redesign of seven chart types. New spec fields: `xType` and `drillOut`.
+
+### Breaking
+
+- Line, area and vertical bar charts whose x values are ISO 8601 dates now get a time axis (sorted by time, proportional spacing). Set `xType: "category"` to keep the old axis.
 
 ### Added
 
@@ -34,18 +50,8 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 - Sunburst centre disk with the current branch's name and total (`text.total` at the root). Clicking it, or Enter on it, goes back up one level.
 - Sunburst tooltip shows each slice's share of its parent (`text.shareOf`), and the top ring's share of the total.
 
-### Fixed
-
-- Sunburst with many small slices: once a slice would be under 4 px across, it and its smaller siblings draw as one grey "Other (n)" slice with a tooltip, instead of hairline slices and white gaps where slivers were skipped.
-- Sunburst names cross the ring only when their box fits inside the slice (else they turn along the radius, else they are left to the tooltip), so neighbouring names no longer overlap.
-- Treemap and sunburst colour slots follow size, largest first, so neighbouring slices differ until the 8-colour palette wraps. A `colors` array now maps to that order.
-
 ### Changed
 
-- Looks: a scatter titles its axes with the field names by default (`titles` still wins), a bubble scatter gets a size key of three reference circles, and a non-binned scatter over 100 points shrinks and thins its fill so density shows. The shared colour ramp starts at 35% (was 20%) so the lowest heatmap cells stay visible.
-- Speed: a line or area with one series and sorted, distinct ISO dates skips the category Map and per-category reducers (typed arrays; 1M rows render in about 300 ms, was 2 s). Plain ISO dates parse by arithmetic, field checks stop at the first row that has the field, and `esc()` skips the regex when nothing needs escaping.
-- Line and area downsampling targets one point per 2 px of plot width (at most 1000, and 4000 shared between series), so a 640 px chart draws about 290 points and its svg is about a third of the size. The look of a long line is the same; its hover bands are no narrower than 2 px.
-- Scatter charts no longer draw `data-maya="hit"` circles: the svg is smaller and a 1M-row scatter renders in about 300 ms (was 1.9 s). The element picks the nearest mark within 12 px instead.
 - Sunburst draws every level, sorted largest first, and a drill zooms: the clicked branch becomes the centre and its descendants sweep around to fill the circle while the rest fold away at its edges. Clicking a slice drills straight to it, however deep.
 - Sunburst slices are stroked circles whose dash is the arc, so drill and data updates animate in angle space through WAAPI in every engine (no path morph or crossfade).
 - Deeper sunburst rings are lighter tints of their branch's colour, with a 1 px gap between slices.
@@ -70,8 +76,6 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 
 ### Fixed
 
-- Parallel coordinates: hovering near a line showed no tooltip, because the theme cleared the stroke of every hit shape and so of the wide transparent hit paths. The rule is gone (no other hit shape gets a stroke).
-- Sankey: the longest left-column label (`Referral`) was cut to `Referr…` by a rounding error in its reserved room.
 - Sankey: clicking a node drilled into its level number and showed "No data". Only the outermost nodes and their links drill, by name.
 - Sankey and chord never drill to a single level they cannot draw (chord, with its two levels, does not drill).
 - Line and area: a click on a category drilled nothing, because the band hit has no key. It now drills that category.
