@@ -89,8 +89,8 @@ describe("time downsampling", () => {
 
 describe("data-i on a time axis", () => {
   const ids = (svg: string) =>
-    [...svg.matchAll(/<rect data-maya="hit" data-c="\d+" data-i="(\d+)"/g)].map((m) => +m[1]!);
-  it("hits carry absolute indexes, windowed and reduced", () => {
+    [...svg.matchAll(/<circle data-maya="mark"[^>]* data-i="(\d+)"/g)].map((m) => +m[1]!);
+  it("points carry absolute indexes, windowed and reduced", () => {
     const s = spec(3000);
     const win = ids(render(s, { view: { window: [1000, 2000] } }));
     expect(win[0]).toBe(1000);

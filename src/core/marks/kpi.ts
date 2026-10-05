@@ -1,5 +1,5 @@
 import { thin } from "../shape.ts";
-import { bands, el, esc, key, r } from "../svg.ts";
+import { el, esc, key, plotHit, r } from "../svg.ts";
 import type { Cell, Mark, MarkCtx } from "../types.ts";
 
 const PAD = 12;
@@ -157,12 +157,7 @@ function draw(ctx: MarkCtx) {
         d: d || null,
       }) +
       marks;
-    // One band per drawn point.
-    hits = bands(
-      { x: 0, y: 0, w: W, h: H },
-      shown.map((c) => c.ci),
-      (c) => PAD + c * step,
-    );
+    hits = plotHit({ x: 0, y: 0, w: W, h: H });
   }
   return { marks, hits, labels, grid };
 }

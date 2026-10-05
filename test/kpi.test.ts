@@ -55,7 +55,7 @@ describe("kpi", () => {
     const s = svg(base);
     expect(s).toContain('data-maya="line"');
     expect(s.match(/<circle /g)).toHaveLength(4);
-    expect(s.match(/data-maya="hit"/g)).toHaveLength(4);
+    expect(s.match(/data-maya="hit"/g)).toHaveLength(1); // one plot-wide hit
     expect(s.match(/data-last=""/g)).toHaveLength(1);
     const two = svg({ ...base, data: base.data.slice(0, 2) });
     expect(two).not.toContain('data-maya="line"');

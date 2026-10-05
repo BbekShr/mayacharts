@@ -30,9 +30,9 @@
  *   falls by one until none does, so ticks stay evenly spaced. Sub-day ticks at UTC midnight and
  *   the first tick show the date. No vertical grid. Line and area paths break where the gap to
  *   the previous non-null point exceeds 5x the series' median gap (fixed factor). The svg
- *   carries data-t (empty) beside data-n; line hit rects and bar marks (y2 points too) carry
- *   data-i, the category's index in the time-ordered list before window and reduction (the
- *   index space of view.window). Without spec.format for x, labels use a preset from
+ *   carries data-t (empty) beside data-n; line and area points and bar marks (y2 points too)
+ *   carry data-i, the category's index in the time-ordered list before window and reduction
+ *   (the index space of view.window). Without spec.format for x, labels use a preset from
  *   the smallest gap (year, month, date, datetime); tick labels use per-unit defaults.
  *   Downsampling: line and area on a time axis with more categories than min(MAX_POINTS,
  *   floor(plot width / 2), 4000 / series) (one point per 2 px: a narrower band cannot be
@@ -46,8 +46,7 @@
  *   Thinning in the mark (kpi, ridgeline; shape.thin): above one hover target per 4 px (kpi
  *   sparkline) or 6 px (ridgeline plot width) the mark draws only the kept categories, picked
  *   as on a time axis (shape.thin calls reduceTime): first, last, largest-triangle-three-buckets
- *   per run, each series' minimum and maximum and every gap edge, at most the target. Points, dots and keyless band hits exist for kept categories only (a hit spans to
- *   the midpoints of its neighbours); the kpi headline, delta and the data table use all rows.
+ *   per run, each series' minimum and maximum and every gap edge, at most the target. Points and dots exist for kept categories only; the kpi headline, delta and the data table use all rows.
  *   Both skip the pre-draw category cap (only the post-draw mark count applies). Beeswarm and
  *   parallel draw one mark per row (parallel: one per row and measure), so they keep the
  *   5000-mark error; a reduction would be a different chart (bin with scatter, or limit).
@@ -113,9 +112,13 @@
  *                       bar + y2: one `path[data-maya=line]` plus a point circle mark per
  *                       non-null category, data-s = series count % 8, data-series = the
  *                       y2 title; hits are 24px squares round each point.
- *                       Line: point circles are marks (hidden until active) plus one
- *                       keyless full-height band hit per category, each band running to the
- *                       midpoints with its neighbours (svg.ts bands()).
+ *                       Line, area, kpi and ridgeline: point circles are marks (line and
+ *                       area: hidden until active) plus ONE keyless hit rect over the plot
+ *                       (svg.ts plotHit(), no data-c); the element resolves it to the point
+ *                       at the category nearest the pointer's x, then nearest its y
+ *                       (tooltip.ts pick(), also what select and drill click). A keyless
+ *                       hit WITH data-c (parallel) stands for that category's mark nearest
+ *                       the pointer's y.
  *                       Radial: data-c is the category (a stack lights together); the
  *                       centre total is a text mark keyed `t` with no data-c (counts up).
  *                       Scatter: data-gx/data-gy (formatted x, y) fill the hover guides in

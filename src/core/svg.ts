@@ -71,27 +71,13 @@ export function hit(d: Parameters<typeof el>[1], x: number, y: number, w: number
     : "";
 }
 
-/** Keyless hit bands over `box` for categories `cs` (ascending) centred at `at(c)`, each up to the midpoints to its neighbours. */
-export function bands(
-  box: { x: number; y: number; w: number; h: number },
-  cs: number[],
-  at: (c: number) => number,
-  is?: readonly number[] | null,
-) {
-  const xs = cs.map(at);
-  const e = [box.x, ...xs.slice(1).map((x, k) => (xs[k]! + x) / 2), box.x + box.w];
-  return cs
-    .map((c, k) =>
-      el("rect", {
-        "data-maya": "hit",
-        "data-c": c,
-        "data-i": is?.[k],
-        x: r(e[k]!),
-        y: r(box.y),
-        width: r(e[k + 1]! - e[k]!),
-        height: r(box.h),
-        fill: "transparent",
-      }),
-    )
-    .join("");
-}
+/** One keyless hit over the box `b` (line, area, kpi, ridgeline): the element picks the point nearest the pointer's x, then its y. */
+export const plotHit = (b: { x: number; y: number; w: number; h: number }) =>
+  el("rect", {
+    "data-maya": "hit",
+    x: r(b.x),
+    y: r(b.y),
+    width: r(b.w),
+    height: r(b.h),
+    fill: "transparent",
+  });

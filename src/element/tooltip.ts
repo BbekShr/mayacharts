@@ -27,6 +27,8 @@ export interface Tooltip {
   hide(): void;
   /** The mark the tooltip is showing (hover, tap or keyboard). */
   active(): Element | undefined;
+  /** The mark a pointer event stands for: the mark, a hit's mark, or the nearest point. */
+  pick(e: Event): Element | undefined;
   /** Rebuild the key index after a patch and re-show the active mark if it survived. */
   refresh(): void;
 }
@@ -182,11 +184,19 @@ export function tooltip(
     }
   };
 
-  /** Scatter and beeswarm draw no hit shapes: the mark whose centre is within NEAR px of the pointer. */
-  const nearest = (ev?: Event) => {
+  /**
+   * Scatter and beeswarm draw no hit shapes: the mark whose centre is within NEAR px of the
+   * pointer. Line and area draw one plot-wide hit (`band`): the point at the category nearest
+   * the pointer's x, then nearest its y.
+   */
+  const nearest = (ev?: Event, band = false) => {
     const svg = box.querySelector("svg"),
       p = ev as PointerEvent | undefined;
-    if (!/^(scatter|beeswarm)$/.test(spec()?.type ?? "") || !svg || p?.clientX === undefined)
+    if (
+      (!band && !/^(scatter|beeswarm)$/.test(spec()?.type ?? "")) ||
+      !svg ||
+      p?.clientX === undefined
+    )
       return;
     index();
     cxy ??= list.flatMap((m) => ["cx", "cy"].map((k) => +(m.getAttribute(k) ?? "x")));
@@ -195,10 +205,13 @@ export function tooltip(
       px = (p.clientX - s.left) * k,
       py = (p.clientY - s.top) * k;
     let best = -1,
-      bd = (NEAR * k) ** 2;
+      bx = Infinity,
+      bd = band ? Infinity : (NEAR * k) ** 2;
     for (let i = 0; i < cxy.length; i += 2) {
-      const d = (cxy[i]! - px) ** 2 + (cxy[i + 1]! - py) ** 2;
-      if (d < bd) ((bd = d), (best = i));
+      const dx = Math.abs(cxy[i]! - px),
+        dy = Math.abs(cxy[i + 1]! - py),
+        d = band ? dy : dx * dx + dy * dy;
+      if (band ? dx < bx || (dx === bx && d < bd) : d < bd) ((bx = dx), (bd = d), (best = i));
     }
     return list[best / 2];
   };
@@ -209,6 +222,7 @@ export function tooltip(
     index();
     if (a(e, "data-maya") !== "hit") return e;
     if (e.hasAttribute("data-key")) return byKey.get(a(e, "data-key"));
+    if (!e.hasAttribute("data-c")) return nearest(ev, true);
     // Keyless band hit: the mark in this category nearest the pointer.
     const y = (ev as PointerEvent | undefined)?.clientY ?? 0;
     let best: Element | undefined,
@@ -415,6 +429,7 @@ export function tooltip(
     off: () => (hide(), clearTimeout(timer), offs.forEach((f) => f())),
     hide,
     active: () => cur,
+    pick: (e) => markOf(e.target, e),
     refresh() {
       const k = cur && a(cur, "data-key");
       dirty = true;

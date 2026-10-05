@@ -557,6 +557,8 @@ export interface Host {
   commit(next: State, target?: (Sel & { value: unknown }) | null): void;
   /** Polite live-region announcement (debounced 300 ms). */
   announce(text: string): void;
+  /** The mark a pointer event stands for (the tooltip's pick: hits and nearest points resolved). */
+  mark(e: Event): Element | undefined;
 }
 
 /** Returned by `mount()`. Keyboard handlers return true when they handled the key. */

@@ -69,12 +69,11 @@ describe("line", () => {
     const keys = attr(cs.join(""), "data-key");
     expect(new Set(keys).size).toBe(6);
   });
-  it("band hits: one keyless rect per category", () => {
+  it("one keyless plot-wide hit; the element picks the nearest point", () => {
     const h = group(svg(two), "hits");
     const rects = h.match(/<rect [^>]*>/g)!;
-    expect(rects).toHaveLength(3);
-    for (const x of rects) expect(x).not.toContain("data-key");
-    expect(attr(h, "data-c")).toEqual(["0", "1", "2"]);
+    expect(rects).toHaveLength(1);
+    expect(rects[0]).not.toMatch(/data-(key|c)=/);
     expect(group(svg(two), "cross")).toMatch(/^<line /);
   });
   it("labels and tone", () => {

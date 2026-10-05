@@ -86,15 +86,7 @@ export function mount(host: Host): Handlers {
       if (k) pick({ series: k }, null);
       return;
     }
-    let m = el.closest("[data-maya=mark],[data-maya=hit]");
-    // Scatter and beeswarm have no hit shapes: the tooltip's nearest-point pick (within 12 px) is the target.
-    if (!m && /^(scatter|beeswarm)$/.test(type() ?? ""))
-      m = root.querySelector("[data-maya=mark][data-active]");
-    if (m && !m.getAttribute("data-key")) {
-      // keyless band hit (line/area): the category's first keyed mark
-      const c = m.getAttribute("data-c");
-      m = c === null ? null : root.querySelector(`[data-maya=mark][data-key][data-c="${c}"]`);
-    }
+    const m = host.mark(e);
     const sel = m && selOf(m, type());
     if (m && sel) pick(sel, m);
   };

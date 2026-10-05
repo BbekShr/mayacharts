@@ -136,6 +136,7 @@ export class MayaChart extends HTMLElement {
       state: () => this.#state,
       commit: (next, target) => this.#commit(next, target ?? null),
       announce: (text) => this.#announce(text),
+      mark: (e) => this.#tip?.pick(e),
     };
     this.#ix = {
       measure: measure.mount(host),

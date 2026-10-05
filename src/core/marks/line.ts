@@ -1,5 +1,5 @@
 import { colorVals } from "../shape.ts";
-import { bands, el, key, OTHER, r } from "../svg.ts";
+import { el, key, OTHER, plotHit, r } from "../svg.ts";
 import type { Axis, BandScale, Cell, LinearScale, Mark, MarkCtx, MarkOut } from "../types.ts";
 
 const axes: Mark["axes"] = (spec, shaped) => [
@@ -61,6 +61,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         "data-maya": "mark",
         "data-key": key(ser, cname),
         "data-c": c.ci,
+        "data-i": shaped.index?.[c.ci],
         "data-s": si % 8,
         "data-x": x,
         "data-series": ser,
@@ -106,15 +107,9 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     });
   }
 
-  const hits = bands(
-    plot,
-    shaped.categories.map((_, ci) => ci),
-    (c) => cat.at(c) + cat.bandwidth / 2,
-    shaped.index,
-  );
   return {
     marks: areas + lines + dots,
-    hits,
+    hits: plotHit(plot),
     cross: el("line", { x1: 0, x2: 0, y1: r(plot.y), y2: r(plot.y + plot.h) }),
   };
 }

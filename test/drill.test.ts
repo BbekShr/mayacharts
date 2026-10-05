@@ -186,12 +186,10 @@ describe("drill in <maya-chart>", () => {
     await frame();
     expect(el.view?.drill).toEqual(["West"]);
   });
-  it("line: a click on a category's band drills", async () => {
+  it("line: a click on the plot drills the nearest category", async () => {
     const el = await mount(spec({ type: "line" }));
-    const band = [...el.shadowRoot!.querySelectorAll("[data-maya=hit]")].find(
-      (h) => !h.hasAttribute("data-key") && h.getAttribute("data-c") === "0",
-    )!;
-    click(band);
+    // The plot-wide hit stands for the point nearest the pointer (x 0: the first category).
+    click(el.shadowRoot!.querySelector("[data-maya=hit]")!);
     await frame();
     expect(el.view?.drill).toEqual(["West"]);
   });

@@ -1,5 +1,5 @@
 import { colorVals, thin } from "../shape.ts";
-import { bands, el, key, OTHER, r } from "../svg.ts";
+import { el, key, OTHER, plotHit, r } from "../svg.ts";
 import type { Axis, BandScale, Cell, Mark } from "../types.ts";
 
 // One hover target per 6 px of plot width; a denser category list keeps each bucket's low and high.
@@ -98,11 +98,9 @@ export const ridgeline: Mark = {
       });
     });
 
-    // One band per drawn category.
-    const hits = bands(plot, keep, (c) => cat.at(c) + cat.bandwidth / 2);
     return {
       marks: rows + dots,
-      hits,
+      hits: plotHit(plot),
       cross: el("line", { x1: 0, x2: 0, y1: r(plot.y), y2: r(plot.y + plot.h) }),
     };
   },
