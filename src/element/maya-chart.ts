@@ -17,6 +17,7 @@ import { css } from "../styles/theme.ts";
 import { type Intro, patch, type PatchOptions } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
+import { listen } from "./listen.ts";
 import * as measure from "./measure.ts";
 import * as select from "./select.ts";
 import * as sort from "./sort.ts";
@@ -41,6 +42,7 @@ export class MayaChart extends HTMLElement {
   #ro: ResizeObserver | undefined;
   #resized = false;
   #off: (() => void) | undefined;
+  #unlisten: (() => void)[] = [];
   #tip: Tooltip | undefined;
   #zoom: PatchOptions["zoom"];
   #vars = new Set<string>();
@@ -123,9 +125,10 @@ export class MayaChart extends HTMLElement {
         ),
       );
     }
-    root.addEventListener("click", this.#click);
-    root.addEventListener("keydown", this.#key);
-    globalThis.addEventListener("maya-register", this.#registered);
+    this.#unlisten = [
+      listen(root, ["click", this.#click], ["keydown", this.#key]),
+      listen(globalThis, ["maya-register", this.#registered]),
+    ];
     const host: Host = {
       root,
       el: this,
@@ -177,9 +180,7 @@ export class MayaChart extends HTMLElement {
     this.#q = false;
     this.#ro?.disconnect();
     this.#off?.();
-    this.shadowRoot?.removeEventListener("click", this.#click);
-    this.shadowRoot?.removeEventListener("keydown", this.#key);
-    globalThis.removeEventListener("maya-register", this.#registered);
+    this.#unlisten.forEach((f) => f());
     clearTimeout(this.#say);
     for (const h of Object.values(this.#ix ?? {})) h.off();
     this.#ix = undefined;

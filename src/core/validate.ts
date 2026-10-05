@@ -796,9 +796,9 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     format: new Map(typeof f === "string" ? measures.map((m) => [m, f]) : entries<FieldFormat>(f)),
     // A scatter names its axes by field: two numeric axes say nothing otherwise.
     titles: new Map([
-      ...(spec.type === "scatter"
-        ? [spec.x, measures[measure]].map((k): [string, string] => [k!, k!])
-        : []),
+      ...(spec.type === "scatter" ? [spec.x!, measures[measure]!] : []).map(
+        (k): [string, string] => [k, k],
+      ),
       ...entries<string>(spec.titles),
     ]),
     labels: spec.labels ?? null,

@@ -6,6 +6,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, Sel, SpecEvent, State } from "../core/types.ts";
+import { listen } from "./listen.ts";
 
 export type SelectEvent =
   { type: "toggle"; sel: Sel; multi: boolean } | { type: "clear" } | SpecEvent;
@@ -97,7 +98,6 @@ export function mount(host: Host): Handlers {
     const sel = m && selOf(m, type());
     if (m && sel) pick(sel, m);
   };
-  root.addEventListener("click", onClick);
   return {
     escape() {
       if (!host.state().selected.length) return false;
@@ -117,6 +117,6 @@ export function mount(host: Host): Handlers {
         if (sel.some((q) => matches(q, m, type()))) m.setAttribute("data-selected", "");
         else m.removeAttribute("data-selected");
     },
-    off: () => root.removeEventListener("click", onClick),
+    off: listen(root, ["click", onClick]),
   };
 }

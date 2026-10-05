@@ -7,6 +7,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { ChartSpec, Handlers, Host, SpecEvent, State } from "../core/types.ts";
+import { listen } from "./listen.ts";
 
 /** `spec` is needed to gate a push (the reducer has no other access to it). */
 export type DrillEvent =
@@ -149,7 +150,6 @@ export const mount = (host: Host): Handlers => {
     }
     ptr = false;
   };
-  host.root.addEventListener("click", click);
 
   return {
     escape: () => pop((host.state().view.drill ?? []).length - 1),
@@ -179,6 +179,6 @@ export const mount = (host: Host): Handlers => {
       if (!host.root.activeElement || !host.root.contains(host.root.activeElement))
         host.root.querySelector<HTMLElement>(".maya-svg")?.focus({ preventScroll: true });
     },
-    off: () => host.root.removeEventListener("click", click),
+    off: listen(host.root, ["click", click]),
   };
 };

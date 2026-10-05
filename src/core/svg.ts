@@ -59,18 +59,15 @@ export const key = (...parts: unknown[]): string =>
 export function hit(d: Parameters<typeof el>[1], x: number, y: number, w: number, h: number) {
   const [gw, gh] = [Math.max(w, 24), Math.max(h, 24)];
   return w < 24 || h < 24
-    ? el(
-        "rect",
-        {
-          "data-maya": "hit",
-          ...d,
-          x: r(x - (gw - w) / 2),
-          y: r(y - (gh - h) / 2),
-          width: r(gw),
-          height: r(gh),
-          fill: "transparent",
-        },
-      )
+    ? el("rect", {
+        "data-maya": "hit",
+        ...d,
+        x: r(x - (gw - w) / 2),
+        y: r(y - (gh - h) / 2),
+        width: r(gw),
+        height: r(gh),
+        fill: "transparent",
+      })
     : "";
 }
 
@@ -82,20 +79,19 @@ export function bands(
   is?: readonly number[] | null,
 ) {
   const xs = cs.map(at);
-  return xs
-    .map((x, k) => {
-      const a = k ? (xs[k - 1]! + x) / 2 : box.x;
-      const b = k < xs.length - 1 ? (x + xs[k + 1]!) / 2 : box.x + box.w;
-      return el("rect", {
+  const e = [box.x, ...xs.slice(1).map((x, k) => (xs[k]! + x) / 2), box.x + box.w];
+  return cs
+    .map((c, k) =>
+      el("rect", {
         "data-maya": "hit",
-        "data-c": cs[k],
+        "data-c": c,
         "data-i": is?.[k],
-        x: r(a),
+        x: r(e[k]!),
         y: r(box.y),
-        width: r(b - a),
+        width: r(e[k + 1]! - e[k]!),
         height: r(box.h),
         fill: "transparent",
-      });
-    })
+      }),
+    )
     .join("");
 }

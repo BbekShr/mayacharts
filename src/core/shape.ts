@@ -42,14 +42,13 @@ interface Opts {
   plotWidth?: number;
 }
 
-export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped {
-  const {
-    hidden = [],
-    window,
-    plotWidth = Infinity,
-  }: Opts = Array.isArray(o) ? { hidden: o } : (o as Opts);
+export function shape(
+  s: ResolvedSpec,
+  { hidden = [], window, plotWidth = Infinity }: Opts = {},
+): Shaped {
   const series: string[] = [];
   const si = new Map<string, number>();
+  const shown = () => series.flatMap((k, j) => (hidden.includes(k) ? [] : [j]));
   if (s.type === "scatter") {
     // Marks draw from rows: only the series list (and which are visible) is shared.
     if (s.series !== null)
@@ -58,13 +57,11 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
         if (!si.has(sk)) si.set(sk, series.push(sk) - 1);
       }
     else if (s.data.length) series.push("");
-    const visible: number[] = [];
-    series.forEach((k, j) => hidden.includes(k) || visible.push(j));
     return {
       categories: [],
       totals: [],
       series,
-      visible,
+      visible: shown(),
       cells: [],
       extent: [0, 0],
       y2: [],
@@ -189,8 +186,7 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
     }
   }
 
-  const visible: number[] = [];
-  series.forEach((k, j) => hidden.includes(k) || visible.push(j));
+  const visible = shown();
   const cells: Cell[] = [];
   let lo = 0;
   let hi = 0;

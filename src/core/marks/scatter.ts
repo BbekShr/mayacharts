@@ -80,21 +80,18 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
   // Pixel to data, from the scale's own endpoints.
   const inv = (s: LinearScale, px: number) =>
     s.domain[0] + ((px - s.range[0]) / (s.range[1] - s.range[0])) * (s.domain[1] - s.domain[0]);
-  const memoSpan = new Map<string, string>();
-  const span = (s: LinearScale, f: string, a: number, b: number, k: string) => {
-    let v = memoSpan.get(k);
-    if (v === undefined)
-      memoSpan.set(k, (v = ctx.t("range", ctx.fmt(f, inv(s, a)), ctx.fmt(f, inv(s, b)))));
-    return v;
-  };
+  // Formatted values at the grid lines, once each: cells read their two neighbours.
+  const edges = (s: LinearScale, f: string, o: number, c: number, n: number) =>
+    Array.from({ length: n + 1 }, (_, i) => ctx.fmt(f, inv(s, o + i * c)));
+  const [ex, ey] = [edges(sx, spec.x, plot.x, cw, nx), edges(sy, spec.y, plot.y, ch, ny)];
   let marks = "";
   [...grid]
     .sort((a, b) => a[0] - b[0])
     .forEach(([k, n], c) => {
       const [i, j] = [Math.floor(k / ny), k % ny];
       const [x, y] = [plot.x + i * cw, plot.y + j * ch];
-      const gx = span(sx, spec.x, x, x + cw, "x" + i);
-      const gy = span(sy, spec.y, y + ch, y, "y" + j);
+      const gx = ctx.t("range", ex[i]!, ex[i + 1]!);
+      const gy = ctx.t("range", ey[j + 1]!, ey[j]!);
       marks += el("rect", {
         "data-maya": "mark",
         "data-key": key("b", i, j),

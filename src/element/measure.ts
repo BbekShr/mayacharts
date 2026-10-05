@@ -7,6 +7,7 @@
  * Persistence: measure resets when spec.y changes.
  */
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
+import { listen } from "./listen.ts";
 import { t } from "../core/strings.ts";
 
 /** `count` (number of measures) bounds the index; without it only the lower bound applies. */
@@ -94,13 +95,5 @@ export const mount = (host: Host): Handlers => {
     }
   };
 
-  host.root.addEventListener("click", click);
-  host.root.addEventListener("keydown", keydown);
-  return {
-    painted,
-    off() {
-      host.root.removeEventListener("click", click);
-      host.root.removeEventListener("keydown", keydown);
-    },
-  };
+  return { painted, off: listen(host.root, ["click", click], ["keydown", keydown]) };
 };

@@ -79,7 +79,7 @@ describe("shape", () => {
         { m: "a", s: "A", v: 1 },
         { m: "a", s: "B", v: 100 },
       ]),
-      ["B"],
+      { hidden: ["B"] },
     );
     expect(s.series).toEqual(["A", "B"]);
     expect(s.visible).toEqual([0]);

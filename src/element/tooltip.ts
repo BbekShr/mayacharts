@@ -1,5 +1,6 @@
 import { t as str } from "../core/strings.ts";
 import type { ChartSpec } from "../core/types.ts";
+import { listen } from "./listen.ts";
 
 const a = (e: Element, k: string) => e.getAttribute(k) ?? "";
 const h = (t: string, txt = "", at: Record<string, string> = {}) => {
@@ -14,6 +15,11 @@ const FADE = 120;
 const NEAR = 12;
 const FIXED = ["position", "position-area", "left", "top", "margin"];
 const GLIDE: KeyframeAnimationOptions = { duration: 200, easing: "cubic-bezier(.22,1,.36,1)" };
+/** viewBox units per client px (the svg may be scaled by CSS). */
+const unit = (svg: Element, s: DOMRect) => {
+  const w = +(a(svg, "viewBox").split(" ")[2] || s.width) || 1;
+  return w / (s.width || w);
+};
 const still = () => matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export interface Tooltip {
@@ -103,8 +109,7 @@ export function tooltip(
     if (!m || !svg) return g.removeAttribute("data-on");
     const r = m.getBoundingClientRect(),
       s = svg.getBoundingClientRect();
-    const vw = +(a(svg, "viewBox").split(" ")[2] || s.width) || 1;
-    const k = vw / (s.width || vw),
+    const k = unit(svg, s),
       px = (r.left + r.width / 2 - s.left) * k,
       py = (r.top + r.height / 2 - s.top) * k,
       tx = g.querySelectorAll("text");
@@ -182,17 +187,14 @@ export function tooltip(
       return;
     index();
     cxy ??= list.flatMap((m) => ["cx", "cy"].map((k) => +(m.getAttribute(k) ?? "x")));
-    // Client px to viewBox units (the svg may be scaled by CSS).
     const s = svg.getBoundingClientRect(),
-      [, , vw, vh] = a(svg, "viewBox").split(" ").map(Number) as number[],
-      kx = (vw || s.width) / (s.width || 1),
-      ky = (vh || s.height) / (s.height || 1),
-      px = (p.clientX - s.left) * kx,
-      py = (p.clientY - s.top) * ky;
+      k = unit(svg, s),
+      px = (p.clientX - s.left) * k,
+      py = (p.clientY - s.top) * k;
     let best = -1,
-      bd = (NEAR * kx) ** 2;
+      bd = (NEAR * k) ** 2;
     for (let i = 0; i < cxy.length; i += 2) {
-      const d = (cxy[i]! - px) ** 2 + ((cxy[i + 1]! - py) * (kx / ky)) ** 2;
+      const d = (cxy[i]! - px) ** 2 + (cxy[i + 1]! - py) ** 2;
       if (d < bd) ((bd = d), (best = i));
     }
     return list[best / 2];
@@ -275,7 +277,7 @@ export function tooltip(
     } = m.getBoundingClientRect();
     if (side && svg) {
       const s = svg.getBoundingClientRect(),
-        k = s.width / (+a(svg, "viewBox").split(" ")[2]! || s.width || 1),
+        k = 1 / unit(svg, s),
         [, py, , ph] = a(svg, "data-plot").split(" ").map(Number) as number[],
         left = r.left + r.width / 2,
         top = s.top + py! * k;
@@ -391,25 +393,23 @@ export function tooltip(
   };
   const blur = () => pin || hide();
 
-  const on_: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
-    [box, "pointerover", move],
-    [box, "pointermove", move],
-    [box, "pointerdown", down],
-    [box, "pointerup", up],
-    [box, "pointerleave", leave],
-    [box, "keydown", key],
-    [box, "focusout", blur],
-    [document, "pointerdown", outside, { capture: true }],
-    // Focusing the chart can scroll it into view; that must not close a keyboard tooltip.
-    [window, "scroll", () => kb || hide(), { capture: true, passive: true }],
-  ];
-  for (const [t, n, f, o] of on_) t.addEventListener(n, f, o);
-  return {
-    off: () => (
-      hide(),
-      clearTimeout(timer),
-      on_.forEach(([t, n, f, o]) => t.removeEventListener(n, f, o))
+  const offs = [
+    listen(
+      box,
+      ["pointerover", move],
+      ["pointermove", move],
+      ["pointerdown", down],
+      ["pointerup", up],
+      ["pointerleave", leave],
+      ["keydown", key],
+      ["focusout", blur],
     ),
+    listen(document, ["pointerdown", outside, { capture: true }]),
+    // Focusing the chart can scroll it into view; that must not close a keyboard tooltip.
+    listen(window, ["scroll", () => kb || hide(), { capture: true, passive: true }]),
+  ];
+  return {
+    off: () => (hide(), clearTimeout(timer), offs.forEach((f) => f())),
     hide,
     active: () => cur,
     refresh() {

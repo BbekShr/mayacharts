@@ -11,9 +11,7 @@ const num = (v: unknown) => (typeof v === "number" ? v : null);
 function draw(ctx: MarkCtx) {
   const { spec, shaped, width: W, height: H } = ctx;
   const cats = spec.x ? shaped.categories : [];
-  const cells: Cell[] = spec.x
-    ? shaped.cells.filter((c) => c.si === 0)
-    : [];
+  const cells: Cell[] = spec.x ? shaped.cells.filter((c) => c.si === 0) : [];
   const live = cells.filter((c) => c.value !== null);
   const last = live[live.length - 1];
   const value = spec.x
@@ -44,35 +42,24 @@ function draw(ctx: MarkCtx) {
   };
   const text = (a: Parameters<typeof el>[1], s: string) =>
     el("text", { "dominant-baseline": "hanging", x: PAD, ...a }, esc(s));
+  const pct = (o: Intl.NumberFormatOptions) =>
+    new Intl.NumberFormat(spec.locale, { style: "percent", maximumFractionDigits: 1, ...o });
 
-  let marks = el(
-    "text",
-    {
-      "data-maya": "mark",
-      "data-key": "v",
-      ...payload,
-      "font-size": fs,
-      x: PAD,
-      y: PAD,
-      "dominant-baseline": "hanging",
-    },
-    esc(f),
+  let marks = text(
+    { "data-maya": "mark", "data-key": "v", ...payload, "font-size": fs, y: PAD },
+    f,
   );
   let labels = "";
   let hits = "";
   let top = PAD + fs + 4;
   const prev = live[live.length - 2];
   if (last && prev && prev.value) {
-    const pct = (value - prev.value) / Math.abs(prev.value);
-    const s = new Intl.NumberFormat(spec.locale, {
-      style: "percent",
-      maximumFractionDigits: 1,
-      signDisplay: "exceptZero",
-    }).format(pct);
+    const chg = (value - prev.value) / Math.abs(prev.value);
+    const s = pct({ signDisplay: "exceptZero" }).format(chg);
     labels += text(
       {
         "data-kpi": "delta",
-        "data-tone": pct > 0 ? "good" : pct < 0 ? "bad" : null,
+        "data-tone": chg > 0 ? "good" : chg < 0 ? "bad" : null,
         y: r(top),
         "font-size": 12,
       },
@@ -89,7 +76,6 @@ function draw(ctx: MarkCtx) {
   if (target) {
     const w = W - 2 * PAD;
     const k = Math.min(Math.max(value / target, 0), 1.2) / 1.2;
-    const pct = new Intl.NumberFormat(spec.locale, { style: "percent", maximumFractionDigits: 1 });
     bottom -= 8;
     // Unkeyed parts live outside the marks group (the element diffs marks by data-key).
     grid = el("rect", { "data-kpi": "track", x: PAD, y: bottom, width: r(w), height: 8, rx: 4 });
@@ -115,7 +101,7 @@ function draw(ctx: MarkCtx) {
     });
     labels += text(
       { "data-kpi": "of", y: bottom - 16, "font-size": 11 },
-      ctx.t("ofTarget", pct.format(value / target), ctx.fmt(spec.y, target)),
+      ctx.t("ofTarget", pct({}).format(value / target), ctx.fmt(spec.y, target)),
     );
     bottom -= 24;
   }
