@@ -156,7 +156,7 @@
  *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
  *   key on `svg[data-xd]` (both axes linear). Rules whose subject is a mark avoid a `:has()` on
  *   an ancestor, which is checked once per mark: selection dims through `--o`, set once on the
- *   marks group.
+ *   marks group, and legend hover through `--d` and `--h<slot>` on `.maya`.
  *
  * Keyboard (one keydown dispatcher in maya-chart.ts; handlers return "handled"):
  *   Escape priority: pinned tooltip -> brush in progress -> selection -> zoom window -> drill
@@ -199,7 +199,8 @@
  *   spec.animate === false.
  *
  * Hover (element/tooltip.ts): the active mark gets data-active and the marks of its
- *   category (its tooltip rows, plus hierarchy ancestors) data-lit; CSS dims the rest.
+ *   category (its tooltip rows, plus hierarchy ancestors, plus for a flow node every link and
+ *   node whose data-a lists it) data-lit; CSS dims the rest.
  *   Bar types get an element-owned `<rect data-maya="band">` before the marks group,
  *   moved with a CSSOM transform; it and the crosshair glide once they carry data-on.
  *   Charts with a crosshair anchor the tooltip beside it (data-side on .maya-tip).

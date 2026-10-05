@@ -18,13 +18,13 @@ const Q = rng(10)
   .map((n) => `[data-q="${n}"]{--q:${Math.round(35 + (n * 65) / 9)}%}`)
   .join("");
 // Legend hover: dim the other series' marks (slot match; :has needs no JS). Speed: a `:has()` on
-// an ancestor of a mark is checked once per mark (~0.4 ms per rule per 1000 marks), so the
-// legend is reached as a sibling of .maya-box: a chart without a legend fails that test at once.
-// Selection dims through --o, set once on the marks group.
+// an ancestor of a mark is checked once per mark (~0.4 ms per rule per 1000 marks), so dimming
+// is set as inherited custom properties on one ancestor (--d legend hover, --h<slot> the hovered
+// slot, --o selection on the marks group) and each mark reads them in one declaration.
 const H = rng(8)
   .map(
     (n) =>
-      `.maya-legend:has([data-s="${n}"]:hover)~.maya-box :is([data-maya=mark],[data-maya=line],[data-maya=area]):not([data-s="${n}"]){opacity:.25}`,
+      `.maya:has(.maya-legend [data-s="${n}"]:hover){--h${n}:1;--d:.25}[data-s="${n}"]{--h:var(--h${n})}`,
   )
   .join("");
 // Sliding indicator of .maya-ctl: data-n = options (2..4; ponytail: more options need more rules), data-i = checked index (set by the element).
@@ -53,21 +53,16 @@ const MEKKO =
 // flow
 // Sankey and chord: the outer column is neutral slate (`data-neu` 0..3, no `data-s`), links take a
 // palette colour. Hovering a node (`data-n`) lights every link and node on a path through it
-// (`data-a` lists the node numbers whose hover lights it) and dims the rest; hovering a link lifts
-// it and keeps every node bright.
-// ponytail: path lighting covers the first 32 nodes.
-const lift = rng(32)
-  .map((i) => `M:has([data-n="${i}"][data-active]) [data-a~="${i}"]{opacity:var(--l,1)}`)
-  .join("");
+// (the tooltip sets data-lit where `data-a` lists the node) and dims the rest; hovering a link
+// lifts it and keeps every node bright.
 const FLOW =
   [55, 42, 30, 20]
     .map((p, i) => `[data-neu="${i}"]{--c:color-mix(in oklab,var(--maya-fg) ${p}%,var(--maya-bg))}`)
     .join("") +
   (
-    "[data-maya=link]{opacity:.45;--l:.85}" +
+    "[data-maya=link]{opacity:.45}" +
     "M:has([data-active]) [data-maya=link]{opacity:.08}" +
-    lift +
-    "M [data-maya=link][data-active]{opacity:.85}M:has([data-maya=link][data-active]) [data-n]{opacity:1}"
+    "M [data-maya=link]:is([data-active],[data-lit]){opacity:.85}M:has([data-maya=link][data-active]) [data-n]{opacity:1}"
   ).replaceAll("M", "[data-maya=marks]") +
   "rect[data-n]{rx:4px}" +
   "path[data-maya][data-arc]{stroke:var(--c);stroke-width:4;stroke-linejoin:round}path[data-arc][data-active]{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 12%)}" +
@@ -137,7 +132,7 @@ export const css =
   "[data-tone=good]{--c:var(--maya-good)}[data-tone=bad]{--c:var(--maya-bad)}" +
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
-  "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--o)}" +
+  "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
   "[data-dir=h] [data-neg]{transform-origin:100% 0}" +
   "[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}[data-ghost]{pointer-events:none}" +
   "[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)),var(--maya-fg) 12%)}" +
@@ -159,7 +154,7 @@ export const css =
   "[data-ridge]{fill:color-mix(in oklab,var(--c) 40%,var(--maya-bg))}[data-maya=grid] circle{fill:none;shape-rendering:auto}" +
   "[data-maya=labels] [data-ring]{fill:var(--maya-fg-muted)}[data-maya=marks] text{fill:var(--maya-fg)}" +
   "[data-maya=sort]{cursor:pointer}[data-maya=sort] rect{fill:transparent}[data-maya=sort] text{font-weight:600}[data-maya=sort]:focus-visible{outline:2px solid var(--maya-focus)}" +
-  ":is([data-maya=line],[data-maya=area]){transition:opacity .25s}[data-maya=marks]:has(path[data-active]) path[data-maya=line]:not([data-active]){opacity:.25}" +
+  ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks]:has(path[data-active]) path[data-maya=line]:not([data-active]){opacity:.25}" +
   ":not(circle)[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
   // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
   // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.

@@ -96,6 +96,9 @@ export function tooltip(
     const k = m ? a(m, "data-key") : "";
     if (k.startsWith("h~"))
       for (const [p, e] of byKey) if (k.startsWith(p + "~") && p !== "h") peers.push(e);
+    // Flows: a node lights every link and node on a path through it (their data-a lists it).
+    if (m?.hasAttribute("data-n"))
+      peers.push(...box.querySelectorAll(`[data-a~="${a(m, "data-n")}"]`));
     for (const l of lit) l.setAttribute("data-active", "");
     for (const l of peers) l.setAttribute("data-lit", "");
   };
