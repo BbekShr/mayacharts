@@ -7,6 +7,7 @@ import json from "./compare.json";
 // missing, so they are read through import.meta.glob, which yields nothing for an absent file.
 interface Result {
   supported?: boolean;
+  note?: string;
   renders?: boolean;
   firstViolation?: string;
   axeSeriousCritical?: number | null;
@@ -498,9 +499,48 @@ function summary(): HTMLElement {
   return s;
 }
 
+/** The same chart from every library, as screenshots written by scripts/compare-shots.mjs. */
+function sideBySide(): HTMLElement {
+  const s = el("section");
+  s.id = "side";
+  el("h2", "Side by side", s);
+  el(
+    "p",
+    "Each library's reference chart for the same data, with its defaults, at 640 by 360 pixels in the light theme. These are pictures of the charts, so hover and keyboard do not work here.",
+    s,
+  );
+  const label = el("label", "Chart ", s);
+  const pick = el("select", "", label);
+  for (const c of data.charts) el("option", chartName(c), pick).value = c;
+  const grid = el("div", "", s);
+  grid.className = "side";
+  const show = () => {
+    const c = pick.value;
+    grid.replaceChildren();
+    for (const l of libs) {
+      const f = el("figure", "", grid);
+      const r = data.results[l]?.[c];
+      if (r?.supported === false) {
+        el("div", r.note ?? "Not supported.", f).className = "none";
+      } else {
+        const img = el("img", "", f);
+        img.src = `${import.meta.env.BASE_URL}compare/${l}-${c}.png`;
+        img.alt = `${name(l)}: ${chartName(c)}`;
+        img.width = 640;
+        img.height = 360;
+        img.loading = "lazy";
+      }
+      el("figcaption", name(l), f);
+    }
+  };
+  pick.addEventListener("change", show);
+  show();
+  return s;
+}
+
 const host = document.getElementById("tables")!;
 const sum = summary();
-host.append(sum, ...dims.map(render));
+host.append(sum, sideBySide(), ...dims.map(render));
 const absent = [!size && "bundle size", !ease && "ease of writing", !looks && "looks"]
   .filter(Boolean)
   .join(" and ");

@@ -92,7 +92,8 @@
     "tokens": "node scripts/tokens.mjs",
     "compare:bundle": "node scripts/compare-bundle.mjs",
     "compare:size": "node scripts/compare-size.mjs",
-    "compare:ease": "node scripts/compare-ease.mjs"
+    "compare:ease": "node scripts/compare-ease.mjs",
+    "compare:shots": "node scripts/compare-bundle.mjs && node scripts/compare-shots.mjs"
   },
   "mayaSize": {
     "dist/index.js": 30464,
