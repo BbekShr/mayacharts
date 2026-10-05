@@ -14,7 +14,7 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 
 ### Changed
 
-- Speed: kpi sparklines and ridgelines draw at most one hover point per 4 px (kpi) or 6 px (ridgeline) of width, keeping each bucket's lowest and highest value, and no longer fail with `too-many-marks` on long series. Beeswarm draws no hit rects (the tooltip and click pick the nearest dot within 12 px, as for scatter). Parallel shares its hit stroke on a group. At 1k rows the svg is 43 KB (kpi, was 289), 32 KB (ridgeline, was 305), 139 KB (beeswarm, was 334) and 859 KB (parallel, was 934).
+- Speed: kpi sparklines and ridgelines draw at most one hover point per 4 px (kpi) or 6 px (ridgeline) of width, keeping the shape of the line (the time-axis downsampling pick, with each series' minimum, maximum and gap edges), and no longer fail with `too-many-marks` on long series. Beeswarm draws no hit rects (the tooltip and click pick the nearest dot within 12 px, as for scatter). Parallel shares its hit stroke on a group. At 1k rows the svg is 43 KB (kpi, was 289), 32 KB (ridgeline, was 305), 139 KB (beeswarm, was 334) and 859 KB (parallel, was 934).
 
 ### Added
 
@@ -59,6 +59,7 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 
 ### Fixed
 
+- Parallel coordinates: hovering near a line showed no tooltip, because the theme cleared the stroke of every hit shape and so of the wide transparent hit paths. The rule is gone (no other hit shape gets a stroke).
 - Sankey: the longest left-column label (`Referral`) was cut to `Referr…` by a rounding error in its reserved room.
 - Sankey: clicking a node drilled into its level number and showed "No data". Only the outermost nodes and their links drill, by name.
 - Sankey and chord never drill to a single level they cannot draw (chord, with its two levels, does not drill).

@@ -44,9 +44,9 @@
  *   before reduction. Scatter is exempt from the pre-draw mark cap (it bins its own rows).
  *   Scatter's Shaped has empty categories and cells: its marks draw from rows.
  *   Thinning in the mark (kpi, ridgeline; shape.thin): above one hover target per 4 px (kpi
- *   sparkline) or 6 px (ridgeline plot width) the mark draws only the kept categories: first,
- *   last, each bucket's lowest and highest value per series and every gap edge, at most the
- *   target. Points, dots and keyless band hits exist for kept categories only (a hit spans to
+ *   sparkline) or 6 px (ridgeline plot width) the mark draws only the kept categories, picked
+ *   as on a time axis (shape.thin calls reduceTime): first, last, largest-triangle-three-buckets
+ *   per run, each series' minimum and maximum and every gap edge, at most the target. Points, dots and keyless band hits exist for kept categories only (a hit spans to
  *   the midpoints of its neighbours); the kpi headline, delta and the data table use all rows.
  *   Both skip the pre-draw category cap (only the post-draw mark count applies). Beeswarm and
  *   parallel draw one mark per row (parallel: one per row and measure), so they keep the
@@ -327,7 +327,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           : "bad"
         : null;
   const toneWord = (n: "good" | "bad") =>
-    t(s, cb === "sign" ? (n === "good" ? "positive" : "negative") : n === "good" ? "above" : "below");
+    t(
+      s,
+      cb === "sign" ? (n === "good" ? "positive" : "negative") : n === "good" ? "above" : "below",
+    );
   const toneText = (v: number) => {
     const n = tone(v);
     return n && toneWord(n);
@@ -535,10 +538,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       cb === "sign" || typeof cb === "object"
         ? `<div class="maya-legend" data-maya="tone">` +
           (["good", "bad"] as const)
-            .map(
-              (n) =>
-                `<span data-tone="${n}"><i></i>${esc(toneWord(n))}</span>`,
-            )
+            .map((n) => `<span data-tone="${n}"><i></i>${esc(toneWord(n))}</span>`)
             .join("") +
           `</div>`
         : hi > lo

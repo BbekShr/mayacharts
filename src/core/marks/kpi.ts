@@ -41,7 +41,7 @@ function draw(ctx: MarkCtx) {
     "data-f": f,
   };
   const text = (a: Parameters<typeof el>[1], s: string) =>
-    el("text", { "dominant-baseline": "hanging", x: PAD, ...a }, esc(s));
+    el("text", { ...a, "dominant-baseline": "hanging", x: PAD }, esc(s));
   const pct = (o: Intl.NumberFormatOptions) =>
     new Intl.NumberFormat(spec.locale, { style: "percent", maximumFractionDigits: 1, ...o });
 

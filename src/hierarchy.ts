@@ -1,6 +1,6 @@
 // treemap + sunburst. Importing this file registers both types.
 import { register } from "./core/registry.ts";
-import { el, esc, hit, key, r } from "./core/svg.ts";
+import { cbField, el, esc, hit, key, r } from "./core/svg.ts";
 import type { Aggregate, Mark, MarkCtx, MarkOut, Row } from "./core/types.ts";
 
 interface Node {
@@ -105,7 +105,7 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
         'To show negative values use a bar chart with colorBy: "sign".',
       );
   });
-  const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
+  const cb = cbField(spec);
   const root = tree(spec.data, spec.path, spec.y, ctx.agg(spec.aggregate as Aggregate), cb);
   // Drilling: draw only the next level; a click pushes it, so each click goes one level deeper.
   if (flat) for (const n of root.children) n.children = [];

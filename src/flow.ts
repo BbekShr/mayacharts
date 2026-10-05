@@ -209,16 +209,15 @@ export const sankey: Mark = {
       nodes.filter((n) => n.lv === lv).sort((a, b) => b.v - a.v || a.i - b.i),
     );
     const sweep = (lv: number, from: number) => {
-      const bary = new Map<N, number>();
       for (const n of order[lv]!) {
         let [sum, w] = [0, 0];
         for (const l of ls) {
           const o = from < lv ? (l.t === n ? l.s : null) : l.s === n ? l.t : null;
           if (o) ((sum += l.v * order[from]!.indexOf(o)), (w += l.v));
         }
-        bary.set(n, w ? sum / w : 0);
+        n.a = w ? sum / w : 0; // the barycentre (chord uses `a` for an angle)
       }
-      order[lv]!.sort((a, b) => bary.get(a)! - bary.get(b)! || b.v - a.v || a.i - b.i);
+      order[lv]!.sort((a, b) => a.a - b.a || b.v - a.v || a.i - b.i);
     };
     for (let lv = 1; lv < cols; lv++) sweep(lv, lv - 1);
     for (let lv = cols - 2; lv > 0; lv--) sweep(lv, lv + 1);
@@ -281,14 +280,14 @@ export const sankey: Mark = {
     // Labels, biggest node first so a crowded column keeps the important ones.
     // ponytail: a label that collides with a bigger one is dropped (the tooltip still names it).
     const taken = order.map(() => slots(plot.y, plot.y + plot.h));
-    const lab = new Map<N, string>();
+    const lab: string[] = []; // by node index
     for (const n of [...nodes].sort((a, b) => b.v - a.v || a.i - b.i)) {
       const [first, last] = [n.lv === 0, n.lv === cols - 1];
       const left = wide ? first : last;
       const w = wide && first ? padL : wide && last ? padR : gap;
       const cap = Math.max(3, Math.floor((w - (wide && (first || last) ? 12 : W + 14)) / CH));
       const cy = n.y + (n.v * k) / 2;
-      const s = lines(
+      lab[n.i] = lines(
         left ? x(n) - 6 : x(n) + W + 6,
         cy,
         left ? "end" : "start",
@@ -297,13 +296,8 @@ export const sankey: Mark = {
         cap,
         taken[n.lv]!,
       );
-      lab.set(n, s);
     }
-    return {
-      marks,
-      hits: "",
-      labels: nodes.map((n) => lab.get(n) ?? "").join(""),
-    };
+    return { marks, hits: "", labels: lab.join("") };
   },
 };
 
