@@ -14,6 +14,7 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 
 ### Changed
 
+- Speed: style recalculation of marks is 2 to 3 times cheaper. Mark rules no longer put a `:has()` on an ancestor (checked once per mark): scatter styles key on `svg[data-xd]`, line points on a new `svg[data-pt]`, and selection and legend hover dim through custom properties set once on an ancestor. Flow path lighting is set by the tooltip (`data-lit`), so it now covers every node, not the first 32. The hidden data table is always inserted when the browser is next idle. The default en-US number format no longer loads ICU (about 7 ms on a page's first chart), with output equal to `Intl.NumberFormat`.
 - Speed: kpi sparklines and ridgelines draw at most one hover point per 4 px (kpi) or 6 px (ridgeline) of width, keeping the shape of the line (the time-axis downsampling pick, with each series' minimum, maximum and gap edges), and no longer fail with `too-many-marks` on long series. Beeswarm draws no hit rects (the tooltip and click pick the nearest dot within 12 px, as for scatter). Parallel shares its hit stroke on a group. At 1k rows the svg is 43 KB (kpi, was 289), 32 KB (ridgeline, was 305), 139 KB (beeswarm, was 334) and 859 KB (parallel, was 934).
 
 ### Added

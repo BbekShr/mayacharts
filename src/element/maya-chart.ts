@@ -362,14 +362,13 @@ export class MayaChart extends HTMLElement {
         root.querySelector("table.maya-sr")?.remove();
         box.insertAdjacentHTML("afterend", html(parts.table));
       };
-      // A big table (1000 scatter rows) costs ~10 ms of style and layout; it is hidden, so it
-      // waits until the browser is idle (2 s at most) and only the latest one lands.
-      // ponytail: a screen reader sees a big table a moment after the marks.
+      // The table is hidden but costs style and layout (300 line rows: ~4 ms, 1000 scatter rows:
+      // ~10 ms), so it waits until the browser is idle (2 s at most) and only the latest lands.
+      // ponytail: a screen reader sees the table a moment after the marks.
       const n = ++this.#tbl;
       const late = () => n === this.#tbl && put();
-      if (parts.table.length < 2e4) put();
-      else if ("requestIdleCallback" in window) requestIdleCallback(late, { timeout: 2000 });
-      else setTimeout(late, 100);
+      // Without requestIdleCallback (Safari) the options coerce to a 0 ms timeout: the next task.
+      (globalThis.requestIdleCallback ?? setTimeout)(late, { timeout: 2000 } as never);
     }
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);

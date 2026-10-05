@@ -90,7 +90,8 @@
  *        aria-labelledby="maya-t" aria-describedby="maya-d" [tabindex="0" in parts only]
  *        data-plot="x y w h" data-n="categories" [data-xd="lo hi" data-yd="lo hi" for
  *        linear-x types instead of data-n] [data-dir="h" when horizontal]
- *        [data-drill when a click can drill one level further]>
+ *        [data-drill when a click can drill one level further] [data-pt when the body holds a
+ *        [data-maya=line] path: its point circles are hidden until active]>
  *     <title id="maya-t">  <desc id="maya-d">
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
@@ -152,7 +153,10 @@
  *   [data-maya=link]  [data-depth]  [data-selected]
  *   svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
- *   indicator; line point circles are hidden until active under `svg[data-n]`.
+ *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
+ *   key on `svg[data-xd]` (both axes linear). Rules whose subject is a mark avoid a `:has()` on
+ *   an ancestor, which is checked once per mark: selection dims through `--o`, set once on the
+ *   marks group, and legend hover through `--d` and `--h<slot>` on `.maya`.
  *
  * Keyboard (one keydown dispatcher in maya-chart.ts; handlers return "handled"):
  *   Escape priority: pinned tooltip -> brush in progress -> selection -> zoom window -> drill
@@ -195,7 +199,8 @@
  *   spec.animate === false.
  *
  * Hover (element/tooltip.ts): the active mark gets data-active and the marks of its
- *   category (its tooltip rows, plus hierarchy ancestors) data-lit; CSS dims the rest.
+ *   category (its tooltip rows, plus hierarchy ancestors, plus for a flow node every link and
+ *   node whose data-a lists it) data-lit; CSS dims the rest.
  *   Bar types get an element-owned `<rect data-maya="band">` before the marks group,
  *   moved with a CSSOM transform; it and the crosshair glide once they carry data-on.
  *   Charts with a crosshair anchor the tooltip beside it (data-side on .maya-tip).
@@ -490,6 +495,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       ...f?.attrs,
       "data-dir": s.horizontal ? "h" : null,
       "data-stack": s.stack || null,
+      // A line path: its point circles are hidden until active (one search, not a CSS :has).
+      "data-pt": body.includes('data-maya="line"') || null,
       // A click can drill further (pointer cursor on marks).
       "data-drill":
         (s.drill && s.path.length > (s.type === "sankey" || s.type === "chord" ? 2 : 1)) || null,

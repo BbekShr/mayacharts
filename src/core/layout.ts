@@ -1,4 +1,4 @@
-import { dtf, loc } from "./format.ts";
+import { dtf } from "./format.ts";
 import { bandScale, linearScale, timeScale } from "./scale.ts";
 import { el, esc, r } from "./svg.ts";
 import { niceTicks, timeTicks } from "./ticks.ts";
@@ -95,7 +95,7 @@ function timeAxis(
   target: number,
 ) {
   const tk = timeTicks(a.t[0] ?? 0, a.t.at(-1) ?? 0, target, true);
-  const mk = (o: Intl.DateTimeFormatOptions) => dtf(loc(spec.locale), { timeZone: "UTC", ...o });
+  const mk = (o: Intl.DateTimeFormatOptions) => dtf(spec.locale, { timeZone: "UTC", ...o });
   const plain = mk(TIME_FMT(tk.unit));
   const yeared = mk({ month: "short", year: "numeric" });
   const dated = mk({ month: "short", day: "numeric" });
