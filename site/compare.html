@@ -30,6 +30,35 @@
         <p id="method"></p>
       </section>
       <div id="tables"></div>
+      <section id="unmeasured">
+        <h2>Not measured here</h2>
+        <p>
+          The tables above cover twelve common charts, chosen by us. These are the places where the
+          other libraries are likely ahead, and none of them is scored:
+        </p>
+        <ul>
+          <li>
+            Chart types. ECharts and Plotly ship many more, such as candlestick, gauge, radar, maps
+            and 3D. mayaCharts has no pie chart, by design.
+          </li>
+          <li>
+            Drawing every point. Chart.js and ECharts draw to canvas, and Plotly can use WebGL, so
+            they can put millions of marks on screen. mayaCharts stays SVG and reduces large data
+            before drawing it (downsampling and binning).
+          </li>
+          <li>
+            Interaction depth. Brushing linked charts, data zoom sliders, toolbars and image export
+            are built into some rivals.
+          </li>
+          <li>
+            Custom code. Rivals accept functions for formatters, tooltips and drawing. mayaCharts
+            takes plain JSON only, so some layouts are not possible.
+          </li>
+          <li>
+            Maturity. The rivals have years of users, plugins, answers and docs. mayaCharts is new.
+          </li>
+        </ul>
+      </section>
       <section id="llm" hidden>
         <h2>LLM-written specs</h2>
         <p id="llm-note"></p>
