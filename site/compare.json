@@ -1,7 +1,7 @@
 {
-  "generated": "2026-10-04",
+  "generated": "2026-10-05",
   "versions": {
-    "commit": "e132df4",
+    "commit": "a4ffc6f",
     "maya": null,
     "chartjs": "4.5.1",
     "echarts": "6.1.0",
@@ -14,16 +14,13 @@
   "browser": "Chromium 153.0.8010.12",
   "csp": "default-src 'self'; style-src 'self'; require-trusted-types-for 'script'; trusted-types mayacharts",
   "arrowCap": 40,
-  "speedDefinition": "First paint is the draw call to the next animation frame. Update is 10 calls of the redraw function with fresh rows, each timed to the next animation frame, p50 and p95 per load. Heap is JS heap after a forced GC and 10 updates. Median of 5 fresh loads per cell, no CSP, CPU throttle 4x in the second column. A cell that crashes or passes 90 s is recorded with its reason.",
+  "speedDefinition": "First paint is the draw call to the next animation frame. Update is 10 calls of the redraw function with fresh rows, each timed to the next animation frame, p50 and p95 per load. Heap is JS heap after a forced GC and 10 updates. Median of 5 fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle 4x in the second column. A cell that crashes or passes 90 s is recorded with its reason.",
   "notes": [
     "Each library draws the same data through its own reference module in e2e/compare/ref, written the way its documentation shows, with defaults and no theming.",
     "The CSP row is its own test: a chart that is blocked by the policy is recorded as failing there, and the speed suite runs with no CSP so those numbers survive.",
     "A canvas exposes little to axe, so a low axe count there is not evidence of accessibility."
   ],
-  "libs": [
-    "maya",
-    "echarts"
-  ],
+  "libs": ["maya", "chartjs", "echarts", "plot", "vegalite", "recharts", "nivo", "plotly"],
   "charts": [
     "bar",
     "grouped",
@@ -409,7 +406,7 @@
             "right": 0.3898871527777778
           }
         },
-        "ttfpMs": 18.6
+        "ttfpMs": 21.1
       },
       "grouped": {
         "supported": true,
@@ -439,7 +436,7 @@
             "right": 0.27734375
           }
         },
-        "ttfpMs": 20.7
+        "ttfpMs": 23.4
       },
       "stacked": {
         "supported": true,
@@ -469,7 +466,7 @@
             "right": 0.3541232638888889
           }
         },
-        "ttfpMs": 29.2
+        "ttfpMs": 23
       },
       "horizontal": {
         "supported": true,
@@ -499,7 +496,7 @@
             "right": 0.11966145833333333
           }
         },
-        "ttfpMs": 19.4
+        "ttfpMs": 21.8
       },
       "line": {
         "supported": true,
@@ -529,7 +526,7 @@
             "right": 0.023524305555555555
           }
         },
-        "ttfpMs": 21.6
+        "ttfpMs": 26
       },
       "multiline": {
         "supported": true,
@@ -559,7 +556,7 @@
             "right": 0.04236111111111111
           }
         },
-        "ttfpMs": 32
+        "ttfpMs": 27.5
       },
       "area": {
         "supported": true,
@@ -589,7 +586,7 @@
             "right": 0.5168836805555556
           }
         },
-        "ttfpMs": 24.9
+        "ttfpMs": 27.9
       },
       "scatter": {
         "supported": true,
@@ -619,7 +616,7 @@
             "right": 0.1666015625
           }
         },
-        "ttfpMs": 30.8
+        "ttfpMs": 50.3
       },
       "bubble": {
         "supported": true,
@@ -649,7 +646,7 @@
             "right": 0.04924045138888889
           }
         },
-        "ttfpMs": 28.2
+        "ttfpMs": 23.8
       },
       "heatmap": {
         "supported": true,
@@ -679,7 +676,7 @@
             "right": 0.41423611111111114
           }
         },
-        "ttfpMs": 29.9
+        "ttfpMs": 28.9
       },
       "treemap": {
         "supported": true,
@@ -709,7 +706,7 @@
             "right": 0.9200303819444444
           }
         },
-        "ttfpMs": 28.8
+        "ttfpMs": 22.6
       },
       "sankey": {
         "supported": true,
@@ -739,7 +736,264 @@
             "right": 0.3541449652777778
           }
         },
-        "ttfpMs": 28.8
+        "ttfpMs": 23.7
+      }
+    },
+    "chartjs": {
+      "bar": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.31851128472222223,
+            "right": 0.33708767361111114
+          },
+          "inkRtl": {
+            "left": 0.2848090277777778,
+            "right": 0.2992621527777778
+          }
+        },
+        "ttfpMs": 28.1
+      },
+      "grouped": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.2970052083333333,
+            "right": 0.28389756944444444
+          },
+          "inkRtl": {
+            "left": 0.2676866319444444,
+            "right": 0.25386284722222224
+          }
+        },
+        "ttfpMs": 27.8
+      },
+      "stacked": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.352734375,
+            "right": 0.3376519097222222
+          },
+          "inkRtl": {
+            "left": 0.3209418402777778,
+            "right": 0.30625
+          }
+        },
+        "ttfpMs": 28.4
+      },
+      "horizontal": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.377734375,
+            "right": 0.07892795138888889
+          },
+          "inkRtl": {
+            "left": 0.377734375,
+            "right": 0.024153645833333334
+          }
+        },
+        "ttfpMs": 26.5
+      },
+      "line": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.05147569444444444,
+            "right": 0.034678819444444446
+          },
+          "inkRtl": {
+            "left": 0.05082465277777778,
+            "right": 0.03376736111111111
+          }
+        },
+        "ttfpMs": 27.6
+      },
+      "multiline": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.06067708333333333,
+            "right": 0.04526909722222222
+          },
+          "inkRtl": {
+            "left": 0.06050347222222222,
+            "right": 0.04440104166666667
+          }
+        },
+        "ttfpMs": 29.1
+      },
+      "area": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.27643229166666666,
+            "right": 0.5212673611111112
+          },
+          "inkRtl": {
+            "left": 0.253515625,
+            "right": 0.47280815972222223
+          }
+        },
+        "ttfpMs": 30.9
+      },
+      "scatter": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.08118489583333334,
+            "right": 0.07649739583333333
+          },
+          "inkRtl": {
+            "left": 0.0796875,
+            "right": 0.074609375
+          }
+        },
+        "ttfpMs": 39.4
+      },
+      "bubble": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Chart.js draws to a canvas and has no SVG output.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 0,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": false,
+          "inkLtr": {
+            "left": 0.14155815972222222,
+            "right": 0.031575520833333336
+          },
+          "inkRtl": {
+            "left": 0.10334201388888889,
+            "right": 0.02749565972222222
+          }
+        },
+        "ttfpMs": 29.7
+      },
+      "heatmap": {
+        "supported": false,
+        "note": "Chart.js has no core heatmap chart type, only a third-party plugin."
+      },
+      "treemap": {
+        "supported": false,
+        "note": "Chart.js has no core treemap chart type; it needs a third-party plugin."
+      },
+      "sankey": {
+        "supported": false,
+        "note": "Chart.js has no core sankey chart type; it needs a third-party plugin."
       }
     },
     "echarts": {
@@ -935,6 +1189,309 @@
         "ttfpMs": null,
         "note": "did not render, so the remaining measures do not apply"
       }
+    },
+    "recharts": {
+      "bar": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 11
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.1939707409972299,
+            "right": 0.34864092797783935
+          },
+          "inkRtl": {
+            "left": 0.17014369806094182,
+            "right": 0.3693299861495845
+          }
+        },
+        "ttfpMs": 29.2
+      },
+      "grouped": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 12,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 11
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.20306007617728533,
+            "right": 0.24158154432132964
+          },
+          "inkRtl": {
+            "left": 0.17931959833795014,
+            "right": 0.26192434210526316
+          }
+        },
+        "ttfpMs": 45.2
+      },
+      "stacked": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 12,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 11
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.2600199099722992,
+            "right": 0.3513893698060942
+          },
+          "inkRtl": {
+            "left": 0.23212430747922438,
+            "right": 0.3726411011080332
+          }
+        },
+        "ttfpMs": 46.2
+      },
+      "horizontal": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.3482946675900277,
+            "right": 0.10015581717451523
+          },
+          "inkRtl": {
+            "left": 0.30007790858725764,
+            "right": 0.12036876731301939
+          }
+        },
+        "ttfpMs": 30
+      },
+      "line": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 35
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.059794840720221606,
+            "right": 0.02304795706371191
+          },
+          "inkRtl": {
+            "left": 0.03663867728531856,
+            "right": 0.04423476454293629
+          }
+        },
+        "ttfpMs": 31
+      },
+      "multiline": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 9,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 35
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.06215373961218837,
+            "right": 0.029302285318559558
+          },
+          "inkRtl": {
+            "left": 0.038781163434903045,
+            "right": 0.049385387811634346
+          }
+        },
+        "ttfpMs": 40.9
+      },
+      "area": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 12,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 23
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.25443646121883656,
+            "right": 0.6241343490304709
+          },
+          "inkRtl": {
+            "left": 0.2282288781163435,
+            "right": 0.6455375692520776
+          }
+        },
+        "ttfpMs": 40
+      },
+      "scatter": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 40
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.10617209141274238,
+            "right": 0.12272766620498615
+          },
+          "inkRtl": {
+            "left": 0.08271295013850416,
+            "right": 0.14298389889196675
+          }
+        },
+        "ttfpMs": 59.1
+      },
+      "bubble": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 29
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.10909366343490305,
+            "right": 0.012508656509695291
+          },
+          "inkRtl": {
+            "left": 0.08684643351800554,
+            "right": 0.033955159279778394
+          }
+        },
+        "ttfpMs": 32.1
+      },
+      "heatmap": {
+        "supported": false,
+        "note": "Recharts has no heatmap component."
+      },
+      "treemap": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 0,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.8239915166204986,
+            "right": 0.7931094182825484
+          },
+          "inkRtl": {
+            "left": 0.8027397853185596,
+            "right": 0.8141447368421053
+          }
+        },
+        "ttfpMs": 21.3
+      },
+      "sankey": {
+        "supported": true,
+        "rendered": true,
+        "renders": true,
+        "firstViolation": "",
+        "ssr": null,
+        "ssrNote": "Recharts server rendering needs React and its DOM measurement, not measured here.",
+        "axeSeriousCritical": 0,
+        "axeRules": [],
+        "ariaSnapshotLines": 2,
+        "keyboard": {
+          "tabStops": 1,
+          "arrowStates": 0
+        },
+        "rtl": {
+          "yAxisMovedRight": true,
+          "inkLtr": {
+            "left": 0.6899454639889196,
+            "right": 0.27523372576177285
+          },
+          "inkRtl": {
+            "left": 0.6690399930747922,
+            "right": 0.2833275623268698
+          }
+        },
+        "ttfpMs": 17.4
+      }
     }
   },
   "speed": {
@@ -942,31 +1499,31 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 65.3,
-            "updateP50Ms": 1093.5,
-            "updateP95Ms": 1233.5,
-            "heapMB": 2.7,
+            "firstPaintMs": 90.4,
+            "updateP50Ms": 65.1,
+            "updateP95Ms": 70.5,
+            "heapMB": 2.4,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 228.7,
-            "updateP50Ms": 4638.2,
-            "updateP95Ms": 6281.2,
-            "heapMB": 2.7,
-            "runs": 2
+            "firstPaintMs": 347.2,
+            "updateP50Ms": 225.9,
+            "updateP95Ms": 250.7,
+            "heapMB": 2.4,
+            "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 69.5,
-            "updateP50Ms": 74.2,
-            "updateP95Ms": 95.3,
+            "firstPaintMs": 108.5,
+            "updateP50Ms": 78.3,
+            "updateP95Ms": 93.1,
             "heapMB": 3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 282,
-            "updateP50Ms": 301.9,
+            "firstPaintMs": 438.3,
+            "updateP50Ms": 294.3,
             "updateP95Ms": 371.8,
             "heapMB": 3,
             "runs": 5
@@ -976,33 +1533,103 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 46.5,
-            "updateP50Ms": 923.4,
-            "updateP95Ms": 1006.3,
-            "heapMB": 2.9,
+            "firstPaintMs": 88.8,
+            "updateP50Ms": 63.4,
+            "updateP95Ms": 67.1,
+            "heapMB": 2.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 186.4,
-            "updateP50Ms": 3936.2,
-            "updateP95Ms": 4175.7,
-            "heapMB": 2.9,
-            "runs": 3
+            "firstPaintMs": 353.1,
+            "updateP50Ms": 202.2,
+            "updateP95Ms": 218.5,
+            "heapMB": 2.7,
+            "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 64,
-            "updateP50Ms": 197,
-            "updateP95Ms": 322.8,
-            "heapMB": 3.9,
+            "firstPaintMs": 102.8,
+            "updateP50Ms": 62.1,
+            "updateP95Ms": 71,
+            "heapMB": 3.3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 246.1,
-            "updateP50Ms": 847.5,
-            "updateP95Ms": 1238.7,
+            "firstPaintMs": 420.7,
+            "updateP50Ms": 240.5,
+            "updateP95Ms": 262.3,
+            "heapMB": 3.3,
+            "runs": 5
+          }
+        }
+      }
+    },
+    "chartjs": {
+      "scatter": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 52.2,
+            "updateP50Ms": 32.8,
+            "updateP95Ms": 33.3,
+            "heapMB": 3.7,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 208.8,
+            "updateP50Ms": 75.1,
+            "updateP95Ms": 89.5,
             "heapMB": 3.8,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 209.3,
+            "updateP50Ms": 158.6,
+            "updateP95Ms": 169.4,
+            "heapMB": 13,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 854.1,
+            "updateP50Ms": 649,
+            "updateP95Ms": 672.5,
+            "heapMB": 13,
+            "runs": 5
+          }
+        }
+      },
+      "line": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 56,
+            "updateP50Ms": 32.7,
+            "updateP95Ms": 34.5,
+            "heapMB": 7.9,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 218,
+            "updateP50Ms": 89.5,
+            "updateP95Ms": 98.8,
+            "heapMB": 7.3,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 205.1,
+            "updateP50Ms": 157.3,
+            "updateP95Ms": 170.1,
+            "heapMB": 29.4,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 832.5,
+            "updateP50Ms": 634.5,
+            "updateP95Ms": 650.3,
+            "heapMB": 10.1,
             "runs": 5
           }
         }
@@ -1012,33 +1639,33 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 65.3,
-            "updateP50Ms": 15.9,
-            "updateP95Ms": 20.6,
-            "heapMB": 12.6,
+            "firstPaintMs": 65.5,
+            "updateP50Ms": 32.7,
+            "updateP95Ms": 34,
+            "heapMB": 12.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 273.5,
-            "updateP50Ms": 59.9,
-            "updateP95Ms": 80.2,
-            "heapMB": 12.2,
+            "firstPaintMs": 249.9,
+            "updateP50Ms": 70,
+            "updateP95Ms": 90.4,
+            "heapMB": 12.3,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 61.7,
-            "updateP50Ms": 10.1,
-            "updateP95Ms": 14.7,
-            "heapMB": 10.1,
+            "firstPaintMs": 59,
+            "updateP50Ms": 27.1,
+            "updateP95Ms": 28.9,
+            "heapMB": 11.3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 229.3,
-            "updateP50Ms": 46.1,
-            "updateP95Ms": 68.1,
-            "heapMB": 10.7,
+            "firstPaintMs": 230.8,
+            "updateP50Ms": 54.7,
+            "updateP95Ms": 66.9,
+            "heapMB": 10.8,
             "runs": 5
           }
         }
@@ -1046,33 +1673,103 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 46.7,
-            "updateP50Ms": 16.1,
-            "updateP95Ms": 16.8,
+            "firstPaintMs": 45.1,
+            "updateP50Ms": 32.5,
+            "updateP95Ms": 33.4,
             "heapMB": 6.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 225.9,
-            "updateP50Ms": 23,
-            "updateP95Ms": 39.8,
+            "firstPaintMs": 183.6,
+            "updateP50Ms": 31.4,
+            "updateP95Ms": 37.9,
             "heapMB": 6.1,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 54.4,
-            "updateP50Ms": 15.3,
-            "updateP95Ms": 24.8,
-            "heapMB": 9.5,
+            "firstPaintMs": 52.8,
+            "updateP50Ms": 27,
+            "updateP95Ms": 28.8,
+            "heapMB": 9.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 210.5,
-            "updateP50Ms": 68,
-            "updateP95Ms": 100.1,
+            "firstPaintMs": 211.1,
+            "updateP50Ms": 63.9,
+            "updateP95Ms": 89.4,
             "heapMB": 9.5,
+            "runs": 5
+          }
+        }
+      }
+    },
+    "recharts": {
+      "scatter": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 83.8,
+            "updateP50Ms": 85,
+            "updateP95Ms": 101.9,
+            "heapMB": 15.6,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 340.1,
+            "updateP50Ms": 341.9,
+            "updateP95Ms": 378.8,
+            "heapMB": 15.6,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 539.7,
+            "updateP50Ms": 842.3,
+            "updateP95Ms": 989.7,
+            "heapMB": 104.2,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 2115,
+            "updateP50Ms": 3308.3,
+            "updateP95Ms": 3455.6,
+            "heapMB": 104.2,
+            "runs": 3
+          }
+        }
+      },
+      "line": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 60.6,
+            "updateP50Ms": 32.2,
+            "updateP95Ms": 33.4,
+            "heapMB": 7.9,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 247.3,
+            "updateP50Ms": 73.9,
+            "updateP95Ms": 85.6,
+            "heapMB": 7.9,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 308.6,
+            "updateP50Ms": 205.5,
+            "updateP95Ms": 222.1,
+            "heapMB": 29.8,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 1257,
+            "updateP50Ms": 845.4,
+            "updateP95Ms": 938.8,
+            "heapMB": 29.8,
             "runs": 5
           }
         }

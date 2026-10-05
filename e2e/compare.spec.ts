@@ -94,7 +94,7 @@ function write(browser: Browser): void {
     browser: `Chromium ${browser.version()}`,
     csp: CSP,
     arrowCap: ARROW_CAP,
-    speedDefinition: `First paint is the draw call to the next animation frame. Update is ${UPDATES} calls of the redraw function with fresh rows, each timed to the next animation frame, p50 and p95 per load. Heap is JS heap after a forced GC and ${UPDATES} updates. Median of ${SPEED_RUNS} fresh loads per cell, no CSP, CPU throttle ${THROTTLE}x in the second column. A cell that crashes or passes ${CELL_MS / 1000} s is recorded with its reason.`,
+    speedDefinition: `First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink), plus one frame. Update is ${UPDATES} calls of the redraw function with fresh rows, each timed until the chart DOM changed (one frame for canvas libraries), plus one frame; p50 and p95 per load. Heap is JS heap after a forced GC and ${UPDATES} updates. Median of ${SPEED_RUNS} fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle ${THROTTLE}x in the second column. A cell that crashes or passes ${CELL_MS / 1000} s is recorded with its reason.`,
     notes: [
       "Each library draws the same data through its own reference module in e2e/compare/ref, written the way its documentation shows, with defaults and no theming.",
       "The CSP row is its own test: a chart that is blocked by the policy is recorded as failing there, and the speed suite runs with no CSP so those numbers survive.",
@@ -109,6 +109,7 @@ function write(browser: Browser): void {
     ...(prev["eval"] ? { eval: prev["eval"] } : {}),
   };
   writeFileSync(OUT, JSON.stringify(json, null, 2) + "\n");
+  execSync(`npx prettier --write ${OUT}`, { stdio: "ignore" });
 }
 
 async function route(ctx: BrowserContext, csp: boolean): Promise<void> {
@@ -541,6 +542,7 @@ test("speed: scatter and line at growing row counts", async ({ browser }: { brow
   const ctx = await browser.newContext({
     viewport: { width: 800, height: 500 },
     colorScheme: "light",
+    reducedMotion: "reduce",
   });
   await route(ctx, false);
   for (const lib of libs) {
