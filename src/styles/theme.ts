@@ -17,11 +17,14 @@ const A = rng(8)
 const Q = rng(10)
   .map((n) => `[data-q="${n}"]{--q:${Math.round(35 + (n * 65) / 9)}%}`)
   .join("");
-// Legend hover: dim the other series' marks (slot match; :has needs no JS).
+// Legend hover: dim the other series' marks (slot match; :has needs no JS). Speed: a `:has()` on
+// an ancestor of a mark is checked once per mark (~0.4 ms per rule per 1000 marks), so the
+// legend is reached as a sibling of .maya-box: a chart without a legend fails that test at once.
+// Selection dims through --o, set once on the marks group.
 const H = rng(8)
   .map(
     (n) =>
-      `.maya:has(.maya-legend [data-s="${n}"]:hover) :is([data-maya=mark],[data-maya=line],[data-maya=area]):not([data-s="${n}"]){opacity:.25}`,
+      `.maya-legend:has([data-s="${n}"]:hover)~.maya-box :is([data-maya=mark],[data-maya=line],[data-maya=area]):not([data-s="${n}"]){opacity:.25}`,
   )
   .join("");
 // Sliding indicator of .maya-ctl: data-n = options (2..4; ponytail: more options need more rules), data-i = checked index (set by the element).
@@ -32,8 +35,7 @@ const C =
   rng(3, 1)
     .map((i) => `.maya-ctl[data-i="${i}"]::before{transform:translateX(${i * 100}%)}`)
     .join("");
-const B =
-  "border:0;background:none;padding:0;font:inherit;color:var(--maya-fg-muted);cursor:pointer";
+const B = "border:0;background:none;font:inherit;color:var(--maya-fg-muted);cursor:pointer";
 // radial
 const RADIAL =
   ":where(path[data-polar]){stroke:var(--maya-bg);stroke-width:1.5;stroke-linejoin:round}" +
@@ -65,7 +67,7 @@ const FLOW =
     "[data-maya=link]{opacity:.45;--l:.85}" +
     "M:has([data-active]) [data-maya=link]{opacity:.08}" +
     lift +
-    "M [data-maya=link][data-active]{opacity:.85}M:has([data-maya=link][data-active]) [data-maya=mark]{opacity:1}"
+    "M [data-maya=link][data-active]{opacity:.85}M:has([data-maya=link][data-active]) [data-n]{opacity:1}"
   ).replaceAll("M", "[data-maya=marks]") +
   "rect[data-n]{rx:4px}" +
   "path[data-maya][data-arc]{stroke:var(--c);stroke-width:4;stroke-linejoin:round}path[data-arc][data-active]{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 12%)}" +
@@ -83,8 +85,8 @@ const HEXMAP =
   "[data-hex] i{width:120px;height:10px;border-radius:3px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}";
 
 // scatter
-// SCAT = a chart whose cross group holds guide text (scatter only).
-const SCAT = "svg:has([data-maya=cross] text) ";
+// SCAT = a chart with two linear axes (scatter only).
+const SCAT = "[data-xd] ";
 // Density cells: floor of 88% accent (>= 3:1 on --maya-bg in both themes), darkening toward --maya-fg.
 const DENS = (p: string) =>
   `color-mix(in oklab,color-mix(in oklab,var(--maya-accent) 88%,var(--maya-bg)),var(--maya-fg) ${p})`;
@@ -135,14 +137,13 @@ export const css =
   "[data-tone=good]{--c:var(--maya-good)}[data-tone=bad]{--c:var(--maya-bad)}" +
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
-  "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0}" +
+  "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--o)}" +
   "[data-dir=h] [data-neg]{transform-origin:100% 0}" +
   "[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}[data-ghost]{pointer-events:none}" +
   "[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)),var(--maya-fg) 12%)}" +
   "[data-stack] rect[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1}" +
-  ":where([data-xd] circle[data-maya=mark]){stroke:var(--maya-bg);stroke-width:1}" +
-  "svg:has([data-maya=line]) circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
-  "svg:has([data-maya=line]) circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2;transition:fill-opacity .15s,stroke-opacity .15s}svg:has([data-maya=line]) circle[data-lit]{r:4px}" +
+  "[data-pt] circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
+  "[data-pt] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2;transition:fill-opacity .15s,stroke-opacity .15s}[data-pt] circle[data-lit]{r:4px}" +
   "circle[data-maya=mark][data-active]{filter:drop-shadow(0 0 4px color-mix(in oklab,var(--c) 70%,transparent))}" +
   "[data-maya=line]{fill:none;stroke:var(--c);stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round}" +
   "[data-maya=area]{fill:color-mix(in oklab,var(--c) 18%,transparent);stroke:none}[data-stack] [data-maya=area]{fill:color-mix(in oklab,var(--c) 45%,var(--maya-bg))}" +
@@ -167,10 +168,10 @@ export const css =
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
   "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text){opacity:.4}" +
-  '[data-maya=marks]:has(circle[data-depth="0"][data-active]) [data-maya=mark]{opacity:1}' +
+  '[data-maya=marks]:has(circle[data-depth="0"][data-active]) [data-depth]{opacity:1}' +
   'svg[data-drill] :is([data-maya=mark],[data-maya=hit]),circle[data-depth="0"][data-s]{cursor:pointer}' +
-  "[data-maya=marks]:has([data-selected]) [data-maya=mark]:not([data-selected]){opacity:.35}" +
-  "[data-selected]{stroke:var(--maya-fg);stroke-width:2}" +
+  "[data-maya=marks]:has([data-selected]){--o:.35}" +
+  "[data-selected]{stroke:var(--maya-fg);stroke-width:2;--o:1}" +
   H +
   "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}[data-maya=cross],[data-maya=band]{opacity:0;transition:opacity .2s}" +
   "[data-on]:is([data-maya=cross],[data-maya=band]){opacity:1;transition:opacity .2s,transform .25s var(--maya-ease)}[data-maya=band]{fill:var(--maya-fg);fill-opacity:.05;rx:6px}" +
@@ -178,7 +179,7 @@ export const css =
   "[data-maya=cross] line{stroke:var(--maya-fg-muted);stroke-opacity:.55}" +
   "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke;pointer-events:none}" +
   ".maya-svg:focus{outline:none}.maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +
-  ".maya-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}" +
+  ".maya-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}" +
   ".maya-probe{position:absolute;width:0;height:0;pointer-events:none;anchor-name:--maya-probe}" +
   ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none}" +
   "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}.maya-tip[data-side]{position-area:inline-end span-block-end;position-try-fallbacks:flip-inline;margin:0 12px}}" +
