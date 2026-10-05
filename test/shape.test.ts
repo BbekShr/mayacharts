@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agg, shape } from "../src/core/shape.ts";
+import { agg, shape, thin } from "../src/core/shape.ts";
 import { OTHER } from "../src/core/svg.ts";
 import { resolve } from "../src/core/validate.ts";
 import type { ChartSpec, Row } from "../src/core/types.ts";
@@ -79,7 +79,7 @@ describe("shape", () => {
         { m: "a", s: "A", v: 1 },
         { m: "a", s: "B", v: 100 },
       ]),
-      ["B"],
+      { hidden: ["B"] },
     );
     expect(s.series).toEqual(["A", "B"]);
     expect(s.visible).toEqual([0]);
@@ -191,5 +191,20 @@ describe("shape", () => {
     expect(s.categories).toEqual(["__proto__", "constructor"]);
     expect(s.series).toEqual(["constructor", "__proto__"]);
     expect(s.cells.find((c) => c.ci === 0 && c.si === 0)!.value).toBe(4);
+  });
+});
+
+describe("thin", () => {
+  it("returns every position when they fit", () => {
+    expect(thin([[1, 2, 3]], 3)).toEqual([0, 1, 2]);
+  });
+  it("keeps first, last, each bucket's extremes and gap edges within max", () => {
+    const v: (number | null)[] = Array.from({ length: 1000 }, (_, i) => (i * 7) % 100);
+    v[500] = 9999;
+    v[300] = null;
+    const k = thin([v], 50);
+    expect(k.length).toBeLessThanOrEqual(50);
+    expect(k).toEqual([...k].sort((a, b) => a - b));
+    for (const i of [0, 999, 500, 300]) expect(k).toContain(i);
   });
 });

@@ -37,6 +37,7 @@ import type {
   FieldFormat,
   RenderOptions,
   ResolvedSpec,
+  Row,
   View,
 } from "./types.ts";
 
@@ -572,9 +573,11 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (hit) fail("option-unsupported", k, headline, detail);
 
   if (rows.length) {
-    const found = [...new Set(rows.flatMap((r) => Object.keys(r)))];
-    const unk = (p: string, headline: string, f: string, use: string) =>
-      fail(
+    // The key list is only built on the error path; the check itself stops at the first row.
+    const has = (f: string) => rows.some((r) => Object.hasOwn(r, f));
+    const unk = (p: string, headline: string, f: string, use: string) => {
+      const found = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+      return fail(
         "unknown-field",
         p,
         headline,
@@ -582,6 +585,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         dym(f, found),
         use,
       );
+    };
     const ys = typeof y === "string" ? [y] : (y as string[]);
     const arr = (o: string, a: string[]): [string, string][] => a.map((f, i) => [`${o}[${i}]`, f]);
     const fields: [string, unknown][] = [
@@ -595,7 +599,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       ["colorBy", colorBy === "sign" ? undefined : colorBy],
     ];
     for (const [p, f] of fields) {
-      if (typeof f !== "string" || found.includes(f)) continue;
+      if (typeof f !== "string" || has(f)) continue;
       const opt = p.replace(/\[.*/, "");
       unk(
         p,
@@ -607,14 +611,14 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     for (const opt of ["format", "titles"])
       if (isObj(s[opt]))
         for (const f of Object.keys(s[opt] as object))
-          if (!found.includes(f))
+          if (!has(f))
             unk(
               `${opt}.${f}`,
               `spec.${opt} key "${f}" is not a field in spec.data.`,
               f,
               `spec.${opt} keys name fields, for ${USE[opt]}.`,
             );
-    if (colorBy === "sign" && found.includes("sign"))
+    if (colorBy === "sign" && has("sign"))
       fail(
         "invalid-option",
         "colorBy",
@@ -622,11 +626,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         "Rename that field (e.g. data.map(({ sign, ...r }) => ({ ...r, signValue: sign }))) to colour by it.",
       );
 
-    const scan = (f: string, g: (v: unknown, p: string) => void) =>
-      rows.forEach((r, i) => g(r[f], `data[${i}].${f}`));
+    // Callbacks build the data[i].field path themselves, only when a row fails.
+    const scan = (f: string, g: (v: unknown, i: number) => void) =>
+      rows.forEach((r, i) => g(r[f], i));
     const numeric = (f: string, code: ErrorCode, opt: string) =>
-      scan(f, (v, p) => {
+      scan(f, (v, i) => {
         if (v == null || (typeof v === "number" && Number.isFinite(v))) return;
+        const p = `data[${i}].${f}`;
         fail(
           code,
           p,
@@ -651,8 +657,9 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     }
     if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
     if (s.xType === "time" && typeof s.x === "string")
-      scan(s.x, (v, p) => {
+      scan(s.x, (v, i) => {
         if (v == null || toTime(v) !== null) return;
+        const p = `data[${i}].${s.x}`;
         fail(
           "invalid-date",
           p,
@@ -664,14 +671,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       numeric(colorBy, "non-numeric-field", "colorBy");
     if (isPath)
       for (const f of ys)
-        scan(f, (v, p) => {
-          if (typeof v === "number" && v <= 0)
+        scan(f, (v, i) => {
+          if (typeof v === "number" && v <= 0) {
+            const p = `data[${i}].${f}`;
             fail(
               "non-positive-value",
               p,
               `spec.${p} is ${v}, but ${t} sizes must be positive.`,
               `Filter first: data.filter(r => r.${f} > 0), or chart the signed values with "bar".`,
             );
+          }
         });
   }
   MODULES.get(t)?.check?.(spec as unknown as ChartSpec, fail);
@@ -742,6 +751,17 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
     inv("nonce", nonce, "a base64 nonce string");
 }
 
+/** Top-level names largest first (ties in first-appearance order): the hierarchy colour slots. */
+// ponytail: ranks by summed y; a non-sum aggregate can rank a drilled branch to another colour.
+function rank(rows: readonly Row[], f: string, y: string): string[] {
+  const t = new Map<string, number>();
+  for (const r of rows) {
+    const k = String(r[f]);
+    t.set(k, (t.get(k) ?? 0) + (typeof r[y] === "number" ? r[y] : 0));
+  }
+  return [...t.keys()].sort((a, b) => t.get(b)! - t.get(a)!);
+}
+
 /**
  * Apply defaults plus the view's measure and drill. Assumes `spec` passed validateSpec.
  * Drill keeps rows whose path[i] equals drill[i], then advances: bar/line/area take the next
@@ -772,9 +792,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     y2: spec.y2 ?? null,
     path,
     drilled,
-    hue: drilled.length
-      ? [...new Set(spec.data.map((r) => String(r[full[0]!])))].indexOf(drilled[0]!)
-      : null,
+    hue: drilled.length ? rank(spec.data, full[0]!, measures[measure]!).indexOf(drilled[0]!) : null,
     window: view.window && view.window.length === 4 ? view.window : null,
     size: spec.size ?? null,
     name: spec.name ?? null,
@@ -786,7 +804,13 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     sortBy: view.sortBy ?? null,
     limit: spec.limit ?? null,
     format: new Map(typeof f === "string" ? measures.map((m) => [m, f]) : entries<FieldFormat>(f)),
-    titles: new Map(entries<string>(spec.titles)),
+    // A scatter names its axes by field: two numeric axes say nothing otherwise.
+    titles: new Map([
+      ...(spec.type === "scatter" ? [spec.x!, measures[measure]!] : []).map(
+        (k): [string, string] => [k, k],
+      ),
+      ...entries<string>(spec.titles),
+    ]),
     labels: spec.labels ?? null,
     text: { ...spec.text },
     title: spec.title ?? null,

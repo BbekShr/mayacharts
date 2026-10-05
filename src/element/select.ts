@@ -6,6 +6,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, Sel, SpecEvent, State } from "../core/types.ts";
+import { listen } from "./listen.ts";
 
 export type SelectEvent =
   { type: "toggle"; sel: Sel; multi: boolean } | { type: "clear" } | SpecEvent;
@@ -85,16 +86,10 @@ export function mount(host: Host): Handlers {
       if (k) pick({ series: k }, null);
       return;
     }
-    let m = el.closest("[data-maya=mark],[data-maya=hit]");
-    if (m && !m.getAttribute("data-key")) {
-      // keyless band hit (line/area): the category's first keyed mark
-      const c = m.getAttribute("data-c");
-      m = c === null ? null : root.querySelector(`[data-maya=mark][data-key][data-c="${c}"]`);
-    }
+    const m = host.mark(e);
     const sel = m && selOf(m, type());
     if (m && sel) pick(sel, m);
   };
-  root.addEventListener("click", onClick);
   return {
     escape() {
       if (!host.state().selected.length) return false;
@@ -110,10 +105,13 @@ export function mount(host: Host): Handlers {
     },
     painted() {
       const sel = host.state().selected;
-      for (const m of root.querySelectorAll("[data-maya=mark][data-key]"))
+      // No selection: only marks still flagged need a visit (not every mark on every paint).
+      for (const m of root.querySelectorAll(
+        sel.length ? "[data-maya=mark][data-key]" : "[data-selected]",
+      ))
         if (sel.some((q) => matches(q, m, type()))) m.setAttribute("data-selected", "");
         else m.removeAttribute("data-selected");
     },
-    off: () => root.removeEventListener("click", onClick),
+    off: listen(root, ["click", onClick]),
   };
 }

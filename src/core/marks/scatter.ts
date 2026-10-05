@@ -1,8 +1,6 @@
-import { el, esc, key, r } from "../svg.ts";
+import { cbField, el, nameId, esc, key, r } from "../svg.ts";
 import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
-
-const MIN = 24;
 
 interface Pt {
   i: number;
@@ -14,13 +12,20 @@ interface Pt {
   row: Row;
 }
 
+const memo = new WeakMap<Shaped, Pt[]>(); // axes() and draw() share one pass
+
 /**
  * Visible points, in row order. Rows with a null/non-numeric x or y, hidden series, and points
  * outside an explicit xDomain/yDomain are skipped (domains clip; they never draw off-plot).
  * A 4-element view.window (scatter zoom box) clips the same way as the domains.
  */
 function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
+  const hit = memo.get(shaped);
+  if (hit) return hit;
   const out: Pt[] = [];
+  memo.set(shaped, out);
+  const sIdx = new Map(shaped.series.map((k, j) => [k, j]));
+  const vis = new Set(shaped.visible);
   const xd = spec.xDomain;
   const yd = spec.yDomain;
   const w = spec.window;
@@ -31,8 +36,8 @@ function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
     if (xd && (x < xd[0] || x > xd[1])) return;
     if (yd && (y < yd[0] || y > yd[1])) return;
     if (w && (x < w[0] || x > w[1] || y < w[2] || y > w[3])) return;
-    const si = shaped.series.indexOf(spec.series === null ? "" : String(row[spec.series]));
-    if (!shaped.visible.includes(si)) return;
+    const si = sIdx.get(spec.series === null ? "" : String(row[spec.series]))!;
+    if (!vis.has(si)) return;
     const sv = spec.size === null ? null : row[spec.size];
     const nv = spec.name === null ? null : row[spec.name];
     out.push({
@@ -75,16 +80,18 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
   // Pixel to data, from the scale's own endpoints.
   const inv = (s: LinearScale, px: number) =>
     s.domain[0] + ((px - s.range[0]) / (s.range[1] - s.range[0])) * (s.domain[1] - s.domain[0]);
-  const span = (s: LinearScale, f: string, a: number, b: number) =>
-    ctx.t("range", ctx.fmt(f, inv(s, a)), ctx.fmt(f, inv(s, b)));
+  // Formatted values at the grid lines, once each: cells read their two neighbours.
+  const edges = (s: LinearScale, f: string, o: number, c: number, n: number) =>
+    Array.from({ length: n + 1 }, (_, i) => ctx.fmt(f, inv(s, o + i * c)));
+  const [ex, ey] = [edges(sx, spec.x, plot.x, cw, nx), edges(sy, spec.y, plot.y, ch, ny)];
   let marks = "";
   [...grid]
     .sort((a, b) => a[0] - b[0])
     .forEach(([k, n], c) => {
       const [i, j] = [Math.floor(k / ny), k % ny];
       const [x, y] = [plot.x + i * cw, plot.y + j * ch];
-      const gx = span(sx, spec.x, x, x + cw);
-      const gy = span(sy, spec.y, y + ch, y);
+      const gx = ctx.t("range", ex[i]!, ex[i + 1]!);
+      const gy = ctx.t("range", ey[j + 1]!, ey[j]!);
       marks += el("rect", {
         "data-maya": "mark",
         "data-key": key("b", i, j),
@@ -160,66 +167,66 @@ export const scatter: Mark = {
     let max = 0;
     for (const p of pts) if (p.sz !== null) max = Math.max(max, Math.abs(p.sz));
     const scale = Math.min(plot.w, plot.h) / 16;
-    const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
+    const radius = (v: number) => 3 + Math.sqrt(Math.abs(v) / max) * scale;
+    // Dense plots read as density: points shrink and thin out as they multiply (isolated ones keep their outline).
+    const dense = max === 0 && pts.length > 100;
+    const flat = dense ? Math.max(2.5, 5 * Math.sqrt(100 / pts.length)) : 5;
+    const cb = cbField(spec);
 
+    // Ids follow row order (name, name#2, ...), so they are assigned before the size sort.
     const seen = new Map<string, number>();
-    const items = pts.map((p) => {
-      const rad = p.sz !== null && max > 0 ? 3 + Math.sqrt(Math.abs(p.sz) / max) * scale : 5;
-      let id: string | number = p.i;
-      if (p.name !== null) {
-        const n = (seen.get(p.name) ?? 0) + 1;
-        seen.set(p.name, n);
-        id = n > 1 ? `${p.name}#${n}` : p.name;
-      }
+    const ids = spec.name === null ? null : new Map(pts.map((p) => [p, nameId(seen, p.name, p.i)]));
+    const rad = (p: Pt) => (p.sz !== null && max > 0 ? radius(p.sz) : flat);
+    // Big bubbles first so small ones stay on top; stable for ties.
+    const order = max > 0 ? [...pts].sort((a, b) => rad(b) - rad(a)) : pts;
+
+    let marks = "";
+    for (const p of order) {
       const ser = shaped.series[p.si]!;
       const x = ctx.fmt(spec.x, p.x);
       const y = ctx.fmt(spec.y, p.y);
       const cv = cb ? p.row[cb] : null;
-      const d = {
-        "data-key": key(ser, id),
+      const named = p.name !== null || p.sz !== null;
+      const cx = sx.of(p.x);
+      const cy = sy.of(p.y);
+      marks += el("circle", {
+        "data-maya": "mark",
+        "data-key": key(ser, ids?.get(p) ?? p.i),
         "data-c": p.i,
-        "data-s": p.si % 8,
+        "data-s": spec.series === null ? null : p.si % 8, // none: the group colours the point
         "data-x": p.name ?? x,
-        "data-series": ser,
+        "data-series": ser || null,
         "data-y": p.y,
-        "data-f":
-          p.name === null && p.sz === null
-            ? y
-            : [x, y, p.sz === null ? null : ctx.fmt(spec.size!, p.sz)]
-                .filter((v) => v !== null)
-                .join(" · "),
-        "data-gx": x,
-        "data-gy": y,
+        "data-f": !named
+          ? y
+          : [x, y, p.sz === null ? null : ctx.fmt(spec.size!, p.sz)]
+              .filter((v) => v !== null)
+              .join(" · "),
+        // Guide pills: only when data-x / data-f are not already the formatted x and y.
+        "data-gx": named ? x : null,
+        "data-gy": named ? y : null,
         "data-neg": p.y < 0,
         "data-tone": ctx.tone(p.y),
         "data-q": typeof cv === "number" ? ctx.q(cv) : null,
-      };
-      return { p, rad, d, cx: sx.of(p.x), cy: sy.of(p.y) };
-    });
-    // Big bubbles first so small ones stay on top; stable for ties.
-    items.sort((a, b) => b.rad - a.rad);
-
-    let marks = "";
-    let hits = "";
-    for (const { p, rad, d, cx, cy } of items) {
-      marks += el("circle", {
-        "data-maya": "mark",
-        ...d,
-        r: r(rad),
+        // Once, on the first point: CSS thins every point of a dense plot from the group.
+        "data-dense": dense && !marks,
+        r: r(rad(p)),
         cx: r(cx),
         cy: r(cy),
       });
-      if (rad * 2 < MIN)
-        hits += el("circle", {
-          "data-maya": "hit",
-          ...d,
-          r: r(Math.max(rad, 12)),
-          cx: r(cx),
-          cy: r(cy),
-          fill: "transparent",
-        });
-      if (spec.labels) ctx.label(cx, cy - rad, ctx.fmt(spec.y, p.y), "above");
+      if (spec.labels) ctx.label(cx, cy - rad(p), y, "above");
     }
-    return { marks, hits, cross: pts.length ? cross(ctx) : "" };
+    // Size key: three reference circles drawn with the marks' own radius rule, values rounded to one digit.
+    const ref = [0.1, 0.25, 0.5].map((f) => Number((max * f).toPrecision(1)));
+    const key3 = (v: number) => {
+      const q = radius(v); // the rounded value, so circle and label agree
+      const d = r(q * 2 + 2);
+      return `<svg width="${d}" height="${d}" aria-hidden="true"><circle cx="${r(q + 1)}" cy="${r(q + 1)}" r="${r(q)}"/></svg><span>${esc(ctx.fmt(spec.size!, v))}</span>`;
+    };
+    const legend =
+      max > 0
+        ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.size!) ?? spec.size!)}</b>${ref.map(key3).join("")}</div>`
+        : "";
+    return { marks, hits: "", cross: pts.length ? cross(ctx) : "", legend };
   },
 };

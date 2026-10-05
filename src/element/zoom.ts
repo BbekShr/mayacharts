@@ -6,6 +6,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, SpecEvent, State, View } from "../core/types.ts";
+import { listen } from "./listen.ts";
 
 type Win = NonNullable<View["window"]>;
 export type ZoomEvent = { type: "zoom"; window: Win } | { type: "reset" } | SpecEvent;
@@ -208,22 +209,24 @@ export const mount = (host: Host): Handlers => {
     if (svgOf(e)) reset();
   };
 
-  root.addEventListener("pointerdown", onDown);
-  root.addEventListener("pointermove", onMove);
-  root.addEventListener("pointerup", onUp);
   const onCancel = () => {
     stopBrush();
     start = undefined;
   };
-  root.addEventListener("pointercancel", onCancel);
-  root.addEventListener("click", onClick);
-  root.addEventListener("dblclick", onDbl);
+  const off = listen(
+    root,
+    ["pointerdown", onDown],
+    ["pointermove", onMove],
+    ["pointerup", onUp],
+    ["pointercancel", onCancel],
+    ["click", onClick],
+    ["dblclick", onDbl],
+  );
 
   return {
     cancel() {
       if (!brush) return false;
-      stopBrush();
-      start = undefined;
+      onCancel();
       return true;
     },
     escape: reset,
@@ -264,12 +267,7 @@ export const mount = (host: Host): Handlers => {
     },
     off() {
       stopBrush();
-      root.removeEventListener("pointerdown", onDown);
-      root.removeEventListener("pointermove", onMove);
-      root.removeEventListener("pointerup", onUp);
-      root.removeEventListener("pointercancel", onCancel);
-      root.removeEventListener("click", onClick);
-      root.removeEventListener("dblclick", onDbl);
+      off();
     },
   };
 };

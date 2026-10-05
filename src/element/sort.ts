@@ -6,6 +6,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
+import { listen } from "./listen.ts";
 
 export type SortEvent = { type: "sort"; field: string; label?: boolean } | SpecEvent;
 
@@ -64,9 +65,6 @@ export const mount = (host: Host): Handlers => {
     e.stopPropagation(); // the chart's own Enter handler would drill/select
     pick(h);
   };
-  host.root.addEventListener("click", click);
-  host.root.addEventListener("keydown", keydown, true);
-
   return {
     painted() {
       if (want === null) return;
@@ -76,9 +74,6 @@ export const mount = (host: Host): Handlers => {
         .find((h) => h.getAttribute("data-field") === f)
         ?.focus({ preventScroll: true });
     },
-    off() {
-      host.root.removeEventListener("click", click);
-      host.root.removeEventListener("keydown", keydown, true);
-    },
+    off: listen(host.root, ["click", click], ["keydown", keydown, true]),
   };
 };

@@ -1,5 +1,5 @@
 import { t } from "./strings.ts";
-import { esc } from "./svg.ts";
+import { cbField, esc } from "./svg.ts";
 import type { ResolvedSpec, Shaped } from "./types.ts";
 
 /** Density scatter stats [cells, fewest, most], left by the mark's draw for describe (same spec object). */
@@ -79,15 +79,9 @@ export function dataTable(
   if (ROWS.includes(spec.type)) {
     const cols = [
       ...new Set(
-        [
-          spec.x,
-          ...spec.path,
-          spec.series,
-          spec.name,
-          spec.size,
-          spec.y,
-          typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null,
-        ].filter((f): f is string => !!f),
+        [spec.x, ...spec.path, spec.series, spec.name, spec.size, spec.y, cbField(spec)].filter(
+          (f): f is string => !!f,
+        ),
       ),
     ];
     n = spec.data.length;

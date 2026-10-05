@@ -1,6 +1,8 @@
 name: Compare
 
-# Re-measures mayaCharts, Chart.js and ECharts and commits site/compare.json when it changed.
+# Re-measures every library in e2e/compare/ref (compare.json), their bundle sizes (compare-size.json)
+# and the code it takes to write each chart (compare-ease.json), and commits the three files when
+# they changed.
 # The LLM eval (eval/run.mjs) calls a paid API and never runs here.
 # The measuring job installs npm packages and has read-only access. Only the second job can write,
 # and it runs no repository code.
@@ -31,11 +33,16 @@ jobs:
       - run: npm ci
 
       - run: npm run compare
+      - run: npm run compare:size --if-present
+      - run: npm run compare:ease --if-present
 
       - uses: actions/upload-artifact@v4
         with:
           name: compare-json
-          path: site/compare.json
+          path: |
+            site/compare.json
+            site/compare-size.json
+            site/compare-ease.json
           if-no-files-found: error
 
   commit:
@@ -53,15 +60,17 @@ jobs:
           name: compare-json
           path: measured
 
-      - name: Commit site/compare.json if it changed
+      - name: Commit the compare files if they changed
         run: |
-          cp measured/compare.json site/compare.json
+          for f in compare compare-size compare-ease; do
+            if [ -f "measured/$f.json" ]; then cp "measured/$f.json" "site/$f.json"; fi
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- site/compare.json; then
-            echo "site/compare.json unchanged"
+          git add site/compare*.json
+          if git diff --cached --quiet; then
+            echo "compare files unchanged"
           else
-            git add site/compare.json
-            git commit -m "Update site/compare.json"
+            git commit -m "Update compare files"
             git push origin HEAD:main
           fi

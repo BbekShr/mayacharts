@@ -7,6 +7,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { ChartSpec, Handlers, Host, SpecEvent, State } from "../core/types.ts";
+import { listen } from "./listen.ts";
 
 /** `spec` is needed to gate a push (the reducer has no other access to it). */
 export type DrillEvent =
@@ -107,20 +108,12 @@ export const mount = (host: Host): Handlers => {
 
   const push = (m: Element): boolean => {
     const spec = host.spec();
-    // A keyless band hit (line, area) stands for its category's first keyed mark.
-    const c = m.getAttribute("data-c");
-    const mark = m.hasAttribute("data-key")
-      ? m
-      : c === null
-        ? null
-        : host.root.querySelector(`[data-maya=mark][data-key][data-c="${CSS.escape(c)}"]`);
-    const key = mark?.getAttribute("data-key");
-    if (!mark) return false;
-    if (!spec?.drill || !key || mark.hasAttribute("data-other")) return false;
+    const key = m.getAttribute("data-key");
+    if (!spec?.drill || !key || m.hasAttribute("data-other")) return false;
     const s = host.state();
     const depth = (s.view.drill ?? []).length;
     // Sunburst centre: the current branch; activating it goes back up.
-    if (spec.type === "sunburst" && mark.getAttribute("data-depth") === "0") return pop(depth - 1);
+    if (spec.type === "sunburst" && m.getAttribute("data-depth") === "0") return pop(depth - 1);
     // A hierarchy key holds the whole branch: push every level down to the mark.
     const p = key.split("~");
     const values = p[0] === "h" ? p.slice(1 + depth).map(decode) : [];
@@ -142,14 +135,13 @@ export const mount = (host: Host): Handlers => {
     ptr = (e as MouseEvent).detail > 0; // 0: a keyboard-activated crumb button
     if (crumb) pop(Number(crumb.getAttribute("data-depth")));
     else {
-      const m = el?.closest("[data-maya=mark],[data-maya=hit]");
-      if (m) push(m);
+      const m = host.mark(e); // links drill by keyboard only
+      if (m && m.getAttribute("data-maya") !== "link") push(m);
       else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false)
         pop((host.state().view.drill ?? []).length - 1);
     }
     ptr = false;
   };
-  host.root.addEventListener("click", click);
 
   return {
     escape: () => pop((host.state().view.drill ?? []).length - 1),
@@ -179,6 +171,6 @@ export const mount = (host: Host): Handlers => {
       if (!host.root.activeElement || !host.root.contains(host.root.activeElement))
         host.root.querySelector<HTMLElement>(".maya-svg")?.focus({ preventScroll: true });
     },
-    off: () => host.root.removeEventListener("click", click),
+    off: listen(host.root, ["click", click]),
   };
 };

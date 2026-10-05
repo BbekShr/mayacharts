@@ -12,3 +12,7 @@ maya-chart {
   width: 640px;
   height: 360px;
 }
+/* Plot returns a <figure>; the browser default margin would push its axis out of the box. */
+#chart > figure {
+  margin: 0;
+}

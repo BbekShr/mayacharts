@@ -104,10 +104,10 @@ describe("theme css", () => {
       expect(ratio(d, "#0d1117")).toBeGreaterThanOrEqual(3);
     }
   });
-  it("ramp: 10 steps from a 20% floor; upper steps reach 3:1", () => {
+  it("ramp: 10 steps from a 35% floor; upper steps reach 3:1", () => {
     const q = [...css.matchAll(/\[data-q="(\d)"\]\{--q:(\d+)%\}/g)].map((m) => +m[2]!);
     expect(q).toHaveLength(10);
-    expect(q[0]).toBe(20);
+    expect(q[0]).toBe(35);
     expect(q[9]).toBe(100);
     expect(css).toContain("color-mix(in oklab,var(--maya-accent) var(--q),var(--b))");
     expect(css).toContain(

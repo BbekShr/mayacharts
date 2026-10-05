@@ -1,0 +1,102 @@
+{
+  "generated": "2026-10-05",
+  "esbuild": "0.28.2",
+  "libs": {
+    "chartjs": {
+      "version": "4.5.1",
+      "bar": {
+        "min": 204830,
+        "gzip": 70544
+      },
+      "all": {
+        "min": 208753,
+        "gzip": 71248,
+        "charts": 9
+      }
+    },
+    "echarts": {
+      "version": "6.1.0",
+      "bar": {
+        "min": 1134022,
+        "gzip": 380522
+      },
+      "all": {
+        "min": 1138446,
+        "gzip": 381528,
+        "charts": 12
+      }
+    },
+    "maya": {
+      "version": "0.3.0",
+      "bar": {
+        "min": 119152,
+        "gzip": 44839
+      },
+      "all": {
+        "min": 135686,
+        "gzip": 51402,
+        "charts": 12
+      }
+    },
+    "nivo": {
+      "version": "0.99.0",
+      "bar": {
+        "min": 486536,
+        "gzip": 159288
+      },
+      "all": {
+        "min": 650411,
+        "gzip": 207908,
+        "charts": 12
+      }
+    },
+    "plot": {
+      "version": "0.6.17",
+      "bar": {
+        "min": 267851,
+        "gzip": 92997
+      },
+      "all": {
+        "min": 304063,
+        "gzip": 102134,
+        "charts": 10
+      }
+    },
+    "plotly": {
+      "version": "4.1.1",
+      "bar": {
+        "min": 4794194,
+        "gzip": 1469774
+      },
+      "all": {
+        "min": 4798469,
+        "gzip": 1471019,
+        "charts": 12
+      }
+    },
+    "recharts": {
+      "version": "3.10.1",
+      "bar": {
+        "min": 587657,
+        "gzip": 175716
+      },
+      "all": {
+        "min": 690782,
+        "gzip": 201827,
+        "charts": 11
+      }
+    },
+    "vegalite": {
+      "version": "6.4.3",
+      "bar": {
+        "min": 878322,
+        "gzip": 303231
+      },
+      "all": {
+        "min": 881478,
+        "gzip": 303777,
+        "charts": 10
+      }
+    }
+  }
+}

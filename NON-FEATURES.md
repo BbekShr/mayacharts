@@ -16,6 +16,11 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 ## Known ceilings
 
+- **Render batching**: property sets in one task coalesce into one render (microtask), but sets in separate tasks each render, so a host that updates faster than 60 Hz is not capped at one render per frame. Resizes still wait for a frame.
+- **Scatter pointer pick**: scatter has no hit circles; the tooltip and click pick the nearest point centre within 12 px by a linear scan, so a pick costs O(points) per pointer move.
+- **Thinned sparkline and ridgeline**: kpi (one hover point per 4 px) and ridgeline (one per 6 px of plot width) keep the same largest-triangle-three-buckets pick as a downsampled time axis (each series' minimum and maximum and every gap edge included), so a click or hover lands on a kept category only, not every row. When the kept set is still over the target it is thinned evenly, which can drop a gap edge or a peak in the densest cases.
+- **Per-row marks stay capped**: beeswarm (a dot per row) and parallel (a line and a dot per measure per row, so about 1250 rows) throw `too-many-marks` at 5000 marks. Drawing less would mean binning, which is a different chart; use scatter, `limit` or aggregate the rows first.
+- **Late data table**: the hidden data table is inserted when the browser is next idle after a render (2 s at most), and only the latest one, so a screen reader sees it a moment after the marks. A server-rendered table stays in place until then.
 - **Y-domain origin**: value axes (lines included) are 0-anchored. Negative values are supported; set `yDomain` to override the origin.
 - **Ramp depth**: 10-step sequential ramp for colorBy numeric fields (not user-tunable).
 - **Label truncation**: long x labels are thinned by code point; text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
@@ -23,7 +28,9 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Time line gaps**: a line breaks where the gap between readings exceeds 5 times the series' median step (fixed factor); use null rows for gaps it should not guess.
 - **Time bar width**: bars on a time axis take 0.8 of the smallest gap between dates, so one close pair makes every bar thin.
 - **Time tick labels**: a `format` entry for x replaces the per-unit tick labels entirely.
-- **Downsampling**: line and area on a time axis only, a fixed target of 1000 categories (fewer with many series; more than about 100 series or many gaps can exceed it). LTTB runs per series over all series, hidden ones included. Bars on a time axis are not reduced and stop at 5000 marks.
+- **Downsampling**: line and area on a time axis only, a target of one point per 2 px of plot width, at most 1000 categories (fewer with many series; more than about 100 series or many gaps can exceed it). LTTB runs per series over all series, hidden ones included. Bars on a time axis are not reduced and stop at 5000 marks.
+- **Point budget width**: the plot width the downsampling target uses is estimated as chart width minus 56 px, because shape runs before layout fixes the margins; a very wide y axis keeps a few points more than one per 2 px.
+- **Scatter hits**: scatter draws no hit elements; the element picks the nearest mark centre within 12 px, so a dense plot picks by distance, not by drawn circle.
 - **Density cells**: scatter past 5000 visible points draws square cells (not hexagons), merges series into one ramp, drops `size` and `name`, and scales colour by the square root of the count against the visible maximum.
 - **Format templates**: one `{value}` or `{value:<preset>}` per template, at most 80 characters; no other placeholders such as the series or category name.
 - **Drill engine**: `drill: true` + `path` for navigation. No custom drill templates, custom breadcrumb shapes, or drilling by a measure-derived category (use `path` and `aggregate`).
@@ -41,9 +48,10 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Path morph browsers**: line and area updates morph only where the browser interpolates CSS `d` (Chromium, Firefox) and the path keeps its command sequence; Safari, and paths that gain or lose points, crossfade instead.
 - **Gradient ids in standalone SVG**: area fills reference `#maya-a0`..`#maya-a7`. Several `render()` SVGs inlined in one page share those ids, so a chart with custom `colors` may show another chart's gradient colours (the element's shadow root scopes them; the flat fallback tint is used if the reference fails).
 - **Bar width**: bars stop growing at 72 px and sit centred in their slot.
-- **Flow hover paths**: hovering a sankey or chord node lights its whole paths only for the first 32 nodes; later nodes still show their tooltip. Node labels that would collide with a larger node's label are dropped (the tooltip still names them).
+- **Flow node labels**: node labels that would collide with a larger node's label are dropped (the tooltip still names them).
 - **Radial tip values**: a bar's total shows at its tip only when it fits (wedge arc of 11 px or more, 40 categories or fewer); otherwise it is in the tooltip.
-- **Sunburst slivers**: slices under 2 px of outer arc are not drawn, nor their children. Rotated names skip the label overlap scan; each is fitted to its own ring instead.
+- **Sunburst slivers**: once a slice would be under 4 px across, it and its smaller siblings draw as one grey "Other (n)" slice that does not drill; its rows are only in the data table. Slices under 2 px of outer arc are not drawn, nor their children. Rotated names skip the label overlap scan; each is fitted to its own ring instead.
+- **Hierarchy colours by size**: treemap and sunburst colour slots follow each top-level branch's total, largest first. A drilled branch keeps its colour by ranking summed `y`, so with a non-sum `aggregate` a branch can change colour on drill.
 - **Entrance**: the first draw animates once; server-rendered charts never replay it.
 - **Measure toggle up to 4 options**: a `y` array works with more measures, but the sliding indicator is styled for 2 to 4.
 - **kpi in a short box**: the sparkline needs about 28 px of free height; with a target bullet and too little room, the bullet stays and the sparkline is dropped.

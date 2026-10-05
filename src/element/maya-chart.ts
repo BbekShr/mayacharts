@@ -17,6 +17,7 @@ import { css } from "../styles/theme.ts";
 import { type Intro, patch, type PatchOptions } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
+import { listen } from "./listen.ts";
 import * as measure from "./measure.ts";
 import * as select from "./select.ts";
 import * as sort from "./sort.ts";
@@ -37,15 +38,17 @@ export class MayaChart extends HTMLElement {
   #say: ReturnType<typeof setTimeout> | undefined;
   #last: Record<string, string> = {};
   #size = [0, 0];
-  #raf = 0;
+  #q = false;
   #ro: ResizeObserver | undefined;
   #resized = false;
   #off: (() => void) | undefined;
+  #unlisten: (() => void)[] = [];
   #tip: Tooltip | undefined;
   #zoom: PatchOptions["zoom"];
   #vars = new Set<string>();
   #err = "";
   #drawn = false;
+  #tbl = 0;
 
   get spec(): ChartSpec | undefined {
     return this.#prop ?? this.#json ?? this.#attr;
@@ -98,12 +101,7 @@ export class MayaChart extends HTMLElement {
         delete (this as any)[p];
         (this as any)[p] = v;
       }
-    const j = this.querySelector(':scope > script[type="application/json"]')?.textContent;
-    try {
-      if (j) this.#json = JSON.parse(j);
-    } catch (e) {
-      console.error(e);
-    }
+    this.#readJson();
     let root = this.shadowRoot;
     if (!root) {
       root = this.attachShadow({ mode: "open" });
@@ -127,9 +125,10 @@ export class MayaChart extends HTMLElement {
         ),
       );
     }
-    root.addEventListener("click", this.#click);
-    root.addEventListener("keydown", this.#key);
-    globalThis.addEventListener("maya-register", this.#registered);
+    this.#unlisten = [
+      listen(root, ["click", this.#click], ["keydown", this.#key]),
+      listen(globalThis, ["maya-register", this.#registered]),
+    ];
     const host: Host = {
       root,
       el: this,
@@ -137,6 +136,7 @@ export class MayaChart extends HTMLElement {
       state: () => this.#state,
       commit: (next, target) => this.#commit(next, target ?? null),
       announce: (text) => this.#announce(text),
+      mark: (e) => this.#tip?.pick(e),
     };
     this.#ix = {
       measure: measure.mount(host),
@@ -160,21 +160,28 @@ export class MayaChart extends HTMLElement {
       ) {
         this.#ix?.zoom.cancel?.(); // a brush's pixel geometry is stale after a resize
         this.#resized = true;
-        this.#schedule();
+        this.#schedule(true);
       }
     });
     this.#ro.observe(box);
     this.#schedule();
   }
 
+  /** The SSR spec child. A parser-created element connects before its children are parsed. */
+  #readJson(): void {
+    const j = this.querySelector(':scope > script[type="application/json"]')?.textContent;
+    try {
+      if (j) this.#json = JSON.parse(j);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   disconnectedCallback(): void {
-    cancelAnimationFrame(this.#raf);
-    this.#raf = 0;
+    this.#q = false;
     this.#ro?.disconnect();
     this.#off?.();
-    this.shadowRoot?.removeEventListener("click", this.#click);
-    this.shadowRoot?.removeEventListener("keydown", this.#key);
-    globalThis.removeEventListener("maya-register", this.#registered);
+    this.#unlisten.forEach((f) => f());
     clearTimeout(this.#say);
     for (const h of Object.values(this.#ix ?? {})) h.off();
     this.#ix = undefined;
@@ -277,16 +284,24 @@ export class MayaChart extends HTMLElement {
     this.#commit({ ...this.#state, view: { ...this.#state.view, hidden: [...hidden] } }, null);
   };
 
-  #schedule(): void {
-    if (this.isConnected && !this.#raf)
-      this.#raf = requestAnimationFrame(() => ((this.#raf = 0), this.#render()));
+  /** Renders in a microtask (property sets in one task batch); ResizeObserver delivery waits a frame. */
+  #schedule(raf = false): void {
+    if (!this.isConnected || this.#q) return;
+    this.#q = true;
+    const run = () => this.#q && ((this.#q = false), this.#render());
+    raf ? requestAnimationFrame(run) : queueMicrotask(run);
   }
 
   #render(): void {
     const root = this.shadowRoot!;
+    if (!this.spec) this.#readJson();
     const spec = this.spec;
     const box = root.querySelector(".maya-box")!;
-    if (!spec) return;
+    if (!spec) {
+      // Still parsing: the JSON child may arrive later in this document.
+      if (document.readyState === "loading") (this.#readJson(), this.#schedule(true));
+      return;
+    }
     if (spec !== this.#seen) {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
@@ -296,9 +311,9 @@ export class MayaChart extends HTMLElement {
       );
       this.#seen = spec;
     }
-    const draw = () => {
+    const draw = (s = spec) => {
       this.#size = [box.clientWidth, box.clientHeight];
-      return renderParts(spec, {
+      return renderParts(s, {
         width: box.clientWidth || 640,
         height: box.clientHeight || 320,
         view: this.#state.view,
@@ -309,7 +324,14 @@ export class MayaChart extends HTMLElement {
     const focus = this.#focusId();
     let parts;
     try {
+      if (!this.#drawn && !box.querySelector("svg"))
+        try {
+          // Title and controls depend only on the spec: place them first, measure once. No
+          // measuring here: reading the box now would force a layout that is thrown away.
+          this.#slots(root, renderParts({ ...spec, data: [] }, { width: 640, height: 320 }));
+        } catch {} // the real draw reports the error
       parts = draw();
+      // ponytail: a multi-series legend needs the data, so it still costs a second draw.
       // A title, legend or control that just appeared shrinks the box: fit it in this frame.
       const [w, h] = this.#size;
       if (this.#slots(root, parts) && (box.clientWidth !== w || box.clientHeight !== h))
@@ -335,11 +357,18 @@ export class MayaChart extends HTMLElement {
     }
     this.#err = "";
     const maya = root.querySelector<HTMLElement>(".maya")!;
-    if (this.#last["table"] !== parts.table) {
+    // The table is hidden but costs its markup, style and layout (1000 scatter rows: ~10 ms), so
+    // it is built and inserted when the browser is idle (2 s at most) and only the latest lands.
+    // ponytail: a screen reader sees the table a moment after the marks.
+    const n = ++this.#tbl;
+    const late = () => {
+      if (n !== this.#tbl || this.#last["table"] === parts.table) return;
       this.#last["table"] = parts.table;
       root.querySelector("table.maya-sr")?.remove();
       box.insertAdjacentHTML("afterend", html(parts.table));
-    }
+    };
+    // Without requestIdleCallback (Safari) the options coerce to a 0 ms timeout: the next task.
+    (globalThis.requestIdleCallback ?? setTimeout)(late, { timeout: 2000 } as never);
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
     for (const k of this.#vars)

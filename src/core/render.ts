@@ -30,16 +30,26 @@
  *   falls by one until none does, so ticks stay evenly spaced. Sub-day ticks at UTC midnight and
  *   the first tick show the date. No vertical grid. Line and area paths break where the gap to
  *   the previous non-null point exceeds 5x the series' median gap (fixed factor). The svg
- *   carries data-t (empty) beside data-n; line hit rects and bar marks (y2 points too) carry
- *   data-i, the category's index in the time-ordered list before window and reduction (the
- *   index space of view.window). Without spec.format for x, labels use a preset from
+ *   carries data-t (empty) beside data-n; line and area points and bar marks (y2 points too)
+ *   carry data-i, the category's index in the time-ordered list before window and reduction
+ *   (the index space of view.window). Without spec.format for x, labels use a preset from
  *   the smallest gap (year, month, date, datetime); tick labels use per-unit defaults.
  *   Downsampling: line and area on a time axis with more categories than min(MAX_POINTS,
- *   4000 / series) run largest-triangle-three-buckets per series (keeping first, last, min, max
+ *   floor(plot width / 2), 4000 / series) (one point per 2 px: a narrower band cannot be
+ *   hovered; the plot width is estimated as width - 56, shape runs before layout) run
+ *   largest-triangle-three-buckets per series (keeping first, last, min, max
  *   and one marker per gap), after the window; a union still over the target is thinned to
  *   first, last and evenly spaced indexes. Kept categories keep their keys; Shaped.reduced
  *   = [kept, before], and the description says so. view.window indexes the time-ordered list
  *   before reduction. Scatter is exempt from the pre-draw mark cap (it bins its own rows).
+ *   Scatter's Shaped has empty categories and cells: its marks draw from rows.
+ *   Thinning in the mark (kpi, ridgeline; shape.thin): above one hover target per 4 px (kpi
+ *   sparkline) or 6 px (ridgeline plot width) the mark draws only the kept categories, picked
+ *   as on a time axis (shape.thin calls reduceTime): first, last, largest-triangle-three-buckets
+ *   per run, each series' minimum and maximum and every gap edge, at most the target. Points and dots exist for kept categories only; the kpi headline, delta and the data table use all rows.
+ *   Both skip the pre-draw category cap (only the post-draw mark count applies). Beeswarm and
+ *   parallel draw one mark per row (parallel: one per row and measure), so they keep the
+ *   5000-mark error; a reduction would be a different chart (bin with scatter, or limit).
  *
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
  *   (hierarchy, flow, geo) call registry.register() on import. A Mark is
@@ -58,7 +68,10 @@
  *                           fields only (x y series size name path colorBy, format and
  *                           titles keys). `opts.nonce` lands on the shell's <style>.
  *   renderParts(spec, opts) the pieces (svg without <style>, legend, controls, crumbs, table,
- *                           title, override style + vars, warnings).
+ *                           title, override style + vars, warnings). `table` is a getter that
+ *                           builds the data table on first read (the element reads it idle).
+ *   The element renders in a microtask after a property set, and in the next frame after a
+ *   resize or while it waits for its JSON spec child.
  *
  * Shadow content (identical from renderShell and the element, built by `shellInner`).
  * Slot order is fixed:
@@ -77,7 +90,8 @@
  *        aria-labelledby="maya-t" aria-describedby="maya-d" [tabindex="0" in parts only]
  *        data-plot="x y w h" data-n="categories" [data-xd="lo hi" data-yd="lo hi" for
  *        linear-x types instead of data-n] [data-dir="h" when horizontal]
- *        [data-drill when a click can drill one level further]>
+ *        [data-drill when a click can drill one level further] [data-pt when the body holds a
+ *        [data-maya=line] path: its point circles are hidden until active]>
  *     <title id="maya-t">  <desc id="maya-d">
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
@@ -99,17 +113,30 @@
  *                       bar + y2: one `path[data-maya=line]` plus a point circle mark per
  *                       non-null category, data-s = series count % 8, data-series = the
  *                       y2 title; hits are 24px squares round each point.
- *                       Line: point circles are marks (hidden until active) plus one
- *                       keyless full-height band hit per category.
+ *                       Line, area, kpi and ridgeline: point circles are marks (line and
+ *                       area: hidden until active) plus ONE keyless hit rect over the plot
+ *                       (svg.ts plotHit(), no data-c); the element resolves it to the point
+ *                       at the category nearest the pointer's x, then nearest its y
+ *                       (tooltip.ts pick(), also what select and drill click). A keyless
+ *                       hit WITH data-c (parallel) stands for that category's mark nearest
+ *                       the pointer's y.
  *                       Radial: data-c is the category (a stack lights together); the
  *                       centre total is a text mark keyed `t` with no data-c (counts up).
  *                       Scatter: data-gx/data-gy (formatted x, y) fill the hover guides in
- *                       the cross group. Sankey/chord: data-n (node index), data-a (node
+ *                       the cross group; only written when the point has a name or size,
+ *                       otherwise data-x and data-f already are the formatted x and y.
+ *                       Scatter writes no data-series and no data-s when there is no series
+ *                       (the marks group colours those points); a dense plot (over 100
+ *                       unsized points) marks only its first point data-dense. Sankey/chord: data-n (node index), data-a (node
  *                       indices whose hover lights this link or node), data-neu (neutral
  *                       outer-level step, no data-s).
  *   [data-maya="hit"]   same payload as its mark (incl. data-key). Emitted only when the
  *                       mark is narrower or shorter than 24px: the mark's rect grown to
  *                       >= 24px in that dimension, centered. fill="transparent".
+ *                       Scatter and beeswarm emit none: the tooltip and select pick the nearest
+ *                       mark centre within 12px of the pointer. Parallel's hit paths share
+ *                       their stroke through a wrapping <g> in the hits group.
+ *                       Beeswarm writes no data-series when there is no series.
  *   [data-maya="probe"] / .maya-tip  tooltip anchor probe + popover (shell only).
  *   [data-maya="live"]  the static polite live region; written via textContent only.
  *   [data-maya="legend"] buttons: <button type="button" data-si="i" data-s="i%8"
@@ -132,7 +159,10 @@
  *   [data-maya=link]  [data-depth]  [data-selected]
  *   svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
- *   indicator; line point circles are hidden until active under `svg[data-n]`.
+ *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
+ *   key on `svg[data-xd]` (both axes linear). Rules whose subject is a mark avoid a `:has()` on
+ *   an ancestor, which is checked once per mark: selection dims through `--o`, set once on the
+ *   marks group, and legend hover through `--d` and `--h<slot>` on `.maya`.
  *
  * Keyboard (one keydown dispatcher in maya-chart.ts; handlers return "handled"):
  *   Escape priority: pinned tooltip -> brush in progress -> selection -> zoom window -> drill
@@ -175,7 +205,8 @@
  *   spec.animate === false.
  *
  * Hover (element/tooltip.ts): the active mark gets data-active and the marks of its
- *   category (its tooltip rows, plus hierarchy ancestors) data-lit; CSS dims the rest.
+ *   category (its tooltip rows, plus hierarchy ancestors, plus for a flow node every link and
+ *   node whose data-a lists it) data-lit; CSS dims the rest.
  *   Bar types get an element-owned `<rect data-maya="band">` before the marks group,
  *   moved with a CSSOM transform; it and the crosshair glide once they carry data-on.
  *   Charts with a crosshair anchor the tooltip beside it (data-side on .maya-tip).
@@ -250,7 +281,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const s0 = resolve(spec, opts?.view);
   const W = opts?.width ?? 640;
   const H = opts?.height ?? 320;
-  const shaped = shape(s0, opts?.view ?? {});
+  // ponytail: plot width is only known after shape (tick labels set the margins); W - 56 is the
+  // usual plot of a 4-digit y axis, and the point budget needs no more than that.
+  const shaped = shape(s0, { ...opts?.view, plotWidth: W - 56 });
   // Time axis without a format for x: the preset follows the smallest gap between categories.
   let s = s0;
   if (shaped.time && !s0.format.has(s0.x)) {
@@ -269,7 +302,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       `${n} marks exceed the limit of ${MAX_MARKS}.`,
       "Use spec.limit to keep the top N categories, or aggregate the rows first.",
     );
-  if (s.type !== "scatter") cap(shaped.cells.length); // scatter draws from rows and bins past MAX_MARKS
+  // Scatter draws from rows and bins past MAX_MARKS; kpi and ridgeline thin their own points.
+  if (!["scatter", "kpi", "ridgeline"].includes(s.type)) cap(shaped.cells.length);
 
   // Formatters are cached per (field, step): marks call fmt once per value.
   const fmts = new Map<string, (v: unknown) => string>();
@@ -303,20 +337,14 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           ? "good"
           : "bad"
         : null;
+  const toneWord = (n: "good" | "bad") =>
+    t(
+      s,
+      cb === "sign" ? (n === "good" ? "positive" : "negative") : n === "good" ? "above" : "below",
+    );
   const toneText = (v: number) => {
     const n = tone(v);
-    return n === null
-      ? null
-      : t(
-          s,
-          cb === "sign"
-            ? n === "good"
-              ? "positive"
-              : "negative"
-            : n === "good"
-              ? "above"
-              : "below",
-        );
+    return n && toneWord(n);
   };
 
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
@@ -366,7 +394,11 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     return true;
   };
 
-  const f = mark.axes ? frame(s0, mark.axes(s, shaped), { width: W, height: H }, fmt) : null;
+  // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
+  const f =
+    mark.axes && s.data.length
+      ? frame(s0, mark.axes(s, shaped), { width: W, height: H }, fmt)
+      : null;
   const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
   const ctx: MarkCtx = {
     spec: s,
@@ -410,7 +442,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
     const m = mark.draw(ctx);
-    cap(m.marks.split(' data-maya="mark"').length - 1); // scatter and modules draw per row/node
+    // Scatter and modules draw per row/node. Counted in place: a split would copy every mark.
+    let nm = 0;
+    for (let i = 0; (i = m.marks.indexOf(' data-maya="mark"', i) + 1);) nm++;
+    cap(nm);
     markLegend = m.legend ?? null;
     note = m.note ?? "";
     // Area fills fade toward the baseline: one gradient per visible slot, kept in the grid group
@@ -473,6 +508,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       ...f?.attrs,
       "data-dir": s.horizontal ? "h" : null,
       "data-stack": s.stack || null,
+      // A line path: its point circles are hidden until active (one search, not a CSS :has).
+      "data-pt": body.includes('data-maya="line"') || null,
       // A click can drill further (pointer cursor on marks).
       "data-drill":
         (s.drill && s.path.length > (s.type === "sankey" || s.type === "chord" ? 2 : 1)) || null,
@@ -490,6 +527,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   );
 
   let legend = "";
+  let tbl: string | undefined;
   if (markLegend !== null && spec.legend !== false) legend = markLegend;
   else if ((s.series !== null || s.y2 !== null) && s.legend)
     legend =
@@ -521,10 +559,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       cb === "sign" || typeof cb === "object"
         ? `<div class="maya-legend" data-maya="tone">` +
           (["good", "bad"] as const)
-            .map(
-              (n) =>
-                `<span data-tone="${n}"><i></i>${esc(t(s, cb === "sign" ? (n === "good" ? "positive" : "negative") : n === "good" ? "above" : "below"))}</span>`,
-            )
+            .map((n) => `<span data-tone="${n}"><i></i>${esc(toneWord(n))}</span>`)
             .join("") +
           `</div>`
         : hi > lo
@@ -557,7 +592,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         : s.drill
           ? `<div class="maya-crumbs" aria-hidden="true"></div>` // holds the row: no shift on drill
           : "",
-    table: s.table ? dataTable(s, shaped, fmt, toneText) : "",
+    // Built on first read: the element inserts the table when the browser is idle.
+    get table() {
+      return (tbl ??= s.table ? dataTable(s, shaped, fmt, toneText) : "");
+    },
     title: s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`,
     style,
     vars,

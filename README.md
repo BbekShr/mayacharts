@@ -122,7 +122,7 @@ Dates in x values are automatically detected and placed on a proportional time a
 
 ### Large data
 
-Line and area charts on a time axis automatically reduce long time series to at most 1000 categories using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. The data table and screen reader description indicate how many points are displayed. Scatter charts above 5000 visible points are drawn as density cells to reduce rendering cost; bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest using `limit` or `aggregate` when exceeded.
+Line and area charts on a time axis automatically reduce long time series to about one point per 2 px of plot width (at most 1000 categories, and 4000 shared between series) using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. The data table and screen reader description indicate how many points are displayed. Scatter charts above 5000 visible points are drawn as density cells to reduce rendering cost; bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest using `limit` or `aggregate` when exceeded.
 
 ## Canonical examples
 
@@ -648,7 +648,7 @@ maya-chart {
 
 | Token     | CSS variable                       | Light default                        | Dark default          | Colours                         |
 | --------- | ---------------------------------- | ------------------------------------ | --------------------- | ------------------------------- |
-| font      | --maya-font                        | ui-sans-serif, system-ui, sans-serif | same as light         | Axis labels, tooltip text       |
+| font      | --maya-font                        | system-ui, sans-serif                | same as light         | Axis labels, tooltip text       |
 | fontSize  | --maya-font-size                   | 12px                                 | 12px                  | All text                        |
 | fg        | --maya-fg                          | #1f2328                              | #e6edf3               | Title, value labels             |
 | fgMuted   | --maya-fg-muted                    | #656d76                              | #9198a1               | Axis text, legend, breadcrumb   |
@@ -749,15 +749,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 4,185 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 4,913 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 410,144,212 total, 1,045,502 output
+- claude-opus-5-5: 612,911,115 total, 1,233,839 output
 - claude-sonnet-5-5: 189,175,194 total, 41,383 output
 - claude-fable-5-1: 74,794,840 total, 178,397 output
 - claude-haiku-4-5-20251001: 18,481,843 total, 761 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 700,393,948 total, 1,309,356 output
+- all: 903,160,851 total, 1,497,693 output
 
 <!-- tokens:end -->
 

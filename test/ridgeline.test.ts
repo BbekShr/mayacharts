@@ -21,7 +21,7 @@ describe("ridgeline", () => {
     expect(dots).toHaveLength(6);
     expect(dots[0]).toContain('data-key="East~Jan"');
     expect(dots[3]).toContain('data-s="1"');
-    expect(tags(s, 'rect data-maya="hit"')).toHaveLength(3);
+    expect(tags(s, 'rect data-maya="hit"')).toHaveLength(1); // one plot-wide hit
   });
   it("marks group holds only keyed children, dots after outlines", () => {
     const g = svg(spec).match(/<g data-maya="marks">(.*?)<\/g>/s)![1]!;

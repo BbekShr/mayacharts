@@ -1,5 +1,6 @@
 import { t as str } from "../core/strings.ts";
 import type { ChartSpec } from "../core/types.ts";
+import { listen } from "./listen.ts";
 
 const a = (e: Element, k: string) => e.getAttribute(k) ?? "";
 const h = (t: string, txt = "", at: Record<string, string> = {}) => {
@@ -11,8 +12,14 @@ const h = (t: string, txt = "", at: Record<string, string> = {}) => {
 // Links (sankey flows, chord ribbons) carry the same payload as marks.
 const SEL = "[data-maya=hit],[data-maya=mark],[data-maya=link][data-key]";
 const FADE = 120;
+const NEAR = 12;
 const FIXED = ["position", "position-area", "left", "top", "margin"];
 const GLIDE: KeyframeAnimationOptions = { duration: 200, easing: "cubic-bezier(.22,1,.36,1)" };
+/** viewBox units per client px (the svg may be scaled by CSS). */
+const unit = (svg: Element, s: DOMRect) => {
+  const w = +(a(svg, "viewBox").split(" ")[2] || s.width) || 1;
+  return w / (s.width || w);
+};
 const still = () => matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export interface Tooltip {
@@ -20,6 +27,8 @@ export interface Tooltip {
   hide(): void;
   /** The mark the tooltip is showing (hover, tap or keyboard). */
   active(): Element | undefined;
+  /** The mark a pointer event stands for: the mark, a hit's mark, or the nearest point. */
+  pick(e: Event): Element | undefined;
   /** Rebuild the key index after a patch and re-show the active mark if it survived. */
   refresh(): void;
 }
@@ -50,7 +59,12 @@ export function tooltip(
     flip: Animation | undefined,
     band: SVGRectElement | undefined;
 
+  let dirty = true,
+    cxy: number[] | undefined;
   const index = () => {
+    if (!dirty) return;
+    dirty = false;
+    cxy = undefined;
     list = [...box.querySelectorAll("[data-maya=mark][data-key]")];
     byKey = new Map();
     byC = new Map();
@@ -58,7 +72,9 @@ export function tooltip(
       byKey.set(a(m, "data-key"), m);
       if (!m.hasAttribute("data-c")) continue;
       const c = a(m, "data-c");
-      byC.set(c, [...(byC.get(c) ?? []), m]);
+      const g = byC.get(c);
+      if (g) g.push(m);
+      else byC.set(c, [m]);
     }
   };
   const group = (m: Element) =>
@@ -82,6 +98,9 @@ export function tooltip(
     const k = m ? a(m, "data-key") : "";
     if (k.startsWith("h~"))
       for (const [p, e] of byKey) if (k.startsWith(p + "~") && p !== "h") peers.push(e);
+    // Flows: a node lights every link and node on a path through it (their data-a lists it).
+    if (m?.hasAttribute("data-n"))
+      peers.push(...box.querySelectorAll(`[data-a~="${a(m, "data-n")}"]`));
     for (const l of lit) l.setAttribute("data-active", "");
     for (const l of peers) l.setAttribute("data-lit", "");
   };
@@ -95,8 +114,7 @@ export function tooltip(
     if (!m || !svg) return g.removeAttribute("data-on");
     const r = m.getBoundingClientRect(),
       s = svg.getBoundingClientRect();
-    const vw = +(a(svg, "viewBox").split(" ")[2] || s.width) || 1;
-    const k = vw / (s.width || vw),
+    const k = unit(svg, s),
       px = (r.left + r.width / 2 - s.left) * k,
       py = (r.top + r.height / 2 - s.top) * k,
       tx = g.querySelectorAll("text");
@@ -105,8 +123,8 @@ export function tooltip(
     if (tx.length) {
       g.style.setProperty("--x", px + "px");
       g.style.setProperty("--y", py + "px");
-      tx[0]!.textContent = a(m, "data-gx");
-      tx[1]!.textContent = a(m, "data-gy");
+      tx[0]!.textContent = a(m, "data-gx") || a(m, "data-x");
+      tx[1]!.textContent = a(m, "data-gy") || a(m, "data-f");
     }
     // Glide between categories once visible; the first placement jumps (flush, then enable).
     if (!was) getComputedStyle(g).transform;
@@ -166,10 +184,45 @@ export function tooltip(
     }
   };
 
+  /**
+   * Scatter and beeswarm draw no hit shapes: the mark whose centre is within NEAR px of the
+   * pointer. Line and area draw one plot-wide hit (`band`): the point at the category nearest
+   * the pointer's x, then nearest its y.
+   */
+  const nearest = (ev?: Event, band = false) => {
+    const svg = box.querySelector("svg"),
+      p = ev as PointerEvent | undefined;
+    if (
+      (!band && !/^(scatter|beeswarm)$/.test(spec()?.type ?? "")) ||
+      !svg ||
+      p?.clientX === undefined
+    )
+      return;
+    index();
+    cxy ??= list.flatMap((m) => ["cx", "cy"].map((k) => +(m.getAttribute(k) ?? "x")));
+    const s = svg.getBoundingClientRect(),
+      k = unit(svg, s),
+      px = (p.clientX - s.left) * k,
+      py = (p.clientY - s.top) * k;
+    let best = -1,
+      bx = Infinity,
+      bd = band ? Infinity : (NEAR * k) ** 2;
+    for (let i = 0; i < cxy.length; i += 2) {
+      const dx = Math.abs(cxy[i]! - px),
+        dy = Math.abs(cxy[i + 1]! - py),
+        d = band ? dy : dx * dx + dy * dy;
+      if (band ? dx < bx || (dx === bx && d < bd) : d < bd) ((bx = dx), (bd = d), (best = i));
+    }
+    return list[best / 2];
+  };
+
   const markOf = (t: EventTarget | null | undefined, ev?: Event) => {
     const e = (t as Element | null)?.closest?.(SEL);
-    if (!e || a(e, "data-maya") !== "hit") return e ?? undefined;
+    if (!e) return nearest(ev);
+    index();
+    if (a(e, "data-maya") !== "hit") return e;
     if (e.hasAttribute("data-key")) return byKey.get(a(e, "data-key"));
+    if (!e.hasAttribute("data-c")) return nearest(ev, true);
     // Keyless band hit: the mark in this category nearest the pointer.
     const y = (ev as PointerEvent | undefined)?.clientY ?? 0;
     let best: Element | undefined,
@@ -192,6 +245,7 @@ export function tooltip(
   };
 
   const show = (m: Element, say = false) => {
+    index();
     // Glide: remember where the tooltip is now (mid-glide included) before it moves.
     const from = open ? tip.getBoundingClientRect() : undefined;
     flip?.cancel();
@@ -240,7 +294,7 @@ export function tooltip(
     } = m.getBoundingClientRect();
     if (side && svg) {
       const s = svg.getBoundingClientRect(),
-        k = s.width / (+a(svg, "viewBox").split(" ")[2]! || s.width || 1),
+        k = 1 / unit(svg, s),
         [, py, , ph] = a(svg, "data-plot").split(" ").map(Number) as number[],
         left = r.left + r.width / 2,
         top = s.top + py! * k;
@@ -326,6 +380,7 @@ export function tooltip(
     const k = (e as KeyboardEvent).key;
     if (!on()) return;
     kb = true;
+    index();
     if (k === "Escape") {
       // Pinned tooltip is Escape's first priority: consume the key so nothing else reacts.
       if (pin) e.preventDefault();
@@ -355,30 +410,30 @@ export function tooltip(
   };
   const blur = () => pin || hide();
 
-  const on_: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
-    [box, "pointerover", move],
-    [box, "pointermove", move],
-    [box, "pointerdown", down],
-    [box, "pointerup", up],
-    [box, "pointerleave", leave],
-    [box, "keydown", key],
-    [box, "focusout", blur],
-    [document, "pointerdown", outside, { capture: true }],
-    // Focusing the chart can scroll it into view; that must not close a keyboard tooltip.
-    [window, "scroll", () => kb || hide(), { capture: true, passive: true }],
-  ];
-  for (const [t, n, f, o] of on_) t.addEventListener(n, f, o);
-  index();
-  return {
-    off: () => (
-      hide(),
-      clearTimeout(timer),
-      on_.forEach(([t, n, f, o]) => t.removeEventListener(n, f, o))
+  const offs = [
+    listen(
+      box,
+      ["pointerover", move],
+      ["pointermove", move],
+      ["pointerdown", down],
+      ["pointerup", up],
+      ["pointerleave", leave],
+      ["keydown", key],
+      ["focusout", blur],
     ),
+    listen(document, ["pointerdown", outside, { capture: true }]),
+    // Focusing the chart can scroll it into view; that must not close a keyboard tooltip.
+    listen(window, ["scroll", () => kb || hide(), { capture: true, passive: true }]),
+  ];
+  return {
+    off: () => (hide(), clearTimeout(timer), offs.forEach((f) => f())),
     hide,
     active: () => cur,
+    pick: (e) => markOf(e.target, e),
     refresh() {
       const k = cur && a(cur, "data-key");
+      dirty = true;
+      if (!cur) return hide(); // rebuilt on the first pointer or key
       index();
       const m = k ? byKey.get(k) : undefined;
       if (m && on()) show(m);

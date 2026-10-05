@@ -1,0 +1,410 @@
+{
+  "generated": "2026-10-04",
+  "judgment": true,
+  "rubric": "e2e/compare/LOOKS.md",
+  "criteria": [
+    "Data first",
+    "Labels read",
+    "Numbers are formatted",
+    "Colour",
+    "Legend and title",
+    "Small screens",
+    "Dark mode"
+  ],
+  "judge": "maya-design-critic (Claude Opus), blind: libraries shown as letter codes, revealed after scoring. The judge is the project's own design critic, so treat this row as an informed opinion, not a measurement.",
+  "max": 14,
+  "libs": {
+    "maya": {
+      "charts": {
+        "bar": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "grouped": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "stacked": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "horizontal": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "line": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "multiline": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "area": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "scatter": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "bubble": {
+          "scores": [2, 2, 2, 2, 1, 2, 2],
+          "total": 13
+        },
+        "heatmap": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "treemap": {
+          "scores": [2, 2, 2, 2, 2, 2, 2],
+          "total": 14
+        },
+        "sankey": {
+          "scores": [2, 1, 2, 2, 2, 2, 2],
+          "total": 13
+        }
+      },
+      "mean": 13.83
+    },
+    "plot": {
+      "charts": {
+        "bar": {
+          "scores": [2, 2, 2, 2, 2, 1, 2],
+          "total": 13
+        },
+        "grouped": {
+          "scores": [2, 2, 2, 0, 2, 1, 2],
+          "total": 11
+        },
+        "stacked": {
+          "scores": [2, 2, 2, 0, 2, 1, 2],
+          "total": 11
+        },
+        "horizontal": {
+          "scores": [2, 2, 2, 2, 2, 1, 2],
+          "total": 13
+        },
+        "line": {
+          "scores": [2, 2, 2, 2, 2, 1, 2],
+          "total": 13
+        },
+        "multiline": {
+          "scores": [2, 2, 2, 0, 2, 1, 2],
+          "total": 11
+        },
+        "area": {
+          "scores": [2, 2, 2, 0, 2, 1, 2],
+          "total": 11
+        },
+        "scatter": {
+          "scores": [2, 2, 2, 2, 2, 1, 2],
+          "total": 13
+        },
+        "bubble": {
+          "scores": [2, 2, 2, 2, 1, 1, 2],
+          "total": 12
+        },
+        "heatmap": {
+          "scores": [2, 2, 2, 0, 2, 1, 1],
+          "total": 10
+        }
+      },
+      "mean": 11.8
+    },
+    "echarts": {
+      "charts": {
+        "bar": {
+          "scores": [2, 2, 2, 2, 2, 2, 0],
+          "total": 12
+        },
+        "grouped": {
+          "scores": [2, 2, 2, 0, 2, 2, 0],
+          "total": 10
+        },
+        "stacked": {
+          "scores": [2, 2, 2, 0, 2, 2, 0],
+          "total": 10
+        },
+        "horizontal": {
+          "scores": [2, 2, 2, 2, 2, 2, 0],
+          "total": 12
+        },
+        "line": {
+          "scores": [2, 2, 2, 2, 2, 0, 0],
+          "total": 10
+        },
+        "multiline": {
+          "scores": [2, 2, 2, 0, 2, 0, 0],
+          "total": 8
+        },
+        "area": {
+          "scores": [2, 2, 2, 0, 2, 2, 0],
+          "total": 10
+        },
+        "scatter": {
+          "scores": [2, 2, 2, 2, 2, 2, 0],
+          "total": 12
+        },
+        "bubble": {
+          "scores": [2, 2, 2, 2, 1, 2, 0],
+          "total": 11
+        },
+        "heatmap": {
+          "scores": [2, 2, 2, 1, 1, 2, 0],
+          "total": 10
+        },
+        "treemap": {
+          "scores": [2, 1, 1, 2, 0, 2, 0],
+          "total": 8
+        },
+        "sankey": {
+          "scores": [2, 2, 1, 2, 2, 2, 0],
+          "total": 11
+        }
+      },
+      "mean": 10.33
+    },
+    "vegalite": {
+      "charts": {
+        "bar": {
+          "scores": [1, 1, 2, 2, 2, 2, 0],
+          "total": 10
+        },
+        "grouped": {
+          "scores": [1, 1, 2, 0, 2, 2, 0],
+          "total": 8
+        },
+        "stacked": {
+          "scores": [1, 1, 2, 0, 2, 2, 0],
+          "total": 8
+        },
+        "horizontal": {
+          "scores": [1, 2, 2, 2, 2, 2, 0],
+          "total": 11
+        },
+        "line": {
+          "scores": [1, 2, 2, 2, 2, 2, 0],
+          "total": 11
+        },
+        "multiline": {
+          "scores": [1, 2, 2, 0, 2, 2, 0],
+          "total": 9
+        },
+        "area": {
+          "scores": [1, 2, 2, 0, 2, 2, 0],
+          "total": 9
+        },
+        "scatter": {
+          "scores": [1, 2, 2, 2, 2, 2, 0],
+          "total": 11
+        },
+        "bubble": {
+          "scores": [1, 2, 2, 2, 2, 2, 0],
+          "total": 11
+        },
+        "heatmap": {
+          "scores": [2, 1, 2, 2, 2, 1, 0],
+          "total": 10
+        }
+      },
+      "mean": 9.8
+    },
+    "plotly": {
+      "charts": {
+        "bar": {
+          "scores": [2, 1, 2, 2, 2, 1, 0],
+          "total": 10
+        },
+        "grouped": {
+          "scores": [2, 1, 2, 0, 2, 1, 0],
+          "total": 8
+        },
+        "stacked": {
+          "scores": [2, 1, 2, 0, 2, 1, 0],
+          "total": 8
+        },
+        "horizontal": {
+          "scores": [2, 1, 2, 2, 2, 2, 0],
+          "total": 11
+        },
+        "line": {
+          "scores": [2, 2, 2, 2, 2, 2, 0],
+          "total": 12
+        },
+        "multiline": {
+          "scores": [2, 2, 2, 0, 2, 2, 0],
+          "total": 10
+        },
+        "area": {
+          "scores": [2, 2, 2, 0, 2, 1, 0],
+          "total": 9
+        },
+        "scatter": {
+          "scores": [2, 2, 2, 2, 2, 2, 0],
+          "total": 12
+        },
+        "bubble": {
+          "scores": [2, 2, 2, 2, 1, 2, 0],
+          "total": 11
+        },
+        "heatmap": {
+          "scores": [2, 2, 2, 1, 2, 2, 0],
+          "total": 11
+        },
+        "treemap": {
+          "scores": [1, 1, 1, 2, 2, 0, 0],
+          "total": 7
+        },
+        "sankey": {
+          "scores": [1, 1, 1, 1, 2, 1, 0],
+          "total": 7
+        }
+      },
+      "mean": 9.67
+    },
+    "recharts": {
+      "charts": {
+        "bar": {
+          "scores": [2, 2, 2, 2, 2, 0, 2],
+          "total": 12
+        },
+        "grouped": {
+          "scores": [2, 2, 2, 0, 2, 0, 2],
+          "total": 10
+        },
+        "stacked": {
+          "scores": [2, 2, 2, 0, 2, 0, 2],
+          "total": 10
+        },
+        "horizontal": {
+          "scores": [2, 1, 2, 2, 2, 0, 2],
+          "total": 11
+        },
+        "line": {
+          "scores": [1, 1, 1, 2, 2, 0, 2],
+          "total": 9
+        },
+        "multiline": {
+          "scores": [1, 1, 1, 0, 2, 0, 2],
+          "total": 7
+        },
+        "area": {
+          "scores": [2, 1, 1, 0, 2, 0, 2],
+          "total": 8
+        },
+        "scatter": {
+          "scores": [2, 2, 2, 2, 2, 0, 2],
+          "total": 12
+        },
+        "bubble": {
+          "scores": [2, 2, 1, 2, 1, 0, 2],
+          "total": 10
+        },
+        "treemap": {
+          "scores": [1, 0, 1, 0, 0, 0, 2],
+          "total": 4
+        },
+        "sankey": {
+          "scores": [2, 1, 1, 1, 2, 0, 0],
+          "total": 7
+        }
+      },
+      "mean": 9.09
+    },
+    "chartjs": {
+      "charts": {
+        "bar": {
+          "scores": [1, 2, 2, 0, 1, 1, 1],
+          "total": 8
+        },
+        "grouped": {
+          "scores": [1, 2, 2, 0, 1, 1, 1],
+          "total": 8
+        },
+        "stacked": {
+          "scores": [1, 2, 2, 0, 1, 1, 1],
+          "total": 8
+        },
+        "horizontal": {
+          "scores": [1, 2, 2, 0, 1, 2, 1],
+          "total": 9
+        },
+        "line": {
+          "scores": [1, 1, 1, 0, 1, 1, 1],
+          "total": 6
+        },
+        "multiline": {
+          "scores": [1, 1, 1, 0, 1, 1, 1],
+          "total": 6
+        },
+        "area": {
+          "scores": [1, 1, 1, 0, 1, 1, 1],
+          "total": 6
+        },
+        "scatter": {
+          "scores": [1, 2, 2, 0, 1, 2, 1],
+          "total": 9
+        },
+        "bubble": {
+          "scores": [1, 2, 2, 0, 1, 2, 1],
+          "total": 9
+        }
+      },
+      "mean": 7.67
+    },
+    "nivo": {
+      "charts": {
+        "bar": {
+          "scores": [1, 2, 2, 0, 2, 0, 1],
+          "total": 8
+        },
+        "grouped": {
+          "scores": [0, 0, 2, 0, 2, 0, 1],
+          "total": 5
+        },
+        "stacked": {
+          "scores": [1, 2, 2, 0, 2, 0, 1],
+          "total": 8
+        },
+        "horizontal": {
+          "scores": [1, 2, 2, 0, 2, 0, 1],
+          "total": 8
+        },
+        "line": {
+          "scores": [1, 1, 2, 0, 2, 0, 1],
+          "total": 7
+        },
+        "multiline": {
+          "scores": [1, 2, 2, 0, 2, 0, 1],
+          "total": 8
+        },
+        "area": {
+          "scores": [1, 2, 2, 0, 2, 0, 1],
+          "total": 8
+        },
+        "scatter": {
+          "scores": [1, 2, 2, 0, 2, 0, 1],
+          "total": 8
+        },
+        "bubble": {
+          "scores": [1, 2, 1, 0, 1, 0, 1],
+          "total": 6
+        },
+        "heatmap": {
+          "scores": [1, 1, 2, 1, 2, 0, 1],
+          "total": 8
+        },
+        "treemap": {
+          "scores": [1, 1, 1, 0, 2, 0, 0],
+          "total": 5
+        },
+        "sankey": {
+          "scores": [1, 1, 1, 0, 2, 0, 1],
+          "total": 6
+        }
+      },
+      "mean": 7.08
+    }
+  }
+}

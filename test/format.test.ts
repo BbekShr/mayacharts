@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatter } from "../src/core/format.ts";
+import { dtf, formatter, nf } from "../src/core/format.ts";
 import { render } from "../src/core/render.ts";
 import { resolve, validateSpec } from "../src/core/validate.ts";
 import type { ChartSpec } from "../src/core/types.ts";
@@ -137,5 +137,55 @@ describe("format templates", () => {
   });
   it("suggests a preset", () => {
     expect(bad("{value:pct} x")).toThrowError(/percent/);
+  });
+});
+
+describe("en-US fast path (no ICU load) equals Intl", () => {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  it("numbers with maximumFractionDigits 0..8", () => {
+    const vals = [0, -0, 0.5, 1.5, 2.5, -2.5, 1.005, 0.125, 0.995, 999.995, 1e21, 1e-7, 1.234e-6];
+    vals.push(NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER, 123456789012345680000);
+    for (let i = 0; i < 4000; i++) {
+      const v = (rnd() - 0.5) * 10 ** Math.floor(rnd() * 16 - 6);
+      vals.push(v, Math.round(v * 1000) / 1000);
+    }
+    for (let k = 0; k <= 8; k++) {
+      const fast = nf("en-US", { maximumFractionDigits: k });
+      const intl = new Intl.NumberFormat("en-US", { maximumFractionDigits: k });
+      expect(fast).not.toBeInstanceOf(Intl.NumberFormat);
+      for (const v of vals) expect(fast.format(v), `${v} k=${k}`).toBe(intl.format(v));
+    }
+  });
+  it("UTC dates for every covered option subset", () => {
+    const EN: Record<string, string> = {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+    };
+    const opts: Intl.DateTimeFormatOptions[] = [
+      { dateStyle: "medium" },
+      { timeStyle: "short" },
+      { dateStyle: "medium", timeStyle: "short" },
+    ];
+    const keys = Object.keys(EN);
+    for (let b = 1; b < 64; b++)
+      opts.push(Object.fromEntries(keys.filter((_, i) => b & (1 << i)).map((k) => [k, EN[k]])));
+    const times = [Date.UTC(2024, 0, 1), Date.UTC(1000, 0, 1), Date.UTC(9999, 11, 31, 23, 59, 59)];
+    times.push(Date.UTC(999, 11, 31), Date.UTC(-5, 0, 1), Date.UTC(2024, 5, 3, 12, 0, 5));
+    for (let i = 0; i < 2000; i++) times.push(Math.floor(rnd() * 4e12));
+    let covered = 0;
+    for (const o of opts) {
+      const fast = dtf("en-US", { timeZone: "UTC", ...o });
+      if (fast instanceof Intl.DateTimeFormat) continue;
+      covered++;
+      const intl = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", ...o });
+      for (const t of times)
+        expect(fast.format(t), `${JSON.stringify(o)} ${t}`).toBe(intl.format(t));
+    }
+    expect(covered).toBeGreaterThanOrEqual(14); // the presets and every time-axis label format
   });
 });

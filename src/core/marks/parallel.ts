@@ -110,13 +110,15 @@ export const parallel: Mark = {
         "data-maya": "hit",
         "data-c": ci,
         d,
-        fill: "none",
-        stroke: "transparent",
-        "stroke-width": 16,
-        "stroke-linejoin": "round",
       });
     }
     // Points first: the line~circle CSS rule (hide points until active) only matches circles after a line.
-    return { marks: dots + paths, hits, grid, labels };
+    // The hit paths share their stroke: set once on a group instead of on every row.
+    return {
+      marks: dots + paths,
+      hits: `<g fill="none" stroke="transparent" stroke-width="16" stroke-linejoin="round">${hits}</g>`,
+      grid,
+      labels,
+    };
   },
 };

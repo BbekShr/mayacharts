@@ -1,4 +1,4 @@
-import { el, hit, key, r } from "../svg.ts";
+import { cbField, el, nameId, key, r } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
 
 interface Pt {
@@ -89,31 +89,24 @@ export const beeswarm: Mark = {
     for (const g of groups.values()) big = Math.max(big, g.length);
     // Radius from density: the area each point of the busiest swarm gets, 3 to 6 px.
     const rad = Math.max(3, Math.min(6, Math.sqrt((plot.w * bh) / big) / 4));
-    const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
+    const cb = cbField(spec);
 
     const seen = new Map<string, number>();
     let marks = "";
-    let hits = "";
     for (const [ci, g] of [...groups].sort((a, b) => a[0] - b[0])) {
       const mid = band ? band.at(ci) + band.bandwidth / 2 : plot.y + plot.h / 2;
       const xs = g.map((p) => sx.of(p.v));
       const off = dodge(xs, rad + 0.5, Math.max(0, bh / 2 - rad));
       g.forEach((p, k) => {
-        let id: string | number = p.i;
-        if (p.name !== null) {
-          const n = (seen.get(p.name) ?? 0) + 1;
-          seen.set(p.name, n);
-          id = n > 1 ? `${p.name}#${n}` : p.name;
-        }
         const ser = shaped.series[p.si]!;
         const f = ctx.fmt(spec.y, p.v);
         const cv = cb ? p.row[cb] : null;
         const d = {
-          "data-key": key(ser, id),
+          "data-key": key(ser, nameId(seen, p.name, p.i)),
           "data-c": p.i,
           "data-s": p.si % 8,
           "data-x": p.name ?? (band ? ctx.fmt(spec.x, shaped.categories[ci]) : ""),
-          "data-series": ser,
+          "data-series": ser || null,
           "data-y": p.v,
           "data-f": f,
           "data-neg": p.v < 0,
@@ -123,10 +116,9 @@ export const beeswarm: Mark = {
         const cx = xs[k]!;
         const cy = mid + off[k]!;
         marks += el("circle", { "data-maya": "mark", ...d, r: r(rad), cx: r(cx), cy: r(cy) });
-        hits += hit(d, cx - rad, cy - rad, rad * 2, rad * 2);
         if (spec.labels) ctx.label(cx, cy - rad, f, "above");
       });
     }
-    return { marks, hits };
+    return { marks, hits: "" }; // no hit squares: the tooltip picks the nearest dot, as for scatter
   },
 };
