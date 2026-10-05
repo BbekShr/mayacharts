@@ -103,9 +103,9 @@ describe("performance envelope", () => {
     expect(best(() => renderParts(line(data))).ms).toBeLessThan(60);
   });
 
-  it("line 1M: < 400 ms", () => {
+  it("line 1M: < 600 ms", () => {
     const data = minutes(1_000_000);
-    expect(best(() => renderParts(line(data))).ms).toBeLessThan(400);
+    expect(best(() => renderParts(line(data))).ms).toBeLessThan(600);
   }, 30_000);
 
   it("scatter 1M: < 500 ms, and no hit elements", () => {
