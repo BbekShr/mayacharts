@@ -1,4 +1,5 @@
 import { el, esc, hit, key, r } from "../svg.ts";
+import { inText } from "./bar.ts";
 import type { BandScale, Mark } from "../types.ts";
 
 /** x = column category, series = row category; ramp legend; labels default on at >= 24 px. */
@@ -49,20 +50,11 @@ export const heatmap: Mark = {
       });
       hits += hit(d, x, y, w, h);
       // Drawn here (not ctx.label) so labels on the dark ramp steps can carry data-dark.
-      const text = ctx.fmt(spec.y, v);
+      // Too wide for the cell: the same value to 2 significant digits ("35.2M" becomes "35M") before dropping it.
+      let text = ctx.fmt(spec.y, v);
+      if (text.length * 7.2 + 4 > w) text = ctx.fmt(spec.y, +v.toPrecision(2));
       if (spec.labels !== false && w >= 24 && h >= 24 && text.length * 7.2 + 4 <= w)
-        labels += el(
-          "text",
-          {
-            x: r(x + w / 2),
-            y: r(y + h / 2),
-            "text-anchor": "middle",
-            "dominant-baseline": "middle",
-            "data-in": true,
-            "data-dark": d["data-q"] >= 6,
-          },
-          esc(text),
-        );
+        labels += inText(x + w / 2, y + h / 2, text, { "data-dark": d["data-q"] >= 6 });
     }
     const legend =
       cells.length > 0
