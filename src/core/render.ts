@@ -90,8 +90,8 @@
  *        aria-labelledby="maya-t" aria-describedby="maya-d" [tabindex="0" in parts only]
  *        data-plot="x y w h" data-n="categories" [data-xd="lo hi" data-yd="lo hi" for
  *        linear-x types instead of data-n] [data-dir="h" when horizontal]
- *        [data-drill when a click can drill one level further] [data-pt on line, area, kpi
- *        and bar y2: point circles hidden until active]>
+ *        [data-drill when a click can drill one level further] [data-pt when the body holds a
+ *        [data-maya=line] path: its point circles are hidden until active]>
  *     <title id="maya-t">  <desc id="maya-d">
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
@@ -495,8 +495,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       ...f?.attrs,
       "data-dir": s.horizontal ? "h" : null,
       "data-stack": s.stack || null,
-      // Point circles hidden until active (line, area, kpi sparkline, bar y2 line).
-      "data-pt": /^(line|area|kpi)$/.test(s.type) || s.y2 !== null || null,
+      // A line path: its point circles are hidden until active (one search, not a CSS :has).
+      "data-pt": body.includes('data-maya="line"') || null,
       // A click can drill further (pointer cursor on marks).
       "data-drill":
         (s.drill && s.path.length > (s.type === "sankey" || s.type === "chord" ? 2 : 1)) || null,

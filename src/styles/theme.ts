@@ -95,7 +95,7 @@ const SCATTER =
   `${SCAT}[data-maya=marks]{${P("var(--maya-series-1)", 58)}}${SCAT}[data-maya=marks]:has(>[data-dense]){${P("var(--maya-series-1)", 30)}}` +
   `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit;stroke-width:1.25;transform-origin:center;transition:opacity .25s var(--maya-ease),fill .2s,stroke-width .2s,transform .2s var(--maya-ease)}` +
   `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))", 58)}}` +
-  `${SCAT}rect[data-maya=mark]{rx:0}${SCAT}rect[data-maya=mark][data-q]{--c:${DENS("calc((var(--q) - 20%)*.5)")}}` +
+  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q]{--c:${DENS("calc((var(--q) - 20%)*.5)")}}` +
   `[data-d] i{width:80px;background:linear-gradient(90deg,${DENS("0%")},${DENS("40%")})}[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("20%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("20%")},${DENS("40%")})}` +
   `${SCAT}circle[data-dense]${OWN}{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 30%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
@@ -122,7 +122,8 @@ export const css =
   "[data-maya=ramp] circle{fill:none;stroke:var(--maya-fg-muted)}" +
   "[data-maya=ramp] i{width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 35%,var(--b)),var(--maya-accent))}" +
   // Ramp floor: the background, lifted toward the accent in dark mode so low steps stay visible.
-  "[data-q],[data-maya=ramp] i{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
+  // Declared once where the theme overrides live, not on every ramp mark (speed).
+  ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
   ".maya-reset{position:absolute;top:4px;right:4px;border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}" +
   ".maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;align-self:flex-start;margin:0 0 8px;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
   ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);box-shadow:0 1px 3px #00000024;transition:transform .3s var(--maya-ease)}" +
