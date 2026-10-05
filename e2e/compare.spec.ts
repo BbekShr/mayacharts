@@ -98,7 +98,7 @@ function write(browser: Browser): void {
     browser: `Chromium ${browser.version()}`,
     csp: CSP,
     arrowCap: ARROW_CAP,
-    speedDefinition: `First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink) and the next frame has painted (a task after that frame, so its style, layout and paint count). Update is ${UPDATES} calls of the redraw function with fresh rows, each timed from the call until the chart drew (a DOM mutation or a canvas draw call) and the next frame painted; p50 and p95 per load. Heap is JS heap after a forced GC and ${UPDATES} updates. Median of ${SPEED_RUNS} fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle ${THROTTLE}x in the second column. A cell stops after ${CELL_MS / 1000} s with the runs it finished; one with none is recorded with its reason, and a first paint over ${SLOW_MS / 1000} s skips the larger sizes.`,
+    speedDefinition: `First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink) and the next frame has painted (a task after that frame, so its style, layout and paint count). Load to paint is the same finish line measured from the end of the library download, so parsing, compiling and evaluating the library count too. Update is ${UPDATES} calls of the redraw function with fresh rows, each timed from the call until the chart drew (a DOM mutation or a canvas draw call) and the next frame painted; p50 and p95 per load. Heap is JS heap after a forced GC and ${UPDATES} updates. Median of ${SPEED_RUNS} fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle ${THROTTLE}x in the second column. A cell stops after ${CELL_MS / 1000} s with the runs it finished; one with none is recorded with its reason, and a first paint over ${SLOW_MS / 1000} s skips the larger sizes.`,
     notes: [
       "Each library draws the same data through its own reference module in e2e/compare/ref, written the way its documentation shows, with defaults and no theming.",
       "The CSP row is its own test: a chart that is blocked by the policy is recorded as failing there, and the speed suite runs with no CSP so those numbers survive.",
@@ -146,6 +146,8 @@ interface Done {
   ok: boolean;
   error?: string;
   ttfp?: number;
+  /** Module download end to painted chart: parse, compile, evaluate and first paint. */
+  load?: number;
   unsupported?: boolean;
 }
 interface Loaded {
@@ -473,6 +475,7 @@ test("compare libraries under one CSP", async ({ browser }: { browser: Browser }
 // Speed: no CSP, so a blocked chart does not erase its numbers.
 interface Run {
   paint: number;
+  load: number;
   p50: number;
   p95: number;
   heap: number;
@@ -512,7 +515,13 @@ async function run(
     await cdp.send("HeapProfiler.collectGarbage");
     const m = (await cdp.send("Performance.getMetrics")).metrics;
     const heap = m.find((x) => x.name === "JSHeapUsedSize")?.value ?? 0;
-    return { paint: done.ttfp!, p50: median(times), p95: pctl(times, 0.95), heap: heap / 1e6 };
+    return {
+      paint: done.ttfp!,
+      load: done.load ?? NaN,
+      p50: median(times),
+      p95: pctl(times, 0.95),
+      heap: heap / 1e6,
+    };
   } catch (e) {
     return String((e as Error).message)
       .split("\n")[0]!
@@ -544,6 +553,7 @@ async function cell(
   const med = (f: (r: Run) => number) => r1(median(ok.map(f)));
   return {
     firstPaintMs: med((r) => r.paint),
+    loadPaintMs: med((r) => r.load),
     updateP50Ms: med((r) => r.p50),
     updateP95Ms: med((r) => r.p95),
     heapMB: med((r) => r.heap),

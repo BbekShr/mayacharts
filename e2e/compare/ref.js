@@ -93,11 +93,15 @@ const timedUpdate = async (fn) => {
 };
 
 try {
-  const mod = await import(`/.build/${lib}/${chart}.js`);
+  const url = `/.build/${lib}/${chart}.js`;
+  const n = +q.get("n");
+  const rows = n ? speedRows(n)?.[chart] : refData()[chart];
+  const mod = await import(url);
+  // Load: from the end of the module download to the painted chart, so parse, compile and
+  // evaluation of the library count but the network does not.
+  const loaded = performance.getEntriesByName(new URL(url, location.href).href)[0]?.responseEnd;
   if (mod.unsupported) window.__done = { ok: false, unsupported: true, error: mod.unsupported };
   else {
-    const n = +q.get("n");
-    const rows = n ? speedRows(n)[chart] : refData()[chart];
     window.__rows = (seed) => speedRows(n, seed)[chart];
     watch(root);
     const t0 = performance.now();
@@ -106,7 +110,7 @@ try {
     while (!hasMarks() && performance.now() < end) await frame();
     await painted();
     window.__done = hasMarks()
-      ? { ok: true, ttfp: performance.now() - t0 }
+      ? { ok: true, ttfp: performance.now() - t0, load: loaded && performance.now() - loaded }
       : { ok: false, error: "no marks appeared" };
     find(root, (e) => (e.shadowRoot && watch(e.shadowRoot), false));
     window.__timedUpdate = (rows) => timedUpdate(() => window.__update(rows));
