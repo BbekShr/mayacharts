@@ -27,6 +27,7 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 
 ### Changed
 
+- Looks: a scatter titles its axes with the field names by default (`titles` still wins), a bubble scatter gets a size key of three reference circles, and a non-binned scatter over 100 points shrinks and thins its fill so density shows. The shared colour ramp starts at 35% (was 20%) so the lowest heatmap cells stay visible.
 - Speed: a line or area with one series and sorted, distinct ISO dates skips the category Map and per-category reducers (typed arrays; 1M rows render in about 300 ms, was 2 s). Plain ISO dates parse by arithmetic, field checks stop at the first row that has the field, and `esc()` skips the regex when nothing needs escaping.
 - Line and area downsampling targets one point per 2 px of plot width (at most 1000, and 4000 shared between series), so a 640 px chart draws about 290 points and its svg is about a third of the size. The look of a long line is the same; its hover bands are no narrower than 2 px.
 - Scatter charts no longer draw `data-maya="hit"` circles: the svg is smaller and a 1M-row scatter renders in about 300 ms (was 1.9 s). The element picks the nearest mark within 12 px instead.
@@ -54,6 +55,7 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 
 ### Fixed
 
+- Sankey: the longest left-column label (`Referral`) was cut to `Referr…` by a rounding error in its reserved room.
 - Sankey: clicking a node drilled into its level number and showed "No data". Only the outermost nodes and their links drill, by name.
 - Sankey and chord never drill to a single level they cannot draw (chord, with its two levels, does not drill).
 - Line and area: a click on a category drilled nothing, because the band hit has no key. It now drills that category.

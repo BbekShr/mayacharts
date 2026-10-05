@@ -229,7 +229,7 @@ export const sankey: Mark = {
     const room = (lv: number) =>
       Math.min(
         plot.w * 0.22,
-        Math.max(0, ...order[lv]!.map((n) => Math.min(20, [...n.name].length) * CH)) + 12,
+        Math.max(0, ...order[lv]!.map((n) => Math.min(20, [...n.name].length) * CH)) + 16, // 4 px over the cap's 12: no float round-down
       );
     const wide = plot.w >= 420;
     const [padL, padR] = wide ? [room(0), room(cols - 1)] : [0, 0];

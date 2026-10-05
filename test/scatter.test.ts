@@ -123,7 +123,7 @@ describe("scatter", () => {
 
   it("snapshot", () =>
     expect(circles(renderParts(base).svg).join("")).toMatchInlineSnapshot(
-      `"<circle data-maya="mark" data-key="~0" data-c="0" data-s="0" data-x="1" data-y="2" data-f="2" r="5" cx="39.6" cy="296"/><circle data-maya="mark" data-key="~1" data-c="1" data-s="0" data-x="2" data-y="4" data-f="4" r="5" cx="333.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-s="0" data-x="3" data-y="3" data-f="3" r="5" cx="628" cy="153"/>"`,
+      `"<circle data-maya="mark" data-key="~0" data-c="0" data-s="0" data-x="1" data-y="2" data-f="2" r="5" cx="57.6" cy="278"/><circle data-maya="mark" data-key="~1" data-c="1" data-s="0" data-x="2" data-y="4" data-f="4" r="5" cx="342.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-s="0" data-x="3" data-y="3" data-f="3" r="5" cx="628" cy="144"/>"`,
     ));
 
   describe("density bins", () => {
@@ -198,5 +198,15 @@ describe("scatter", () => {
       const p = renderParts(mk(20000));
       expect(p.legend).toContain('data-maya="ramp"');
     });
+  });
+
+  it("names axes by field, keys bubble size, thins out dense plots", () => {
+    const b = renderParts(bubbles);
+    expect(b.svg).toContain(">a<");
+    expect(b.legend).toContain("<circle");
+    const many = { ...base, data: Array.from({ length: 300 }, (_, i) => ({ a: i, b: i % 17 })) };
+    const c = circles(renderParts(many).svg);
+    expect(c[0]).toContain("data-dense");
+    expect(Number(attr(c[0]!, "r"))).toBeLessThan(5);
   });
 });

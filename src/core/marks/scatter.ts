@@ -170,11 +170,15 @@ export const scatter: Mark = {
     let max = 0;
     for (const p of pts) if (p.sz !== null) max = Math.max(max, Math.abs(p.sz));
     const scale = Math.min(plot.w, plot.h) / 16;
+    const radius = (v: number) => 3 + Math.sqrt(Math.abs(v) / max) * scale;
+    // Dense plots read as density: points shrink and thin out as they multiply (isolated ones keep their outline).
+    const dense = max === 0 && pts.length > 100;
+    const flat = dense ? Math.max(2.5, 5 * Math.sqrt(100 / pts.length)) : 5;
     const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
 
     const seen = new Map<string, number>();
     const items = pts.map((p) => {
-      const rad = p.sz !== null && max > 0 ? 3 + Math.sqrt(Math.abs(p.sz) / max) * scale : 5;
+      const rad = p.sz !== null && max > 0 ? radius(p.sz) : flat;
       let id: string | number = p.i;
       if (p.name !== null) {
         const n = (seen.get(p.name) ?? 0) + 1;
@@ -204,6 +208,7 @@ export const scatter: Mark = {
         "data-neg": p.y < 0,
         "data-tone": ctx.tone(p.y),
         "data-q": typeof cv === "number" ? ctx.q(cv) : null,
+        "data-dense": dense || null,
       };
       return { p, rad, d, cx: sx.of(p.x), cy: sy.of(p.y) };
     });
@@ -221,6 +226,17 @@ export const scatter: Mark = {
       });
       if (spec.labels) ctx.label(cx, cy - rad, ctx.fmt(spec.y, p.y), "above");
     }
-    return { marks, hits: "", cross: pts.length ? cross(ctx) : "" };
+    // Size key: three reference circles drawn with the marks' own radius rule, values rounded to one digit.
+    const ref = [0.1, 0.25, 0.5].map((f) => Number((max * f).toPrecision(1)));
+    const key3 = (v: number) => {
+      const q = radius(v); // the rounded value, so circle and label agree
+      const d = r(q * 2 + 2);
+      return `<svg width="${d}" height="${d}" aria-hidden="true"><circle cx="${r(q + 1)}" cy="${r(q + 1)}" r="${r(q)}"/></svg><span>${esc(ctx.fmt(spec.size!, v))}</span>`;
+    };
+    const legend =
+      max > 0
+        ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.size!) ?? spec.size!)}</b>${ref.map(key3).join("")}</div>`
+        : "";
+    return { marks, hits: "", cross: pts.length ? cross(ctx) : "", legend };
   },
 };
