@@ -121,3 +121,50 @@ describe("downsampling bound", () => {
     expect(render({ type: "line", x: "x", y: "v", data } as never)).toContain("<svg");
   });
 });
+
+describe("point budget", () => {
+  it("one point per 2 px of plot, at most MAX_POINTS", () => {
+    const s = spec(5000);
+    const kept = (width: number) =>
+      renderParts(s, { width, height: 360 }).svg.split('data-maya="mark"').length - 1;
+    expect(kept(640)).toBeLessThanOrEqual(Math.floor((640 - 56) / 2));
+    expect(kept(640)).toBeGreaterThan(100);
+    expect(kept(1600)).toBeGreaterThan(kept(640));
+    expect(kept(4000)).toBeLessThanOrEqual(MAX_POINTS);
+  });
+  it("shares 4000 points between series", () => {
+    const data = Array.from({ length: 6000 }, (_, i) => ({
+      x: stamp(i),
+      v: wave(i),
+      g: "s" + (i % 8),
+    }));
+    const s = sh({ type: "line", x: "x", y: "v", series: "g", data } as ChartSpec);
+    expect(s.categories.length).toBeLessThanOrEqual(MAX_POINTS);
+  });
+});
+
+describe("time fast path", () => {
+  // The fast path (one series, sorted distinct dates) must equal the general path, which
+  // shuffled rows take: same categories, same bytes.
+  const shuffled = <T>(a: T[]) =>
+    a
+      .map((v, i) => [(i * 7919) % a.length, v] as const)
+      .sort((p, q) => p[0] - q[0])
+      .map((p) => p[1]);
+  const cases: [string, (i: number) => unknown, Partial<ChartSpec>, object][] = [
+    ["plain", wave, {}, {}],
+    ["gaps", (i) => (i % 400 < 60 ? null : wave(i)), {}, {}],
+    ["count", (i) => (i % 5 ? wave(i) : null), { aggregate: "count" }, {}],
+    ["area", wave, { type: "area" }, {}],
+    ["window", wave, {}, { view: { window: [500, 3500] } }],
+    ["small", wave, {}, {}],
+  ];
+  for (const [name, f, extra, opts] of cases)
+    for (const n of name === "small" ? [40] : [2000, 6000])
+      it(`${name} ${n}`, () => {
+        const s = spec(n, extra, f as never);
+        const g = { ...s, data: shuffled(s.data as never[]) } as ChartSpec;
+        expect(g.data).not.toEqual(s.data);
+        expect(renderParts(s, opts)).toEqual(renderParts(g, opts));
+      });
+});

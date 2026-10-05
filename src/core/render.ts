@@ -256,7 +256,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const s0 = resolve(spec, opts?.view);
   const W = opts?.width ?? 640;
   const H = opts?.height ?? 320;
-  const shaped = shape(s0, opts?.view ?? {});
+  // ponytail: plot width is only known after shape (tick labels set the margins); W - 56 is the
+  // usual plot of a 4-digit y axis, and the point budget needs no more than that.
+  const shaped = shape(s0, { ...opts?.view, plotWidth: W - 56 });
   // Time axis without a format for x: the preset follows the smallest gap between categories.
   let s = s0;
   if (shaped.time && !s0.format.has(s0.x)) {

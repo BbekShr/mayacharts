@@ -37,6 +37,55 @@ const ISO =
   /^\d{4}-\d{2}(?:-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?)?)?$/;
 
 /**
+ * The plain shapes ("2024-03-05", "2024-03-05T14:30[:00[.000]][Z]", digits only, day <= 28, no
+ * leap or offset cases) by arithmetic, about ten times faster than Date.parse. NaN: use the slow path.
+ */
+const num = (v: string, i: number, k: number) => {
+  let x = 0;
+  for (const e = i + k; i < e; i++) {
+    const d = v.charCodeAt(i) - 48;
+    if (d < 0 || d > 9) return NaN;
+    x = x * 10 + d;
+  }
+  return x;
+};
+let day = "?"; // the last "YYYY-MM-DD" and its UTC ms: a series shares one for many rows
+let dayMs = NaN;
+function plainIso(v: string): number {
+  const n = v.length;
+  if (n !== 10 && n !== 16 && n !== 17 && n !== 19 && n !== 20 && n !== 23 && n !== 24) return NaN;
+  if (n === 10 || !v.startsWith(day)) {
+    const [Y, M, D] = [num(v, 0, 4), num(v, 5, 2), num(v, 8, 2)];
+    if (v[4] !== "-" || v[7] !== "-" || !(M >= 1 && M <= 12 && D >= 1 && D <= 28)) return NaN;
+    const y = Y - (M <= 2 ? 1 : 0);
+    const era = Math.floor(y / 400);
+    const yoe = y - era * 400;
+    const doy = Math.floor((153 * (M + (M > 2 ? -3 : 9)) + 2) / 5) + D - 1;
+    dayMs =
+      (era * 146097 + yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy - 719468) *
+      864e5;
+    day = v.slice(0, 10);
+  }
+  if (n === 10) return dayMs;
+  const [h, mi] = [num(v, 11, 2), num(v, 14, 2)];
+  if (v[10] !== "T" || v[13] !== ":" || !(h < 24 && mi < 60)) return NaN;
+  let rest = h * 36e5 + mi * 6e4;
+  let end = 16;
+  if (n > 17 && v[16] === ":") {
+    const sec = num(v, 17, 2);
+    if (!(sec < 60)) return NaN;
+    rest += sec * 1e3;
+    end = 19;
+    if (n > 20 && v[19] === ".") {
+      if (n < 23) return NaN;
+      rest += num(v, 20, 3);
+      end = 23;
+    }
+  }
+  return n === end || (n === end + 1 && v[end] === "Z") ? dayMs + rest : NaN;
+}
+
+/**
  * UTC ms of an ISO 8601 date ("2024-03", "2024-03-05", "2024-03-05T14:30[:00[.000]][Z|±hh:mm]");
  * a date-time without an offset is read as UTC. Finite numbers pass through as epoch ms only
  * when `ms` is true (xType "time"). Anything else: null.
@@ -45,9 +94,14 @@ export function toTime(v: unknown, ms = true): number | null {
   // 8.64e15 is the Date range; beyond it every calendar helper gives NaN.
   if (typeof v === "number") return ms && Math.abs(v) <= 8.64e15 ? v : null;
   if (typeof v !== "string") return null;
-  const m = ISO.exec(v);
-  if (!m) return null;
-  const t = Date.parse(v.length > 10 && m[1] === undefined ? v + "Z" : v);
+  const q = plainIso(v);
+  if (q === q) return q;
+  if (!ISO.test(v)) return null;
+  // A date-time without an offset is UTC. ISO matched, so a sign six from the end is an offset.
+  const c = v.charCodeAt(v.length - 6);
+  const t = Date.parse(
+    v.length > 10 && v.charCodeAt(v.length - 1) !== 90 && c !== 43 && c !== 45 ? v + "Z" : v,
+  );
   return Number.isNaN(t) ? null : t;
 }
 
