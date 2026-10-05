@@ -65,6 +65,13 @@ const first = <T>(m: Record<string, unknown>): T | undefined =>
   (Object.values(m)[0] as { default: T } | undefined)?.default;
 const size = first<Size>(import.meta.glob("./compare-size.json", { eager: true }));
 const ease = first<Ease>(import.meta.glob("./compare-ease.json", { eager: true }));
+interface Looks {
+  judge: string;
+  rubric: string;
+  max: number;
+  libs: Record<string, { mean: number; charts: Record<string, { total: number }> }>;
+}
+const looks = first<Looks>(import.meta.glob("./compare-looks.json", { eager: true }));
 
 const WE = "maya";
 const NAME: Record<string, string> = {
@@ -365,6 +372,32 @@ dims.push({
   ],
 });
 
+if (looks) {
+  const row = (label: string, f: (l: string) => number | undefined, skip = false): Row => {
+    const r: Row = { label, v: {}, t: {}, skip };
+    for (const l of libs) {
+      const x = looks.libs[l] ? f(l) : undefined;
+      r.v[l] = x ?? null;
+      r.t[l] =
+        x == null ? (looks.libs[l] ? "not supported" : "not scored") : `${x} of ${looks.max}`;
+    }
+    return r;
+  };
+  dims.push({
+    id: "looks",
+    title: "Looks",
+    def: `Judgment, not measurement. Each chart is scored 0 to 2 on seven criteria from the rubric in ${looks.rubric}, with library defaults, at 640 and 360 px and in dark mode. Judge: ${looks.judge}`,
+    tables: [
+      {
+        rows: [
+          ...data.charts.map((c) => row(chartName(c), (l) => looks.libs[l]!.charts[c]?.total)),
+          row("Mean over supported charts", (l) => looks.libs[l]!.mean, true),
+        ],
+      },
+    ],
+  });
+}
+
 function box(parent: HTMLElement, label: string): HTMLTableElement {
   const wrap = el("div", "", parent);
   wrap.className = "scroll";
@@ -460,7 +493,9 @@ function summary(): HTMLElement {
 const host = document.getElementById("tables")!;
 const sum = summary();
 host.append(sum, ...dims.map(render));
-const absent = [!size && "bundle size", !ease && "ease of writing"].filter(Boolean).join(" and ");
+const absent = [!size && "bundle size", !ease && "ease of writing", !looks && "looks"]
+  .filter(Boolean)
+  .join(" and ");
 if (absent) el("p", `Not shown yet, because its script has not written its file: ${absent}.`, sum);
 
 document.getElementById("method")!.textContent = data.notes.join(" ");
@@ -484,9 +519,6 @@ if (data.eval) {
     for (const p of [v.validJsonPct, v.rendersPct, v.nonBlankPct]) el("td", `${p}%`, tr);
   }
 }
-
-// Hook for the looks table: empty until reviewed scores exist. Looks are judgment, not measurement.
-document.getElementById("looks-table")!.hidden = true;
 
 const vs = data.versions;
 document.getElementById("foot")!.textContent =
