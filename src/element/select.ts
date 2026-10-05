@@ -86,6 +86,8 @@ export function mount(host: Host): Handlers {
       return;
     }
     let m = el.closest("[data-maya=mark],[data-maya=hit]");
+    // Scatter has no hit circles: the tooltip's nearest-point pick (within 12 px) is the target.
+    if (!m && type() === "scatter") m = root.querySelector("[data-maya=mark][data-active]");
     if (m && !m.getAttribute("data-key")) {
       // keyless band hit (line/area): the category's first keyed mark
       const c = m.getAttribute("data-c");

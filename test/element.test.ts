@@ -5,6 +5,11 @@ import { MayaChart } from "../src/element/maya-chart.ts";
 import { renderParts } from "../src/core/render.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
+vi.mock("../src/core/render.ts", async (orig) => {
+  const m = await orig<typeof import("../src/core/render.ts")>();
+  return { ...m, renderParts: vi.fn(m.renderParts) };
+});
+
 const rows = [
   { q: "Q1", r: "N", v: 3 },
   { q: "Q1", r: "S", v: -2 },
@@ -209,6 +214,33 @@ describe("<maya-chart>", () => {
     vi.restoreAllMocks();
   });
 
+  it("renders in a microtask, before the first rAF", async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = spec();
+    document.body.append(el);
+    await Promise.resolve();
+    expect(marks(el)).toHaveLength(3);
+  });
+
+  it("a titled single-series chart draws its data once on first paint", async () => {
+    vi.mocked(renderParts).mockClear();
+    await mount((e) => (e.spec = spec(rows.slice(0, 1), { title: "T", series: undefined })));
+    const full = vi.mocked(renderParts).mock.calls.filter(([s]) => s.data.length);
+    expect(full).toHaveLength(1);
+  });
+
+  it("hydrates when the JSON child is parsed after connectedCallback", async () => {
+    Object.defineProperty(document, "readyState", { value: "loading", configurable: true });
+    const el = document.createElement("maya-chart") as MayaChart;
+    document.body.append(el);
+    await frame();
+    expect(marks(el)).toHaveLength(0);
+    el.innerHTML = `<script type="application/json">${JSON.stringify(spec())}</script>`;
+    await frame();
+    delete (document as any).readyState;
+    expect(marks(el)).toHaveLength(3);
+  });
+
   it("upgrade race: own properties set before upgrade are re-applied", async () => {
     const el = document.createElement("maya-chart") as MayaChart;
     Object.defineProperty(el, "spec", {
@@ -329,5 +361,47 @@ describe("table header sort", () => {
     expect(ramps()).toHaveLength(1);
     expect(ramps()[0]!.textContent).not.toBe(before);
     expect(ramps()[0]!.textContent).toContain("900");
+  });
+});
+
+describe("scatter without hit circles", () => {
+  const pts = [
+    { a: 10, b: 10, n: "p1" },
+    { a: 50, b: 40, n: "p2" },
+  ];
+  const sc = (extra: object = {}) =>
+    ({ type: "scatter", x: "a", y: "b", name: "n", data: pts, ...extra }) as ChartSpec;
+  const at = (el: Element, m: Element, dx: number, type: string) => {
+    const svg = el.shadowRoot!.querySelector("svg")!;
+    const [, , w, h] = svg.getAttribute("viewBox")!.split(" ").map(Number);
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: w, height: h }) as DOMRect;
+    for (const x of svg.querySelectorAll("[data-maya=hit]")) x.remove();
+    svg.dispatchEvent(
+      Object.assign(new Event(type, { bubbles: true }), {
+        pointerType: "mouse",
+        clientX: +m.getAttribute("cx")! + dx,
+        clientY: +m.getAttribute("cy")!,
+      }),
+    );
+  };
+
+  it("hover within 12 px of a point shows its tooltip; farther does not", async () => {
+    const el = await mount((e) => (e.spec = sc()));
+    const m = marks(el)[1]!;
+    at(el, m, 30, "pointermove");
+    expect(m.hasAttribute("data-active")).toBe(false);
+    at(el, m, 8, "pointermove");
+    expect(m.hasAttribute("data-active")).toBe(true);
+    expect(el.shadowRoot!.querySelector(".maya-tip")!.textContent).toContain("p2");
+  });
+
+  it("click near a point selects it", async () => {
+    const el = await mount((e) => (e.spec = sc({ select: true })));
+    const got: unknown[] = [];
+    el.addEventListener("maya-select", (e) => got.push((e as CustomEvent).detail.selected));
+    const m = marks(el)[0]!;
+    at(el, m, 5, "pointermove");
+    at(el, m, 5, "click");
+    expect(got).toEqual([[{ name: "p1" }]]);
   });
 });

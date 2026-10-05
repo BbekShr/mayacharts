@@ -37,7 +37,7 @@ export class MayaChart extends HTMLElement {
   #say: ReturnType<typeof setTimeout> | undefined;
   #last: Record<string, string> = {};
   #size = [0, 0];
-  #raf = 0;
+  #q = false;
   #ro: ResizeObserver | undefined;
   #resized = false;
   #off: (() => void) | undefined;
@@ -98,12 +98,7 @@ export class MayaChart extends HTMLElement {
         delete (this as any)[p];
         (this as any)[p] = v;
       }
-    const j = this.querySelector(':scope > script[type="application/json"]')?.textContent;
-    try {
-      if (j) this.#json = JSON.parse(j);
-    } catch (e) {
-      console.error(e);
-    }
+    this.#readJson();
     let root = this.shadowRoot;
     if (!root) {
       root = this.attachShadow({ mode: "open" });
@@ -160,16 +155,25 @@ export class MayaChart extends HTMLElement {
       ) {
         this.#ix?.zoom.cancel?.(); // a brush's pixel geometry is stale after a resize
         this.#resized = true;
-        this.#schedule();
+        this.#schedule(true);
       }
     });
     this.#ro.observe(box);
     this.#schedule();
   }
 
+  /** The SSR spec child. A parser-created element connects before its children are parsed. */
+  #readJson(): void {
+    const j = this.querySelector(':scope > script[type="application/json"]')?.textContent;
+    try {
+      if (j) this.#json = JSON.parse(j);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   disconnectedCallback(): void {
-    cancelAnimationFrame(this.#raf);
-    this.#raf = 0;
+    this.#q = false;
     this.#ro?.disconnect();
     this.#off?.();
     this.shadowRoot?.removeEventListener("click", this.#click);
@@ -277,16 +281,24 @@ export class MayaChart extends HTMLElement {
     this.#commit({ ...this.#state, view: { ...this.#state.view, hidden: [...hidden] } }, null);
   };
 
-  #schedule(): void {
-    if (this.isConnected && !this.#raf)
-      this.#raf = requestAnimationFrame(() => ((this.#raf = 0), this.#render()));
+  /** Renders in a microtask (property sets in one task batch); ResizeObserver delivery waits a frame. */
+  #schedule(raf = false): void {
+    if (!this.isConnected || this.#q) return;
+    this.#q = true;
+    const run = () => this.#q && ((this.#q = false), this.#render());
+    raf ? requestAnimationFrame(run) : queueMicrotask(run);
   }
 
   #render(): void {
     const root = this.shadowRoot!;
+    if (!this.spec) this.#readJson();
     const spec = this.spec;
     const box = root.querySelector(".maya-box")!;
-    if (!spec) return;
+    if (!spec) {
+      // Still parsing: the JSON child may arrive later in this document.
+      if (document.readyState === "loading") (this.#readJson(), this.#schedule(true));
+      return;
+    }
     if (spec !== this.#seen) {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
@@ -309,7 +321,23 @@ export class MayaChart extends HTMLElement {
     const focus = this.#focusId();
     let parts;
     try {
+      if (!this.#drawn && !box.querySelector("svg"))
+        try {
+          // Title and controls depend only on the spec: place them first, measure once.
+          this.#slots(
+            root,
+            renderParts(
+              { ...spec, data: [] },
+              {
+                width: box.clientWidth || 640,
+                height: box.clientHeight || 320,
+                view: this.#state.view,
+              },
+            ),
+          );
+        } catch {} // the real draw reports the error
       parts = draw();
+      // ponytail: a multi-series legend needs the data, so it still costs a second draw.
       // A title, legend or control that just appeared shrinks the box: fit it in this frame.
       const [w, h] = this.#size;
       if (this.#slots(root, parts) && (box.clientWidth !== w || box.clientHeight !== h))

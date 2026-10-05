@@ -11,6 +11,7 @@ const h = (t: string, txt = "", at: Record<string, string> = {}) => {
 // Links (sankey flows, chord ribbons) carry the same payload as marks.
 const SEL = "[data-maya=hit],[data-maya=mark],[data-maya=link][data-key]";
 const FADE = 120;
+const NEAR = 12;
 const FIXED = ["position", "position-area", "left", "top", "margin"];
 const GLIDE: KeyframeAnimationOptions = { duration: 200, easing: "cubic-bezier(.22,1,.36,1)" };
 const still = () => matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -50,7 +51,12 @@ export function tooltip(
     flip: Animation | undefined,
     band: SVGRectElement | undefined;
 
+  let dirty = true,
+    cxy: number[] | undefined;
   const index = () => {
+    if (!dirty) return;
+    dirty = false;
+    cxy = undefined;
     list = [...box.querySelectorAll("[data-maya=mark][data-key]")];
     byKey = new Map();
     byC = new Map();
@@ -58,7 +64,9 @@ export function tooltip(
       byKey.set(a(m, "data-key"), m);
       if (!m.hasAttribute("data-c")) continue;
       const c = a(m, "data-c");
-      byC.set(c, [...(byC.get(c) ?? []), m]);
+      const g = byC.get(c);
+      if (g) g.push(m);
+      else byC.set(c, [m]);
     }
   };
   const group = (m: Element) =>
@@ -166,9 +174,37 @@ export function tooltip(
     }
   };
 
+  /** Scatter draws no hit circles: the mark whose centre is within NEAR px of the pointer. */
+  const nearest = (ev?: Event) => {
+    const svg = box.querySelector("svg"),
+      p = ev as PointerEvent | undefined;
+    if (spec()?.type !== "scatter" || !svg || p?.clientX === undefined) return;
+    index();
+    cxy ??= list.flatMap((m) => [
+      m.hasAttribute("cx") ? +a(m, "cx") : NaN,
+      m.hasAttribute("cy") ? +a(m, "cy") : NaN,
+    ]);
+    // Client px to viewBox units (the svg may be scaled by CSS).
+    const s = svg.getBoundingClientRect(),
+      [, , vw, vh] = a(svg, "viewBox").split(" ").map(Number) as number[],
+      kx = (vw || s.width) / (s.width || 1),
+      ky = (vh || s.height) / (s.height || 1),
+      px = (p.clientX - s.left) * kx,
+      py = (p.clientY - s.top) * ky;
+    let best = -1,
+      bd = (NEAR * kx) ** 2;
+    for (let i = 0; i < cxy.length; i += 2) {
+      const d = (cxy[i]! - px) ** 2 + ((cxy[i + 1]! - py) * (kx / ky)) ** 2;
+      if (d < bd) ((bd = d), (best = i));
+    }
+    return list[best / 2];
+  };
+
   const markOf = (t: EventTarget | null | undefined, ev?: Event) => {
     const e = (t as Element | null)?.closest?.(SEL);
-    if (!e || a(e, "data-maya") !== "hit") return e ?? undefined;
+    if (!e) return nearest(ev);
+    index();
+    if (a(e, "data-maya") !== "hit") return e;
     if (e.hasAttribute("data-key")) return byKey.get(a(e, "data-key"));
     // Keyless band hit: the mark in this category nearest the pointer.
     const y = (ev as PointerEvent | undefined)?.clientY ?? 0;
@@ -192,6 +228,7 @@ export function tooltip(
   };
 
   const show = (m: Element, say = false) => {
+    index();
     // Glide: remember where the tooltip is now (mid-glide included) before it moves.
     const from = open ? tip.getBoundingClientRect() : undefined;
     flip?.cancel();
@@ -326,6 +363,7 @@ export function tooltip(
     const k = (e as KeyboardEvent).key;
     if (!on()) return;
     kb = true;
+    index();
     if (k === "Escape") {
       // Pinned tooltip is Escape's first priority: consume the key so nothing else reacts.
       if (pin) e.preventDefault();
@@ -368,7 +406,6 @@ export function tooltip(
     [window, "scroll", () => kb || hide(), { capture: true, passive: true }],
   ];
   for (const [t, n, f, o] of on_) t.addEventListener(n, f, o);
-  index();
   return {
     off: () => (
       hide(),
@@ -379,6 +416,8 @@ export function tooltip(
     active: () => cur,
     refresh() {
       const k = cur && a(cur, "data-key");
+      dirty = true;
+      if (!cur) return hide(); // rebuilt on the first pointer or key
       index();
       const m = k ? byKey.get(k) : undefined;
       if (m && on()) show(m);
