@@ -30,13 +30,16 @@ const intl = (C: new (l: string, o: object) => F, locale: string, o: object) => 
       format: (v) => {
         const s = Math.abs(+v) + "";
         if (/e|N|I/.test(s)) return late(v);
-        let [i, d = ""] = s.split(".") as [string, string?];
+        const p = s.indexOf(".");
+        let i = p < 0 ? s : s.slice(0, p),
+          d = p < 0 ? "" : s.slice(p + 1);
+        // A JS number's shortest decimal has no trailing zeros; only rounding makes them.
         if (d.length > k) {
           const r = (BigInt(i + d.slice(0, k)) + BigInt(d[k]! > "4") + "").padStart(k + 1, "0");
-          [i, d] = [r.slice(0, r.length - k), r.slice(r.length - k)];
+          [i, d] = [r.slice(0, r.length - k), r.slice(r.length - k).replace(/0+$/, "")];
         }
-        d = d.replace(/0+$/, "");
-        return (1 / +v < 0 ? "-" : "") + i.replace(/\B(?=(\d{3})+$)/g, ",") + (d && "." + d);
+        if (i.length > 3) i = i.replace(/\B(?=(\d{3})+$)/g, ",");
+        return (1 / +v < 0 ? "-" : "") + i + (d && "." + d);
       },
     };
   } else if (g) {

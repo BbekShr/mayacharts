@@ -55,12 +55,16 @@ function plainIso(v: string): number {
   if ((n !== 20 && n !== 24) || v[n - 1] !== "Z" || v[10] !== "T" || v[13] !== ":" || v[16] !== ":")
     return NaN;
   if (!v.startsWith(day)) {
-    const [Y, M, D] = [num(v, 0, 4), num(v, 5, 2), num(v, 8, 2)];
+    const Y = num(v, 0, 4),
+      M = num(v, 5, 2),
+      D = num(v, 8, 2);
     if (v[4] !== "-" || v[7] !== "-" || !(M >= 1 && M <= 12 && D >= 1 && D <= 28)) return NaN;
     dayMs = new Date(0).setUTCFullYear(Y, M - 1, D);
     day = v.slice(0, 10);
   }
-  const [h, mi, s] = [num(v, 11, 2), num(v, 14, 2), num(v, 17, 2)];
+  const h = num(v, 11, 2),
+    mi = num(v, 14, 2),
+    s = num(v, 17, 2);
   const ms = n === 24 ? (v[19] === "." ? num(v, 20, 3) : NaN) : 0;
   return h < 24 && mi < 60 && s < 60 && ms === ms
     ? dayMs + h * 36e5 + mi * 6e4 + s * 1e3 + ms

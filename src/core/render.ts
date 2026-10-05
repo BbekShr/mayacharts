@@ -442,7 +442,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
     const m = mark.draw(ctx);
-    cap(m.marks.split(' data-maya="mark"').length - 1); // scatter and modules draw per row/node
+    // Scatter and modules draw per row/node. Counted in place: a split would copy every mark.
+    let nm = 0;
+    for (let i = 0; (i = m.marks.indexOf(' data-maya="mark"', i) + 1);) nm++;
+    cap(nm);
     markLegend = m.legend ?? null;
     note = m.note ?? "";
     // Area fills fade toward the baseline: one gradient per visible slot, kept in the grid group

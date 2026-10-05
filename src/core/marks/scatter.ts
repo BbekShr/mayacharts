@@ -173,17 +173,25 @@ export const scatter: Mark = {
     const flat = dense ? Math.max(2.5, 5 * Math.sqrt(100 / pts.length)) : 5;
     const cb = cbField(spec);
 
+    // Ids follow row order (name, name#2, ...), so they are assigned before the size sort.
     const seen = new Map<string, number>();
-    const items = pts.map((p) => {
-      const rad = p.sz !== null && max > 0 ? radius(p.sz) : flat;
-      const id = nameId(seen, p.name, p.i);
+    const ids = spec.name === null ? null : new Map(pts.map((p) => [p, nameId(seen, p.name, p.i)]));
+    const rad = (p: Pt) => (p.sz !== null && max > 0 ? radius(p.sz) : flat);
+    // Big bubbles first so small ones stay on top; stable for ties.
+    const order = max > 0 ? [...pts].sort((a, b) => rad(b) - rad(a)) : pts;
+
+    let marks = "";
+    for (const p of order) {
       const ser = shaped.series[p.si]!;
       const x = ctx.fmt(spec.x, p.x);
       const y = ctx.fmt(spec.y, p.y);
       const cv = cb ? p.row[cb] : null;
       const named = p.name !== null || p.sz !== null;
-      const d = {
-        "data-key": key(ser, id),
+      const cx = sx.of(p.x);
+      const cy = sy.of(p.y);
+      marks += el("circle", {
+        "data-maya": "mark",
+        "data-key": key(ser, ids?.get(p) ?? p.i),
         "data-c": p.i,
         "data-s": spec.series === null ? null : p.si % 8, // none: the group colours the point
         "data-x": p.name ?? x,
@@ -200,24 +208,13 @@ export const scatter: Mark = {
         "data-neg": p.y < 0,
         "data-tone": ctx.tone(p.y),
         "data-q": typeof cv === "number" ? ctx.q(cv) : null,
-      };
-      return { p, rad, d, cx: sx.of(p.x), cy: sy.of(p.y) };
-    });
-    // Big bubbles first so small ones stay on top; stable for ties.
-    items.sort((a, b) => b.rad - a.rad);
-
-    let marks = "";
-    for (const { p, rad, d, cx, cy } of items) {
-      marks += el("circle", {
-        "data-maya": "mark",
-        ...d,
         // Once, on the first point: CSS thins every point of a dense plot from the group.
         "data-dense": dense && !marks,
-        r: r(rad),
+        r: r(rad(p)),
         cx: r(cx),
         cy: r(cy),
       });
-      if (spec.labels) ctx.label(cx, cy - rad, ctx.fmt(spec.y, p.y), "above");
+      if (spec.labels) ctx.label(cx, cy - rad(p), y, "above");
     }
     // Size key: three reference circles drawn with the marks' own radius rule, values rounded to one digit.
     const ref = [0.1, 0.25, 0.5].map((f) => Number((max * f).toPrecision(1)));

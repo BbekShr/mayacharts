@@ -196,10 +196,12 @@ export function shape(
     for (const j of visible) {
       const value = c.vals[j] ?? null;
       const v = value ?? 0;
-      let [y0, y1] = wf ? spans.get(c)! : [0, v];
+      // Plain assignments: array destructuring is slow in V8's interpreter (first render).
+      let y0 = wf ? spans.get(c)![0] : 0,
+        y1 = wf ? spans.get(c)![1] : v;
       if (s.stack) {
-        if (v < 0) [y0, y1] = [neg, (neg += v)];
-        else [y0, y1] = [pos, (pos += v)];
+        y0 = v < 0 ? neg : pos;
+        y1 = v < 0 ? (neg += v) : (pos += v);
       }
       lo = Math.min(lo, y0, y1);
       hi = Math.max(hi, y0, y1);

@@ -105,7 +105,10 @@ export function mount(host: Host): Handlers {
     },
     painted() {
       const sel = host.state().selected;
-      for (const m of root.querySelectorAll("[data-maya=mark][data-key]"))
+      // No selection: only marks still flagged need a visit (not every mark on every paint).
+      for (const m of root.querySelectorAll(
+        sel.length ? "[data-maya=mark][data-key]" : "[data-selected]",
+      ))
         if (sel.some((q) => matches(q, m, type()))) m.setAttribute("data-selected", "");
         else m.removeAttribute("data-selected");
     },

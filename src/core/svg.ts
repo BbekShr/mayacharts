@@ -52,7 +52,11 @@ export const OTHER = "\u0000other";
  */
 export const key = (...parts: unknown[]): string =>
   parts
-    .map((p) => encodeURIComponent(String(p).replace(/\p{Cs}/gu, "�")).replace(/~/g, "%7E"))
+    .map((p) =>
+      typeof p === "number"
+        ? p
+        : encodeURIComponent(String(p).replace(/\p{Cs}/gu, "�")).replace(/~/g, "%7E"),
+    )
     .join("~");
 
 /** Invisible target grown to >= 24 px around a small rect mark; "" when it is big enough. */
