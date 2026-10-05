@@ -123,7 +123,7 @@ describe("scatter", () => {
 
   it("snapshot", () =>
     expect(circles(renderParts(base).svg).join("")).toMatchInlineSnapshot(
-      `"<circle data-maya="mark" data-key="~0" data-c="0" data-s="0" data-x="1" data-y="2" data-f="2" r="5" cx="57.6" cy="278"/><circle data-maya="mark" data-key="~1" data-c="1" data-s="0" data-x="2" data-y="4" data-f="4" r="5" cx="342.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-s="0" data-x="3" data-y="3" data-f="3" r="5" cx="628" cy="144"/>"`,
+      `"<circle data-maya="mark" data-key="~0" data-c="0" data-x="1" data-y="2" data-f="2" r="5" cx="57.6" cy="278"/><circle data-maya="mark" data-key="~1" data-c="1" data-x="2" data-y="4" data-f="4" r="5" cx="342.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-x="3" data-y="3" data-f="3" r="5" cx="628" cy="144"/>"`,
     ));
 
   describe("density bins", () => {

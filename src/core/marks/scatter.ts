@@ -185,7 +185,7 @@ export const scatter: Mark = {
       const d = {
         "data-key": key(ser, id),
         "data-c": p.i,
-        "data-s": p.si % 8,
+        "data-s": spec.series === null ? null : p.si % 8, // none: the group colours the point
         "data-x": p.name ?? x,
         "data-series": ser || null,
         "data-y": p.y,
@@ -200,7 +200,6 @@ export const scatter: Mark = {
         "data-neg": p.y < 0,
         "data-tone": ctx.tone(p.y),
         "data-q": typeof cv === "number" ? ctx.q(cv) : null,
-        "data-dense": dense || null,
       };
       return { p, rad, d, cx: sx.of(p.x), cy: sy.of(p.y) };
     });
@@ -212,6 +211,8 @@ export const scatter: Mark = {
       marks += el("circle", {
         "data-maya": "mark",
         ...d,
+        // Once, on the first point: CSS thins every point of a dense plot from the group.
+        "data-dense": dense && !marks,
         r: r(rad),
         cx: r(cx),
         cy: r(cy),

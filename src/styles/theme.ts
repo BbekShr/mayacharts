@@ -85,19 +85,19 @@ const SCAT = "[data-xd] ";
 // Density cells: floor of 88% accent (>= 3:1 on --maya-bg in both themes), darkening toward --maya-fg.
 const DENS = (p: string) =>
   `color-mix(in oklab,color-mix(in oklab,var(--maya-accent) 88%,var(--maya-bg)),var(--maya-fg) ${p})`;
-// Speed: points of the first slot inherit fill and stroke from the marks group, resolved once
-// (a var() and color-mix() per point cost ~3 ms of first paint at 1000 points); other slots,
-// tones and ramp steps (OWN) mix their own --c.
-const P = (c: string, p: number) =>
-  `fill:color-mix(in oklab,${c} ${p}%,transparent);stroke:color-mix(in oklab,${c} 70%,var(--maya-fg))`;
-const OWN = ':is([data-tone],[data-q],:not([data-s="0"]))';
+// Speed: points without a series (no data-s) inherit fill, stroke and its width from the marks
+// group, resolved once (a var() and color-mix() per point cost ~3 ms of first paint at 1000
+// points); other slots, tones and ramp steps (OWN) mix their own --c. A dense plot's first point
+// carries data-dense: the group's fill strength --p drops from 58% to 30% for every point.
+const P = (c: string) =>
+  `fill:color-mix(in oklab,${c} var(--p),transparent);stroke:color-mix(in oklab,${c} 70%,var(--maya-fg))`;
+const OWN = ':is([data-tone],[data-q],[data-s]:not([data-s="0"]))';
 const SCATTER =
-  `${SCAT}[data-maya=marks]{${P("var(--maya-series-1)", 58)}}${SCAT}[data-maya=marks]:has(>[data-dense]){${P("var(--maya-series-1)", 30)}}` +
-  `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit;stroke-width:1.25;transform-origin:center;transition:opacity .25s var(--maya-ease),fill .2s,stroke-width .2s,transform .2s var(--maya-ease)}` +
-  `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))", 58)}}` +
+  `${SCAT}[data-maya=marks]{--p:58%;stroke-width:1.25;${P("var(--maya-series-1)")}}${SCAT}[data-maya=marks]:has(>[data-dense]){--p:30%}` +
+  `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit;transform-origin:center}` +
+  `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))")}}` +
   `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q]{--c:${DENS("calc((var(--q) - 20%)*.5)")}}` +
   `[data-d] i{width:80px;background:linear-gradient(90deg,${DENS("0%")},${DENS("40%")})}[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("20%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("20%")},${DENS("40%")})}` +
-  `${SCAT}circle[data-dense]${OWN}{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 30%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
@@ -143,11 +143,11 @@ export const css =
   Q +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
   "[data-dir=h] [data-neg]{transform-origin:100% 0}" +
-  "[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}[data-ghost]{pointer-events:none}" +
+  "[data-ghost]{pointer-events:none}" +
   "[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)),var(--maya-fg) 12%)}" +
   "[data-stack] rect[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1}" +
   "[data-pt] circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
-  "[data-pt] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2;transition:fill-opacity .15s,stroke-opacity .15s}[data-pt] circle[data-lit]{r:4px}" +
+  "[data-pt] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2}[data-pt] circle[data-lit]{r:4px}" +
   "circle[data-maya=mark][data-active]{filter:drop-shadow(0 0 4px color-mix(in oklab,var(--c) 70%,transparent))}" +
   "[data-maya=line]{fill:none;stroke:var(--c);stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round}" +
   "[data-maya=area]{fill:color-mix(in oklab,var(--c) 18%,transparent);stroke:none}[data-stack] [data-maya=area]{fill:color-mix(in oklab,var(--c) 45%,var(--maya-bg))}" +
@@ -199,4 +199,7 @@ export const css =
   SCATTER +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +
   "@media (forced-colors:active){.maya-svg,i{forced-color-adjust:none}[data-maya=mark]:not(circle[data-depth]){stroke:CanvasText;stroke-width:1}[data-tone=bad]{stroke-dasharray:4 2}}" +
+  "@media (prefers-reduced-motion:no-preference){[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}" +
+  `${SCAT}circle[data-maya=mark]{transition:opacity .25s var(--maya-ease),fill .2s,stroke-width .2s,transform .2s var(--maya-ease)}` +
+  "[data-pt] circle[data-maya=mark]{transition:fill-opacity .15s,stroke-opacity .15s}}" +
   "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}";
