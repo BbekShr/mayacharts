@@ -44,6 +44,29 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
   const { hidden = [], window }: Opts = Array.isArray(o) ? { hidden: o } : (o as Opts);
   const series: string[] = [];
   const si = new Map<string, number>();
+  if (s.type === "scatter") {
+    // Marks draw from rows: only the series list (and which are visible) is shared.
+    if (s.series !== null)
+      for (const row of s.data) {
+        const sk = String(row[s.series]);
+        if (!si.has(sk)) si.set(sk, series.push(sk) - 1);
+      }
+    else if (s.data.length) series.push("");
+    const visible: number[] = [];
+    series.forEach((k, j) => hidden.includes(k) || visible.push(j));
+    return {
+      categories: [],
+      totals: [],
+      series,
+      visible,
+      cells: [],
+      extent: [0, 0],
+      y2: [],
+      time: null,
+      reduced: null,
+      index: null,
+    };
+  }
   const ci = new Map<string, Cat>();
   for (const row of s.data) {
     if (s.xType === "time" && row[s.x] == null) continue; // String(null) is a label, not a date

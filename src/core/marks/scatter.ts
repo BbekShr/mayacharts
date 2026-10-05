@@ -2,8 +2,6 @@ import { el, esc, key, r } from "../svg.ts";
 import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
 
-const MIN = 24;
-
 interface Pt {
   i: number;
   x: number;
@@ -14,13 +12,20 @@ interface Pt {
   row: Row;
 }
 
+const memo = new WeakMap<Shaped, Pt[]>(); // axes() and draw() share one pass
+
 /**
  * Visible points, in row order. Rows with a null/non-numeric x or y, hidden series, and points
  * outside an explicit xDomain/yDomain are skipped (domains clip; they never draw off-plot).
  * A 4-element view.window (scatter zoom box) clips the same way as the domains.
  */
 function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
+  const hit = memo.get(shaped);
+  if (hit) return hit;
   const out: Pt[] = [];
+  memo.set(shaped, out);
+  const sIdx = new Map(shaped.series.map((k, j) => [k, j]));
+  const vis = new Set(shaped.visible);
   const xd = spec.xDomain;
   const yd = spec.yDomain;
   const w = spec.window;
@@ -31,8 +36,8 @@ function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
     if (xd && (x < xd[0] || x > xd[1])) return;
     if (yd && (y < yd[0] || y > yd[1])) return;
     if (w && (x < w[0] || x > w[1] || y < w[2] || y > w[3])) return;
-    const si = shaped.series.indexOf(spec.series === null ? "" : String(row[spec.series]));
-    if (!shaped.visible.includes(si)) return;
+    const si = sIdx.get(spec.series === null ? "" : String(row[spec.series]))!;
+    if (!vis.has(si)) return;
     const sv = spec.size === null ? null : row[spec.size];
     const nv = spec.name === null ? null : row[spec.name];
     out.push({
@@ -75,16 +80,21 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
   // Pixel to data, from the scale's own endpoints.
   const inv = (s: LinearScale, px: number) =>
     s.domain[0] + ((px - s.range[0]) / (s.range[1] - s.range[0])) * (s.domain[1] - s.domain[0]);
-  const span = (s: LinearScale, f: string, a: number, b: number) =>
-    ctx.t("range", ctx.fmt(f, inv(s, a)), ctx.fmt(f, inv(s, b)));
+  const memoSpan = new Map<string, string>();
+  const span = (s: LinearScale, f: string, a: number, b: number, k: string) => {
+    let v = memoSpan.get(k);
+    if (v === undefined)
+      memoSpan.set(k, (v = ctx.t("range", ctx.fmt(f, inv(s, a)), ctx.fmt(f, inv(s, b)))));
+    return v;
+  };
   let marks = "";
   [...grid]
     .sort((a, b) => a[0] - b[0])
     .forEach(([k, n], c) => {
       const [i, j] = [Math.floor(k / ny), k % ny];
       const [x, y] = [plot.x + i * cw, plot.y + j * ch];
-      const gx = span(sx, spec.x, x, x + cw);
-      const gy = span(sy, spec.y, y + ch, y);
+      const gx = span(sx, spec.x, x, x + cw, "x" + i);
+      const gy = span(sy, spec.y, y + ch, y, "y" + j);
       marks += el("rect", {
         "data-maya": "mark",
         "data-key": key("b", i, j),
@@ -200,7 +210,6 @@ export const scatter: Mark = {
     items.sort((a, b) => b.rad - a.rad);
 
     let marks = "";
-    let hits = "";
     for (const { p, rad, d, cx, cy } of items) {
       marks += el("circle", {
         "data-maya": "mark",
@@ -209,17 +218,8 @@ export const scatter: Mark = {
         cx: r(cx),
         cy: r(cy),
       });
-      if (rad * 2 < MIN)
-        hits += el("circle", {
-          "data-maya": "hit",
-          ...d,
-          r: r(Math.max(rad, 12)),
-          cx: r(cx),
-          cy: r(cy),
-          fill: "transparent",
-        });
       if (spec.labels) ctx.label(cx, cy - rad, ctx.fmt(spec.y, p.y), "above");
     }
-    return { marks, hits, cross: pts.length ? cross(ctx) : "" };
+    return { marks, hits: "", cross: pts.length ? cross(ctx) : "" };
   },
 };

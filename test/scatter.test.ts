@@ -35,22 +35,18 @@ describe("scatter", () => {
     expect(circles(renderParts(s).svg)).toHaveLength(3);
   });
 
-  it("default radius is 5 and every small point gets a 12px hit", () => {
+  it("default radius is 5 and no point gets a hit element", () => {
     const svg = renderParts(base).svg;
     expect(circles(svg).map((c) => attr(c, "r"))).toEqual(["5", "5", "5"]);
-    expect(circles(svg, "hit").map((c) => attr(c, "r"))).toEqual(["12", "12", "12"]);
+    expect(circles(svg, "hit")).toHaveLength(0); // the element picks the nearest mark within 12px
   });
 
-  it("size grows the radius, biggest drawn first, and big bubbles get no hit", () => {
+  it("size grows the radius, biggest drawn first", () => {
     const svg = renderParts(bubbles).svg;
     const rs = circles(svg).map((c) => Number(attr(c, "r")));
     expect(rs).toEqual([...rs].sort((a, b) => b - a));
     expect(new Set(rs).size).toBe(3);
     expect(attr(circles(svg)[0]!, "data-x")).toBe("big");
-    // plot ~ 320 high -> max r = 2 + 26.7 = 28.7 (>= 12 so no hit); the small one is 2 + 0.1*26.7 = 4.7
-    const hitNames = circles(svg, "hit").map((c) => attr(c, "data-x"));
-    expect(hitNames).toContain("small");
-    expect(hitNames).not.toContain("big");
   });
 
   it("tooltip payload: name title, x · y · size", () => {
