@@ -174,11 +174,12 @@ export function tooltip(
     }
   };
 
-  /** Scatter draws no hit circles: the mark whose centre is within NEAR px of the pointer. */
+  /** Scatter and beeswarm draw no hit shapes: the mark whose centre is within NEAR px of the pointer. */
   const nearest = (ev?: Event) => {
     const svg = box.querySelector("svg"),
       p = ev as PointerEvent | undefined;
-    if (spec()?.type !== "scatter" || !svg || p?.clientX === undefined) return;
+    if (!/^(scatter|beeswarm)$/.test(spec()?.type ?? "") || !svg || p?.clientX === undefined)
+      return;
     index();
     cxy ??= list.flatMap((m) => [
       m.hasAttribute("cx") ? +a(m, "cx") : NaN,

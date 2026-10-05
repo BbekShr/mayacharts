@@ -1,7 +1,10 @@
-import { el, esc, key, r } from "../svg.ts";
+import { thin } from "../shape.ts";
+import { bands, el, esc, key, r } from "../svg.ts";
 import type { Cell, Mark, MarkCtx } from "../types.ts";
 
 const PAD = 12;
+// One hover target per 4 px of sparkline; a denser series keeps each bucket's low and high.
+const PX = 4;
 const num = (v: unknown) => (typeof v === "number" ? v : null);
 
 /** Headline, delta vs previous period, sparkline, target bullet. No axes: everything from width/height. */
@@ -36,7 +39,6 @@ function draw(ctx: MarkCtx) {
     "data-c": ci,
     "data-s": 0,
     "data-x": period,
-    "data-series": "",
     "data-y": value,
     "data-f": f,
   };
@@ -121,15 +123,18 @@ function draw(ctx: MarkCtx) {
   // ponytail: sparkline needs 28px; with a target bullet and a short box the bullet wins.
   if (cats.length >= 3 && bottom - top >= 28) {
     const vs = live.map((c) => c.value!);
-    const lo = Math.min(...vs);
-    const span = Math.max(...vs) - lo || 1;
+    const lo = vs.reduce((a, b) => Math.min(a, b)); // not Math.min(...vs): that throws on long series
+    const span = vs.reduce((a, b) => Math.max(a, b)) - lo || 1;
     const n = cats.length - 1;
     const step = (W - 2 * PAD) / n;
     const px = (i: number) => r(PAD + i * step);
     const py = (v: number) => r(bottom - ((v - lo) / span) * (bottom - top - 4) - 2);
+    const shown = thin([cells.map((c) => c.value)], Math.floor((W - 2 * PAD) / PX)).map(
+      (k) => cells[k]!,
+    );
     let d = "";
     let gap = true;
-    cells.forEach((c) => {
+    shown.forEach((c) => {
       if (c.value === null) return void (gap = true);
       d += `${gap ? "M" : "L"}${px(c.ci)} ${py(c.value)}`;
       gap = false;
@@ -139,7 +144,6 @@ function draw(ctx: MarkCtx) {
         "data-c": c.ci,
         "data-s": 0,
         "data-x": ctx.fmt(spec.x, cats[c.ci]),
-        "data-series": "",
         "data-y": c.value,
         "data-f": ctx.fmt(spec.y, c.value),
         "data-neg": c.value < 0,
@@ -169,17 +173,12 @@ function draw(ctx: MarkCtx) {
         d: d || null,
       }) +
       marks;
-    cats.forEach((_, i) => {
-      hits += el("rect", {
-        "data-maya": "hit",
-        "data-c": i,
-        x: r(Math.max(0, PAD + i * step - step / 2)),
-        y: 0,
-        width: r(step),
-        height: H,
-        fill: "transparent",
-      });
-    });
+    // One band per drawn point.
+    hits = bands(
+      { x: 0, y: 0, w: W, h: H },
+      shown.map((c) => c.ci),
+      (c) => PAD + c * step,
+    );
   }
   return { marks, hits, labels, grid };
 }

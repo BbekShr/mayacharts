@@ -12,6 +12,10 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 
 - Line, area and vertical bar charts whose x values are ISO 8601 dates now get a time axis (sorted by time, proportional spacing). Set `xType: "category"` to keep the old axis.
 
+### Changed
+
+- Speed: kpi sparklines and ridgelines draw at most one hover point per 4 px (kpi) or 6 px (ridgeline) of width, keeping each bucket's lowest and highest value, and no longer fail with `too-many-marks` on long series. Beeswarm draws no hit rects (the tooltip and click pick the nearest dot within 12 px, as for scatter). Parallel shares its hit stroke on a group. At 1k rows the svg is 43 KB (kpi, was 289), 32 KB (ridgeline, was 305), 139 KB (beeswarm, was 334) and 859 KB (parallel, was 934).
+
 ### Added
 
 - `xType`: "auto", "category" or "time". Line, area and vertical bar charts whose x values are all ISO 8601 dates ("2024-03", "2024-03-05", "2024-03-05T14:30:00Z") get a time axis: categories sorted by time, spaced in proportion, ticks on UTC calendar boundaries. `"time"` also accepts epoch ms (within the Date range); `"category"` opts out. Month, quarter and year starts are spaced by calendar so bars line up evenly, tick density follows the chart width, and a line breaks where the gap between readings is more than 5 times the usual step.

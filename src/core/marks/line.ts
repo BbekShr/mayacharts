@@ -1,5 +1,5 @@
 import { colorVals } from "../shape.ts";
-import { el, key, OTHER, r } from "../svg.ts";
+import { bands, el, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, Cell, LinearScale, Mark, MarkCtx, MarkOut } from "../types.ts";
 
 const axes: Mark["axes"] = (spec, shaped) => [
@@ -106,27 +106,12 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     });
   }
 
-  let hits = "";
-  // Time axis: each hit runs from the midpoint with the previous category to the one with the next.
-  const mid = (ci: number, d: number) => {
-    if (ci + d < 0 || ci + d >= shaped.categories.length) return d < 0 ? plot.x : plot.x + plot.w;
-    return (cat.at(ci) + cat.at(ci + d)) / 2 + cat.bandwidth / 2;
-  };
-  shaped.categories.forEach((_, ci) => {
-    const [x0, x1] = shaped.time
-      ? [mid(ci, -1), mid(ci, 1)]
-      : [cat.at(ci), cat.at(ci) + cat.bandwidth];
-    hits += el("rect", {
-      "data-maya": "hit",
-      "data-c": ci,
-      "data-i": shaped.index?.[ci],
-      x: r(x0),
-      y: r(plot.y),
-      width: r(x1 - x0),
-      height: r(plot.h),
-      fill: "transparent",
-    });
-  });
+  const hits = bands(
+    plot,
+    shaped.categories.map((_, ci) => ci),
+    (c) => cat.at(c) + cat.bandwidth / 2,
+    shaped.index,
+  );
   return {
     marks: areas + lines + dots,
     hits,
