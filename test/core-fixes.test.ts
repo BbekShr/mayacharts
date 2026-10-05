@@ -74,10 +74,12 @@ describe("format option cache", () => {
     } as unknown as ChartSpec;
     expect(() => render(spec)).not.toThrow();
   });
-  it("junk options share one cache entry", () => {
-    const a = nf("en-US", { maximumFractionDigits: 1 });
-    for (let i = 0; i < 500; i++)
-      expect(nf("en-US", { maximumFractionDigits: 1, ["j" + i]: i } as never)).toBe(a);
+  it("the cache is flushed past 200 entries, so junk options cannot grow it", () => {
+    const junk = (i: number) => nf("en-US", { maximumFractionDigits: 1, ["j" + i]: i } as never);
+    const a = junk(0);
+    expect(junk(0)).toBe(a);
+    for (let i = 1; i < 500; i++) junk(i);
+    expect(junk(0)).not.toBe(a);
   });
 });
 

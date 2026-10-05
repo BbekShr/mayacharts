@@ -15,19 +15,10 @@ const INTL = new Map<string, F>();
 const NUM = /^{"maximumFractionDigits":(\d)}$/;
 const DATE =
   /^{"timeZone":"UTC"(?=,)(?:(,"month":"short"(,"day":"numeric")?)?(,"year":"numeric")?(,"hour":"numeric","minute":"2-digit"(,"second":"2-digit")?)?|(,"dateStyle":"medium")?(,"timeStyle":"short")?)}$/;
-// Only these option names reach Intl or the cache key; anything else in a spec is dropped.
-const KNOWN = new Set(
-  (
-    "localeMatcher numberingSystem style currency currencyDisplay currencySign unit unitDisplay notation compactDisplay signDisplay useGrouping roundingMode roundingPriority roundingIncrement trailingZeroDisplay minimumIntegerDigits minimumFractionDigits maximumFractionDigits minimumSignificantDigits maximumSignificantDigits " +
-    "calendar dayPeriod hour12 hourCycle timeZone weekday era year month day hour minute second fractionalSecondDigits timeZoneName formatMatcher dateStyle timeStyle"
-  ).split(" "),
-);
 const intl = (C: new (l: string, o: object) => F, locale: string, raw: object) => {
-  // A fresh object of known names with primitive values (no BigInt), in the caller's key order.
+  // Primitive values only (a BigInt or object would throw in JSON.stringify); Intl ignores unknown names.
   const o = Object.fromEntries(
-    Object.entries(raw).filter(
-      ([k, v]) => KNOWN.has(k) && ["string", "number", "boolean"].includes(typeof v),
-    ),
+    Object.entries(raw).filter(([, v]) => typeof v != "object" && typeof v != "bigint"),
   );
   const j = JSON.stringify(o);
   let f = INTL.get(C.name + locale + j);
