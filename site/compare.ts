@@ -18,6 +18,7 @@ interface Result {
 }
 interface Cell {
   firstPaintMs?: number;
+  loadPaintMs?: number;
   updateP50Ms?: number;
   updateP95Ms?: number;
   heapMB?: number;
@@ -99,6 +100,8 @@ interface Row {
   low?: boolean;
   /** Left out of the win count (totals). */
   skip?: boolean;
+  /** Timing noise: values within this fraction of the best share the win. */
+  tie?: number;
 }
 interface Dim {
   id: string;
@@ -125,7 +128,8 @@ function winners(r: Row): string[] {
   if (have.length < 2) return [];
   const vals = have.map((l) => r.v[l] as number);
   const best = r.low ? Math.min(...vals) : Math.max(...vals);
-  return have.filter((l) => r.v[l] === best);
+  const near = (x: number) => Math.abs(x - best) <= Math.abs(best) * (r.tie ?? 0);
+  return have.filter((l) => near(r.v[l] as number));
 }
 
 function wins(d: Dim): Record<string, number> {
@@ -187,10 +191,13 @@ const ns = [
 ].sort((a, b) => +a - +b);
 const METRICS: [keyof Cell, string, string][] = [
   ["firstPaintMs", "first paint", "ms"],
+  ["loadPaintMs", "load to paint", "ms"],
   ["updateP50Ms", "update p50", "ms"],
   ["updateP95Ms", "update p95", "ms"],
   ["heapMB", "JS heap", "MB"],
 ];
+// Repeat runs of the same cell move by a few percent, so a timing within 5% of the best is a tie.
+const TIE = 0.05;
 const speedTable = (col: string, caption: string) => ({
   caption,
   rows: kinds.flatMap((k) =>
@@ -201,6 +208,7 @@ const speedTable = (col: string, caption: string) => ({
           v: {},
           t: {},
           low: true,
+          tie: TIE,
         };
         for (const l of libs) {
           const c = data.speed[l]?.[k]?.[n]?.[col];
