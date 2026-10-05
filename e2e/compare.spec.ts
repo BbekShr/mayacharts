@@ -29,7 +29,9 @@ const ARROW_CAP = 40;
 const TAB_CAP = 60;
 const SPEED_RUNS = 5;
 const UPDATES = 10;
-const CELL_MS = 90_000;
+const CELL_MS = 30_000;
+/** A first paint slower than this skips the larger sizes for that library, chart and CPU. */
+const SLOW_MS = 5_000;
 const THROTTLE = 4;
 const KINDS = ["scatter", "line"] as const;
 type Kind = (typeof KINDS)[number];
@@ -96,7 +98,7 @@ function write(browser: Browser): void {
     browser: `Chromium ${browser.version()}`,
     csp: CSP,
     arrowCap: ARROW_CAP,
-    speedDefinition: `First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink), plus one frame. Update is ${UPDATES} calls of the redraw function with fresh rows, each timed until the chart changed (a DOM mutation, or different canvas pixels), plus one frame; p50 and p95 per load. Heap is JS heap after a forced GC and ${UPDATES} updates. Median of ${SPEED_RUNS} fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle ${THROTTLE}x in the second column. A cell that crashes or passes ${CELL_MS / 1000} s is recorded with its reason.`,
+    speedDefinition: `First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink), plus one frame. Update is ${UPDATES} calls of the redraw function with fresh rows, each timed until the chart changed (a DOM mutation, or different canvas pixels), plus one frame; p50 and p95 per load. Heap is JS heap after a forced GC and ${UPDATES} updates. Median of ${SPEED_RUNS} fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle ${THROTTLE}x in the second column. A cell stops after ${CELL_MS / 1000} s with the runs it finished; one with none is recorded with its reason, and a first paint over ${SLOW_MS / 1000} s skips the larger sizes.`,
     notes: [
       "Each library draws the same data through its own reference module in e2e/compare/ref, written the way its documentation shows, with defaults and no theming.",
       "The CSP row is its own test: a chart that is blocked by the policy is recorded as failing there, and the speed suite runs with no CSP so those numbers survive.",
@@ -557,11 +559,13 @@ test("speed: scatter and line at growing row counts", async ({ browser }: { brow
         for (const rate of [1, THROTTLE]) {
           const key = rate === 1 ? "normal" : "throttled";
           if (failed.has(rate)) {
-            byN[n]![key] = { error: "skipped: failed at a smaller size" };
+            byN[n]![key] = {
+              error: `skipped: failed or took over ${SLOW_MS / 1000} s at a smaller size`,
+            };
             continue;
           }
           const c = await cell(ctx, lib, kind, n, rate);
-          if ("error" in c) failed.add(rate);
+          if ("error" in c || (c["firstPaintMs"] as number) > SLOW_MS) failed.add(rate);
           byN[n]![key] = c;
           console.log(`${lib} ${kind} ${n} x${rate}: ${JSON.stringify(c)}`);
         }
