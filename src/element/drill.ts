@@ -19,8 +19,8 @@ const same = (a: readonly string[] = [], b: readonly string[] = []) =>
 const withDrill = (s: State, drill: readonly string[]): State =>
   same(s.view.drill, drill) ? s : { view: { ...s.view, drill }, selected: [] };
 
-/** Flows (sankey, chord) need two levels left to draw; everything else one. */
-const FLOW = ["sankey", "chord"];
+/** A sankey needs two levels left to draw; everything else one. (chord has no drill.) */
+const FLOW = ["sankey"];
 
 export const reduce = (s: State, e: DrillEvent): State => {
   const cur = s.view.drill ?? [];
@@ -135,7 +135,7 @@ export const mount = (host: Host): Handlers => {
     ptr = (e as MouseEvent).detail > 0; // 0: a keyboard-activated crumb button
     if (crumb) pop(Number(crumb.getAttribute("data-depth")));
     else {
-      const m = host.mark(e); // links drill by keyboard only
+      const m = host.mark(e); // a link never drills (sankey and chord links are not keyboard-reachable)
       if (m && m.getAttribute("data-maya") !== "link") push(m);
       else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false)
         pop((host.state().view.drill ?? []).length - 1);

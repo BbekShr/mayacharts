@@ -24,6 +24,24 @@ describe("select reducer", () => {
     s = reduce(s, { type: "toggle", sel: { x: "b" }, multi: false });
     expect(s.selected).toEqual([]);
   });
+  it("a numeric x matches the string the DOM hands back", () => {
+    const num = { x: 2024 } as never;
+    const str = { x: "2024" };
+    expect(
+      reduce(reduce(st(), { type: "toggle", sel: num, multi: true }), {
+        type: "toggle",
+        sel: str,
+        multi: true,
+      }).selected,
+    ).toEqual([]);
+    expect(
+      reduce(reduce(st(), { type: "toggle", sel: num, multi: false }), {
+        type: "toggle",
+        sel: str,
+        multi: false,
+      }).selected,
+    ).toEqual([]);
+  });
   it("multi toggles in the array; clear empties", () => {
     let s = reduce(st(), { type: "toggle", sel: { x: "a" }, multi: true });
     s = reduce(s, { type: "toggle", sel: { x: "b" }, multi: true });

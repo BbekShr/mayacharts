@@ -176,6 +176,18 @@ test.describe("select", () => {
   });
 });
 
+test.describe("tooltip:false", () => {
+  test("arrow keys and Enter still select", async ({ page }) => {
+    const data = ["A", "B", "C"].map((c, i) => ({ c, v: i + 1 }));
+    await mount(page, "notip", { type: "bar", x: "c", y: "v", data, tooltip: false, select: true });
+    await page.locator("#notip svg.maya-svg").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await selected(page, "notip")).length).toBe(1);
+    await expect(page.locator("#notip .maya-tip.maya-open")).toHaveCount(0);
+  });
+});
+
 test.describe("zoom", () => {
   test("drag sets the window, Reset chip shows, double-click resets", async ({ page }) => {
     await open(page);

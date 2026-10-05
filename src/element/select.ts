@@ -11,8 +11,9 @@ import { listen } from "./listen.ts";
 export type SelectEvent =
   { type: "toggle"; sel: Sel; multi: boolean } | { type: "clear" } | SpecEvent;
 
-const same = (a: Sel, b: Sel) => JSON.stringify(a) === JSON.stringify(b);
 const FIELDS = ["x", "series", "name"] as const;
+// String compare: a numeric selection (x: 2024) matches the attribute-derived "2024".
+const same = (a: Sel, b: Sel) => FIELDS.every((f) => String(a[f]) === String(b[f]));
 const dec = (s: string) => {
   try {
     return decodeURIComponent(s);

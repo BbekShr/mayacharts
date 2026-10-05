@@ -39,6 +39,7 @@ export class MayaChart extends HTMLElement {
   #last: Record<string, string> = {};
   #size = [0, 0];
   #q = false;
+  #raf = false;
   #ro: ResizeObserver | undefined;
   #resized = false;
   #off: (() => void) | undefined;
@@ -235,7 +236,7 @@ export class MayaChart extends HTMLElement {
     // Drilling zooms into the branch entered, or out of the branch left. Flows keep their
     // nodes in place across a drill (stable keys), so they morph instead.
     const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
-    const flow = this.spec?.type === "sankey" || this.spec?.type === "chord";
+    const flow = this.spec?.type === "sankey";
     if (flow) this.#zoom = undefined;
     else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
     else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
@@ -286,13 +287,17 @@ export class MayaChart extends HTMLElement {
 
   /** Renders in a microtask (property sets in one task batch); ResizeObserver delivery waits a frame. */
   #schedule(raf = false): void {
-    if (!this.isConnected || this.#q) return;
-    this.#q = true;
-    const run = () => this.#q && ((this.#q = false), this.#render());
-    raf ? requestAnimationFrame(run) : queueMicrotask(run);
+    if (!this.isConnected || (raf ? this.#raf : this.#q)) return;
+    const run = () => {
+      if (raf) this.#raf = false;
+      else this.#q = false;
+      this.#render(raf);
+    };
+    if (raf) ((this.#raf = true), requestAnimationFrame(run));
+    else ((this.#q = true), queueMicrotask(run));
   }
 
-  #render(): void {
+  #render(fromRaf = false): void {
     const root = this.shadowRoot!;
     if (!this.spec) this.#readJson();
     const spec = this.spec;
@@ -338,6 +343,10 @@ export class MayaChart extends HTMLElement {
         parts = draw();
     } catch (e) {
       this.#tip?.hide();
+      // The old table would describe data the box no longer shows; cancel a pending idle insert.
+      this.#tbl++;
+      this.#last["table"] = "";
+      root.querySelector("table.maya-sr")?.remove();
       const d: MayaErrorDetail | null =
         e instanceof MayaSpecError ? { code: e.code, path: e.path, message: e.message } : null;
       // Cancelable: preventDefault() hides the box (the host shows its own error).
@@ -377,8 +386,9 @@ export class MayaChart extends HTMLElement {
     // Nothing animates on resize: geometry must track the container immediately.
     const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
     maya.toggleAttribute("data-still", spec.animate === false); // CSS transitions off too
-    const resized = this.#resized;
-    this.#resized = false;
+    // A microtask render beside a pending resize frame is not the resize's own: it animates.
+    const resized = this.#resized && fromRaf;
+    if (fromRaf) this.#resized = false;
     // First draw plays an entrance, unless the chart arrived server-rendered (already on screen).
     const intro: Intro | undefined =
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
