@@ -2,6 +2,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import type { ChartSpec } from "../src/core/types.ts";
+import { patch } from "../src/element/animate.ts";
 
 const frame = () => new Promise((r) => setTimeout(r, 30));
 const root = (el: Element) => el.shadowRoot!;
@@ -111,6 +112,95 @@ describe("motion", () => {
     document.body.append(el);
     await frame();
     expect(root(el).querySelector(".maya")!.hasAttribute("data-still")).toBe(true);
+    el.remove();
+  });
+
+  /** Record every animate() call: element, keyframes. */
+  const spy = () => {
+    const calls: { e: Element; k: Keyframe[] }[] = [];
+    const orig = Element.prototype.animate;
+    Element.prototype.animate = function (this: Element, k: Keyframe[]) {
+      calls.push({ e: this, k });
+      return orig.call(this, k as never) as never;
+    } as never;
+    return { calls, done: () => (Element.prototype.animate = orig) };
+  };
+
+  it("a fade in leaves its end opacity to the CSS value; a fade out starts from it", async () => {
+    const rows = (k: number) => ["a", "b", "c"].map((x, i) => ({ x, v: (i + 1) * k }));
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = { type: "line", x: "x", y: "v", data: rows(1) } as unknown as ChartSpec;
+    document.body.append(el);
+    await frame();
+    const s = spy();
+    el.spec = {
+      type: "line",
+      x: "x",
+      y: "v",
+      data: [...rows(2), { x: "d", v: 9 }],
+    } as unknown as ChartSpec;
+    await frame();
+    s.done();
+    const paths = s.calls.filter((c) => c.e.matches("path[data-maya=line]"));
+    const inn = paths.find((c) => !c.e.hasAttribute("data-ghost"))!;
+    const out = paths.find((c) => c.e.hasAttribute("data-ghost"))!;
+    expect(inn.k).toEqual([{ opacity: 0 }, {}]);
+    expect(out.k).toEqual([{}, { opacity: 0 }]);
+    el.remove();
+  });
+
+  it("a drill zoom moves circles by translate only and maps dumbbell connector ends", () => {
+    const box = document.createElement("div");
+    const svg = (marks: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="10 10 80 80"><g data-maya="marks">${marks}</g></svg>`;
+    const dot = (k: string, x: number, y: number) =>
+      `<circle data-maya="mark" data-key="${k}" cx="${x}" cy="${y}" r="3"/>`;
+    const link = (k: string, x: number) =>
+      `<line data-maya="link" data-key="${k}" x1="${x}" y1="20" x2="${x}" y2="40"/>`;
+    patch(box, svg(dot("a~A", 20, 30) + dot("a~B", 70, 30) + link("k~A", 20)), false);
+    const s = spy();
+    patch(box, svg(dot("c~x", 50, 50) + link("k~x", 50)), true, { zoom: { in: "A" } });
+    s.done();
+    const tr = (sel: string) =>
+      s.calls
+        .filter((c) => c.e.matches(sel))
+        .map((c) => JSON.stringify(c.k.map((f) => f.transform)));
+    const circles = tr("circle");
+    expect(circles.length).toBe(3); // clip is on the group; two exit, one enters
+    for (const t of circles) {
+      expect(t).toContain("translate(");
+      expect(t).not.toContain("scale");
+    }
+    const lines = tr("line");
+    expect(lines.length).toBe(2);
+    for (const t of lines) expect(t).toContain("matrix(1,0,0,"); // stroke width keeps its scale
+  });
+
+  it("a group already fading out is not ghosted again by the next patch", async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    const at = (k: number) =>
+      ({
+        type: "bar",
+        x: "x",
+        y: "v",
+        labels: true,
+        data: [
+          { x: "a", v: k },
+          { x: "b", v: 2 * k },
+        ],
+      }) as unknown as ChartSpec;
+    el.spec = at(1);
+    document.body.append(el);
+    await frame();
+    const s = spy();
+    el.spec = at(1000);
+    await frame();
+    el.spec = at(5);
+    await frame();
+    s.done();
+    const out = s.calls.filter((c) => c.e.localName === "g" && c.k.at(-1)?.opacity === 0);
+    expect(out.length).toBeGreaterThan(0);
+    expect(new Set(out.map((c) => c.e)).size).toBe(out.length);
     el.remove();
   });
 });
