@@ -1,59 +1,105 @@
+/// <reference types="vite/client" />
 import { theme } from "./theme.ts";
 import json from "./compare.json";
 
-// Everything shown here comes from compare.json. No number or verdict is written in this file.
-interface Row {
-  library: string;
-  chart: string;
+// Everything shown here comes from compare.json, compare-size.json and compare-ease.json. No number
+// or verdict is written in this file. The size and ease files come from other scripts and may be
+// missing, so they are read through import.meta.glob, which yields nothing for an absent file.
+interface Result {
   supported?: boolean;
   renders?: boolean;
   firstViolation?: string;
   axeSeriousCritical?: number | null;
-  gzipBytes: number;
-  ssr: { svg: boolean; bytes: number; note?: string };
   keyboard?: { tabStops: number; arrowStates: number } | null;
   rtl?: { yAxisMovedRight: boolean } | null;
+  ssr?: { svg: boolean; bytes: number; note?: string } | null;
+  ssrNote?: string;
   ttfpMs?: number | null;
-  note?: string;
 }
-interface EvalLib {
-  validJsonPct: number;
-  rendersPct: number;
-  nonBlankPct: number;
+interface Cell {
+  firstPaintMs?: number;
+  updateP50Ms?: number;
+  updateP95Ms?: number;
+  heapMB?: number;
+  runs?: number;
+  error?: string;
 }
-interface Eval {
-  model: string;
-  date: string;
-  n: number;
-  libraries: Record<string, EvalLib>;
-}
-const data = json as unknown as {
+interface Data {
   generated: string;
-  versions: Record<string, string>;
-  arrowCap?: number;
+  versions: Record<string, string | null>;
   browser: string;
   csp: string;
+  arrowCap?: number;
+  speedDefinition: string;
   notes: string[];
-  results: Row[];
-  eval?: Eval;
-};
+  libs: string[];
+  charts: string[];
+  titles: Record<string, string>;
+  excluded: Record<string, string>;
+  results: Record<string, Record<string, Result>>;
+  speed: Record<string, Record<string, Record<string, Record<string, Cell>>>>;
+  eval?: {
+    model: string;
+    date: string;
+    n: number;
+    libraries: Record<string, { validJsonPct: number; rendersPct: number; nonBlankPct: number }>;
+  };
+}
+interface SizeLib {
+  bar: { gzip: number };
+  all: { gzip: number; charts: number };
+}
+interface Size {
+  libs: Record<string, SizeLib>;
+}
+interface EaseCell {
+  tokens: number;
+  lines: number;
+}
+interface Ease {
+  definition?: string;
+  libs: Record<string, Record<string, (EaseCell & { charts?: number }) | null>>;
+}
+const data = json as unknown as Data;
+const first = <T>(m: Record<string, unknown>): T | undefined =>
+  (Object.values(m)[0] as { default: T } | undefined)?.default;
+const size = first<Size>(import.meta.glob("./compare-size.json", { eager: true }));
+const ease = first<Ease>(import.meta.glob("./compare-ease.json", { eager: true }));
 
-const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const LIBS = ["mayacharts", "chartjs", "echarts"];
+const WE = "maya";
 const NAME: Record<string, string> = {
-  mayacharts: "mayaCharts",
+  maya: "mayaCharts",
   chartjs: "Chart.js",
   echarts: "ECharts",
+  plot: "Observable Plot",
+  vegalite: "Vega-Lite",
+  recharts: "Recharts",
+  nivo: "Nivo",
+  plotly: "Plotly.js",
 };
-const CHARTS = ["bar", "line", "scatter", "heatmap"];
-const CHART_NAME: Record<string, string> = {
-  bar: "Grouped bar",
-  line: "Multi-line, monthly",
-  scatter: "Scatter, 50 000 points",
-  heatmap: "Heatmap, 24 x 7",
-};
-const get = (lib: string, chart: string) =>
-  data.results.find((r) => r.library === lib && r.chart === chart);
+const name = (l: string) => NAME[l] ?? l;
+const libs = [...data.libs].sort((a, b) => (a === WE ? -1 : b === WE ? 1 : 0));
+const num = (n: number) => n.toLocaleString("en-US");
+const kb = (b: number) => `${(b / 1024).toFixed(1)} KB`;
+const yn = (b: boolean) => (b ? "yes" : "no");
+const chartName = (c: string) => data.titles[c] ?? c;
+
+interface Row {
+  label: string;
+  v: Record<string, number | null>;
+  t: Record<string, string>;
+  /** Lower is better. */
+  low?: boolean;
+  /** Left out of the win count (totals). */
+  skip?: boolean;
+}
+interface Dim {
+  id: string;
+  title: string;
+  def: string;
+  tables: { caption?: string; rows: Row[] }[];
+  extra?: HTMLElement;
+}
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -66,133 +112,384 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
-/** A table: one row per chart, one column per library. `cell` returns the text for a result. */
-function table(
-  caption: string,
-  def: string,
-  cell: (r: Row) => string,
-  charts = CHARTS,
-): HTMLElement {
-  const s = el("section");
-  el("h2", caption, s);
-  el("p", def, s);
-  const wrap = el("div", "", s);
+/** Libraries sharing the best value in a row. At least two must have a value. */
+function winners(r: Row): string[] {
+  const have = libs.filter((l) => r.v[l] != null);
+  if (have.length < 2) return [];
+  const vals = have.map((l) => r.v[l] as number);
+  const best = r.low ? Math.min(...vals) : Math.max(...vals);
+  return have.filter((l) => r.v[l] === best);
+}
+
+function wins(d: Dim): Record<string, number> {
+  const w = Object.fromEntries(libs.map((l) => [l, 0])) as Record<string, number>;
+  for (const t of d.tables)
+    for (const r of t.rows) if (!r.skip) for (const l of winners(r)) w[l]!++;
+  return w;
+}
+
+/** One row per chart; `f` maps a measured result to a value and its text. */
+function perChart(f: (r: Result) => { v: number | null; t: string }, low = false): Row[] {
+  return data.charts.map((c) => {
+    const row: Row = { label: chartName(c), v: {}, t: {}, low };
+    for (const l of libs) {
+      const r = data.results[l]?.[c];
+      const x = !r
+        ? { v: null, t: "not measured" }
+        : r.supported === false
+          ? { v: null, t: "not supported" }
+          : f(r);
+      row.v[l] = x.v;
+      row.t[l] = x.t;
+    }
+    return row;
+  });
+}
+const notRendered = (r: Result) => r.renders === undefined || r.ttfpMs === null;
+const supportedCount = (l: string) =>
+  data.charts.filter((c) => data.results[l]?.[c]?.supported !== false).length;
+
+const dims: Dim[] = [];
+
+dims.push({
+  id: "support",
+  title: "Chart types supported",
+  def: "Whether the library can draw the chart at all from its own documentation, with no add-on package.",
+  tables: [
+    {
+      rows: [
+        ...perChart(() => ({ v: 1, t: "yes" })),
+        {
+          label: "Charts supported",
+          skip: true,
+          v: Object.fromEntries(libs.map((l) => [l, supportedCount(l)])),
+          t: Object.fromEntries(
+            libs.map((l) => [l, `${supportedCount(l)} of ${data.charts.length}`]),
+          ),
+        },
+      ],
+    },
+  ],
+});
+
+const kinds = [...new Set(libs.flatMap((l) => Object.keys(data.speed[l] ?? {})))];
+const ns = [
+  ...new Set(
+    libs.flatMap((l) => Object.values(data.speed[l] ?? {}).flatMap((k) => Object.keys(k))),
+  ),
+].sort((a, b) => +a - +b);
+const METRICS: [keyof Cell, string, string][] = [
+  ["firstPaintMs", "first paint", "ms"],
+  ["updateP50Ms", "update p50", "ms"],
+  ["updateP95Ms", "update p95", "ms"],
+  ["heapMB", "JS heap", "MB"],
+];
+const speedTable = (col: string, caption: string) => ({
+  caption,
+  rows: kinds.flatMap((k) =>
+    ns.flatMap((n) =>
+      METRICS.map(([key, label, unit]): Row => {
+        const row: Row = {
+          label: `${k[0]!.toUpperCase()}${k.slice(1)}, ${num(+n)} rows, ${label}`,
+          v: {},
+          t: {},
+          low: true,
+        };
+        for (const l of libs) {
+          const c = data.speed[l]?.[k]?.[n]?.[col];
+          const x = c?.[key];
+          row.v[l] = typeof x === "number" ? x : null;
+          row.t[l] =
+            typeof x === "number"
+              ? `${num(x)} ${unit}`
+              : c
+                ? `failed: ${c.error ?? "no data"}`
+                : "not measured";
+        }
+        return row;
+      }),
+    ),
+  ),
+});
+dims.push({
+  id: "speed",
+  title: "Speed and memory",
+  def: data.speedDefinition,
+  tables: [speedTable("normal", "Normal CPU"), speedTable("throttled", "CPU throttled")],
+});
+
+if (size) {
+  const row = (label: string, f: (s: SizeLib) => number, t: (s: SizeLib) => string): Row => ({
+    label,
+    low: true,
+    v: Object.fromEntries(libs.map((l) => [l, size.libs[l] ? f(size.libs[l]) : null])),
+    t: Object.fromEntries(libs.map((l) => [l, size.libs[l] ? t(size.libs[l]) : "not measured"])),
+  });
+  dims.push({
+    id: "size",
+    title: "Bundle size",
+    def: "Gzipped size of what a page ships to draw the chart, bundled and minified with the same settings for every library.",
+    tables: [
+      {
+        rows: [
+          row(
+            "One bar chart, gzipped",
+            (s) => s.bar.gzip,
+            (s) => kb(s.bar.gzip),
+          ),
+          row(
+            "Every chart it can draw, gzipped",
+            (s) => s.all.gzip,
+            (s) => `${kb(s.all.gzip)}, ${s.all.charts} charts`,
+          ),
+        ],
+      },
+    ],
+  });
+}
+
+if (ease) {
+  const rows: Row[] = data.charts.map((c) => {
+    const r: Row = { label: chartName(c), low: true, v: {}, t: {} };
+    for (const l of libs) {
+      const e = ease.libs[l]?.[c];
+      r.v[l] = e ? e.tokens : null;
+      r.t[l] = e
+        ? `${num(e.tokens)} tokens, ${e.lines} lines`
+        : e === null
+          ? "not supported"
+          : "not measured";
+    }
+    return r;
+  });
+  const tot: Row = { label: "Total tokens", low: true, skip: true, v: {}, t: {} };
+  for (const l of libs) {
+    const t = ease.libs[l]?.["total"];
+    tot.v[l] = t ? t.tokens : null;
+    tot.t[l] = t ? `${num(t.tokens)} tokens, ${t.lines} lines, ${t.charts} charts` : "not measured";
+  }
+  dims.push({
+    id: "ease",
+    title: "Ease of writing",
+    def:
+      ease.definition ??
+      "Tokens and lines in the reference module for each chart. Fewer is easier.",
+    tables: [{ rows: [...rows, tot] }],
+  });
+}
+
+const failures = el("div");
+const fails = libs.flatMap((l) =>
+  data.charts.flatMap((c) => {
+    const r = data.results[l]?.[c];
+    return r?.firstViolation ? [`${name(l)}, ${chartName(c)}: ${r.firstViolation}`] : [];
+  }),
+);
+if (fails.length) {
+  el("h3", "First violation or error, per failing chart", failures);
+  const ul = el("ul", "", failures);
+  for (const f of fails) el("li", f, ul);
+}
+dims.push({
+  id: "csp",
+  title: "Strict CSP with Trusted Types",
+  def: `Yes when marks were painted with no CSP or Trusted Types violation and no script error. The policy is ${data.csp}`,
+  tables: [{ rows: perChart((r) => ({ v: r.renders ? 1 : 0, t: yn(r.renders === true) })) }],
+  extra: failures,
+});
+
+dims.push({
+  id: "a11y",
+  title: "Accessibility",
+  def: "axe-core serious and critical violations, WCAG 2.2 AA rule set, scoped to the chart box. Fewer is better. A canvas exposes little to axe, so a low count there is not evidence of accessibility.",
+  tables: [
+    {
+      rows: perChart(
+        (r) =>
+          notRendered(r) || r.axeSeriousCritical == null
+            ? { v: null, t: "not measured" }
+            : { v: r.axeSeriousCritical, t: String(r.axeSeriousCritical) },
+        true,
+      ),
+    },
+  ],
+});
+
+dims.push({
+  id: "keyboard",
+  title: "Keyboard",
+  def: `Tab stops reached inside the chart, then the number of distinct states produced by pressing ArrowRight${data.arrowCap == null ? "" : ` (stops counting at ${data.arrowCap})`}. More states is better.`,
+  tables: [
+    {
+      rows: perChart((r) =>
+        notRendered(r) || !r.keyboard
+          ? { v: null, t: "not rendered" }
+          : {
+              v: r.keyboard.arrowStates,
+              t: `${r.keyboard.tabStops} ${r.keyboard.tabStops === 1 ? "stop" : "stops"}, ${r.keyboard.arrowStates} ${r.keyboard.arrowStates === 1 ? "state" : "states"}`,
+            },
+      ),
+    },
+  ],
+});
+
+dims.push({
+  id: "rtl",
+  title: "Right-to-left",
+  def: "With dir=rtl on the page, whether ink moved from the left fifth of the chart to the right fifth, which is where a mirrored y axis would put it.",
+  tables: [
+    {
+      rows: perChart((r) =>
+        notRendered(r) || !r.rtl
+          ? { v: null, t: "not rendered" }
+          : { v: r.rtl.yAxisMovedRight ? 1 : 0, t: yn(r.rtl.yAxisMovedRight) },
+      ),
+    },
+  ],
+});
+
+dims.push({
+  id: "ssr",
+  title: "Server-side render with no DOM",
+  def: "Whether the library produced an SVG string in plain Node with no window or document. A library with no cheap documented path is listed as not measured and takes no part in the ranking.",
+  tables: [
+    {
+      rows: perChart((r) =>
+        r.ssr
+          ? r.ssr.svg
+            ? { v: 1, t: `yes, ${num(r.ssr.bytes)} characters` }
+            : { v: 0, t: `no. ${r.ssr.note ?? ""}`.trim() }
+          : { v: null, t: r.ssrNote ?? "not measured" },
+      ),
+    },
+  ],
+});
+
+function box(parent: HTMLElement, label: string): HTMLTableElement {
+  const wrap = el("div", "", parent);
   wrap.className = "scroll";
   wrap.tabIndex = 0;
   wrap.setAttribute("role", "region");
-  wrap.setAttribute("aria-label", caption);
-  const t = el("table", "", wrap);
-  const head = el("tr", "", el("thead", "", t));
-  el("th", "Chart", head).scope = "col";
-  for (const l of LIBS) el("th", NAME[l] ?? l, head).scope = "col";
-  const body = el("tbody", "", t);
-  for (const c of charts) {
-    const tr = el("tr", "", body);
-    el("th", CHART_NAME[c] ?? c, tr).scope = "row";
-    for (const l of LIBS) {
-      const r = get(l, c);
-      el("td", !r ? "not measured" : r.supported === false ? "not supported" : cell(r), tr);
+  wrap.setAttribute("aria-label", label);
+  return el("table", "", wrap);
+}
+
+function tag(c: HTMLElement, text: string): void {
+  c.append(" ");
+  el("span", text, c).className = "tag";
+}
+
+function render(d: Dim): HTMLElement {
+  const s = el("section");
+  s.id = d.id;
+  el("h2", d.title, s);
+  el("p", d.def, s);
+  for (const t of d.tables) {
+    if (t.caption) el("h3", t.caption, s);
+    const table = box(s, `${d.title}${t.caption ? `, ${t.caption}` : ""}`);
+    const head = el("tr", "", el("thead", "", table));
+    el("th", "Row", head).scope = "col";
+    for (const l of libs) el("th", name(l), head).scope = "col";
+    const body = el("tbody", "", table);
+    for (const r of t.rows) {
+      const tr = el("tr", "", body);
+      el("th", r.label, tr).scope = "row";
+      const win = winners(r);
+      for (const l of libs) {
+        const c = el("td", r.t[l] ?? "not measured", tr);
+        if (win.includes(l)) {
+          c.className = "win";
+          tag(c, "best");
+        } else if (l === WE && r.v[l] != null && win.length) {
+          c.className = "loss";
+          tag(c, "behind");
+        }
+      }
     }
+  }
+  if (d.extra) s.append(d.extra);
+  return s;
+}
+
+/** Our rank per dimension, from rows won. */
+function summary(): HTMLElement {
+  const s = el("section");
+  s.id = "summary";
+  el("h2", "Summary", s);
+  el(
+    "p",
+    `Rank by rows won. A row is won by the library with the best value, and ties share the win. ${name(WE)} is ranked among the libraries that have a value in that dimension.`,
+    s,
+  );
+  const table = box(s, "Summary");
+  const head = el("tr", "", el("thead", "", table));
+  for (const h of ["Dimension", `${name(WE)} rank`, "Rows won by us", "Leader"])
+    el("th", h, head).scope = "col";
+  const body = el("tbody", "", table);
+  for (const d of dims) {
+    const w = wins(d);
+    const rows = d.tables.flatMap((t) => t.rows).filter((r) => !r.skip);
+    const present = libs.filter((l) => rows.some((r) => r.v[l] != null));
+    const tr = el("tr", "", body);
+    const th = el("th", "", tr);
+    th.scope = "row";
+    el("a", d.title, th).href = `#${d.id}`;
+    if (!present.includes(WE)) {
+      el("td", "not measured", tr).colSpan = 3;
+      continue;
+    }
+    const rank = 1 + present.filter((l) => w[l]! > w[WE]!).length;
+    const top = Math.max(...present.map((l) => w[l]!));
+    const c = el("td", `${rank} of ${present.length}`, tr);
+    c.className = rank === 1 ? "win" : "loss";
+    el("td", `${w[WE]} of ${rows.length}`, tr);
+    el(
+      "td",
+      top
+        ? present
+            .filter((l) => w[l] === top)
+            .map(name)
+            .join(", ")
+        : "no row has a winner",
+      tr,
+    );
   }
   return s;
 }
 
-const yn = (b: boolean) => (b ? "yes" : "no");
-const tables = $("tables");
-const notRendered = (r: Row) => r.renders === false && r.ttfpMs == null;
+const host = document.getElementById("tables")!;
+const sum = summary();
+host.append(sum, ...dims.map(render));
+const absent = [!size && "bundle size", !ease && "ease of writing"].filter(Boolean).join(" and ");
+if (absent) el("p", `Not shown yet, because its script has not written its file: ${absent}.`, sum);
 
-tables.append(
-  table(
-    "Renders under the CSP",
-    "Yes when marks were painted with no CSP or Trusted Types violation and no script error.",
-    (r) => yn(r.renders === true),
-  ),
-);
-// First violation text, for every row that has one.
-const failures = data.results.filter((r) => r.firstViolation);
-if (failures.length) {
-  const s = el("section");
-  el("h2", "First violation or error, per failing chart", s);
-  const ul = el("ul", "", s);
-  for (const r of failures)
-    el(
-      "li",
-      `${NAME[r.library] ?? r.library}, ${CHART_NAME[r.chart] ?? r.chart}: ${r.firstViolation}`,
-      ul,
-    );
-  tables.append(s);
-}
-tables.append(
-  table(
-    "axe-core serious and critical violations",
-    "WCAG 2.2 AA rule set, scoped to the chart box. Not measured when the chart did not render. A canvas exposes little to axe, so a low count there is not evidence of accessibility.",
-    (r) => (notRendered(r) ? "not rendered" : String(r.axeSeriousCritical ?? "not measured")),
-  ),
-  table(
-    "Server-side render with no DOM",
-    "Whether the library produced an SVG string in plain Node with no window or document, and the string length.",
-    (r) =>
-      r.ssr.svg
-        ? `yes, ${r.ssr.bytes.toLocaleString("en-US")} characters`
-        : `no. ${r.ssr.note ?? ""}`.trim(),
-  ),
-  table(
-    "Keyboard",
-    `Tab stops reached inside the chart, then the number of distinct states produced by pressing ArrowRight${data.arrowCap == null ? "" : ` (stops counting at ${data.arrowCap})`}.`,
-    (r) =>
-      notRendered(r) || !r.keyboard
-        ? "not rendered"
-        : `${r.keyboard.tabStops} tab ${r.keyboard.tabStops === 1 ? "stop" : "stops"}, ${
-            data.arrowCap != null && r.keyboard.arrowStates >= data.arrowCap
-              ? `${data.arrowCap} or more`
-              : r.keyboard.arrowStates
-          } arrow ${r.keyboard.arrowStates === 1 ? "state" : "states"}`,
-  ),
-  table(
-    "Right-to-left",
-    "With dir=rtl on the page, whether ink moved from the left fifth of the chart to the right fifth, which is where a mirrored y axis would put it.",
-    (r) => (notRendered(r) || !r.rtl ? "not rendered" : yn(r.rtl.yAxisMovedRight)),
-  ),
-  table(
-    "Time to first paint",
-    "Milliseconds from just before the render call to the next animation frame. Median of fresh page loads.",
-    (r) => (r.ttfpMs == null ? "not rendered" : `${r.ttfpMs} ms`),
-  ),
-  table(
-    "JavaScript downloaded, gzipped, per page",
-    "Sum of the library scripts the page loaded. Each library loads one file, not tree-shaken.",
-    (r) => `${r.gzipBytes.toLocaleString("en-US")} bytes`,
-    ["bar"],
-  ),
-);
-
-$("method").textContent = data.notes.join(" ");
-$("csp").textContent = data.csp;
+document.getElementById("method")!.textContent = data.notes.join(" ");
+const ex = document.getElementById("excluded")!;
+for (const [k, why] of Object.entries(data.excluded))
+  el("li", `${name(k[0]!.toUpperCase() + k.slice(1))}: ${why}`, ex);
 
 if (data.eval) {
   const e = data.eval;
-  $("llm").hidden = false;
-  $("llm-note").textContent =
+  document.getElementById("llm")!.hidden = false;
+  document.getElementById("llm-note")!.textContent =
     `${e.n} prompts sent to ${e.model} on ${e.date}. Valid JSON, renders without throwing, and non-blank output (at least one path or rect in the plot beyond the axes).`;
-  const wrap = el("div", "", $("llm-table"));
-  wrap.className = "scroll";
-  wrap.tabIndex = 0;
-  wrap.setAttribute("role", "region");
-  wrap.setAttribute("aria-label", "LLM-written specs");
-  const t = el("table", "", wrap);
+  const t = box(document.getElementById("llm-table")!, "LLM-written specs");
   const head = el("tr", "", el("thead", "", t));
   for (const h of ["Library", "Valid JSON", "Renders", "Non-blank"])
     el("th", h, head).scope = "col";
   const body = el("tbody", "", t);
   for (const [lib, v] of Object.entries(e.libraries)) {
     const tr = el("tr", "", body);
-    el("th", NAME[lib] ?? lib, tr).scope = "row";
+    el("th", name(lib), tr).scope = "row";
     for (const p of [v.validJsonPct, v.rendersPct, v.nonBlankPct]) el("td", `${p}%`, tr);
   }
 }
 
-const v = data.versions;
-$("foot").textContent =
-  `Generated ${data.generated}. mayaCharts ${v["mayacharts"]} (commit ${v["commit"] ?? "unknown"}), Chart.js ${v["chartjs"]}, ECharts ${v["echarts"]}. ${data.browser}.`;
+// Hook for the looks table: empty until reviewed scores exist. Looks are judgment, not measurement.
+document.getElementById("looks-table")!.hidden = true;
+
+const vs = data.versions;
+document.getElementById("foot")!.textContent =
+  `Generated ${data.generated}, commit ${vs["commit"] ?? "unknown"}. ${libs.map((l) => `${name(l)} ${vs[l] ?? "unknown"}`).join(", ")}. ${data.browser}.`;
 
 theme();
