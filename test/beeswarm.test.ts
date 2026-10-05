@@ -63,8 +63,8 @@ describe("beeswarm", () => {
     expect(bare).toContain('data-key="~4"');
     expect(bare).toContain('data-x="West"');
   });
-  it("small dots get hit rects", () => {
-    expect(svg(spec).match(/data-maya="hit"/g)).toHaveLength(60);
+  it("dots draw no hit rects (the tooltip picks the nearest dot)", () => {
+    expect(svg(spec)).not.toContain(`data-maya="hit"`);
   });
   it("skips null and non-numeric values; empty data renders the empty state", () => {
     const s = svg({

@@ -1,6 +1,9 @@
-import { colorVals } from "../shape.ts";
-import { el, key, OTHER, r } from "../svg.ts";
+import { colorVals, thin } from "../shape.ts";
+import { bands, el, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, Cell, Mark } from "../types.ts";
+
+// One hover target per 6 px of plot width; a denser category list keeps each bucket's low and high.
+const PX = 6;
 
 /** Rows of areas, first series on top, each scaled 0..global max so peaks overlap the row above. */
 export const ridgeline: Mark = {
@@ -26,13 +29,26 @@ export const ridgeline: Mark = {
     const base = (ri: number) => row.at(ri) + row.bandwidth / 2 + row.step / 2;
     const tall = Math.min(1.4 * row.step, base(0) - plot.y);
 
+    // Categories to draw: all, or the thinned union over the visible series.
+    // shape lays cells out category by category, one per visible series.
+    const nv = shaped.visible.length;
+    const keep = thin(
+      shaped.visible.map((_, vi) =>
+        shaped.categories.map((_, ci) => shaped.cells[ci * nv + vi]!.value),
+      ),
+      Math.floor(plot.w / PX),
+    );
+    const kept = new Set(keep);
+
     let rows = "";
     let dots = "";
     shaped.visible.forEach((si, ri) => {
       const ser = shaped.series[si]!;
       const b = base(ri);
       const py = (v: number) => r(b - (v / max) * tall);
-      const cells: Cell[] = shaped.cells.filter((c) => c.si === si).sort((a, c) => a.ci - c.ci);
+      const cells: Cell[] = shaped.cells
+        .filter((c) => c.si === si && kept.has(c.ci))
+        .sort((a, c) => a.ci - c.ci);
       const runs: Cell[][] = [[]];
       for (const c of cells) {
         if (c.value === null) {
@@ -84,18 +100,8 @@ export const ridgeline: Mark = {
       });
     });
 
-    let hits = "";
-    shaped.categories.forEach((_, ci) => {
-      hits += el("rect", {
-        "data-maya": "hit",
-        "data-c": ci,
-        x: r(cat.at(ci)),
-        y: r(plot.y),
-        width: r(cat.bandwidth),
-        height: r(plot.h),
-        fill: "transparent",
-      });
-    });
+    // One band per drawn category.
+    const hits = bands(plot, keep, (c) => cat.at(c) + cat.bandwidth / 2);
     return {
       marks: rows + dots,
       hits,

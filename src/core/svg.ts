@@ -60,3 +60,29 @@ export function hit(d: Parameters<typeof el>[1], x: number, y: number, w: number
       )
     : "";
 }
+
+/** Keyless hit bands over `box` for categories `cs` (ascending) centred at `at(c)`, each up to the midpoints to its neighbours. */
+export function bands(
+  box: { x: number; y: number; w: number; h: number },
+  cs: number[],
+  at: (c: number) => number,
+  is?: readonly number[] | null,
+) {
+  const xs = cs.map(at);
+  return xs
+    .map((x, k) => {
+      const a = k ? (xs[k - 1]! + x) / 2 : box.x;
+      const b = k < xs.length - 1 ? (x + xs[k + 1]!) / 2 : box.x + box.w;
+      return el("rect", {
+        "data-maya": "hit",
+        "data-c": cs[k],
+        "data-i": is?.[k],
+        x: r(a),
+        y: r(box.y),
+        width: r(b - a),
+        height: r(box.h),
+        fill: "transparent",
+      });
+    })
+    .join("");
+}

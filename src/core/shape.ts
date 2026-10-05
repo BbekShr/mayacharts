@@ -373,8 +373,12 @@ function reduceTime(
     }
   }
   // Many series or sparse runs can still overshoot: first, last and evenly spaced indexes.
+  return fit(keep, Math.max(2, catTarget));
+}
+
+/** The indexes ascending; over `n` of them, first, last and evenly spaced ones. */
+function fit(keep: Set<number>, n: number): number[] {
   const u = [...keep].sort((a, b) => a - b);
-  const n = Math.max(2, catTarget);
   return u.length <= n
     ? u
     : Array.from({ length: n }, (_, k) => u[Math.round((k * (u.length - 1)) / (n - 1))]!);
@@ -392,4 +396,30 @@ export function colorVals(s: ResolvedSpec): (c: string, ser: string) => number |
       (m.get(k) ?? m.set(k, agg(s.aggregate)).get(k)!).add(v);
     }
   return (c, ser) => m.get(c + "\0" + ser)?.value() ?? null;
+}
+
+/**
+ * Indexes to draw from `cols` (equal-length value arrays, null = gap): every position, or when
+ * there are more than `max`, per column and bucket the lowest and highest value, plus the first
+ * and last position and every gap; a union still over `max` is thinned evenly.
+ * ponytail: the even thinning can drop a gap or a peak in the densest cases.
+ */
+export function thin(cols: readonly (readonly (number | null)[])[], max: number): number[] {
+  const len = cols[0]?.length ?? 0;
+  if (len <= max) return [...Array(len).keys()];
+  const keep = new Set([0, len - 1]);
+  const n = ((max - 2) / (2 * cols.length)) | 0; // buckets per column
+  for (const v of cols) {
+    const lo: number[] = [];
+    const hi: number[] = [];
+    v.forEach((x, i) => {
+      if (x === null) return keep.add(i); // a gap marker
+      const b = ((i * n) / len) | 0;
+      // An unset slot reads undefined, and a comparison with it is false.
+      if (!(v[lo[b]!]! <= x)) lo[b] = i;
+      if (!(v[hi[b]!]! >= x)) hi[b] = i;
+    });
+    lo.concat(hi).forEach((i) => keep.add(i)); // forEach skips the unset slots
+  }
+  return fit(keep, max);
 }

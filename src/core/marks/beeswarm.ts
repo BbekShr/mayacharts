@@ -1,4 +1,4 @@
-import { el, hit, key, r } from "../svg.ts";
+import { el, key, r } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
 
 interface Pt {
@@ -93,7 +93,6 @@ export const beeswarm: Mark = {
 
     const seen = new Map<string, number>();
     let marks = "";
-    let hits = "";
     for (const [ci, g] of [...groups].sort((a, b) => a[0] - b[0])) {
       const mid = band ? band.at(ci) + band.bandwidth / 2 : plot.y + plot.h / 2;
       const xs = g.map((p) => sx.of(p.v));
@@ -113,7 +112,7 @@ export const beeswarm: Mark = {
           "data-c": p.i,
           "data-s": p.si % 8,
           "data-x": p.name ?? (band ? ctx.fmt(spec.x, shaped.categories[ci]) : ""),
-          "data-series": ser,
+          "data-series": ser || null,
           "data-y": p.v,
           "data-f": f,
           "data-neg": p.v < 0,
@@ -123,10 +122,9 @@ export const beeswarm: Mark = {
         const cx = xs[k]!;
         const cy = mid + off[k]!;
         marks += el("circle", { "data-maya": "mark", ...d, r: r(rad), cx: r(cx), cy: r(cy) });
-        hits += hit(d, cx - rad, cy - rad, rad * 2, rad * 2);
         if (spec.labels) ctx.label(cx, cy - rad, f, "above");
       });
     }
-    return { marks, hits };
+    return { marks, hits: "" }; // no hit squares: the tooltip picks the nearest dot, as for scatter
   },
 };

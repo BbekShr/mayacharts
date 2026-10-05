@@ -43,6 +43,14 @@
  *   = [kept, before], and the description says so. view.window indexes the time-ordered list
  *   before reduction. Scatter is exempt from the pre-draw mark cap (it bins its own rows).
  *   Scatter's Shaped has empty categories and cells: its marks draw from rows.
+ *   Thinning in the mark (kpi, ridgeline; shape.thin): above one hover target per 4 px (kpi
+ *   sparkline) or 6 px (ridgeline plot width) the mark draws only the kept categories: first,
+ *   last, each bucket's lowest and highest value per series and every gap edge, at most the
+ *   target. Points, dots and keyless band hits exist for kept categories only (a hit spans to
+ *   the midpoints of its neighbours); the kpi headline, delta and the data table use all rows.
+ *   Both skip the pre-draw category cap (only the post-draw mark count applies). Beeswarm and
+ *   parallel draw one mark per row (parallel: one per row and measure), so they keep the
+ *   5000-mark error; a reduction would be a different chart (bin with scatter, or limit).
  *
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
  *   (hierarchy, flow, geo) call registry.register() on import. A Mark is
@@ -105,7 +113,8 @@
  *                       non-null category, data-s = series count % 8, data-series = the
  *                       y2 title; hits are 24px squares round each point.
  *                       Line: point circles are marks (hidden until active) plus one
- *                       keyless full-height band hit per category.
+ *                       keyless full-height band hit per category, each band running to the
+ *                       midpoints with its neighbours (svg.ts bands()).
  *                       Radial: data-c is the category (a stack lights together); the
  *                       centre total is a text mark keyed `t` with no data-c (counts up).
  *                       Scatter: data-gx/data-gy (formatted x, y) fill the hover guides in
@@ -117,8 +126,10 @@
  *   [data-maya="hit"]   same payload as its mark (incl. data-key). Emitted only when the
  *                       mark is narrower or shorter than 24px: the mark's rect grown to
  *                       >= 24px in that dimension, centered. fill="transparent".
- *                       Scatter emits none: the tooltip and select pick the nearest mark
- *                       centre within 12px of the pointer.
+ *                       Scatter and beeswarm emit none: the tooltip and select pick the nearest
+ *                       mark centre within 12px of the pointer. Parallel's hit paths share
+ *                       their stroke through a wrapping <g> in the hits group.
+ *                       Beeswarm writes no data-series when there is no series.
  *   [data-maya="probe"] / .maya-tip  tooltip anchor probe + popover (shell only).
  *   [data-maya="live"]  the static polite live region; written via textContent only.
  *   [data-maya="legend"] buttons: <button type="button" data-si="i" data-s="i%8"
@@ -280,7 +291,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       `${n} marks exceed the limit of ${MAX_MARKS}.`,
       "Use spec.limit to keep the top N categories, or aggregate the rows first.",
     );
-  if (s.type !== "scatter") cap(shaped.cells.length); // scatter draws from rows and bins past MAX_MARKS
+  // Scatter draws from rows and bins past MAX_MARKS; kpi and ridgeline thin their own points.
+  if (!["scatter", "kpi", "ridgeline"].includes(s.type)) cap(shaped.cells.length);
 
   // Formatters are cached per (field, step): marks call fmt once per value.
   const fmts = new Map<string, (v: unknown) => string>();
