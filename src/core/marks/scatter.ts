@@ -185,21 +185,22 @@ export const scatter: Mark = {
       const x = ctx.fmt(spec.x, p.x);
       const y = ctx.fmt(spec.y, p.y);
       const cv = cb ? p.row[cb] : null;
+      const named = p.name !== null || p.sz !== null;
       const d = {
         "data-key": key(ser, id),
         "data-c": p.i,
         "data-s": p.si % 8,
         "data-x": p.name ?? x,
-        "data-series": ser,
+        "data-series": ser || null,
         "data-y": p.y,
-        "data-f":
-          p.name === null && p.sz === null
-            ? y
-            : [x, y, p.sz === null ? null : ctx.fmt(spec.size!, p.sz)]
-                .filter((v) => v !== null)
-                .join(" · "),
-        "data-gx": x,
-        "data-gy": y,
+        "data-f": !named
+          ? y
+          : [x, y, p.sz === null ? null : ctx.fmt(spec.size!, p.sz)]
+              .filter((v) => v !== null)
+              .join(" · "),
+        // Guide pills: only when data-x / data-f are not already the formatted x and y.
+        "data-gx": named ? x : null,
+        "data-gy": named ? y : null,
         "data-neg": p.y < 0,
         "data-tone": ctx.tone(p.y),
         "data-q": typeof cv === "number" ? ctx.q(cv) : null,

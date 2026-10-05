@@ -109,13 +109,21 @@ describe("scatter", () => {
     const g = /<g data-maya="cross">(.*?)<\/g>/.exec(svg)![1]!;
     expect(g.match(/<line data-g=/g)).toHaveLength(2);
     expect(g.match(/<text data-g=/g)).toHaveLength(2);
-    expect(attr(circles(svg)[1]!, "data-gx")).toBe("2");
+    // Plain points: data-x and data-f already are the pill texts, so no data-gx/gy/series.
+    expect(attr(circles(svg)[1]!, "data-gx")).toBeUndefined();
+    const named = renderParts({
+      ...base,
+      name: "n",
+      data: base.data.map((r, i) => ({ ...r, n: "p" + i })),
+    }).svg;
+    expect(attr(circles(named)[1]!, "data-gx")).toBe("2");
+    expect(attr(circles(named)[1]!, "data-gy")).toBe("4");
     expect(renderParts({ ...base, data: [] }).svg).not.toContain("data-g=");
   });
 
   it("snapshot", () =>
     expect(circles(renderParts(base).svg).join("")).toMatchInlineSnapshot(
-      `"<circle data-maya="mark" data-key="~0" data-c="0" data-s="0" data-x="1" data-series="" data-y="2" data-f="2" data-gx="1" data-gy="2" r="5" cx="39.6" cy="296"/><circle data-maya="mark" data-key="~1" data-c="1" data-s="0" data-x="2" data-series="" data-y="4" data-f="4" data-gx="2" data-gy="4" r="5" cx="333.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-s="0" data-x="3" data-series="" data-y="3" data-f="3" data-gx="3" data-gy="3" r="5" cx="628" cy="153"/>"`,
+      `"<circle data-maya="mark" data-key="~0" data-c="0" data-s="0" data-x="1" data-y="2" data-f="2" r="5" cx="39.6" cy="296"/><circle data-maya="mark" data-key="~1" data-c="1" data-s="0" data-x="2" data-y="4" data-f="4" r="5" cx="333.8" cy="10"/><circle data-maya="mark" data-key="~2" data-c="2" data-s="0" data-x="3" data-y="3" data-f="3" r="5" cx="628" cy="153"/>"`,
     ));
 
   describe("density bins", () => {

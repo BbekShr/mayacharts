@@ -113,8 +113,8 @@ export function tooltip(
     if (tx.length) {
       g.style.setProperty("--x", px + "px");
       g.style.setProperty("--y", py + "px");
-      tx[0]!.textContent = a(m, "data-gx");
-      tx[1]!.textContent = a(m, "data-gy");
+      tx[0]!.textContent = a(m, "data-gx") || a(m, "data-x");
+      tx[1]!.textContent = a(m, "data-gy") || a(m, "data-f");
     }
     // Glide between categories once visible; the first placement jumps (flush, then enable).
     if (!was) getComputedStyle(g).transform;

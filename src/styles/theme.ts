@@ -139,8 +139,8 @@ export const css =
   "[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)),var(--maya-fg) 12%)}" +
   "[data-stack] rect[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1}" +
   ":where([data-xd] circle[data-maya=mark]){stroke:var(--maya-bg);stroke-width:1}" +
-  "[data-maya=line]~circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
-  "[data-maya=line]~circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2;transition:fill-opacity .15s,stroke-opacity .15s}[data-maya=line]~circle[data-lit]{r:4px}" +
+  "svg:has([data-maya=line]) circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
+  "svg:has([data-maya=line]) circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2;transition:fill-opacity .15s,stroke-opacity .15s}svg:has([data-maya=line]) circle[data-lit]{r:4px}" +
   "circle[data-maya=mark][data-active]{filter:drop-shadow(0 0 4px color-mix(in oklab,var(--c) 70%,transparent))}" +
   "[data-maya=line]{fill:none;stroke:var(--c);stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round}" +
   "[data-maya=area]{fill:color-mix(in oklab,var(--c) 18%,transparent);stroke:none}[data-stack] [data-maya=area]{fill:color-mix(in oklab,var(--c) 45%,var(--maya-bg))}" +
