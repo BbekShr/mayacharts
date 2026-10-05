@@ -18,6 +18,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 - **Render batching**: property sets in one task coalesce into one render (microtask), but sets in separate tasks each render, so a host that updates faster than 60 Hz is not capped at one render per frame. Resizes still wait for a frame.
 - **Scatter pointer pick**: scatter has no hit circles; the tooltip and click pick the nearest point centre within 12 px by a linear scan, so a pick costs O(points) per pointer move.
+- **Late data table**: a hidden data table over 20 KB (about 300 rows) is inserted one frame after the marks, so a screen reader sees it a frame late. Smaller tables land with the render.
 - **Y-domain origin**: value axes (lines included) are 0-anchored. Negative values are supported; set `yDomain` to override the origin.
 - **Ramp depth**: 10-step sequential ramp for colorBy numeric fields (not user-tunable).
 - **Label truncation**: long x labels are thinned by code point; text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).

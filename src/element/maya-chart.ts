@@ -46,6 +46,7 @@ export class MayaChart extends HTMLElement {
   #vars = new Set<string>();
   #err = "";
   #drawn = false;
+  #tbl: ReturnType<typeof setTimeout> | undefined;
 
   get spec(): ChartSpec | undefined {
     return this.#prop ?? this.#json ?? this.#attr;
@@ -365,8 +366,15 @@ export class MayaChart extends HTMLElement {
     const maya = root.querySelector<HTMLElement>(".maya")!;
     if (this.#last["table"] !== parts.table) {
       this.#last["table"] = parts.table;
-      root.querySelector("table.maya-sr")?.remove();
-      box.insertAdjacentHTML("afterend", html(parts.table));
+      const put = () => {
+        root.querySelector("table.maya-sr")?.remove();
+        box.insertAdjacentHTML("afterend", html(parts.table));
+      };
+      // A big table (1000 scatter rows) costs ~10 ms of style and layout; it is hidden, so it
+      // lands after the frame that shows the marks. ponytail: a reader sees it one frame late.
+      clearTimeout(this.#tbl);
+      if (parts.table.length < 2e4) put();
+      else requestAnimationFrame(() => (this.#tbl = setTimeout(put)));
     }
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);

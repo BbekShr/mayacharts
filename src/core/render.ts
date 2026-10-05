@@ -109,7 +109,9 @@
  *                       Radial: data-c is the category (a stack lights together); the
  *                       centre total is a text mark keyed `t` with no data-c (counts up).
  *                       Scatter: data-gx/data-gy (formatted x, y) fill the hover guides in
- *                       the cross group. Sankey/chord: data-n (node index), data-a (node
+ *                       the cross group; only written when the point has a name or size,
+ *                       otherwise data-x and data-f already are the formatted x and y.
+ *                       Scatter writes no data-series when there is no series. Sankey/chord: data-n (node index), data-a (node
  *                       indices whose hover lights this link or node), data-neu (neutral
  *                       outer-level step, no data-s).
  *   [data-maya="hit"]   same payload as its mark (incl. data-key). Emitted only when the
