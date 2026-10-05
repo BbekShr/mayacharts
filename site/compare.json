@@ -1,7 +1,7 @@
 {
   "generated": "2026-10-05",
   "versions": {
-    "commit": "b92488b",
+    "commit": "30d900b",
     "maya": null,
     "chartjs": "4.5.1",
     "echarts": "6.1.0",
@@ -14,7 +14,7 @@
   "browser": "Chromium 153.0.8010.12",
   "csp": "default-src 'self'; style-src 'self'; require-trusted-types-for 'script'; trusted-types mayacharts",
   "arrowCap": 40,
-  "speedDefinition": "First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink), plus one frame. Update is 10 calls of the redraw function with fresh rows, each timed until the chart DOM changed (one frame for canvas libraries), plus one frame; p50 and p95 per load. Heap is JS heap after a forced GC and 10 updates. Median of 5 fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle 4x in the second column. A cell that crashes or passes 90 s is recorded with its reason.",
+  "speedDefinition": "First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink) and the next frame has painted (a task after that frame, so its style, layout and paint count). Update is 10 calls of the redraw function with fresh rows, each timed from the call until the chart drew (a DOM mutation or a canvas draw call) and the next frame painted; p50 and p95 per load. Heap is JS heap after a forced GC and 10 updates. Median of 5 fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle 4x in the second column. A cell stops after 30 s with the runs it finished; one with none is recorded with its reason, and a first paint over 5 s skips the larger sizes.",
   "notes": [
     "Each library draws the same data through its own reference module in e2e/compare/ref, written the way its documentation shows, with defaults and no theming.",
     "The CSP row is its own test: a chart that is blocked by the policy is recorded as failing there, and the speed suite runs with no CSP so those numbers survive.",
@@ -54,329 +54,6 @@
     "highcharts": "Not free software; left out until its terms are confirmed to allow a public comparison."
   },
   "results": {
-    "0": {
-      "library": "mayacharts",
-      "chart": "bar",
-      "supported": true,
-      "gzipBytes": 41327,
-      "ssr": {
-        "noDom": true,
-        "svg": true,
-        "bytes": 35191
-      },
-      "rendered": true,
-      "renders": true,
-      "firstViolation": "",
-      "axeSeriousCritical": 0,
-      "axeRules": [],
-      "ariaSnapshotLines": 74,
-      "keyboard": {
-        "tabStops": 4,
-        "arrowStates": 13
-      },
-      "rtl": {
-        "yAxisMovedRight": true,
-        "inkLtr": {
-          "left": 0.33233506944444446,
-          "right": 0.25008680555555557
-        },
-        "inkRtl": {
-          "left": 0.3060112847222222,
-          "right": 0.27703993055555554
-        }
-      },
-      "ttfpMs": 33.6
-    },
-    "1": {
-      "library": "mayacharts",
-      "chart": "line",
-      "supported": true,
-      "gzipBytes": 41327,
-      "ssr": {
-        "noDom": true,
-        "svg": true,
-        "bytes": 39244
-      },
-      "rendered": true,
-      "renders": true,
-      "firstViolation": "",
-      "axeSeriousCritical": 0,
-      "axeRules": [],
-      "ariaSnapshotLines": 156,
-      "keyboard": {
-        "tabStops": 3,
-        "arrowStates": 36
-      },
-      "rtl": {
-        "yAxisMovedRight": true,
-        "inkLtr": {
-          "left": 0.04609375,
-          "right": 0.018337673611111112
-        },
-        "inkRtl": {
-          "left": 0.02013888888888889,
-          "right": 0.04327256944444444
-        }
-      },
-      "ttfpMs": 35.7
-    },
-    "2": {
-      "library": "mayacharts",
-      "chart": "scatter",
-      "supported": true,
-      "gzipBytes": 41327,
-      "ssr": {
-        "noDom": true,
-        "svg": true,
-        "bytes": 533754
-      },
-      "rendered": true,
-      "renders": true,
-      "firstViolation": "",
-      "axeSeriousCritical": 0,
-      "axeRules": [],
-      "ariaSnapshotLines": 3009,
-      "keyboard": {
-        "tabStops": 1,
-        "arrowStates": 40
-      },
-      "rtl": {
-        "yAxisMovedRight": true,
-        "inkLtr": {
-          "left": 0.22756076388888888,
-          "right": 0.24867621527777778
-        },
-        "inkRtl": {
-          "left": 0.20112847222222222,
-          "right": 0.27493489583333336
-        }
-      },
-      "ttfpMs": 122.7
-    },
-    "3": {
-      "library": "mayacharts",
-      "chart": "heatmap",
-      "supported": true,
-      "gzipBytes": 41327,
-      "ssr": {
-        "noDom": true,
-        "svg": true,
-        "bytes": 82012
-      },
-      "rendered": true,
-      "renders": true,
-      "firstViolation": "",
-      "axeSeriousCritical": 0,
-      "axeRules": [],
-      "ariaSnapshotLines": 231,
-      "keyboard": {
-        "tabStops": 1,
-        "arrowStates": 40
-      },
-      "rtl": {
-        "yAxisMovedRight": true,
-        "inkLtr": {
-          "left": 0.32918836805555557,
-          "right": 0.38209635416666665
-        },
-        "inkRtl": {
-          "left": 0.2972222222222222,
-          "right": 0.41423611111111114
-        }
-      },
-      "ttfpMs": 20.4
-    },
-    "4": {
-      "library": "chartjs",
-      "chart": "bar",
-      "supported": true,
-      "gzipBytes": 70736,
-      "ssr": {
-        "noDom": true,
-        "svg": false,
-        "bytes": 0,
-        "note": "Chart.js has no SVG output."
-      },
-      "rendered": true,
-      "renders": true,
-      "firstViolation": "",
-      "axeSeriousCritical": 0,
-      "axeRules": [],
-      "ariaSnapshotLines": 1,
-      "keyboard": {
-        "tabStops": 0,
-        "arrowStates": 0
-      },
-      "rtl": {
-        "yAxisMovedRight": false,
-        "inkLtr": {
-          "left": 0.3011501736111111,
-          "right": 0.2879557291666667
-        },
-        "inkRtl": {
-          "left": 0.3011501736111111,
-          "right": 0.2879557291666667
-        }
-      },
-      "ttfpMs": 23.8
-    },
-    "5": {
-      "library": "chartjs",
-      "chart": "line",
-      "supported": true,
-      "gzipBytes": 70736,
-      "ssr": {
-        "noDom": true,
-        "svg": false,
-        "bytes": 0,
-        "note": "Chart.js has no SVG output and made no chart without a canvas."
-      },
-      "rendered": true,
-      "renders": true,
-      "firstViolation": "",
-      "axeSeriousCritical": 0,
-      "axeRules": [],
-      "ariaSnapshotLines": 1,
-      "keyboard": {
-        "tabStops": 0,
-        "arrowStates": 0
-      },
-      "rtl": {
-        "yAxisMovedRight": false,
-        "inkLtr": {
-          "left": 0.05640190972222222,
-          "right": 0.040125868055555555
-        },
-        "inkRtl": {
-          "left": 0.05640190972222222,
-          "right": 0.040125868055555555
-        }
-      },
-      "ttfpMs": 26.8
-    },
-    "6": {
-      "library": "chartjs",
-      "chart": "scatter",
-      "supported": true,
-      "gzipBytes": 70736,
-      "ssr": {
-        "noDom": true,
-        "svg": false,
-        "bytes": 0,
-        "note": "Chart.js has no SVG output and made no chart without a canvas."
-      },
-      "rendered": true,
-      "renders": true,
-      "firstViolation": "",
-      "axeSeriousCritical": 0,
-      "axeRules": [],
-      "ariaSnapshotLines": 1,
-      "keyboard": {
-        "tabStops": 0,
-        "arrowStates": 0
-      },
-      "rtl": {
-        "yAxisMovedRight": false,
-        "inkLtr": {
-          "left": 0.24607204861111112,
-          "right": 0.2789279513888889
-        },
-        "inkRtl": {
-          "left": 0.24607204861111112,
-          "right": 0.2789279513888889
-        }
-      },
-      "ttfpMs": 125.6
-    },
-    "7": {
-      "library": "chartjs",
-      "chart": "heatmap",
-      "supported": false,
-      "gzipBytes": 70736,
-      "ssr": {
-        "noDom": true,
-        "svg": false,
-        "bytes": 0,
-        "note": "Chart.js has no SVG output and made no chart without a canvas."
-      },
-      "note": "no heatmap type in Chart.js core"
-    },
-    "8": {
-      "library": "echarts",
-      "chart": "bar",
-      "supported": true,
-      "gzipBytes": 370016,
-      "ssr": {
-        "noDom": true,
-        "svg": true,
-        "bytes": 11563
-      },
-      "rendered": false,
-      "renders": false,
-      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
-      "axeSeriousCritical": null,
-      "keyboard": null,
-      "rtl": null,
-      "ttfpMs": null,
-      "note": "did not render, so the remaining measures do not apply"
-    },
-    "9": {
-      "library": "echarts",
-      "chart": "line",
-      "supported": true,
-      "gzipBytes": 370016,
-      "ssr": {
-        "noDom": true,
-        "svg": true,
-        "bytes": 9060
-      },
-      "rendered": false,
-      "renders": false,
-      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
-      "axeSeriousCritical": null,
-      "keyboard": null,
-      "rtl": null,
-      "ttfpMs": null,
-      "note": "did not render, so the remaining measures do not apply"
-    },
-    "10": {
-      "library": "echarts",
-      "chart": "scatter",
-      "supported": true,
-      "gzipBytes": 370016,
-      "ssr": {
-        "noDom": true,
-        "svg": true,
-        "bytes": 11000665
-      },
-      "rendered": false,
-      "renders": false,
-      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
-      "axeSeriousCritical": null,
-      "keyboard": null,
-      "rtl": null,
-      "ttfpMs": null,
-      "note": "did not render, so the remaining measures do not apply"
-    },
-    "11": {
-      "library": "echarts",
-      "chart": "heatmap",
-      "supported": true,
-      "gzipBytes": 370016,
-      "ssr": {
-        "noDom": true,
-        "svg": true,
-        "bytes": 51353
-      },
-      "rendered": false,
-      "renders": false,
-      "firstViolation": "require-trusted-types-for: trusted-types-sink Element innerHTML",
-      "axeSeriousCritical": null,
-      "keyboard": null,
-      "rtl": null,
-      "ttfpMs": null,
-      "note": "did not render, so the remaining measures do not apply"
-    },
     "maya": {
       "bar": {
         "supported": true,
@@ -2403,68 +2080,124 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 52.2,
-            "updateP50Ms": 32.8,
-            "updateP95Ms": 33.3,
+            "firstPaintMs": 50,
+            "updateP50Ms": 32.6,
+            "updateP95Ms": 33.1,
             "heapMB": 3.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 208.8,
-            "updateP50Ms": 75.1,
-            "updateP95Ms": 89.5,
+            "firstPaintMs": 196.7,
+            "updateP50Ms": 75.4,
+            "updateP95Ms": 95.5,
             "heapMB": 3.8,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 209.3,
-            "updateP50Ms": 158.6,
-            "updateP95Ms": 169.4,
-            "heapMB": 13,
+            "firstPaintMs": 209.6,
+            "updateP50Ms": 163,
+            "updateP95Ms": 193,
+            "heapMB": 13.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 854.1,
-            "updateP50Ms": 649,
-            "updateP95Ms": 672.5,
-            "heapMB": 13,
-            "runs": 5
+            "firstPaintMs": 854.8,
+            "updateP50Ms": 684.7,
+            "updateP95Ms": 814.4,
+            "heapMB": 12.9,
+            "runs": 4
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 1754.1,
+            "updateP50Ms": 1453.9,
+            "updateP95Ms": 1650.8,
+            "heapMB": 102.2,
+            "runs": 2
+          },
+          "throttled": {
+            "firstPaintMs": 5972.7,
+            "updateP50Ms": 5686.5,
+            "updateP95Ms": 6732.6,
+            "heapMB": 99.4,
+            "runs": 1
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 14217.3,
+            "updateP50Ms": 13982.9,
+            "updateP95Ms": 14893.8,
+            "heapMB": 899.9,
+            "runs": 1
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
           }
         }
       },
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 56,
-            "updateP50Ms": 32.7,
-            "updateP95Ms": 34.5,
-            "heapMB": 7.9,
+            "firstPaintMs": 50.2,
+            "updateP50Ms": 32.9,
+            "updateP95Ms": 33.3,
+            "heapMB": 8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 218,
-            "updateP50Ms": 89.5,
-            "updateP95Ms": 98.8,
+            "firstPaintMs": 214.7,
+            "updateP50Ms": 87.3,
+            "updateP95Ms": 96.2,
             "heapMB": 7.3,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 205.1,
-            "updateP50Ms": 157.3,
-            "updateP95Ms": 170.1,
-            "heapMB": 29.4,
+            "firstPaintMs": 208.3,
+            "updateP50Ms": 161.8,
+            "updateP95Ms": 173,
+            "heapMB": 29.2,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 832.5,
-            "updateP50Ms": 634.5,
-            "updateP95Ms": 650.3,
-            "heapMB": 10.1,
-            "runs": 5
+            "firstPaintMs": 848.9,
+            "updateP50Ms": 656.1,
+            "updateP95Ms": 736.2,
+            "heapMB": 10,
+            "runs": 4
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 1656,
+            "updateP50Ms": 1492.2,
+            "updateP95Ms": 1527.7,
+            "heapMB": 53.3,
+            "runs": 2
+          },
+          "throttled": {
+            "firstPaintMs": 6670.6,
+            "updateP50Ms": 6053.2,
+            "updateP95Ms": 6148.8,
+            "heapMB": 51.7,
+            "runs": 1
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 16284.6,
+            "updateP50Ms": 14925,
+            "updateP95Ms": 15039.7,
+            "heapMB": 485.3,
+            "runs": 1
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
           }
         }
       }
@@ -2473,68 +2206,132 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 65.5,
-            "updateP50Ms": 32.7,
-            "updateP95Ms": 34,
-            "heapMB": 12.7,
+            "firstPaintMs": 64.5,
+            "updateP50Ms": 15.9,
+            "updateP95Ms": 20.1,
+            "heapMB": 12.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 249.9,
-            "updateP50Ms": 70,
-            "updateP95Ms": 90.4,
+            "firstPaintMs": 255.6,
+            "updateP50Ms": 61.3,
+            "updateP95Ms": 76.8,
             "heapMB": 12.3,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 59,
-            "updateP50Ms": 27.1,
-            "updateP95Ms": 28.9,
-            "heapMB": 11.3,
+            "firstPaintMs": 63.3,
+            "updateP50Ms": 10.7,
+            "updateP95Ms": 16.9,
+            "heapMB": 10.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 230.8,
-            "updateP50Ms": 54.7,
-            "updateP95Ms": 66.9,
-            "heapMB": 10.8,
+            "firstPaintMs": 266.7,
+            "updateP50Ms": 44.2,
+            "updateP95Ms": 58.9,
+            "heapMB": 11.3,
             "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 88.9,
+            "updateP50Ms": 45.9,
+            "updateP95Ms": 65.4,
+            "heapMB": 41.1,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 326,
+            "updateP50Ms": 163.5,
+            "updateP95Ms": 211.9,
+            "heapMB": 40.5,
+            "runs": 5
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 380.7,
+            "updateP50Ms": 392.1,
+            "updateP95Ms": 466.2,
+            "heapMB": 347.1,
+            "runs": 3
+          },
+          "throttled": {
+            "firstPaintMs": 1314.6,
+            "updateP50Ms": 1497.4,
+            "updateP95Ms": 1896.9,
+            "heapMB": 346,
+            "runs": 1
           }
         }
       },
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 45.1,
-            "updateP50Ms": 32.5,
-            "updateP95Ms": 33.4,
+            "firstPaintMs": 50.3,
+            "updateP50Ms": 16,
+            "updateP95Ms": 16.5,
             "heapMB": 6.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 183.6,
-            "updateP50Ms": 31.4,
-            "updateP95Ms": 37.9,
+            "firstPaintMs": 209.4,
+            "updateP50Ms": 21.6,
+            "updateP95Ms": 37.7,
             "heapMB": 6.1,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 52.8,
-            "updateP50Ms": 27,
-            "updateP95Ms": 28.8,
+            "firstPaintMs": 53.9,
+            "updateP50Ms": 15.4,
+            "updateP95Ms": 24.3,
             "heapMB": 9.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 211.1,
-            "updateP50Ms": 63.9,
-            "updateP95Ms": 89.4,
+            "firstPaintMs": 214.7,
+            "updateP50Ms": 65.7,
+            "updateP95Ms": 99.3,
             "heapMB": 9.5,
             "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 108.1,
+            "updateP50Ms": 118.7,
+            "updateP95Ms": 144.2,
+            "heapMB": 44.5,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 409.5,
+            "updateP50Ms": 469.1,
+            "updateP95Ms": 549.2,
+            "heapMB": 44.4,
+            "runs": 4
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 607.7,
+            "updateP50Ms": 1640.1,
+            "updateP95Ms": 1790.3,
+            "heapMB": 393.4,
+            "runs": 2
+          },
+          "throttled": {
+            "firstPaintMs": 2273.5,
+            "updateP50Ms": 6248.9,
+            "updateP95Ms": 6861.9,
+            "heapMB": 393.1,
+            "runs": 1
           }
         }
       }
@@ -2543,68 +2340,120 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 83.8,
-            "updateP50Ms": 85,
-            "updateP95Ms": 101.9,
+            "firstPaintMs": 88.4,
+            "updateP50Ms": 87.5,
+            "updateP95Ms": 101.7,
             "heapMB": 15.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 340.1,
-            "updateP50Ms": 341.9,
-            "updateP95Ms": 378.8,
+            "firstPaintMs": 354.6,
+            "updateP50Ms": 353.7,
+            "updateP95Ms": 409.2,
             "heapMB": 15.6,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 539.7,
-            "updateP50Ms": 842.3,
-            "updateP95Ms": 989.7,
+            "firstPaintMs": 571.9,
+            "updateP50Ms": 840.4,
+            "updateP95Ms": 894.8,
             "heapMB": 104.2,
-            "runs": 5
+            "runs": 4
           },
           "throttled": {
-            "firstPaintMs": 2115,
-            "updateP50Ms": 3308.3,
-            "updateP95Ms": 3455.6,
+            "firstPaintMs": 2178.4,
+            "updateP50Ms": 3254.4,
+            "updateP95Ms": 3400.5,
             "heapMB": 104.2,
-            "runs": 3
+            "runs": 1
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 4839.8,
+            "updateP50Ms": 8993.8,
+            "updateP95Ms": 9427.3,
+            "heapMB": 991.4,
+            "runs": 1
+          },
+          "throttled": {
+            "firstPaintMs": 18468.5,
+            "updateP50Ms": 33301.7,
+            "updateP95Ms": 35036.6,
+            "heapMB": 991.3,
+            "runs": 1
+          }
+        },
+        "1000000": {
+          "normal": {
+            "error": "page.waitForFunction: Timeout 30000ms exceeded."
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
           }
         }
       },
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 60.6,
-            "updateP50Ms": 32.2,
-            "updateP95Ms": 33.4,
+            "firstPaintMs": 64.5,
+            "updateP50Ms": 32.6,
+            "updateP95Ms": 33.3,
             "heapMB": 7.9,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 247.3,
-            "updateP50Ms": 73.9,
-            "updateP95Ms": 85.6,
+            "firstPaintMs": 267.6,
+            "updateP50Ms": 84.5,
+            "updateP95Ms": 111.9,
             "heapMB": 7.9,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 308.6,
-            "updateP50Ms": 205.5,
-            "updateP95Ms": 222.1,
+            "firstPaintMs": 323.3,
+            "updateP50Ms": 220.9,
+            "updateP95Ms": 241.6,
             "heapMB": 29.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 1257,
-            "updateP50Ms": 845.4,
-            "updateP95Ms": 938.8,
+            "firstPaintMs": 1325.8,
+            "updateP50Ms": 856.5,
+            "updateP95Ms": 972.8,
             "heapMB": 29.8,
-            "runs": 5
+            "runs": 3
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 2904.6,
+            "updateP50Ms": 2090.6,
+            "updateP95Ms": 2183.1,
+            "heapMB": 210.7,
+            "runs": 2
+          },
+          "throttled": {
+            "firstPaintMs": 11402.1,
+            "updateP50Ms": 8387.2,
+            "updateP95Ms": 9012.5,
+            "heapMB": 210.1,
+            "runs": 1
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 29097.9,
+            "updateP50Ms": 41700.5,
+            "updateP95Ms": 58010.7,
+            "heapMB": 2073.1,
+            "runs": 1
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
           }
         }
       }
@@ -2613,133 +2462,603 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 86.4,
-            "updateP50Ms": 65.6,
-            "updateP95Ms": 68.5,
-            "heapMB": 2.4,
+            "firstPaintMs": 44.1,
+            "updateP50Ms": 40.7,
+            "updateP95Ms": 43.6,
+            "heapMB": 2.2,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 342,
-            "updateP50Ms": 225,
-            "updateP95Ms": 256.1,
-            "heapMB": 2.4,
+            "firstPaintMs": 174.6,
+            "updateP50Ms": 166.5,
+            "updateP95Ms": 181.9,
+            "heapMB": 2.2,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 110.3,
-            "updateP50Ms": 80.7,
-            "updateP95Ms": 93.6,
-            "heapMB": 3,
+            "firstPaintMs": 75.1,
+            "updateP50Ms": 73.5,
+            "updateP95Ms": 90.6,
+            "heapMB": 2.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 471,
-            "updateP50Ms": 318.5,
-            "updateP95Ms": 381.2,
-            "heapMB": 3,
+            "firstPaintMs": 309.6,
+            "updateP50Ms": 315,
+            "updateP95Ms": 375.8,
+            "heapMB": 2.7,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 193.3,
-            "updateP50Ms": 114.5,
-            "updateP95Ms": 135.6,
-            "heapMB": 7.4,
+            "firstPaintMs": 70.6,
+            "updateP50Ms": 56.9,
+            "updateP95Ms": 66.6,
+            "heapMB": 7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 812.4,
-            "updateP50Ms": 492.8,
-            "updateP95Ms": 560.6,
-            "heapMB": 7.3,
+            "firstPaintMs": 279.3,
+            "updateP50Ms": 243.7,
+            "updateP95Ms": 299.6,
+            "heapMB": 7,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 1054.4,
-            "updateP50Ms": 529.1,
-            "updateP95Ms": 590.4,
-            "heapMB": 50.5,
-            "runs": 5
+            "firstPaintMs": 304.8,
+            "updateP50Ms": 168.1,
+            "updateP95Ms": 204.6,
+            "heapMB": 50.2,
+            "runs": 4
           },
           "throttled": {
-            "firstPaintMs": 5418.1,
-            "updateP50Ms": 2758.5,
-            "updateP95Ms": 3162.1,
-            "heapMB": 50.5,
-            "runs": 2
+            "firstPaintMs": 1282.3,
+            "updateP50Ms": 621.4,
+            "updateP95Ms": 821.1,
+            "heapMB": 50.2,
+            "runs": 1
           }
         }
       },
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 85.8,
-            "updateP50Ms": 59.2,
-            "updateP95Ms": 66.7,
-            "heapMB": 2.7,
+            "firstPaintMs": 38.8,
+            "updateP50Ms": 16,
+            "updateP95Ms": 16.8,
+            "heapMB": 2.4,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 354.5,
-            "updateP50Ms": 207,
-            "updateP95Ms": 225.8,
-            "heapMB": 2.7,
+            "firstPaintMs": 146.5,
+            "updateP50Ms": 50.8,
+            "updateP95Ms": 57.4,
+            "heapMB": 2.4,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 107.3,
-            "updateP50Ms": 62.6,
-            "updateP95Ms": 75.9,
-            "heapMB": 3.3,
+            "firstPaintMs": 41.7,
+            "updateP50Ms": 15.9,
+            "updateP95Ms": 20.5,
+            "heapMB": 3.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 456.6,
-            "updateP50Ms": 275,
-            "updateP95Ms": 321.7,
-            "heapMB": 3.3,
+            "firstPaintMs": 165.2,
+            "updateP50Ms": 64.8,
+            "updateP95Ms": 73,
+            "heapMB": 3,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 257.8,
-            "updateP50Ms": 130.3,
-            "updateP95Ms": 147.8,
-            "heapMB": 10.1,
+            "firstPaintMs": 50.7,
+            "updateP50Ms": 27.2,
+            "updateP95Ms": 39.6,
+            "heapMB": 9.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 943,
-            "updateP50Ms": 563,
-            "updateP95Ms": 706,
-            "heapMB": 9.8,
+            "firstPaintMs": 183.7,
+            "updateP50Ms": 118.3,
+            "updateP95Ms": 171.2,
+            "heapMB": 9.6,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 1766.1,
-            "updateP50Ms": 1145.6,
-            "updateP95Ms": 1472.6,
-            "heapMB": 90.6,
+            "firstPaintMs": 198.4,
+            "updateP50Ms": 177.2,
+            "updateP95Ms": 261.3,
+            "heapMB": 74.3,
+            "runs": 4
+          },
+          "throttled": {
+            "firstPaintMs": 722.9,
+            "updateP50Ms": 684.2,
+            "updateP95Ms": 802.8,
+            "heapMB": 74.3,
+            "runs": 1
+          }
+        }
+      }
+    },
+    "plot": {
+      "scatter": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 16.4,
+            "updateP50Ms": 16,
+            "updateP95Ms": 17,
+            "heapMB": 2.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 6883.9,
-            "updateP50Ms": 5014,
-            "updateP95Ms": 5994.7,
-            "heapMB": 90.6,
+            "firstPaintMs": 63.6,
+            "updateP50Ms": 20,
+            "updateP95Ms": 22.8,
+            "heapMB": 2.8,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 45.1,
+            "updateP50Ms": 36.8,
+            "updateP95Ms": 46.6,
+            "heapMB": 3.8,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 182.7,
+            "updateP50Ms": 132.9,
+            "updateP95Ms": 170.4,
+            "heapMB": 3.8,
+            "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 195.8,
+            "updateP50Ms": 303.8,
+            "updateP95Ms": 473,
+            "heapMB": 14.5,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 781.4,
+            "updateP50Ms": 1323.8,
+            "updateP95Ms": 1814.9,
+            "heapMB": 14.5,
+            "runs": 2
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 1910.6,
+            "updateP50Ms": 4850.2,
+            "updateP95Ms": 6192.6,
+            "heapMB": 122,
+            "runs": 1
+          },
+          "throttled": {
+            "firstPaintMs": 7681.3,
+            "updateP50Ms": 19335.6,
+            "updateP95Ms": 23761.6,
+            "heapMB": 122,
+            "runs": 1
+          }
+        }
+      },
+      "line": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 12.7,
+            "updateP50Ms": 15.9,
+            "updateP95Ms": 16.6,
+            "heapMB": 3,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 55.5,
+            "updateP50Ms": 14,
+            "updateP95Ms": 15.1,
+            "heapMB": 3,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 22.8,
+            "updateP50Ms": 10.9,
+            "updateP95Ms": 14.3,
+            "heapMB": 4.3,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 95.4,
+            "updateP50Ms": 44.8,
+            "updateP95Ms": 53.2,
+            "heapMB": 4.3,
+            "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 99,
+            "updateP50Ms": 88.8,
+            "updateP95Ms": 115.2,
+            "heapMB": 18,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 382.9,
+            "updateP50Ms": 410,
+            "updateP95Ms": 457.4,
+            "heapMB": 18,
+            "runs": 5
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 937.5,
+            "updateP50Ms": 1146.3,
+            "updateP95Ms": 1242.2,
+            "heapMB": 155.9,
+            "runs": 2
+          },
+          "throttled": {
+            "firstPaintMs": 3716,
+            "updateP50Ms": 4529.2,
+            "updateP95Ms": 4976.5,
+            "heapMB": 155.9,
+            "runs": 1
+          }
+        }
+      }
+    },
+    "vegalite": {
+      "scatter": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 48.6,
+            "updateP50Ms": 17,
+            "updateP95Ms": 28,
+            "heapMB": 22.5,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 199.1,
+            "updateP50Ms": 65.2,
+            "updateP95Ms": 79,
+            "heapMB": 22.5,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 131.4,
+            "updateP50Ms": 119.5,
+            "updateP95Ms": 141.1,
+            "heapMB": 120.3,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 527.1,
+            "updateP50Ms": 451.3,
+            "updateP95Ms": 502,
+            "heapMB": 120.3,
+            "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 761.1,
+            "updateP50Ms": 1095.5,
+            "updateP95Ms": 1612.9,
+            "heapMB": 1109.4,
+            "runs": 2
+          },
+          "throttled": {
+            "firstPaintMs": 2702.4,
+            "updateP50Ms": 4139,
+            "updateP95Ms": 4964.5,
+            "heapMB": 1109.4,
+            "runs": 1
+          }
+        },
+        "1000000": {
+          "normal": {
+            "error": "page.evaluate: Target crashed "
+          },
+          "throttled": {
+            "error": "page.waitForFunction: Timeout 30000ms exceeded."
+          }
+        }
+      },
+      "line": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 37.1,
+            "updateP50Ms": 16,
+            "updateP95Ms": 16.9,
+            "heapMB": 17.6,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 155.5,
+            "updateP50Ms": 32,
+            "updateP95Ms": 41.5,
+            "heapMB": 17.6,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 58.2,
+            "updateP50Ms": 27.8,
+            "updateP95Ms": 38,
+            "heapMB": 69.9,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 234.1,
+            "updateP50Ms": 114.2,
+            "updateP95Ms": 129.3,
+            "heapMB": 69.9,
+            "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 233.3,
+            "updateP50Ms": 230.8,
+            "updateP95Ms": 278.6,
+            "heapMB": 649.8,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 888.8,
+            "updateP50Ms": 1014,
+            "updateP95Ms": 1211,
+            "heapMB": 649.8,
+            "runs": 3
+          }
+        },
+        "1000000": {
+          "normal": {
+            "error": "page.evaluate: Target crashed "
+          },
+          "throttled": {
+            "error": "page.evaluate: Target crashed "
+          }
+        }
+      }
+    },
+    "nivo": {
+      "scatter": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 135.7,
+            "updateP50Ms": 53,
+            "updateP95Ms": 65.5,
+            "heapMB": 22.9,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 588.2,
+            "updateP50Ms": 218.4,
+            "updateP95Ms": 330.4,
+            "heapMB": 22.9,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 5598.5,
+            "updateP50Ms": 825.3,
+            "updateP95Ms": 1608.8,
+            "heapMB": 176.2,
+            "runs": 2,
+            "note": "page.waitForFunction: Timeout 1000ms exceeded."
+          },
+          "throttled": {
+            "firstPaintMs": 22775.1,
+            "updateP50Ms": 3486.9,
+            "updateP95Ms": 6428.5,
+            "heapMB": 175.2,
+            "runs": 1
+          }
+        },
+        "100000": {
+          "normal": {
+            "error": "page.waitForFunction: Timeout 30000ms exceeded."
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          }
+        },
+        "1000000": {
+          "normal": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          }
+        }
+      },
+      "line": {
+        "1000": {
+          "normal": {
+            "error": "page.waitForFunction: Timeout 30000ms exceeded."
+          },
+          "throttled": {
+            "error": "page.waitForFunction: Timeout 30000ms exceeded."
+          }
+        },
+        "10000": {
+          "normal": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          }
+        },
+        "100000": {
+          "normal": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          }
+        },
+        "1000000": {
+          "normal": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          },
+          "throttled": {
+            "error": "skipped: failed or took over 5 s at a smaller size"
+          }
+        }
+      }
+    },
+    "plotly": {
+      "scatter": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 48.2,
+            "updateP50Ms": 19.9,
+            "updateP95Ms": 24.2,
+            "heapMB": 10.7,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 221.8,
+            "updateP50Ms": 89.1,
+            "updateP95Ms": 106.3,
+            "heapMB": 10.7,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 203.7,
+            "updateP50Ms": 151.4,
+            "updateP95Ms": 170.2,
+            "heapMB": 12,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 790.9,
+            "updateP50Ms": 571.9,
+            "updateP95Ms": 609.4,
+            "heapMB": 12,
+            "runs": 3,
+            "note": "page.waitForFunction: Timeout 1837ms exceeded."
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 1625.3,
+            "updateP50Ms": 2512.1,
+            "updateP95Ms": 2904.8,
+            "heapMB": 25.6,
             "runs": 1,
-            "note": "page.waitForFunction: Timeout 8407ms exceeded."
+            "note": "page.waitForFunction: Timeout 1000ms exceeded."
+          },
+          "throttled": {
+            "firstPaintMs": 4387.2,
+            "updateP50Ms": 7824.1,
+            "updateP95Ms": 8144,
+            "heapMB": 24.9,
+            "runs": 1
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 14037.6,
+            "updateP50Ms": 22704.4,
+            "updateP95Ms": 32726.1,
+            "heapMB": 142.7,
+            "runs": 1
+          },
+          "throttled": {
+            "error": "page.waitForFunction: Timeout 30000ms exceeded."
+          }
+        }
+      },
+      "line": {
+        "1000": {
+          "normal": {
+            "firstPaintMs": 31.3,
+            "updateP50Ms": 16,
+            "updateP95Ms": 16.8,
+            "heapMB": 10.8,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 125.1,
+            "updateP50Ms": 22.7,
+            "updateP95Ms": 32.8,
+            "heapMB": 10.8,
+            "runs": 5
+          }
+        },
+        "10000": {
+          "normal": {
+            "firstPaintMs": 41.3,
+            "updateP50Ms": 12.2,
+            "updateP95Ms": 17.1,
+            "heapMB": 11.9,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 164.8,
+            "updateP50Ms": 49.9,
+            "updateP95Ms": 66.2,
+            "heapMB": 11.9,
+            "runs": 5
+          }
+        },
+        "100000": {
+          "normal": {
+            "firstPaintMs": 89.4,
+            "updateP50Ms": 59.6,
+            "updateP95Ms": 74.9,
+            "heapMB": 22,
+            "runs": 5
+          },
+          "throttled": {
+            "firstPaintMs": 373.8,
+            "updateP50Ms": 244.4,
+            "updateP95Ms": 266.9,
+            "heapMB": 22,
+            "runs": 4
+          }
+        },
+        "1000000": {
+          "normal": {
+            "firstPaintMs": 552.4,
+            "updateP50Ms": 534.7,
+            "updateP95Ms": 575.6,
+            "heapMB": 122.6,
+            "runs": 3
+          },
+          "throttled": {
+            "firstPaintMs": 2410.5,
+            "updateP50Ms": 2175.2,
+            "updateP95Ms": 2282.3,
+            "heapMB": 122.6,
+            "runs": 1
           }
         }
       }

@@ -48,7 +48,7 @@ export class MayaChart extends HTMLElement {
   #vars = new Set<string>();
   #err = "";
   #drawn = false;
-  #tbl: ReturnType<typeof setTimeout> | undefined;
+  #tbl = 0;
 
   get spec(): ChartSpec | undefined {
     return this.#prop ?? this.#json ?? this.#attr;
@@ -325,8 +325,9 @@ export class MayaChart extends HTMLElement {
     try {
       if (!this.#drawn && !box.querySelector("svg"))
         try {
-          // Title and controls depend only on the spec: place them first, measure once.
-          this.#slots(root, draw({ ...spec, data: [] }));
+          // Title and controls depend only on the spec: place them first, measure once. No
+          // measuring here: reading the box now would force a layout that is thrown away.
+          this.#slots(root, renderParts({ ...spec, data: [] }, { width: 640, height: 320 }));
         } catch {} // the real draw reports the error
       parts = draw();
       // ponytail: a multi-series legend needs the data, so it still costs a second draw.
@@ -362,10 +363,13 @@ export class MayaChart extends HTMLElement {
         box.insertAdjacentHTML("afterend", html(parts.table));
       };
       // A big table (1000 scatter rows) costs ~10 ms of style and layout; it is hidden, so it
-      // lands after the frame that shows the marks. ponytail: a reader sees it one frame late.
-      clearTimeout(this.#tbl);
+      // waits until the browser is idle (2 s at most) and only the latest one lands.
+      // ponytail: a screen reader sees a big table a moment after the marks.
+      const n = ++this.#tbl;
+      const late = () => n === this.#tbl && put();
       if (parts.table.length < 2e4) put();
-      else requestAnimationFrame(() => (this.#tbl = setTimeout(put)));
+      else if ("requestIdleCallback" in window) requestIdleCallback(late, { timeout: 2000 });
+      else setTimeout(late, 100);
     }
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
