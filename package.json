@@ -98,11 +98,11 @@
     "dist/index.js": 30208,
     "dist/element.js": 43008,
     "dist/theme.css": 4096,
-    "dist/hierarchy.js": 3840,
+    "dist/hierarchy.js": 3940,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 51712
+    "dist/maya.global.js": 51770
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "0.131.0",

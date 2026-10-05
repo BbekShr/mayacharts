@@ -37,6 +37,7 @@ import type {
   FieldFormat,
   RenderOptions,
   ResolvedSpec,
+  Row,
   View,
 } from "./types.ts";
 
@@ -750,6 +751,17 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
     inv("nonce", nonce, "a base64 nonce string");
 }
 
+/** Top-level names largest first (ties in first-appearance order): the hierarchy colour slots. */
+// ponytail: ranks by summed y; a non-sum aggregate can rank a drilled branch to another colour.
+function rank(rows: readonly Row[], f: string, y: string): string[] {
+  const t = new Map<string, number>();
+  for (const r of rows) {
+    const k = String(r[f]);
+    t.set(k, (t.get(k) ?? 0) + (typeof r[y] === "number" ? r[y] : 0));
+  }
+  return [...t.keys()].sort((a, b) => t.get(b)! - t.get(a)!);
+}
+
 /**
  * Apply defaults plus the view's measure and drill. Assumes `spec` passed validateSpec.
  * Drill keeps rows whose path[i] equals drill[i], then advances: bar/line/area take the next
@@ -780,9 +792,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     y2: spec.y2 ?? null,
     path,
     drilled,
-    hue: drilled.length
-      ? [...new Set(spec.data.map((r) => String(r[full[0]!])))].indexOf(drilled[0]!)
-      : null,
+    hue: drilled.length ? rank(spec.data, full[0]!, measures[measure]!).indexOf(drilled[0]!) : null,
     window: view.window && view.window.length === 4 ? view.window : null,
     size: spec.size ?? null,
     name: spec.name ?? null,

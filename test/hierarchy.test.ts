@@ -152,6 +152,44 @@ describe("sunburst", () => {
     expect(at(d[2]!, "data-x")).toBe("C");
     expect(at(d[0]!, "data-depth")).toBe("1");
   });
+  it("slivers under 4 px lump into one Other slice that does not drill", () => {
+    const rows = [
+      { g: "A", n: "big", v: 1000 },
+      ...Array.from({ length: 30 }, (_, i) => ({ g: "A", n: `s${i}`, v: 3 })),
+    ];
+    const s = tags(renderParts({ ...sb, data: rows, drill: true }).svg, "circle");
+    const other = s.filter((c) => / data-other="/.test(c));
+    expect(other).toHaveLength(1);
+    expect(at(other[0]!, "data-x")).toBe("A › Other (30)");
+    expect(at(other[0]!, "data-key")).toBe("h~A~Other%20(30)");
+    expect(s.map((c) => at(c, "data-key"))).toEqual(["h~A", "h~A~big", "h~A~Other%20(30)", "h"]);
+  });
+  it("colour slots follow size, so the drawn order cycles the palette", () => {
+    const rows = [
+      { g: "small", n: "x", v: 1 },
+      { g: "big", n: "x", v: 9 },
+    ];
+    const s = tags(renderParts({ ...sb, data: rows }).svg, "circle");
+    const top = s.filter((c) => at(c, "data-depth") === "1");
+    expect(top.map((c) => [at(c, "data-x"), at(c, "data-s")])).toEqual([
+      ["big", "0"],
+      ["small", "1"],
+    ]);
+    const d = tags(
+      renderParts({ ...sb, data: rows, drill: true }, { view: { drill: ["small"] } }).svg,
+      "circle",
+    );
+    expect(d.every((c) => at(c, "data-s") === "1")).toBe(true);
+  });
+  it("a name crosses the ring only when its box fits inside the slice", () => {
+    // Twelve 30 degree slices: at 12 o'clock a long name is wider than the slice, so it turns
+    // along the radius; near 3 o'clock the ring runs across the box, so it stays level.
+    const rows = Array.from({ length: 12 }, (_, i) => ({ g: `Categories ${i}`, n: "x", v: 1 }));
+    const svg = renderParts({ ...sb, data: rows, path: ["g"] }, { width: 400, height: 400 }).svg;
+    const label = (i: number) => new RegExp(`<text[^>]*>Categories ${i}<`).exec(svg)![0];
+    expect(label(0)).toContain("rotate(");
+    expect(label(2)).not.toContain("rotate(");
+  });
   it("a drilled branch keeps its colour", () => {
     const d = tags(renderParts({ ...sb, drill: true }, { view: { drill: ["C"] } }).svg, "circle");
     expect(d.map((p) => at(p, "data-s"))).toEqual(["2", "2", "2"]);

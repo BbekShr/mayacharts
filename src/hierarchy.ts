@@ -53,10 +53,13 @@ export function tree(
   return build(top, "", 0, []);
 }
 
+/** Largest first; Array.sort is stable, so ties keep first-appearance order. */
+const big = (a: Node, b: Node) => b.value - a.value;
+
 /** Bruls squarify: [node, x, y, w, h] for `nodes` filling the box. */
 function squarify(nodes: Node[], x: number, y: number, w: number, h: number) {
   const out: [Node, number, number, number, number][] = [];
-  const items = nodes.filter((n) => n.value > 0).sort((a, b) => b.value - a.value);
+  const items = nodes.filter((n) => n.value > 0).sort(big);
   let rest = items.reduce((s, n) => s + n.value, 0);
   let i = 0;
   while (i < items.length) {
@@ -110,7 +113,8 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
   // Drilling: draw only the next level; a click pushes it, so each click goes one level deeper.
   if (flat) for (const n of root.children) n.children = [];
   let c = 0;
-  const tops = root.children;
+  // Colour slots follow size (the drawn order), so neighbours differ until the palette wraps.
+  const tops = [...root.children].sort(big);
   const attrs = (n: Node) => {
     const parts = [...spec.drilled, ...n.parts];
     const s = hue ?? tops.findIndex((t) => t.name === n.parts[0]);
@@ -208,14 +212,14 @@ const sunburst: Mark = {
       });
     const names = spec.labels !== false; // on unless turned off: a sunburst without names is unreadable
     let marks = "";
-    const walk = (n: Node, a0: number, a1: number, parent: Node): void => {
+    const walk = (n: Node, a0: number, a1: number, parent: Node, other = false): void => {
       const span = a1 - a0;
       if (n.depth) {
         const rm = (n.depth + 0.5) * w;
         if ((span / DEG) * (rm + w / 2) < 2) return; // ponytail: arcs under 2 px are not drawn (nor their children)
         const full = span > 359.99;
         const pad = full ? 0 : Math.min(span / 2, DEG / rm); // 1 px between siblings
-        const a = attrs(n);
+        const a = { ...attrs(n), "data-other": other || null };
         const share = pct(n.value / parent.value);
         a["data-f"] += ` · ${n.depth > 1 ? ctx.t("shareOf", share, parent.name) : share}`;
         marks += circle(
@@ -224,20 +228,30 @@ const sunburst: Mark = {
           a0 + pad / 2,
           span - pad,
         );
-        // Label across the ring when it fits, else along the radius, else none.
+        // Label across the ring when its box fits the slice (radially, and across at the box's
+        // inner edge), else along the radius, else none.
+        const sw = span - pad;
         const mid = a0 + span / 2;
-        const arc = (span / DEG) * rm;
-        const room = Math.abs(Math.sin(mid / DEG)) * (w - 1) + Math.abs(Math.cos(mid / DEG)) * arc;
         const [lx, ly] = at(rm, mid) as [number, number];
-        if (names && arc >= 14) {
-          if (text(n.name) <= room) ctx.label(lx, ly, n.name, "center");
-          else if (text(n.name) <= w - 4)
-            ctx.label(lx, ly, n.name, "center", mid < 180 ? mid - 90 : mid + 90);
-        }
+        const tw = text(n.name) / 2;
+        const [sn, cs] = [Math.abs(lx - cx) / rm, Math.abs(ly - cy) / rm];
+        const out = sn * tw + cs * 7;
+        if (names && out < w / 2 - 2 && cs * tw + sn * 7 < (sw / 2 / DEG) * (rm - out))
+          ctx.label(lx, ly, n.name, "center");
+        else if (names && tw < w / 2 - 2 && (sw / DEG) * (rm - tw) > 14)
+          ctx.label(lx, ly, n.name, "center", mid < 180 ? mid - 90 : mid + 90);
       }
+      const kids = [...n.children].sort(big);
       let a = a0;
-      for (const c of [...n.children].sort((p, q) => q.value - p.value)) {
+      for (const [i, c] of kids.entries()) {
         const s = (span * c.value) / n.value;
+        // Slivers under 4 px across read as hatching: the rest (all smaller) become one "Other (n)".
+        if (kids[i + 1] && (s / DEG) * (c.depth + 0.5) * w < 4) {
+          const name = `${ctx.t("other")} (${kids.length - i})`;
+          const value = (n.value * (a1 - a)) / span;
+          walk({ ...c, name, value, children: [], parts: [...n.parts, name] }, a, a1, n, true);
+          break;
+        }
         walk(c, a, a + s, n);
         a += s;
       }

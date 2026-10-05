@@ -29,6 +29,12 @@ A time axis, large data (downsampled lines, density scatter), format templates a
 - Sunburst centre disk with the current branch's name and total (`text.total` at the root). Clicking it, or Enter on it, goes back up one level.
 - Sunburst tooltip shows each slice's share of its parent (`text.shareOf`), and the top ring's share of the total.
 
+### Fixed
+
+- Sunburst with many small slices: once a slice would be under 4 px across, it and its smaller siblings draw as one grey "Other (n)" slice with a tooltip, instead of hairline slices and white gaps where slivers were skipped.
+- Sunburst names cross the ring only when their box fits inside the slice (else they turn along the radius, else they are left to the tooltip), so neighbouring names no longer overlap.
+- Treemap and sunburst colour slots follow size, largest first, so neighbouring slices differ until the 8-colour palette wraps. A `colors` array now maps to that order.
+
 ### Changed
 
 - Looks: a scatter titles its axes with the field names by default (`titles` still wins), a bubble scatter gets a size key of three reference circles, and a non-binned scatter over 100 points shrinks and thins its fill so density shows. The shared colour ramp starts at 35% (was 20%) so the lowest heatmap cells stay visible.
