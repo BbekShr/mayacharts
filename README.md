@@ -648,7 +648,7 @@ maya-chart {
 
 | Token     | CSS variable                       | Light default                        | Dark default          | Colours                         |
 | --------- | ---------------------------------- | ------------------------------------ | --------------------- | ------------------------------- |
-| font      | --maya-font                        | ui-sans-serif, system-ui, sans-serif | same as light         | Axis labels, tooltip text       |
+| font      | --maya-font                        | system-ui, sans-serif                | same as light         | Axis labels, tooltip text       |
 | fontSize  | --maya-font-size                   | 12px                                 | 12px                  | All text                        |
 | fg        | --maya-fg                          | #1f2328                              | #e6edf3               | Title, value labels             |
 | fgMuted   | --maya-fg-muted                    | #656d76                              | #9198a1               | Axis text, legend, breadcrumb   |

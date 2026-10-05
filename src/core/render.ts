@@ -392,7 +392,11 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     return true;
   };
 
-  const f = mark.axes ? frame(s0, mark.axes(s, shaped), { width: W, height: H }, fmt) : null;
+  // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
+  const f =
+    mark.axes && s.data.length
+      ? frame(s0, mark.axes(s, shaped), { width: W, height: H }, fmt)
+      : null;
   const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
   const ctx: MarkCtx = {
     spec: s,
