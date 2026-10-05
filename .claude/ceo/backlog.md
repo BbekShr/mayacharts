@@ -4,16 +4,20 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Needs a decision from the human
 
-- **Version of the next release.** The CHANGELOG top section is "0.3.1 - Unreleased" but holds a redesign of seven chart types, new defaults and a new spec field; 0.4.0 fits semver better. Owner: human, then `/maya-release`.
-- **Size budgets.** Raised on 2026-10-04 to fit the redesign (global 46, element 37.5, theme 4, hierarchy 3.75, flow 3.5 KB gzip). If the human wants them back down, the cheapest cuts are the sankey one-line label fallback (about 0.1 KB) and the scatter axis value pills. Owner: human.
+- **Employer name in README.** `README.md:496` and `:622` name the employer product and its SDK calls (security MEDIUM-2, 2026-10-05). Remove or generalise until a signed release exists, or decide it is acceptable. Owner: human.
+- **Apply the approved size budgets** from the 2026-10-05 deep run (index 30720, element 43878, hierarchy 4096, global 52838 bytes); the guard hook blocks agents from editing `mayaSize`. Owner: human.
+- **Rival libraries in the root devDependencies.** The release job no longer holds the token while they install, but CI and dev installs still pull 317 packages. Moving the compare harness to its own package.json would shrink that. Owner: human (scope), then core engineer.
 
 ## Open
 
-- **Chord drill is inert.** A chord has two levels, so one drill leaves nothing to draw; clicks are ignored. Either draw the drilled branch as a one-level radial breakdown or reject `drill` for chord in `validate.ts` with a hint. Owner: core engineer (validation) or chart designer (drawing).
-- **Radial tip totals do not show in the gallery tile.** The stacked tile is too small for them, so the feature is invisible on the demo site. Consider a taller tile or a single-series example. Owner: chart designer.
-- **Drill motion for points.** Dumbbell dots and line points use the default pop or fade in a drill, not the rect zoom. Owner: element engineer.
-- **Drilled treemap is one flat hue.** Children keep the branch colour (correct) but have no tint variation, so tiles separate only by gaps and labels. Owner: chart designer.
-- **Dark text on saturated fills.** Labels on the sunburst inner ring and the radial's in-bar names use the foreground colour; white on dark fills would read better. Owner: chart designer.
-- **Dense scatter at 360px.** The radius stays at 5, so 50 points overlap heavily. A density-based radius would help. Owner: chart designer.
-- **Gallery has no drillable bar or sankey example.** Drill on those types is only reachable by editing a spec. Owner: chart designer.
-- **Release workflow actions are not pinned to commit SHAs** (`# TODO pin to commit SHA` in `.github/workflows/release.yml`). Supply-chain hygiene for a provenance-signed package. Owner: core engineer.
+- **Bubble chart has no series or colour key.** With a `size` field the size key replaces the normal legend; render.ts (~531) should append it instead. About 30 B gzip. Owner: core engineer.
+- **Axis thinning at 360 px drops category names** (heatmap shows 2 of 4 columns, bar-y2 likewise, time-line one tick). Never thin 8 or fewer categories; truncate instead. Owner: core engineer (layout.ts).
+- **Sankey at 360 px loses big leaf labels** (Parka, Tops) now that the last two columns share slots, and "Sweater" clips at the bottom. Consider labels inside tall nodes. Owner: chart designer.
+- **Hexmap value labels measure 2.66 to 2.90** (value line opacity .8 on mid steps). Owner: chart designer.
+- **Design critic MEDIUM items left:** waterfall labels at 360 lose the Total; radial repeats the year on every month; league "Other" sets the bar scale; calendar weekday order and cell shape; line value labels sit on the stroke; parallel lines carry no identity. Owner: chart designer.
+- **Design critic LOW items:** heatmap and calendar ramp legends lack the field name; monthly-line tooltip blank series cell; kpi "Dec" caption floats; synthetic margin is constant per family (beeswarm and bubble rows flat); ridgeline near-flat on a shared zero scale; demo page opens on plain bars. Owner: chart designer.
+- **Sunburst of only slivers** collapses into one "Other (n)" ring. Owner: chart designer.
+- **Sunburst centre text** fades with the old labels 220 ms into a drill, leaving a blank disc until 480 ms. Owner: element engineer.
+- **Unnamed scatter keys are row indexes**, so prepending data moves a selection to another dot. Changing it is a key contract change. Owner: core engineer.
+- **Gallery has no drillable sankey example.** Owner: chart designer.
+- **Attribute versus property precedence** on `<maya-chart>` (a property set wins over later attribute changes) is undocumented. Owner: element engineer.
