@@ -3,10 +3,11 @@
 // { ok, ttfp } once marks are on screen, or { ok: false, error }, or { unsupported } when the
 // library lacks the chart type. ttfp is the time from before draw() until #chart holds marks (an
 // svg with a path, rect or circle, or a canvas with ink, crossing shadow roots), polled per frame,
-// plus one more frame. React libraries commit after draw() returns, so draw() alone is not a paint.
-// window.__update(rows) redraws; window.__timedUpdate(rows) returns the ms until the chart changed
-// (a DOM mutation, or different canvas pixels) plus one frame. Every check is the same for every
-// library and stops early, so the probe itself costs little.
+// plus one more frame. React libraries commit after draw() returns, so
+// draw() alone is not a paint.
+// window.__update(rows) redraws; window.__timedUpdate(rows) returns the ms until the chart drew (a
+// DOM mutation or a canvas draw call) plus one frame. Every
+// check is the same for every library and stops early, so the probe itself costs little.
 // Speed suite: ?n=<rows> (chart=scatter|line) draws n generated rows; window.__rows(seed) makes more.
 import { refData, speedRows } from "/.build/data.js";
 
@@ -16,6 +17,38 @@ const chart = q.get("chart") ?? "bar";
 if (q.get("dir")) document.documentElement.dir = q.get("dir");
 const root = document.getElementById("chart");
 const frame = () => new Promise((r) => requestAnimationFrame(r));
+
+// Activity: every canvas draw call and every DOM mutation under #chart bumps `ticks`. A chart
+// counts as drawn at the first activity plus one frame. Canvas libraries animate by default and
+// ignore reduced motion; counting until their animation ends would measure animation, not speed,
+// so the first frame of new data is the finish line for everyone. A progressive renderer is
+// therefore timed to its first chunk, which favours it.
+let ticks = 0;
+let probing = false;
+const C2D = CanvasRenderingContext2D.prototype;
+for (const m of [
+  "fill",
+  "stroke",
+  "fillRect",
+  "strokeRect",
+  "drawImage",
+  "putImageData",
+  "fillText",
+]) {
+  const f = C2D[m];
+  C2D[m] = function (...a) {
+    if (!probing) ticks++;
+    return f.apply(this, a);
+  };
+}
+const watch = (n) =>
+  mo.observe(n, { subtree: true, childList: true, attributes: true, characterData: true });
+const mo = new MutationObserver(() => ticks++);
+/** Wait until something changed since `from` (or `end` passed), plus one frame. */
+const settle = async (from, end) => {
+  while (ticks === from && performance.now() < end) await frame();
+  await frame();
+};
 
 /** First element under `n` (crossing shadow roots) for which `test` is true, or null. Stops early. */
 const find = (n, test) => {
@@ -32,8 +65,10 @@ const thumb = document.createElement("canvas");
 thumb.width = thumb.height = 16;
 const tg = thumb.getContext("2d", { willReadFrequently: true });
 const pixels = (c) => {
+  probing = true;
   tg.clearRect(0, 0, 16, 16);
   tg.drawImage(c, 0, 0, 16, 16);
+  probing = false;
   return tg.getImageData(0, 0, 16, 16).data.join();
 };
 const BLANK = pixels(thumb);
@@ -43,22 +78,12 @@ const hasMarks = () => {
   return !!find(root, (e) => /^(path|rect|circle)$/.test(e.tagName) && e.closest("svg"));
 };
 
-/** Run `fn`, then wait until #chart changed (DOM mutation, or new canvas pixels), plus one frame. */
+/** Run `fn`, then wait until the chart drew (a DOM mutation or a canvas draw call), plus one frame. */
 const timedUpdate = async (fn) => {
-  const c = canvasOf();
-  const before = c && pixels(c);
-  let changed = false;
-  const mo = new MutationObserver(() => (changed = true));
-  const opts = { subtree: true, childList: true, attributes: true, characterData: true };
-  mo.observe(root, opts);
-  find(root, (e) => (e.shadowRoot && mo.observe(e.shadowRoot, opts), false));
+  const from = ticks;
   const t0 = performance.now();
   await fn();
-  const done = () => (c ? pixels(c) !== before : changed);
-  const end = t0 + 5000;
-  while (!done() && performance.now() < end) await frame();
-  await frame();
-  mo.disconnect();
+  await settle(from, t0 + 30_000);
   return performance.now() - t0;
 };
 
@@ -69,6 +94,7 @@ try {
     const n = +q.get("n");
     const rows = n ? speedRows(n)[chart] : refData()[chart];
     window.__rows = (seed) => speedRows(n, seed)[chart];
+    watch(root);
     const t0 = performance.now();
     window.__update = (await mod.default(root, rows)) ?? null;
     const end = t0 + 60_000;
@@ -77,6 +103,7 @@ try {
     window.__done = hasMarks()
       ? { ok: true, ttfp: performance.now() - t0 }
       : { ok: false, error: "no marks appeared" };
+    find(root, (e) => (e.shadowRoot && watch(e.shadowRoot), false));
     window.__timedUpdate = (rows) => timedUpdate(() => window.__update(rows));
   }
 } catch (e) {
