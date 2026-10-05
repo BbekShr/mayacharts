@@ -57,11 +57,7 @@ function plainIso(v: string): number {
   if (!v.startsWith(day)) {
     const [Y, M, D] = [num(v, 0, 4), num(v, 5, 2), num(v, 8, 2)];
     if (v[4] !== "-" || v[7] !== "-" || !(M >= 1 && M <= 12 && D >= 1 && D <= 28)) return NaN;
-    const y = Y - (M <= 2 ? 1 : 0);
-    const era = Math.floor(y / 400);
-    const yoe = y - era * 400;
-    const doy = Math.floor((153 * (M + (M > 2 ? -3 : 9)) + 2) / 5) + D - 1;
-    dayMs = (era * 146097 + yoe * 365 + (yoe >> 2) - Math.floor(yoe / 100) + doy - 719468) * 864e5;
+    dayMs = new Date(0).setUTCFullYear(Y, M - 1, D);
     day = v.slice(0, 10);
   }
   const [h, mi, s] = [num(v, 11, 2), num(v, 14, 2), num(v, 17, 2)];

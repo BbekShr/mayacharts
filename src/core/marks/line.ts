@@ -22,7 +22,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   let dots = "";
   for (const si of shaped.visible) {
     const ser = shaped.series[si]!;
-    const cells: Cell[] = shaped.cells.filter((c) => c.si === si).sort((a, b) => a.ci - b.ci);
+    const cells: Cell[] = shaped.cells.filter((c) => c.si === si); // ascending ci, as shape lays them out
     let d = "";
     let gap = true;
     // ponytail: on a time axis a hole wider than 5x the series' median gap breaks the line;

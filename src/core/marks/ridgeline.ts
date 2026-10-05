@@ -46,9 +46,7 @@ export const ridgeline: Mark = {
       const ser = shaped.series[si]!;
       const b = base(ri);
       const py = (v: number) => r(b - (v / max) * tall);
-      const cells: Cell[] = shaped.cells
-        .filter((c) => c.si === si && kept.has(c.ci))
-        .sort((a, c) => a.ci - c.ci);
+      const cells: Cell[] = shaped.cells.filter((c) => c.si === si && kept.has(c.ci));
       const runs: Cell[][] = [[]];
       for (const c of cells) {
         if (c.value === null) {

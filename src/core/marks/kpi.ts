@@ -12,7 +12,7 @@ function draw(ctx: MarkCtx) {
   const { spec, shaped, width: W, height: H } = ctx;
   const cats = spec.x ? shaped.categories : [];
   const cells: Cell[] = spec.x
-    ? shaped.cells.filter((c) => c.si === 0).sort((a, b) => a.ci - b.ci)
+    ? shaped.cells.filter((c) => c.si === 0)
     : [];
   const live = cells.filter((c) => c.value !== null);
   const last = live[live.length - 1];
@@ -154,15 +154,13 @@ function draw(ctx: MarkCtx) {
       });
     });
     // Unbroken sparkline: a soft area under it (render.ts adds the fading gradient).
-    const a = live[0],
-      z = live[live.length - 1];
     marks =
-      (a && z && live.length === cells.length
+      (live.length === cells.length
         ? el("path", {
             "data-maya": "area",
             "data-key": key("a", ""),
             "data-s": 0,
-            d: `${d}L${px(z.ci)} ${r(bottom)}L${px(a.ci)} ${r(bottom)}Z`,
+            d: `${d}L${px(last!.ci)} ${r(bottom)}L${px(live[0]!.ci)} ${r(bottom)}Z`,
           })
         : "") +
       el("path", {

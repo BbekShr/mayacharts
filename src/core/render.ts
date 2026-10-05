@@ -326,20 +326,11 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           ? "good"
           : "bad"
         : null;
+  const toneWord = (n: "good" | "bad") =>
+    t(s, cb === "sign" ? (n === "good" ? "positive" : "negative") : n === "good" ? "above" : "below");
   const toneText = (v: number) => {
     const n = tone(v);
-    return n === null
-      ? null
-      : t(
-          s,
-          cb === "sign"
-            ? n === "good"
-              ? "positive"
-              : "negative"
-            : n === "good"
-              ? "above"
-              : "below",
-        );
+    return n && toneWord(n);
   };
 
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
@@ -546,7 +537,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           (["good", "bad"] as const)
             .map(
               (n) =>
-                `<span data-tone="${n}"><i></i>${esc(t(s, cb === "sign" ? (n === "good" ? "positive" : "negative") : n === "good" ? "above" : "below"))}</span>`,
+                `<span data-tone="${n}"><i></i>${esc(toneWord(n))}</span>`,
             )
             .join("") +
           `</div>`

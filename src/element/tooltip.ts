@@ -181,10 +181,7 @@ export function tooltip(
     if (!/^(scatter|beeswarm)$/.test(spec()?.type ?? "") || !svg || p?.clientX === undefined)
       return;
     index();
-    cxy ??= list.flatMap((m) => [
-      m.hasAttribute("cx") ? +a(m, "cx") : NaN,
-      m.hasAttribute("cy") ? +a(m, "cy") : NaN,
-    ]);
+    cxy ??= list.flatMap((m) => ["cx", "cy"].map((k) => +(m.getAttribute(k) ?? "x")));
     // Client px to viewBox units (the svg may be scaled by CSS).
     const s = svg.getBoundingClientRect(),
       [, , vw, vh] = a(svg, "viewBox").split(" ").map(Number) as number[],

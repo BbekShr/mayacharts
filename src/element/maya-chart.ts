@@ -309,9 +309,9 @@ export class MayaChart extends HTMLElement {
       );
       this.#seen = spec;
     }
-    const draw = () => {
+    const draw = (s = spec) => {
       this.#size = [box.clientWidth, box.clientHeight];
-      return renderParts(spec, {
+      return renderParts(s, {
         width: box.clientWidth || 640,
         height: box.clientHeight || 320,
         view: this.#state.view,
@@ -325,17 +325,7 @@ export class MayaChart extends HTMLElement {
       if (!this.#drawn && !box.querySelector("svg"))
         try {
           // Title and controls depend only on the spec: place them first, measure once.
-          this.#slots(
-            root,
-            renderParts(
-              { ...spec, data: [] },
-              {
-                width: box.clientWidth || 640,
-                height: box.clientHeight || 320,
-                view: this.#state.view,
-              },
-            ),
-          );
+          this.#slots(root, draw({ ...spec, data: [] }));
         } catch {} // the real draw reports the error
       parts = draw();
       // ponytail: a multi-series legend needs the data, so it still costs a second draw.

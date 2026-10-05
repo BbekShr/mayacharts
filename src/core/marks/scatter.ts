@@ -1,4 +1,4 @@
-import { el, esc, key, r } from "../svg.ts";
+import { cbField, el, nameId, esc, key, r } from "../svg.ts";
 import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
 
@@ -174,17 +174,12 @@ export const scatter: Mark = {
     // Dense plots read as density: points shrink and thin out as they multiply (isolated ones keep their outline).
     const dense = max === 0 && pts.length > 100;
     const flat = dense ? Math.max(2.5, 5 * Math.sqrt(100 / pts.length)) : 5;
-    const cb = typeof spec.colorBy === "string" && spec.colorBy !== "sign" ? spec.colorBy : null;
+    const cb = cbField(spec);
 
     const seen = new Map<string, number>();
     const items = pts.map((p) => {
       const rad = p.sz !== null && max > 0 ? radius(p.sz) : flat;
-      let id: string | number = p.i;
-      if (p.name !== null) {
-        const n = (seen.get(p.name) ?? 0) + 1;
-        seen.set(p.name, n);
-        id = n > 1 ? `${p.name}#${n}` : p.name;
-      }
+      const id = nameId(seen, p.name, p.i);
       const ser = shaped.series[p.si]!;
       const x = ctx.fmt(spec.x, p.x);
       const y = ctx.fmt(spec.y, p.y);

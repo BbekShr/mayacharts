@@ -1,4 +1,4 @@
-import { OTHER } from "./svg.ts";
+import { cbField, OTHER } from "./svg.ts";
 import { toTime } from "./ticks.ts";
 import { MAX_POINTS } from "./validate.ts";
 import type { Aggregate, Cell, ResolvedSpec, Shaped, View } from "./types.ts";
@@ -122,8 +122,6 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
     const total = (c: Cat) => c.vals.reduce<number>((a, v) => a + (v ?? 0), 0);
 
     // time axis: every label is ISO 8601 (xType "time" also takes epoch ms); sorted by time.
-    const parse = (l: string) =>
-      toTime(l, false) ?? (s.xType === "time" && /^-?\d+(\.\d+)?$/.test(l) ? +l : null);
     const time =
       s.xType === "time" ||
       (s.xType === "auto" &&
@@ -132,7 +130,7 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
         !s.sort &&
         s.limit === null);
     if (time && cats.length) {
-      const ts = cats.map((c) => parse(c.label));
+      const ts = cats.map((c) => when(s, c.label));
       if (ts.every((v) => v !== null)) {
         isTime = true;
         cats.forEach((c, i) => (c.t = ts[i]!));
@@ -258,18 +256,23 @@ function fastTime(
   const t = new Float64Array(rows.length);
   const v = new Float64Array(rows.length); // NaN: no value
   const at = new Int32Array(rows.length); // row of each category
-  const count = s.aggregate === "count";
   let m = 0;
   for (let i = 0; i < rows.length; i++) {
     const x = rows[i]![s.x];
     if (x == null && s.xType === "time") continue;
-    const l = typeof x === "string" ? x : String(x);
-    const tm = toTime(l, false) ?? (s.xType === "time" && NUM.test(l) ? +l : null);
-    if (tm === null || !Number.isFinite(tm) || (m && tm <= t[m - 1]!)) return null;
+    const tm = when(s, String(x));
     const y = rows[i]![s.y];
-    if (typeof y === "number" && y !== y) return null; // a NaN number is not a gap: general path
+    // A NaN number is not a gap: general path.
+    if (tm === null || !Number.isFinite(tm) || (m && tm <= t[m - 1]!) || y !== y) return null;
     t[m] = tm;
-    v[m] = typeof y === "number" ? (count ? 1 : y + 0) : count ? 0 : NaN;
+    v[m] =
+      typeof y === "number"
+        ? s.aggregate === "count"
+          ? 1
+          : y + 0
+        : s.aggregate === "count"
+          ? 0
+          : NaN;
     at[m++] = i;
   }
   if (!m) return null;
@@ -277,8 +280,7 @@ function fastTime(
   const ts = t.subarray(i0, i1 + 1);
   const vs = v.subarray(i0, i1 + 1);
   const before = ts.length;
-  const reduce = before > target;
-  const keep = reduce ? reduceTime(ts, [vs], target) : Array.from(ts, (_, k) => k);
+  const keep = before > target ? reduceTime(ts, [vs], target) : Array.from(ts, (_, k) => k);
   return {
     cats: keep.map((k) => ({
       label: String(rows[at[i0 + k]!]![s.x]),
@@ -287,11 +289,13 @@ function fastTime(
       t: ts[k]!,
       i: i0 + k,
     })),
-    reduced: reduce ? [keep.length, before] : null,
+    reduced: before > target ? [keep.length, before] : null,
   };
 }
 
-const NUM = /^-?\d+(\.\d+)?$/;
+/** UTC ms of a category label: ISO 8601, or epoch ms digits under xType "time". */
+const when = (s: ResolvedSpec, l: string) =>
+  toTime(l, false) ?? (s.xType === "time" && /^-?\d+(\.\d+)?$/.test(l) ? +l : null);
 
 /**
  * Largest-triangle-three-buckets over x[s..s+m) and y[s..s+m) (both normalised to 0..1);
@@ -338,47 +342,41 @@ function reduceTime(
   const len = t.length;
   const per = Math.max(3, Math.floor(catTarget / vs.length));
   const t0 = t[0]!;
-  const span = t[len - 1]! - t0 || 1;
-  const xs = Float64Array.from({ length: len }, (_, i) => (t[i]! - t0) / span);
+  const dt = t[len - 1]! - t0 || 1;
+  const xs = Float64Array.from(t, (v) => (v - t0) / dt);
   const ys = new Float64Array(len);
   const keep = new Set<number>([0, len - 1]);
   for (const v of vs) {
-    const has = (i: number) => v[i] != null && v[i] === v[i];
-    const runs: number[] = []; // start, length pairs
+    const has = (i: number) => Number.isFinite(v[i]);
     let lo = -1;
     let hi = -1;
     let n = 0;
-    let start = -1;
     for (let i = 0; i < len; i++) {
-      if (!has(i)) {
-        if (start >= 0) (keep.add(i), runs.push(start, i - start)); // a gap marker, kept as the run ends
-        start = -1;
-        continue;
-      }
-      if (start < 0) start = i;
+      if (!has(i)) continue;
       n++;
       if (lo < 0 || v[i]! < v[lo]!) lo = i;
       if (hi < 0 || v[i]! > v[hi]!) hi = i;
     }
-    if (start >= 0) runs.push(start, len - start);
-    if (lo < 0) continue;
+    if (!n) continue;
     keep.add(lo).add(hi);
     const [vmin, vmax] = [v[lo]!, v[hi]!];
-    for (let i = 0; i < len; i++) if (has(i)) ys[i] = (v[i]! - vmin) / (vmax - vmin || 1);
-    for (let r = 0; r < runs.length; r += 2) {
-      const [s0, m] = [runs[r]!, runs[r + 1]!];
-      // This run's share of the series' budget (min and max take two).
-      const share = Math.max(3, Math.round(((per - 2) * m) / n));
-      for (const k of lttb(xs, ys, s0, m, share)) keep.add(k);
+    let start = -1;
+    for (let i = 0; i <= len; i++) {
+      if (i < len && has(i)) {
+        ys[i] = (v[i]! - vmin) / (vmax - vmin || 1);
+        if (start < 0) start = i;
+      } else if (start >= 0) {
+        if (i < len) keep.add(i); // a gap marker, kept as the run ends
+        // This run's share of the series' budget (min and max take two).
+        const share = Math.max(3, Math.round(((per - 2) * (i - start)) / n));
+        for (const k of lttb(xs, ys, start, i - start, share)) keep.add(k);
+        start = -1;
+      }
     }
   }
   // Many series or sparse runs can still overshoot: first, last and evenly spaced indexes.
-  return fit(keep, Math.max(2, catTarget));
-}
-
-/** The indexes ascending; over `n` of them, first, last and evenly spaced ones. */
-function fit(keep: Set<number>, n: number): number[] {
   const u = [...keep].sort((a, b) => a - b);
+  const n = Math.max(2, catTarget);
   return u.length <= n
     ? u
     : Array.from({ length: n }, (_, k) => u[Math.round((k * (u.length - 1)) / (n - 1))]!);
@@ -386,7 +384,7 @@ function fit(keep: Set<number>, n: number): number[] {
 
 /** colorBy field aggregated per (category, series) like the marks; null without a field colorBy. */
 export function colorVals(s: ResolvedSpec): (c: string, ser: string) => number | null {
-  const cb = typeof s.colorBy === "string" && s.colorBy !== "sign" ? s.colorBy : null;
+  const cb = cbField(s);
   const m = new Map<string, ReturnType<typeof agg>>();
   if (cb)
     for (const row of s.data) {
@@ -400,26 +398,9 @@ export function colorVals(s: ResolvedSpec): (c: string, ser: string) => number |
 
 /**
  * Indexes to draw from `cols` (equal-length value arrays, null = gap): every position, or when
- * there are more than `max`, per column and bucket the lowest and highest value, plus the first
- * and last position and every gap; a union still over `max` is thinned evenly.
- * ponytail: the even thinning can drop a gap or a peak in the densest cases.
+ * there are more than `max`, the reduceTime pick over evenly spaced positions.
  */
 export function thin(cols: readonly (readonly (number | null)[])[], max: number): number[] {
-  const len = cols[0]?.length ?? 0;
-  if (len <= max) return [...Array(len).keys()];
-  const keep = new Set([0, len - 1]);
-  const n = ((max - 2) / (2 * cols.length)) | 0; // buckets per column
-  for (const v of cols) {
-    const lo: number[] = [];
-    const hi: number[] = [];
-    v.forEach((x, i) => {
-      if (x === null) return keep.add(i); // a gap marker
-      const b = ((i * n) / len) | 0;
-      // An unset slot reads undefined, and a comparison with it is false.
-      if (!(v[lo[b]!]! <= x)) lo[b] = i;
-      if (!(v[hi[b]!]! >= x)) hi[b] = i;
-    });
-    lo.concat(hi).forEach((i) => keep.add(i)); // forEach skips the unset slots
-  }
-  return fit(keep, max);
+  const all = [...Array(cols[0]?.length ?? 0).keys()];
+  return all.length <= max ? all : reduceTime(all, cols, max);
 }

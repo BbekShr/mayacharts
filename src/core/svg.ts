@@ -30,6 +30,18 @@ export function el(
   return children === undefined ? `<${tag}${a}/>` : `<${tag}${a}>${children}</${tag}>`;
 }
 
+/** The numeric colorBy field ("sign" and { target } are not fields), else null. */
+export const cbField = ({ colorBy: c }: { colorBy: unknown }) =>
+  typeof c === "string" && c !== "sign" ? c : null;
+
+/** Unique mark id for a named point: the name, then name#2, name#3 for repeats; the row index when unnamed. */
+export function nameId(seen: Map<string, number>, name: string | null, i: number) {
+  if (name === null) return i;
+  const n = (seen.get(name) ?? 0) + 1;
+  seen.set(name, n);
+  return n > 1 ? `${name}#${n}` : name;
+}
+
 /** Sentinel category for `limit`'s rolled-up rest. Cannot collide with real data text. */
 export const OTHER = "\u0000other";
 
@@ -49,14 +61,15 @@ export function hit(d: Parameters<typeof el>[1], x: number, y: number, w: number
   return w < 24 || h < 24
     ? el(
         "rect",
-        Object.assign({ "data-maya": "hit" }, d, {
+        {
           "data-maya": "hit",
+          ...d,
           x: r(x - (gw - w) / 2),
           y: r(y - (gh - h) / 2),
           width: r(gw),
           height: r(gh),
           fill: "transparent",
-        }),
+        },
       )
     : "";
 }
