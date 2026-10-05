@@ -357,20 +357,18 @@ export class MayaChart extends HTMLElement {
     }
     this.#err = "";
     const maya = root.querySelector<HTMLElement>(".maya")!;
-    if (this.#last["table"] !== parts.table) {
+    // The table is hidden but costs its markup, style and layout (1000 scatter rows: ~10 ms), so
+    // it is built and inserted when the browser is idle (2 s at most) and only the latest lands.
+    // ponytail: a screen reader sees the table a moment after the marks.
+    const n = ++this.#tbl;
+    const late = () => {
+      if (n !== this.#tbl || this.#last["table"] === parts.table) return;
       this.#last["table"] = parts.table;
-      const put = () => {
-        root.querySelector("table.maya-sr")?.remove();
-        box.insertAdjacentHTML("afterend", html(parts.table));
-      };
-      // The table is hidden but costs style and layout (300 line rows: ~4 ms, 1000 scatter rows:
-      // ~10 ms), so it waits until the browser is idle (2 s at most) and only the latest lands.
-      // ponytail: a screen reader sees the table a moment after the marks.
-      const n = ++this.#tbl;
-      const late = () => n === this.#tbl && put();
-      // Without requestIdleCallback (Safari) the options coerce to a 0 ms timeout: the next task.
-      (globalThis.requestIdleCallback ?? setTimeout)(late, { timeout: 2000 } as never);
-    }
+      root.querySelector("table.maya-sr")?.remove();
+      box.insertAdjacentHTML("afterend", html(parts.table));
+    };
+    // Without requestIdleCallback (Safari) the options coerce to a 0 ms timeout: the next task.
+    (globalThis.requestIdleCallback ?? setTimeout)(late, { timeout: 2000 } as never);
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
     for (const k of this.#vars)

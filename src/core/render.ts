@@ -68,7 +68,8 @@
  *                           fields only (x y series size name path colorBy, format and
  *                           titles keys). `opts.nonce` lands on the shell's <style>.
  *   renderParts(spec, opts) the pieces (svg without <style>, legend, controls, crumbs, table,
- *                           title, override style + vars, warnings).
+ *                           title, override style + vars, warnings). `table` is a getter that
+ *                           builds the data table on first read (the element reads it idle).
  *   The element renders in a microtask after a property set, and in the next frame after a
  *   resize or while it waits for its JSON spec child.
  *
@@ -517,6 +518,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   );
 
   let legend = "";
+  let tbl: string | undefined;
   if (markLegend !== null && spec.legend !== false) legend = markLegend;
   else if ((s.series !== null || s.y2 !== null) && s.legend)
     legend =
@@ -581,7 +583,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         : s.drill
           ? `<div class="maya-crumbs" aria-hidden="true"></div>` // holds the row: no shift on drill
           : "",
-    table: s.table ? dataTable(s, shaped, fmt, toneText) : "",
+    // Built on first read: the element inserts the table when the browser is idle.
+    get table() {
+      return (tbl ??= s.table ? dataTable(s, shaped, fmt, toneText) : "");
+    },
     title: s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`,
     style,
     vars,
