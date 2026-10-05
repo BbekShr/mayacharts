@@ -46,7 +46,9 @@ const watch = (n) =>
 const mo = new MutationObserver(() => ticks++);
 /** Wait until something changed since `from` (or `end` passed), plus one frame. */
 const settle = async (from, end) => {
-  while (ticks === from && performance.now() < end) await frame();
+  // takeRecords: a library that renders in a microtask has mutated the DOM by now, but the
+  // observer's callback would only run after this check and cost it a whole frame.
+  while (ticks === from && !mo.takeRecords().length && performance.now() < end) await frame();
   await frame();
 };
 
