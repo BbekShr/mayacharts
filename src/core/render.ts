@@ -76,7 +76,7 @@
  * Shadow content (identical from renderShell and the element, built by `shellInner`).
  * Slot order is fixed:
  *   <style>CSS</style>
- *   <div class="maya" style="OVERRIDES">
+ *   <div class="maya">
  *     TITLE  CONTROLS  LEGEND  CRUMBS
  *     <div class="maya-box">SVG</div>
  *     TABLE
@@ -171,8 +171,8 @@
  * Colors: never inline. CSS rules `[data-s="0"]..[data-s="7"]` map to --maya-series-1..8;
  *   --maya-series-1 defaults to var(--maya-accent) so single-series charts use the
  *   accent. spec.colors / spec.theme become custom properties in `Parts.vars` (applied
- *   with style.setProperty by the element) and `Parts.style` (style attribute in render()
- *   and renderShell() output only). Every value passes the CSS allowlist in validate.ts.
+ *   with style.setProperty by the element) and `Parts.style` (the standalone svg's style attribute in
+ *   render(); a `.maya{...}` rule in the shell's <style> in renderShell(), never an attribute). Every value passes the CSS allowlist in validate.ts.
  *
  * Animation contract (element/animate.ts): marks get
  *   `transform-box: fill-box; transform-origin: 0 0` from CSS. The element commits new
@@ -511,8 +511,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       // A line path: its point circles are hidden until active (one search, not a CSS :has).
       "data-pt": body.includes('data-maya="line"') || null,
       // A click can drill further (pointer cursor on marks).
-      "data-drill":
-        (s.drill && s.path.length > (s.type === "sankey" || s.type === "chord" ? 2 : 1)) || null,
+      "data-drill": (s.drill && s.path.length > (s.type === "sankey" ? 2 : 1)) || null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
       el("title", { id: sheet === null ? "maya-t" : null }, esc(titleText(s))) +
@@ -620,10 +619,12 @@ export function render<R extends object = Row>(
 
 /** Inner shadow-root markup, shared by renderShell and the element. Fixed slot order. */
 export function shellInner(parts: Parts, css: string, nonce?: string): string {
-  const st = parts.style ? ` style="${esc(parts.style)}"` : "";
   const n = nonce ? ` nonce="${esc(nonce)}"` : "";
+  // Overrides ride in the nonce'd <style>, not a style attribute (blocked without style-src-attr).
+  // Raw text, so esc would corrupt quoted fonts; the allowlist already bars `<`, escaped anyway.
+  const sheet = css + (parts.style ? `.maya{${parts.style.replace(/</g, "\\3c ")}}` : "");
   return (
-    `${css ? `<style${n}>${css}</style>` : ""}<div class="maya"${st}>${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
+    `${sheet ? `<style${n}>${sheet}</style>` : ""}<div class="maya">${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
     `<div class="maya-box">${parts.svg}</div>${parts.table}` +
     `<div class="maya-sr" data-maya="live" aria-live="polite"></div>` +
     `<div class="maya-probe" data-maya="probe"></div><div class="maya-tip" popover="manual" role="tooltip"></div></div>`

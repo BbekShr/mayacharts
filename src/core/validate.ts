@@ -84,9 +84,11 @@ export const ALL_Y = ["parallel", "table"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
+// Chord has two levels, so a drill would never go anywhere: drill needs treemap, sunburst or sankey.
+const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} drillOut:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),

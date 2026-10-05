@@ -344,6 +344,7 @@ function reduceTime(
   const xs = Float64Array.from(t, (v) => (v - t0) / dt);
   const ys = new Float64Array(len);
   const keep = new Set<number>([0, len - 1]);
+  const pin = new Set<number>([0, len - 1]); // first, last and each series' min and max survive
   for (const v of vs) {
     const has = (i: number) => Number.isFinite(v[i]);
     let lo = -1;
@@ -357,6 +358,7 @@ function reduceTime(
     }
     if (!n) continue;
     keep.add(lo).add(hi);
+    pin.add(lo).add(hi);
     const [vmin, vmax] = [v[lo]!, v[hi]!];
     let start = -1;
     for (let i = 0; i <= len; i++) {
@@ -372,12 +374,19 @@ function reduceTime(
       }
     }
   }
-  // Many series or sparse runs can still overshoot: first, last and evenly spaced indexes.
+  // Many series or sparse runs can still overshoot: keep the pins, fill the rest evenly spaced.
   const u = [...keep].sort((a, b) => a - b);
   const n = Math.max(2, catTarget);
-  return u.length <= n
-    ? u
-    : Array.from({ length: n }, (_, k) => u[Math.round((k * (u.length - 1)) / (n - 1))]!);
+  if (u.length <= n) return u;
+  if (pin.size >= n)
+    return Array.from({ length: n }, (_, k) => u[Math.round((k * (u.length - 1)) / (n - 1))]!);
+  const rest = u.filter((i) => !pin.has(i));
+  const room = n - pin.size;
+  const picked = Array.from(
+    { length: room },
+    (_, k) => rest[Math.floor(((k + 0.5) * rest.length) / room)]!,
+  );
+  return [...pin, ...picked].sort((a, b) => a - b);
 }
 
 /** colorBy field aggregated per (category, series) like the marks; null without a field colorBy. */

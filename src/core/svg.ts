@@ -34,12 +34,17 @@ export function el(
 export const cbField = ({ colorBy: c }: { colorBy: unknown }) =>
   typeof c === "string" && c !== "sign" ? c : null;
 
-/** Unique mark id for a named point: the name, then name#2, name#3 for repeats; the row index when unnamed. */
+const EMITTED = new WeakMap<Map<string, number>, Set<string>>();
+/** Unique mark id for a named point: the name, then name#2, name#3 for repeats (bumped past any id already emitted); the row index when unnamed. */
 export function nameId(seen: Map<string, number>, name: string | null, i: number) {
   if (name === null) return i;
-  const n = (seen.get(name) ?? 0) + 1;
+  const used = EMITTED.get(seen) ?? EMITTED.set(seen, new Set()).get(seen)!;
+  let n = (seen.get(name) ?? 0) + 1;
+  let id = n > 1 ? `${name}#${n}` : name;
+  while (used.has(id)) id = `${name}#${++n}`;
   seen.set(name, n);
-  return n > 1 ? `${name}#${n}` : name;
+  used.add(id);
+  return id;
 }
 
 /** Sentinel category for `limit`'s rolled-up rest. Cannot collide with real data text. */

@@ -15,7 +15,20 @@ const INTL = new Map<string, F>();
 const NUM = /^{"maximumFractionDigits":(\d)}$/;
 const DATE =
   /^{"timeZone":"UTC"(?=,)(?:(,"month":"short"(,"day":"numeric")?)?(,"year":"numeric")?(,"hour":"numeric","minute":"2-digit"(,"second":"2-digit")?)?|(,"dateStyle":"medium")?(,"timeStyle":"short")?)}$/;
-const intl = (C: new (l: string, o: object) => F, locale: string, o: object) => {
+// Only these option names reach Intl or the cache key; anything else in a spec is dropped.
+const KNOWN = new Set(
+  (
+    "localeMatcher numberingSystem style currency currencyDisplay currencySign unit unitDisplay notation compactDisplay signDisplay useGrouping roundingMode roundingPriority roundingIncrement trailingZeroDisplay minimumIntegerDigits minimumFractionDigits maximumFractionDigits minimumSignificantDigits maximumSignificantDigits " +
+    "calendar dayPeriod hour12 hourCycle timeZone weekday era year month day hour minute second fractionalSecondDigits timeZoneName formatMatcher dateStyle timeStyle"
+  ).split(" "),
+);
+const intl = (C: new (l: string, o: object) => F, locale: string, raw: object) => {
+  // A fresh object of known names with primitive values (no BigInt), in the caller's key order.
+  const o = Object.fromEntries(
+    Object.entries(raw).filter(
+      ([k, v]) => KNOWN.has(k) && ["string", "number", "boolean"].includes(typeof v),
+    ),
+  );
   const j = JSON.stringify(o);
   let f = INTL.get(C.name + locale + j);
   if (f) return f;
@@ -63,6 +76,7 @@ const intl = (C: new (l: string, o: object) => F, locale: string, o: object) => 
       },
     };
   } else f = mk();
+  if (INTL.size > 200) INTL.clear(); // ponytail: a flush, not an LRU; hosts rarely need 200 formats
   INTL.set(C.name + locale + j, f);
   return f;
 };
@@ -86,10 +100,9 @@ const DATE_PRESETS: Record<string, Intl.DateTimeFormatOptions> = {
 
 export function formatter(
   s: ResolvedSpec,
-  field: string | number = s.y,
+  field: string = s.y,
   step?: number,
 ): (v: unknown) => string {
-  if (typeof field === "number") [field, step] = [s.y, field]; // T0-era formatter(spec, step)
   let e: FieldFormat | undefined = s.format.get(field);
   const tpl = typeof e === "string" ? TEMPLATE.exec(e) : null; // "{value:percent} gross"
   if (tpl) e = (tpl[2] ?? "auto") as FieldFormat; // validate.ts checked the preset

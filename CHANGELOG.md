@@ -4,6 +4,18 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- Downsampling a long time axis no longer drops a series' first point, last point, minimum or maximum when many series or sparse runs overshoot the budget. A one-point spike in a gappy line, or a kpi sparkline's extremes, now survive.
+- The exported `version` and `<maya-chart>.version` now read 0.5.0 instead of 0.3.0, so the double-registration warning can fire between versions. A test compares it with package.json so the next release cannot drift.
+- Scatter and beeswarm marks with names like "3", "3" and "3#2" no longer share a `data-key`.
+- Format options are copied to a fresh object of known Intl option names before they are cached or passed to Intl. A BigInt or unknown option no longer throws a raw TypeError, and the formatter cache is cleared past 200 entries.
+- `renderShell` and `shellInner` put `theme` and `colors` overrides in a rule inside the nonce'd style element instead of a style attribute, so they apply under a strict CSP without `style-src-attr`.
+- `drill` and `drillOut` on a chord chart are now rejected with `option-unsupported`. A chord has two levels, so a drill never went anywhere.
+- The release workflow is split into a `gate` job that runs the repository scripts with no credentials and a `publish` job that alone holds the npm token and `id-token: write`, installs nothing and publishes the built artifact. The gate fails when the tag and package.json version differ. Every action in every workflow is pinned to a commit SHA.
+
 ## 0.5.0 - 2026-10-05
 
 A measured scoreboard against seven other chart libraries, and speed: large data renders several times faster than before.
