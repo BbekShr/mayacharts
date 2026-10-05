@@ -95,14 +95,14 @@
     "compare:ease": "node scripts/compare-ease.mjs"
   },
   "mayaSize": {
-    "dist/index.js": 29184,
-    "dist/element.js": 41984,
+    "dist/index.js": 30208,
+    "dist/element.js": 43008,
     "dist/theme.css": 4096,
     "dist/hierarchy.js": 3840,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 50688
+    "dist/maya.global.js": 51712
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "0.131.0",
