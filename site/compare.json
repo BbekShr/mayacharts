@@ -1,7 +1,7 @@
 {
   "generated": "2026-10-05",
   "versions": {
-    "commit": "30d900b",
+    "commit": "58c49d0",
     "maya": null,
     "chartjs": "4.5.1",
     "echarts": "6.1.0",
@@ -14,7 +14,7 @@
   "browser": "Chromium 153.0.8010.12",
   "csp": "default-src 'self'; style-src 'self'; require-trusted-types-for 'script'; trusted-types mayacharts",
   "arrowCap": 40,
-  "speedDefinition": "First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink) and the next frame has painted (a task after that frame, so its style, layout and paint count). Update is 10 calls of the redraw function with fresh rows, each timed from the call until the chart drew (a DOM mutation or a canvas draw call) and the next frame painted; p50 and p95 per load. Heap is JS heap after a forced GC and 10 updates. Median of 5 fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle 4x in the second column. A cell stops after 30 s with the runs it finished; one with none is recorded with its reason, and a first paint over 5 s skips the larger sizes.",
+  "speedDefinition": "First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink) and the next frame has painted (a task after that frame, so its style, layout and paint count). Load to paint is the same finish line measured from the end of the library download, so parsing, compiling and evaluating the library count too. Update is 10 calls of the redraw function with fresh rows, each timed from the call until the chart drew (a DOM mutation or a canvas draw call) and the next frame painted; p50 and p95 per load. Heap is JS heap after a forced GC and 10 updates. Median of 5 fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle 4x in the second column. A cell stops after 30 s with the runs it finished; one with none is recorded with its reason, and a first paint over 5 s skips the larger sizes.",
   "notes": [
     "Each library draws the same data through its own reference module in e2e/compare/ref, written the way its documentation shows, with defaults and no theming.",
     "The CSP row is its own test: a chart that is blocked by the policy is recorded as failing there, and the speed suite runs with no CSP so those numbers survive.",
@@ -2206,32 +2206,36 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 64.5,
-            "updateP50Ms": 15.9,
-            "updateP95Ms": 20.1,
-            "heapMB": 12.6,
+            "firstPaintMs": 60.9,
+            "loadPaintMs": 86.2,
+            "updateP50Ms": 15.8,
+            "updateP95Ms": 19,
+            "heapMB": 12.3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 255.6,
-            "updateP50Ms": 61.3,
-            "updateP95Ms": 76.8,
+            "firstPaintMs": 239.4,
+            "loadPaintMs": 287.3,
+            "updateP50Ms": 53.5,
+            "updateP95Ms": 71.2,
             "heapMB": 12.3,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 63.3,
-            "updateP50Ms": 10.7,
-            "updateP95Ms": 16.9,
-            "heapMB": 10.7,
+            "firstPaintMs": 57.8,
+            "loadPaintMs": 82.5,
+            "updateP50Ms": 9.8,
+            "updateP95Ms": 15.3,
+            "heapMB": 10.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 266.7,
-            "updateP50Ms": 44.2,
-            "updateP95Ms": 58.9,
+            "firstPaintMs": 226.8,
+            "loadPaintMs": 274.6,
+            "updateP50Ms": 38.1,
+            "updateP95Ms": 55,
             "heapMB": 11.3,
             "runs": 5
           }
@@ -2272,32 +2276,36 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 50.3,
+            "firstPaintMs": 43,
+            "loadPaintMs": 68.2,
             "updateP50Ms": 16,
-            "updateP95Ms": 16.5,
+            "updateP95Ms": 16.6,
             "heapMB": 6.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 209.4,
-            "updateP50Ms": 21.6,
-            "updateP95Ms": 37.7,
+            "firstPaintMs": 175.9,
+            "loadPaintMs": 223.5,
+            "updateP50Ms": 16.7,
+            "updateP95Ms": 33.6,
             "heapMB": 6.1,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 53.9,
-            "updateP50Ms": 15.4,
-            "updateP95Ms": 24.3,
-            "heapMB": 9.6,
+            "firstPaintMs": 51.4,
+            "loadPaintMs": 76.2,
+            "updateP50Ms": 14.7,
+            "updateP95Ms": 23.4,
+            "heapMB": 9.5,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 214.7,
-            "updateP50Ms": 65.7,
-            "updateP95Ms": 99.3,
+            "firstPaintMs": 201.6,
+            "loadPaintMs": 248.5,
+            "updateP50Ms": 60,
+            "updateP95Ms": 89.6,
             "heapMB": 9.5,
             "runs": 5
           }
@@ -2462,131 +2470,148 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 44.1,
-            "updateP50Ms": 40.7,
-            "updateP95Ms": 43.6,
+            "firstPaintMs": 25.5,
+            "loadPaintMs": 29.6,
+            "updateP50Ms": 16.2,
+            "updateP95Ms": 18.3,
             "heapMB": 2.2,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 174.6,
-            "updateP50Ms": 166.5,
-            "updateP95Ms": 181.9,
-            "heapMB": 2.2,
+            "firstPaintMs": 101.2,
+            "loadPaintMs": 122.4,
+            "updateP50Ms": 47.5,
+            "updateP95Ms": 64,
+            "heapMB": 4.6,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 75.1,
-            "updateP50Ms": 73.5,
-            "updateP95Ms": 90.6,
+            "firstPaintMs": 52.5,
+            "loadPaintMs": 56.9,
+            "updateP50Ms": 24.9,
+            "updateP95Ms": 31.2,
             "heapMB": 2.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 309.6,
-            "updateP50Ms": 315,
-            "updateP95Ms": 375.8,
-            "heapMB": 2.7,
+            "firstPaintMs": 208.1,
+            "loadPaintMs": 228.5,
+            "updateP50Ms": 102,
+            "updateP95Ms": 156.2,
+            "heapMB": 11.5,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 70.6,
-            "updateP50Ms": 56.9,
-            "updateP95Ms": 66.6,
-            "heapMB": 7,
+            "firstPaintMs": 75.7,
+            "loadPaintMs": 80.1,
+            "updateP50Ms": 35.1,
+            "updateP95Ms": 39.9,
+            "heapMB": 7.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 279.3,
-            "updateP50Ms": 243.7,
-            "updateP95Ms": 299.6,
-            "heapMB": 7,
+            "firstPaintMs": 298.9,
+            "loadPaintMs": 321.1,
+            "updateP50Ms": 146.4,
+            "updateP95Ms": 195.4,
+            "heapMB": 33.8,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 304.8,
-            "updateP50Ms": 168.1,
-            "updateP95Ms": 204.6,
-            "heapMB": 50.2,
+            "firstPaintMs": 301.2,
+            "loadPaintMs": 305.4,
+            "updateP50Ms": 147.8,
+            "updateP95Ms": 198.5,
+            "heapMB": 50.3,
             "runs": 4
           },
           "throttled": {
-            "firstPaintMs": 1282.3,
-            "updateP50Ms": 621.4,
-            "updateP95Ms": 821.1,
-            "heapMB": 50.2,
-            "runs": 1
+            "firstPaintMs": 1226,
+            "loadPaintMs": 1245.5,
+            "updateP50Ms": 550,
+            "updateP95Ms": 633.4,
+            "heapMB": 50.3,
+            "runs": 1,
+            "note": "page.waitForFunction: Timeout 1000ms exceeded."
           }
         }
       },
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 38.8,
+            "firstPaintMs": 20.9,
+            "loadPaintMs": 25.1,
             "updateP50Ms": 16,
             "updateP95Ms": 16.8,
             "heapMB": 2.4,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 146.5,
-            "updateP50Ms": 50.8,
-            "updateP95Ms": 57.4,
-            "heapMB": 2.4,
+            "firstPaintMs": 83.4,
+            "loadPaintMs": 103.4,
+            "updateP50Ms": 27,
+            "updateP95Ms": 49.2,
+            "heapMB": 2.5,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 41.7,
-            "updateP50Ms": 15.9,
-            "updateP95Ms": 20.5,
+            "firstPaintMs": 24.6,
+            "loadPaintMs": 28.9,
+            "updateP50Ms": 11.4,
+            "updateP95Ms": 13.9,
             "heapMB": 3.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 165.2,
-            "updateP50Ms": 64.8,
-            "updateP95Ms": 73,
-            "heapMB": 3,
+            "firstPaintMs": 93.9,
+            "loadPaintMs": 115,
+            "updateP50Ms": 34.4,
+            "updateP95Ms": 43.8,
+            "heapMB": 3.1,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 50.7,
-            "updateP50Ms": 27.2,
-            "updateP95Ms": 39.6,
-            "heapMB": 9.6,
+            "firstPaintMs": 43.9,
+            "loadPaintMs": 48.1,
+            "updateP50Ms": 21.5,
+            "updateP95Ms": 27.9,
+            "heapMB": 83.2,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 183.7,
-            "updateP50Ms": 118.3,
-            "updateP95Ms": 171.2,
-            "heapMB": 9.6,
+            "firstPaintMs": 152.9,
+            "loadPaintMs": 173.3,
+            "updateP50Ms": 88.6,
+            "updateP95Ms": 119.2,
+            "heapMB": 53.8,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 198.4,
-            "updateP50Ms": 177.2,
-            "updateP95Ms": 261.3,
-            "heapMB": 74.3,
+            "firstPaintMs": 176.1,
+            "loadPaintMs": 180.3,
+            "updateP50Ms": 168.3,
+            "updateP95Ms": 200.9,
+            "heapMB": 218.8,
             "runs": 4
           },
           "throttled": {
-            "firstPaintMs": 722.9,
-            "updateP50Ms": 684.2,
-            "updateP95Ms": 802.8,
-            "heapMB": 74.3,
+            "firstPaintMs": 667.1,
+            "loadPaintMs": 686.7,
+            "updateP50Ms": 648.1,
+            "updateP95Ms": 726.2,
+            "heapMB": 74.5,
             "runs": 1
           }
         }
@@ -2596,32 +2621,36 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 16.4,
-            "updateP50Ms": 16,
-            "updateP95Ms": 17,
+            "firstPaintMs": 14.1,
+            "loadPaintMs": 28.5,
+            "updateP50Ms": 16.1,
+            "updateP95Ms": 17.5,
             "heapMB": 2.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 63.6,
-            "updateP50Ms": 20,
-            "updateP95Ms": 22.8,
+            "firstPaintMs": 60.9,
+            "loadPaintMs": 116.7,
+            "updateP50Ms": 18,
+            "updateP95Ms": 22.5,
             "heapMB": 2.8,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 45.1,
-            "updateP50Ms": 36.8,
-            "updateP95Ms": 46.6,
+            "firstPaintMs": 42.2,
+            "loadPaintMs": 56.1,
+            "updateP50Ms": 32.8,
+            "updateP95Ms": 39.3,
             "heapMB": 3.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 182.7,
-            "updateP50Ms": 132.9,
-            "updateP95Ms": 170.4,
+            "firstPaintMs": 171.3,
+            "loadPaintMs": 227,
+            "updateP50Ms": 125.6,
+            "updateP95Ms": 156.8,
             "heapMB": 3.8,
             "runs": 5
           }
@@ -2662,32 +2691,36 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 12.7,
+            "firstPaintMs": 12,
+            "loadPaintMs": 27,
             "updateP50Ms": 15.9,
-            "updateP95Ms": 16.6,
+            "updateP95Ms": 16.5,
             "heapMB": 3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 55.5,
-            "updateP50Ms": 14,
-            "updateP95Ms": 15.1,
+            "firstPaintMs": 51.9,
+            "loadPaintMs": 106.3,
+            "updateP50Ms": 14.3,
+            "updateP95Ms": 15.9,
             "heapMB": 3,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 22.8,
-            "updateP50Ms": 10.9,
-            "updateP95Ms": 14.3,
+            "firstPaintMs": 22.1,
+            "loadPaintMs": 36.4,
+            "updateP50Ms": 11.4,
+            "updateP95Ms": 17.4,
             "heapMB": 4.3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 95.4,
-            "updateP50Ms": 44.8,
-            "updateP95Ms": 53.2,
+            "firstPaintMs": 87.1,
+            "loadPaintMs": 142,
+            "updateP50Ms": 40.7,
+            "updateP95Ms": 49.9,
             "heapMB": 4.3,
             "runs": 5
           }
