@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { niceTicks } from "../src/core/ticks.ts";
+import { niceTicks, toTime } from "../src/core/ticks.ts";
 
 const cases: [number, number][] = [
   [0, 0],
@@ -32,6 +32,38 @@ describe("niceTicks", () => {
   }
   it("crossing zero includes 0", () => {
     expect(niceTicks(-37, 82).values).toContain(0);
+  });
+});
+
+describe("toTime plain shapes", () => {
+  // The arithmetic fast path must agree with Date.parse on every shape, valid or not.
+  const ISO =
+    /^\d{4}-\d{2}(?:-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?)?)?$/;
+  const ref = (v: string) => {
+    const m = ISO.exec(v);
+    const t = m ? Date.parse(v.length > 10 && m[1] === undefined ? v + "Z" : v) : NaN;
+    return Number.isNaN(t) ? null : t;
+  };
+  const p = (n: number, k: number) => String(n).padStart(k, "0");
+  it("matches Date.parse", () => {
+    let seed = 7;
+    const rnd = (n: number) => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff), seed % n);
+    for (let i = 0; i < 20000; i++) {
+      const [Y, M, D, h, mi, s, ms] = [10000, 14, 33, 26, 62, 62, 1000].map(rnd) as [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+      ];
+      const d = `${p(Y, 4)}-${p(M, 2)}-${p(D, 2)}`;
+      const hm = `${d}T${p(h, 2)}:${p(mi, 2)}`;
+      const hms = `${hm}:${p(s, 2)}`;
+      const all = [d, hm, hm + "Z", hms, hms + "Z", `${hms}.${p(ms, 3)}`, `${hms}.${p(ms, 3)}Z`];
+      for (const v of all) expect(toTime(v, false)).toBe(ref(v));
+    }
   });
 });
 

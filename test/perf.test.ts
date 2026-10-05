@@ -8,6 +8,11 @@ const time = (fn: () => unknown) => {
   const out = fn();
   return { ms: performance.now() - t, out };
 };
+// Best of four after the warm-up: a loaded CI box slows a run, rarely all of them.
+const best = (fn: () => unknown, runs = 4) => {
+  const all = Array.from({ length: runs }, () => time(fn));
+  return all.reduce((a, b) => (b.ms < a.ms ? b : a));
+};
 const guard = (ctx: { skip: () => never }, fn: () => unknown) => {
   try {
     return time(fn);
@@ -79,6 +84,46 @@ describe("performance envelope", () => {
     }
     expect(err).toBeInstanceOf(MayaSpecError);
     expect((err as MayaSpecError).code).toBe("too-many-marks");
+  });
+
+  // One row per minute, the shape the comparison suite feeds every library.
+  const minutes = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      date: new Date(Date.UTC(2024, 0, 1) + i * 60_000).toISOString(),
+      value: 100 + Math.sin(i / 50) * 5 + ((i * 7919) % 13) / 10,
+    }));
+  const line = (data: unknown[]) => ({ type: "line", x: "date", y: "value", data }) as never;
+
+  it("line 1k: under 120 KB of svg", () => {
+    expect(renderParts(line(minutes(1000))).svg.length).toBeLessThan(120e3);
+  });
+
+  it("line 100k: < 60 ms", () => {
+    const data = minutes(100_000);
+    expect(best(() => renderParts(line(data))).ms).toBeLessThan(60);
+  });
+
+  it("line 1M: < 400 ms", () => {
+    const data = minutes(1_000_000);
+    expect(best(() => renderParts(line(data))).ms).toBeLessThan(400);
+  }, 30_000);
+
+  it("scatter 1M: < 500 ms, and no hit elements", () => {
+    const data = Array.from({ length: 1_000_000 }, (_, i) => ({
+      x: (i * 7919) % 10007,
+      y: (i * 104729) % 9973,
+    }));
+    const spec = { type: "scatter", x: "x", y: "y", data } as never;
+    const { ms, out } = best(() => renderParts(spec));
+    expect(ms).toBeLessThan(500);
+    expect((out as { svg: string }).svg).not.toContain('data-maya="hit"');
+  }, 30_000);
+
+  it("scatter draws no hit elements below the bin limit either", () => {
+    const data = Array.from({ length: 300 }, (_, i) => ({ x: i, y: (i * 7) % 50 }));
+    const svg = renderParts({ type: "scatter", x: "x", y: "y", data } as never).svg;
+    expect(svg).toContain('data-maya="mark"');
+    expect(svg).not.toContain('data-maya="hit"');
   });
 
   it("6k scatter rows bin into at most MAX_MARKS density rects", () => {

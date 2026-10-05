@@ -572,9 +572,11 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (hit) fail("option-unsupported", k, headline, detail);
 
   if (rows.length) {
-    const found = [...new Set(rows.flatMap((r) => Object.keys(r)))];
-    const unk = (p: string, headline: string, f: string, use: string) =>
-      fail(
+    // The key list is only built on the error path; the check itself stops at the first row.
+    const has = (f: string) => rows.some((r) => Object.hasOwn(r, f));
+    const unk = (p: string, headline: string, f: string, use: string) => {
+      const found = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+      return fail(
         "unknown-field",
         p,
         headline,
@@ -582,6 +584,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         dym(f, found),
         use,
       );
+    };
     const ys = typeof y === "string" ? [y] : (y as string[]);
     const arr = (o: string, a: string[]): [string, string][] => a.map((f, i) => [`${o}[${i}]`, f]);
     const fields: [string, unknown][] = [
@@ -595,7 +598,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       ["colorBy", colorBy === "sign" ? undefined : colorBy],
     ];
     for (const [p, f] of fields) {
-      if (typeof f !== "string" || found.includes(f)) continue;
+      if (typeof f !== "string" || has(f)) continue;
       const opt = p.replace(/\[.*/, "");
       unk(
         p,
@@ -607,14 +610,14 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     for (const opt of ["format", "titles"])
       if (isObj(s[opt]))
         for (const f of Object.keys(s[opt] as object))
-          if (!found.includes(f))
+          if (!has(f))
             unk(
               `${opt}.${f}`,
               `spec.${opt} key "${f}" is not a field in spec.data.`,
               f,
               `spec.${opt} keys name fields, for ${USE[opt]}.`,
             );
-    if (colorBy === "sign" && found.includes("sign"))
+    if (colorBy === "sign" && has("sign"))
       fail(
         "invalid-option",
         "colorBy",
@@ -622,11 +625,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         "Rename that field (e.g. data.map(({ sign, ...r }) => ({ ...r, signValue: sign }))) to colour by it.",
       );
 
-    const scan = (f: string, g: (v: unknown, p: string) => void) =>
-      rows.forEach((r, i) => g(r[f], `data[${i}].${f}`));
+    // Callbacks build the data[i].field path themselves, only when a row fails.
+    const scan = (f: string, g: (v: unknown, i: number) => void) =>
+      rows.forEach((r, i) => g(r[f], i));
     const numeric = (f: string, code: ErrorCode, opt: string) =>
-      scan(f, (v, p) => {
+      scan(f, (v, i) => {
         if (v == null || (typeof v === "number" && Number.isFinite(v))) return;
+        const p = `data[${i}].${f}`;
         fail(
           code,
           p,
@@ -651,8 +656,9 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     }
     if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
     if (s.xType === "time" && typeof s.x === "string")
-      scan(s.x, (v, p) => {
+      scan(s.x, (v, i) => {
         if (v == null || toTime(v) !== null) return;
+        const p = `data[${i}].${s.x}`;
         fail(
           "invalid-date",
           p,
@@ -664,14 +670,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       numeric(colorBy, "non-numeric-field", "colorBy");
     if (isPath)
       for (const f of ys)
-        scan(f, (v, p) => {
-          if (typeof v === "number" && v <= 0)
+        scan(f, (v, i) => {
+          if (typeof v === "number" && v <= 0) {
+            const p = `data[${i}].${f}`;
             fail(
               "non-positive-value",
               p,
               `spec.${p} is ${v}, but ${t} sizes must be positive.`,
               `Filter first: data.filter(r => r.${f} > 0), or chart the signed values with "bar".`,
             );
+          }
         });
   }
   MODULES.get(t)?.check?.(spec as unknown as ChartSpec, fail);

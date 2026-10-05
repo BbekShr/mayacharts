@@ -6,8 +6,10 @@ const ESC: Record<string, string> = {
   "'": "&#39;",
 };
 
+const SPECIAL = /[&<>"']/;
 export function esc(s: string | number): string {
-  return String(s).replace(/[&<>"']/g, (c) => ESC[c]!);
+  if (typeof s !== "string") return String(s); // a number has nothing to escape
+  return SPECIAL.test(s) ? s.replace(/[&<>"']/g, (c) => ESC[c]!) : s;
 }
 
 export function r(n: number): number {

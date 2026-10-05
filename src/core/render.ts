@@ -36,7 +36,8 @@
  *   the smallest gap (year, month, date, datetime); tick labels use per-unit defaults.
  *   Downsampling: line and area on a time axis with more categories than min(MAX_POINTS,
  *   floor(plot width / 2), 4000 / series) (one point per 2 px: a narrower band cannot be
- *   hovered) run largest-triangle-three-buckets per series (keeping first, last, min, max
+ *   hovered; the plot width is estimated as width - 56, shape runs before layout) run
+ *   largest-triangle-three-buckets per series (keeping first, last, min, max
  *   and one marker per gap), after the window; a union still over the target is thinned to
  *   first, last and evenly spaced indexes. Kept categories keep their keys; Shaped.reduced
  *   = [kept, before], and the description says so. view.window indexes the time-ordered list
@@ -256,7 +257,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const s0 = resolve(spec, opts?.view);
   const W = opts?.width ?? 640;
   const H = opts?.height ?? 320;
-  const shaped = shape(s0, opts?.view ?? {});
+  // ponytail: plot width is only known after shape (tick labels set the margins); W - 56 is the
+  // usual plot of a 4-digit y axis, and the point budget needs no more than that.
+  const shaped = shape(s0, { ...opts?.view, plotWidth: W - 56 });
   // Time axis without a format for x: the preset follows the smallest gap between categories.
   let s = s0;
   if (shaped.time && !s0.format.has(s0.x)) {
