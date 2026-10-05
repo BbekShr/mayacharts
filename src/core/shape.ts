@@ -175,11 +175,8 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
         else spans.set(c, [run, (run += total(c))]);
       }
     }
-    if (window?.length === 2 && cats.length) {
-      const i1 = Math.min(cats.length - 1, Math.max(0, Math.trunc(window[1])));
-      const i0 = Math.min(i1, Math.max(0, Math.trunc(window[0])));
-      cats = cats.slice(i0, i1 + 1);
-    }
+    const [i0, i1] = span(cats.length, window);
+    cats = cats.slice(i0, i1 + 1);
 
     const catTarget = target(series.length);
     if (isTime && (s.type === "line" || s.type === "area") && cats.length > catTarget) {
@@ -229,6 +226,13 @@ export function shape(s: ResolvedSpec, o: Opts | readonly string[] = {}): Shaped
   };
 }
 
+/** Inclusive index range of `n` categories inside view.window ([i0, i1]; other lengths ignored). */
+const span = (n: number, w: View["window"]): [number, number] => {
+  if (w?.length !== 2 || !n) return [0, n - 1];
+  const i1 = Math.min(n - 1, Math.max(0, Math.trunc(w[1])));
+  return [Math.min(i1, Math.max(0, Math.trunc(w[0]))), i1];
+};
+
 /**
  * Time axis fast path for the common case: line or area, one series, no y2, sort or limit, and
  * every x a distinct ISO date in increasing order (so each row is its own category). Typed
@@ -269,11 +273,7 @@ function fastTime(
     at[m++] = i;
   }
   if (!m) return null;
-  let [i0, i1] = [0, m - 1];
-  if (window?.length === 2) {
-    i1 = Math.min(m - 1, Math.max(0, Math.trunc(window[1])));
-    i0 = Math.min(i1, Math.max(0, Math.trunc(window[0])));
-  }
+  const [i0, i1] = span(m, window);
   const ts = t.subarray(i0, i1 + 1);
   const vs = v.subarray(i0, i1 + 1);
   const before = ts.length;

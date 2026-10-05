@@ -36,53 +36,39 @@ export function niceTicks(min: number, max: number, target = 5): Ticks {
 const ISO =
   /^\d{4}-\d{2}(?:-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?)?)?$/;
 
-/**
- * The plain shapes ("2024-03-05", "2024-03-05T14:30[:00[.000]][Z]", digits only, day <= 28, no
- * leap or offset cases) by arithmetic, about ten times faster than Date.parse. NaN: use the slow path.
- */
 const num = (v: string, i: number, k: number) => {
   let x = 0;
   for (const e = i + k; i < e; i++) {
     const d = v.charCodeAt(i) - 48;
-    if (d < 0 || d > 9) return NaN;
-    x = x * 10 + d;
+    x = d >>> 0 > 9 ? NaN : x * 10 + d;
   }
   return x;
 };
 let day = "?"; // the last "YYYY-MM-DD" and its UTC ms: a series shares one for many rows
-let dayMs = NaN;
+let dayMs = 0;
+/**
+ * What Date#toISOString writes ("2024-03-05T14:30:00Z", with ".000" before the Z), by arithmetic,
+ * about ten times faster than Date.parse. Day <= 28 only; NaN: use the slow path.
+ */
 function plainIso(v: string): number {
   const n = v.length;
-  if (n !== 10 && n !== 16 && n !== 17 && n !== 19 && n !== 20 && n !== 23 && n !== 24) return NaN;
-  if (n === 10 || !v.startsWith(day)) {
+  if ((n !== 20 && n !== 24) || v[n - 1] !== "Z" || v[10] !== "T" || v[13] !== ":" || v[16] !== ":")
+    return NaN;
+  if (!v.startsWith(day)) {
     const [Y, M, D] = [num(v, 0, 4), num(v, 5, 2), num(v, 8, 2)];
     if (v[4] !== "-" || v[7] !== "-" || !(M >= 1 && M <= 12 && D >= 1 && D <= 28)) return NaN;
     const y = Y - (M <= 2 ? 1 : 0);
     const era = Math.floor(y / 400);
     const yoe = y - era * 400;
     const doy = Math.floor((153 * (M + (M > 2 ? -3 : 9)) + 2) / 5) + D - 1;
-    dayMs =
-      (era * 146097 + yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy - 719468) *
-      864e5;
+    dayMs = (era * 146097 + yoe * 365 + (yoe >> 2) - Math.floor(yoe / 100) + doy - 719468) * 864e5;
     day = v.slice(0, 10);
   }
-  if (n === 10) return dayMs;
-  const [h, mi] = [num(v, 11, 2), num(v, 14, 2)];
-  if (v[10] !== "T" || v[13] !== ":" || !(h < 24 && mi < 60)) return NaN;
-  let rest = h * 36e5 + mi * 6e4;
-  let end = 16;
-  if (n > 17 && v[16] === ":") {
-    const sec = num(v, 17, 2);
-    if (!(sec < 60)) return NaN;
-    rest += sec * 1e3;
-    end = 19;
-    if (n > 20 && v[19] === ".") {
-      if (n < 23) return NaN;
-      rest += num(v, 20, 3);
-      end = 23;
-    }
-  }
-  return n === end || (n === end + 1 && v[end] === "Z") ? dayMs + rest : NaN;
+  const [h, mi, s] = [num(v, 11, 2), num(v, 14, 2), num(v, 17, 2)];
+  const ms = n === 24 ? (v[19] === "." ? num(v, 20, 3) : NaN) : 0;
+  return h < 24 && mi < 60 && s < 60 && ms === ms
+    ? dayMs + h * 36e5 + mi * 6e4 + s * 1e3 + ms
+    : NaN;
 }
 
 /**
