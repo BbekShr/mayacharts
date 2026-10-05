@@ -98,7 +98,7 @@ function write(browser: Browser): void {
     browser: `Chromium ${browser.version()}`,
     csp: CSP,
     arrowCap: ARROW_CAP,
-    speedDefinition: `First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink), plus one frame. Update is ${UPDATES} calls of the redraw function with fresh rows, each timed until the chart changed (a DOM mutation, or different canvas pixels), plus one frame; p50 and p95 per load. Heap is JS heap after a forced GC and ${UPDATES} updates. Median of ${SPEED_RUNS} fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle ${THROTTLE}x in the second column. A cell stops after ${CELL_MS / 1000} s with the runs it finished; one with none is recorded with its reason, and a first paint over ${SLOW_MS / 1000} s skips the larger sizes.`,
+    speedDefinition: `First paint is the time from before the draw call until the chart holds marks (an svg shape or a canvas with ink) and the next frame has painted (a task after that frame, so its style, layout and paint count). Update is ${UPDATES} calls of the redraw function with fresh rows, each timed from the call until the chart drew (a DOM mutation or a canvas draw call) and the next frame painted; p50 and p95 per load. Heap is JS heap after a forced GC and ${UPDATES} updates. Median of ${SPEED_RUNS} fresh loads per cell, no CSP, reduced motion so animation time is not counted, CPU throttle ${THROTTLE}x in the second column. A cell stops after ${CELL_MS / 1000} s with the runs it finished; one with none is recorded with its reason, and a first paint over ${SLOW_MS / 1000} s skips the larger sizes.`,
     notes: [
       "Each library draws the same data through its own reference module in e2e/compare/ref, written the way its documentation shows, with defaults and no theming.",
       "The CSP row is its own test: a chart that is blocked by the policy is recorded as failing there, and the speed suite runs with no CSP so those numbers survive.",
@@ -109,7 +109,18 @@ function write(browser: Browser): void {
     titles: TITLES,
     excluded: EXCLUDED,
     results: keep(prev["results"], results),
-    speed: keep(prev["speed"], speed),
+    // Per size, so a run narrowed with COMPARE_SIZES keeps the other sizes of the same library.
+    speed: Object.fromEntries(
+      Object.entries(keep(prev["speed"], speed)).map(([l, kinds]) => [
+        l,
+        Object.fromEntries(
+          Object.entries(kinds as Record<string, object>).map(([k, byN]) => [
+            k,
+            { ...prev["speed"]?.[l]?.[k], ...byN },
+          ]),
+        ),
+      ]),
+    ),
     ...(prev["eval"] ? { eval: prev["eval"] } : {}),
   };
   writeFileSync(OUT, JSON.stringify(json, null, 2) + "\n");
