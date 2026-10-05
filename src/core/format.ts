@@ -5,26 +5,31 @@ type F = { format(v: number | Date): string };
 // ponytail: Intl formatters are slow to build (ICU data, option resolution) and immutable, so
 // each locale + options pair is built once per page and shared by every render.
 const INTL = new Map<string, F>();
-// A page's first Intl number or date format loads ICU, ~7 ms in Chromium (more than a whole
-// small chart), so the default en-US number format (only maximumFractionDigits: "auto" and
-// "integer") is written out: half away from zero on the shortest decimal, as ICU rounds, equal
-// to Intl in Chromium, Firefox, WebKit and Node (test/format.test.ts). Exponents and non-finite
-// numbers go to Intl, built on first use.
-// ponytail: en-US numbers only; dates and other locales pay the ICU load once per page.
+// A page's first Intl call loads ICU, ~7 ms in Chromium (more than a whole small chart), so the
+// default en-US formats are written out: numbers with only maximumFractionDigits (half away
+// from zero on the shortest decimal, as ICU rounds) and UTC month/day/year/hour:minute(:second)
+// dates. Output equals Intl in Chromium, Firefox and Node (test/format.test.ts); WebKit joins a
+// month date and a time with " at ", these say ", " in every engine. Exponents, non-finite
+// numbers and years outside 1000..9999 go to Intl, built on first use.
+// ponytail: en-US only; another locale pays the ICU load once per page.
 const NUM = /^{"maximumFractionDigits":(\d)}$/;
+const DATE =
+  /^{"timeZone":"UTC"(?=,)(?:(,"month":"short"(,"day":"numeric")?)?(,"year":"numeric")?(,"hour":"numeric","minute":"2-digit"(,"second":"2-digit")?)?|(,"dateStyle":"medium")?(,"timeStyle":"short")?)}$/;
 const intl = (C: new (l: string, o: object) => F, locale: string, o: object) => {
   const j = JSON.stringify(o);
   let f = INTL.get(C.name + locale + j);
   if (f) return f;
   let slow: F | undefined;
   const mk = () => new C(locale, o);
+  const late = (v: number | Date) => (slow ??= mk()).format(v);
   const n = locale === "en-US" && NUM.exec(j);
+  const g = locale === "en-US" && DATE.exec(j);
   if (n) {
     const k = +n[1]!;
     f = {
       format: (v) => {
         const s = Math.abs(+v) + "";
-        if (/e|N|I/.test(s)) return (slow ??= mk()).format(v);
+        if (/e|N|I/.test(s)) return late(v);
         let [i, d = ""] = s.split(".") as [string, string?];
         if (d.length > k) {
           const r = (BigInt(i + d.slice(0, k)) + BigInt(d[k]! > "4") + "").padStart(k + 1, "0");
@@ -32,6 +37,26 @@ const intl = (C: new (l: string, o: object) => F, locale: string, o: object) => 
         }
         d = d.replace(/0+$/, "");
         return (1 / +v < 0 ? "-" : "") + i.replace(/\B(?=(\d{3})+$)/g, ",") + (d && "." + d);
+      },
+    };
+  } else if (g) {
+    const [, m = g[6], d = g[6], y = g[6], h = g[7], s] = g;
+    f = {
+      format: (v) => {
+        const t = new Date(v);
+        const Y = t.getUTCFullYear();
+        const u = t.toUTCString(); // "Mon, 01 Jan 2024 13:05:07 GMT"
+        const H = +u.slice(17, 19);
+        const on = (a: unknown[], sep: string) => a.filter((x) => x).join(sep);
+        return Y > 999 && Y < 1e4
+          ? on(
+              [
+                on([m && u.slice(8, 11) + (d ? " " + +u.slice(5, 7) : ""), y && Y], d ? ", " : " "),
+                h && (H % 12 || 12) + u.slice(19, s ? 25 : 22) + (H < 12 ? " AM" : " PM"),
+              ],
+              ", ",
+            )
+          : late(v);
       },
     };
   } else f = mk();
