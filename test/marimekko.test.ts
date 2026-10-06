@@ -40,6 +40,11 @@ describe("marimekko", () => {
     expect(s).toMatch(/data-col="">North · 17%</);
     expect(s).toMatch(/data-col="">East · 50%</);
   });
+  it("a column too narrow for name and share keeps both on two lines", () => {
+    const s = renderParts(spec, { width: 280, height: 300 }).svg;
+    expect(s).toMatch(/data-col="">North</);
+    expect(s).toMatch(/data-col="">17%</);
+  });
   it("draws a 0 to 100% scale with gridlines inside the plot", () => {
     const s = svg(spec);
     for (const t of ["0%", "25%", "50%", "75%", "100%"]) expect(s).toContain(`data-ax="">${t}<`);

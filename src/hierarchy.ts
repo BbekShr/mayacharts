@@ -407,7 +407,12 @@ export const marimekko: Mark = {
             : room >= 4
               ? `${name.slice(0, room - 1)}…`
               : "";
-      if (on && fit) labels += txt(x + w / 2, bot + 17, fit, { "data-col": "" });
+      // Too narrow for one line: the name over its share, both kept.
+      const two = fit !== full && gs.length <= room && fit.length > 3;
+      if (on && fit) {
+        labels += txt(x + w / 2, bot + (two ? 10 : 17), fit, { "data-col": "" });
+        if (two) labels += txt(x + w / 2, bot + 22, gs, { "data-col": "" });
+      }
       x += w + gap;
     });
     return { marks, hits, grid, labels };
@@ -445,6 +450,9 @@ export const waffle: Mark = {
           "data-key": key("w", name, k),
           "data-c": i,
           "data-s": ci % 8,
+          // Hovering a cell lights its whole category, the way flows light a path (tooltip.ts).
+          "data-n": "w" + ci,
+          "data-a": "w" + ci,
           "data-x": name,
           "data-series": "",
           "data-y": v,
