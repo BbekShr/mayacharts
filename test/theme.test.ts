@@ -137,7 +137,7 @@ describe("theme css", () => {
       "[data-depth]",
       "[data-selected]",
       "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}",
-      "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text)",
+      "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text,:is(rect,path)[data-q])",
       "@media (forced-colors:active)",
       "@media (prefers-contrast:more)",
       "@media (prefers-reduced-motion:reduce){*{transition:none!important}}",
