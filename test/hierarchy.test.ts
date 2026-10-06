@@ -165,6 +165,14 @@ describe("sunburst", () => {
     expect(at(other[0]!, "data-key")).toBe("h~A~%00other");
     expect(s.map((c) => at(c, "data-key"))).toEqual(["h~A", "h~A~big", "h~A~%00other", "h"]);
   });
+  it("a ring of only slivers keeps its largest child as a tick and lumps the rest", () => {
+    const rows = Array.from({ length: 1000 }, (_, i) => ({ g: "A", n: `s${i}`, v: 5 }));
+    const s = tags(renderParts({ ...sb, data: rows }).svg, "circle");
+    expect(s.filter((c) => at(c, "data-depth") === "2").map((c) => at(c, "data-x"))).toEqual([
+      "A › s0",
+      "A › Other (999)",
+    ]);
+  });
   it("colour slots follow size, so the drawn order cycles the palette", () => {
     const rows = [
       { g: "small", n: "x", v: 1 },

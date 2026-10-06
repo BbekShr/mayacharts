@@ -52,12 +52,12 @@ const lines = (
   room: (top: number, bottom: number) => boolean,
 ) => {
   const at = { x: r(x), "text-anchor": anchor, "dominant-baseline": "middle" };
-  if (room(cy - 14, cy + 14))
+  if (room(cy - 16, cy + 16))
     return (
       el("text", { ...at, y: r(cy - 7), "data-nm": true }, esc(clip(name, cap))) +
       el("text", { ...at, y: r(cy + 8), "data-v": true }, esc(val))
     );
-  if (!room(cy - 7, cy + 7)) return "";
+  if (!room(cy - 8, cy + 8)) return "";
   const both = cap - val.length - 1 >= [...name].length; // name and value must both fit
   return el(
     "text",
@@ -284,15 +284,20 @@ export const sankey: Mark = {
       const w = wide && first ? padL : wide && last ? padR : gap;
       const cap = Math.max(3, Math.floor((w - (wide && (first || last) ? 12 : W + 14)) / CH));
       const cy = n.y + (n.v * k) / 2;
-      lab[n.i] = lines(
-        left ? x(n) - 6 : x(n) + W + 6,
-        cy,
-        left ? "end" : "start",
-        n.name,
-        val(n),
-        cap,
-        taken[n.lv]!,
-      );
+      const slack = Math.max(0, (n.v * k) / 2 - 16); // a tall node slides its label up or down to find room
+      for (const d of [0, -1, 1])
+        if (
+          (lab[n.i] = lines(
+            left ? x(n) - 6 : x(n) + W + 6,
+            cy + d * slack,
+            left ? "end" : "start",
+            n.name,
+            val(n),
+            cap,
+            taken[n.lv]!,
+          ))
+        )
+          break;
     }
     return { marks, hits: "", labels: lab.join("") };
   },

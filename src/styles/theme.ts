@@ -1,3 +1,4 @@
+import { HEXINK } from "./wip-flow.ts";
 const L =
   ":host,.maya-root{--maya-font:system-ui,sans-serif;--maya-font-size:12px;--maya-fg:light-dark(#1f2328,#e6edf3);--maya-fg-muted:light-dark(#656d76,#9198a1);--maya-grid:color-mix(in oklab,var(--maya-fg) 10%,transparent);--maya-bg:light-dark(#fff,#0d1117);--maya-accent:oklch(.6 .17 255);--maya-radius:3px;--maya-ease:cubic-bezier(.22,1,.36,1);--maya-tooltip-bg:color-mix(in oklab,var(--maya-bg) 92%,transparent);--maya-tooltip-fg:var(--maya-fg);--maya-focus:var(--maya-accent);--maya-good:light-dark(#1a7f37,#3fb950);--maya-bad:light-dark(#cf222e,#f85149);--maya-series-1:var(--maya-accent);--maya-series-2:oklch(.66 .16 50);--maya-series-3:oklch(.62 .15 160);--maya-series-4:oklch(.66 .17 330);--maya-series-5:oklch(.62 .14 90);--maya-series-6:oklch(.62 .12 205);--maya-series-7:oklch(.64 .19 22);--maya-series-8:oklch(.62 .16 295);color-scheme:light dark}";
 const D = "--maya-fg:#1f2328;--maya-fg-muted:#656d76;--maya-bg:#fff";
@@ -196,8 +197,7 @@ export const css =
   // Treemap names: dark ink on full-strength slots; drilled tiles tint toward white so it holds.
   "svg:has(rect[data-depth]) [data-maya=labels] [data-in]{fill:#12161c}" +
   "rect[data-tint]{fill:color-mix(in oklab,var(--c) var(--t,100%),#fff)}" +
-  // Hexmap steps 7 and 8: the theme foreground (dark text in light, light text in dark).
-  "[data-maya=labels] [data-dark=l]{fill:var(--maya-fg)}" +
+  HEXINK +
   HEXMAP +
   SCATTER +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +

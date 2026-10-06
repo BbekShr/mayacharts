@@ -118,4 +118,11 @@ describe("hexmap", () => {
     expect(t).toHaveLength(3);
     expect(t.map((x) => x.includes("data-dark"))).toEqual([false, true, false]);
   });
+  it("every value line is solid ink (no opacity) and carries its ramp step for the ink rule", () => {
+    const l = /<g data-maya="labels">(.*?)<\/g>/.exec(render(base))![1]!;
+    const v = (l.match(/<text [^>]*>\d+<\/text>/g) ?? []).filter((x) => !x.includes("0.4"));
+    expect(v).toHaveLength(3);
+    for (const x of v) expect(x).toMatch(/data-q="\d"/);
+    expect(v.some((x) => x.includes("opacity"))).toBe(false);
+  });
 });
