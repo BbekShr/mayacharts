@@ -191,7 +191,7 @@ export const bar: Mark = {
           const edge = wf && (t === first || t === last);
           const ax = edge ? (t === last ? x + w : x) : cx;
           const l0 = edge ? (t === last ? ax - est : ax) : cx - est / 2;
-          const [t0, t1] = neg ? [ey, ey + 16] : [ey - 16, ey];
+          const [t0, t1] = neg ? [ey + 3, ey + 16] : [ey - 16, ey - 3];
           // A label that would print over a taller neighbour is dropped, not smeared across it.
           const over = tags.some(
             ([, bx, by, bw, bh]) =>

@@ -67,8 +67,8 @@ export function hit(d: Parameters<typeof el>[1], x: number, y: number, w: number
   const [gw, gh] = [Math.max(w, 24), Math.max(h, 24)];
   return w < 24 || h < 24
     ? el("rect", {
-        ...d,
-        "data-maya": "hit",
+        // data-maya leads the attributes and always wins over a caller's "mark".
+        ...Object.assign({ "data-maya": "hit" }, d, { "data-maya": "hit" }),
         x: r(x - (gw - w) / 2),
         y: r(y - (gh - h) / 2),
         width: r(gw),

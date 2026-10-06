@@ -136,15 +136,18 @@ export const parallel: Mark = {
     for (let i = ends.length; i--;)
       ends[i]!.y = Math.min(ends[i]!.y, (ends[i + 1]?.y ?? H - 4) - GAP);
     const ex = at(ms.length - 1);
-    for (const e of ends) {
-      if (Math.abs(e.y - e.ey) > 2)
-        grid += el("line", { "data-s": e.si % 8, x1: ex + 2, x2: ex + 7, y1: e.ey, y2: r(e.y) });
-      labels += el(
-        "text",
-        { x: ex + 8, y: r(e.y), "text-anchor": "start", "dominant-baseline": "middle" },
-        esc(e.x),
-      );
-    }
+    // ponytail: more lines than fit a 13 px column keep the old rule, a colliding name is dropped.
+    if (ends.length * GAP > H) for (const e of ends) ctx.label(ex + 7, e.ey, e.x, "start");
+    else
+      for (const e of ends) {
+        if (Math.abs(e.y - e.ey) > 2)
+          grid += el("line", { "data-s": e.si % 8, x1: ex + 2, x2: ex + 7, y1: e.ey, y2: r(e.y) });
+        labels += el(
+          "text",
+          { x: ex + 8, y: r(e.y), "text-anchor": "start", "dominant-baseline": "middle" },
+          esc(e.x),
+        );
+      }
     // Points first: the line~circle CSS rule (hide points until active) only matches circles after a line.
     // The hit paths share their stroke: set once on a group instead of on every row.
     return {
