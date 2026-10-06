@@ -91,13 +91,16 @@ describe("summarize", () => {
 });
 
 describe("dry run", () => {
-  it.skipIf(!existsSync("dist/index.js"))("scores the sample file without the API", async () => {
-    const { execFileSync } = await import("node:child_process");
-    const out = execFileSync("node", ["eval/run.mjs", "eval/prompts.sample.jsonl", "--dry"], {
-      encoding: "utf-8",
-    });
-    const j = JSON.parse(out.slice(out.indexOf("{\n")));
-    expect(j.n).toBe(3);
-    expect(j.libraries.mayacharts.validJsonPct).toBeGreaterThan(0);
-  });
+  it.skipIf(!echarts || !existsSync("dist/index.js"))(
+    "scores the sample file without the API",
+    async () => {
+      const { execFileSync } = await import("node:child_process");
+      const out = execFileSync("node", ["eval/run.mjs", "eval/prompts.sample.jsonl", "--dry"], {
+        encoding: "utf-8",
+      });
+      const j = JSON.parse(out.slice(out.indexOf("{\n")));
+      expect(j.n).toBe(3);
+      expect(j.libraries.mayacharts.validJsonPct).toBeGreaterThan(0);
+    },
+  );
 });
