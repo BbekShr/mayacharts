@@ -1,7 +1,7 @@
 {
-  "generated": "2026-10-05",
+  "generated": "2026-10-06",
   "versions": {
-    "commit": "e9c208a",
+    "commit": "248ad0e",
     "maya": null,
     "chartjs": "4.5.1",
     "echarts": "6.1.0",
@@ -63,7 +63,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 20673
+          "bytes": 20928
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -75,15 +75,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.3527777777777778,
-            "right": 0.3731553819444444
+            "left": 0.3451388888888889,
+            "right": 0.37211371527777776
           },
           "inkRtl": {
-            "left": 0.3356119791666667,
-            "right": 0.3898871527777778
+            "left": 0.33381076388888886,
+            "right": 0.38328993055555555
           }
         },
-        "ttfpMs": 15.4
+        "ttfpMs": 12.8
       },
       "grouped": {
         "supported": true,
@@ -93,7 +93,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 32329
+          "bytes": 32584
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -105,15 +105,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.33285590277777777,
-            "right": 0.25008680555555557
+            "left": 0.3232638888888889,
+            "right": 0.2472873263888889
           },
           "inkRtl": {
-            "left": 0.3060112847222222,
-            "right": 0.27734375
+            "left": 0.3018663194444444,
+            "right": 0.2684461805555556
           }
         },
-        "ttfpMs": 15
+        "ttfpMs": 17.8
       },
       "stacked": {
         "supported": true,
@@ -123,7 +123,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 25378
+          "bytes": 25633
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -135,15 +135,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.3768229166666667,
-            "right": 0.32745225694444446
+            "left": 0.3658203125,
+            "right": 0.3242404513888889
           },
           "inkRtl": {
-            "left": 0.3497395833333333,
-            "right": 0.3541232638888889
+            "left": 0.34487847222222223,
+            "right": 0.34453125
           }
         },
-        "ttfpMs": 15.2
+        "ttfpMs": 17.4
       },
       "horizontal": {
         "supported": true,
@@ -153,7 +153,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 23472
+          "bytes": 23727
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -165,15 +165,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.4139322916666667,
-            "right": 0.10247395833333334
+            "left": 0.4033420138888889,
+            "right": 0.10132378472222223
           },
           "inkRtl": {
-            "left": 0.39652777777777776,
-            "right": 0.11966145833333333
+            "left": 0.3909722222222222,
+            "right": 0.11341145833333334
           }
         },
-        "ttfpMs": 14.8
+        "ttfpMs": 15.8
       },
       "line": {
         "supported": true,
@@ -183,7 +183,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 25532
+          "bytes": 25787
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -195,15 +195,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.0271484375,
-            "right": 0.010590277777777778
+            "left": 0.022504340277777778,
+            "right": 0.010134548611111112
           },
           "inkRtl": {
-            "left": 0.013932291666666667,
-            "right": 0.023524305555555555
+            "left": 0.013606770833333334,
+            "right": 0.018598090277777778
           }
         },
-        "ttfpMs": 14
+        "ttfpMs": 15.6
       },
       "multiline": {
         "supported": true,
@@ -213,7 +213,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 33134
+          "bytes": 33389
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -225,15 +225,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.04607204861111111,
-            "right": 0.016710069444444444
+            "left": 0.03940972222222222,
+            "right": 0.016341145833333334
           },
           "inkRtl": {
-            "left": 0.019661458333333333,
-            "right": 0.04236111111111111
+            "left": 0.018880208333333332,
+            "right": 0.037022569444444445
           }
         },
-        "ttfpMs": 14.1
+        "ttfpMs": 19.8
       },
       "area": {
         "supported": true,
@@ -243,7 +243,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 35270
+          "bytes": 35525
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -255,15 +255,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.3169704861111111,
-            "right": 0.48995225694444444
+            "left": 0.3079427083333333,
+            "right": 0.48368055555555556
           },
           "inkRtl": {
-            "left": 0.29086371527777777,
-            "right": 0.5168836805555556
+            "left": 0.28671875,
+            "right": 0.5042317708333334
           }
         },
-        "ttfpMs": 15.9
+        "ttfpMs": 20.2
       },
       "scatter": {
         "supported": true,
@@ -273,7 +273,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 84385
+          "bytes": 84640
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -285,15 +285,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.06714409722222223,
-            "right": 0.06870659722222222
+            "left": 0.0623046875,
+            "right": 0.06825086805555555
           },
           "inkRtl": {
-            "left": 0.05073784722222222,
-            "right": 0.08502604166666666
+            "left": 0.049956597222222225,
+            "right": 0.08033854166666667
           }
         },
-        "ttfpMs": 15.3
+        "ttfpMs": 22.9
       },
       "bubble": {
         "supported": true,
@@ -303,7 +303,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 24878
+          "bytes": 25133
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -315,15 +315,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.13211805555555556,
-            "right": 0.025629340277777777
+            "left": 0.12471788194444444,
+            "right": 0.02476128472222222
           },
           "inkRtl": {
-            "left": 0.10659722222222222,
-            "right": 0.05210503472222222
+            "left": 0.10538194444444444,
+            "right": 0.04418402777777778
           }
         },
-        "ttfpMs": 14.8
+        "ttfpMs": 16.4
       },
       "heatmap": {
         "supported": true,
@@ -333,7 +333,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 79142
+          "bytes": 78869
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -345,15 +345,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.33585069444444443,
-            "right": 0.3890842013888889
+            "left": 0.21026475694444444,
+            "right": 0.2337673611111111
           },
           "inkRtl": {
-            "left": 0.30475260416666666,
-            "right": 0.42135416666666664
+            "left": 0.18587239583333334,
+            "right": 0.25811631944444446
           }
         },
-        "ttfpMs": 15.9
+        "ttfpMs": 25
       },
       "treemap": {
         "supported": true,
@@ -363,7 +363,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 27994
+          "bytes": 28249
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -375,15 +375,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.9141493055555555,
-            "right": 0.9041449652777778
+            "left": 0.9123697916666667,
+            "right": 0.8960503472222222
           },
           "inkRtl": {
-            "left": 0.8978298611111111,
-            "right": 0.9214626736111111
+            "left": 0.9000868055555555,
+            "right": 0.9077473958333333
           }
         },
-        "ttfpMs": 14.2
+        "ttfpMs": 16.6
       },
       "sankey": {
         "supported": true,
@@ -393,7 +393,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 26523
+          "bytes": 26773
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -405,15 +405,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.3664279513888889,
-            "right": 0.31343315972222224
+            "left": 0.3549045138888889,
+            "right": 0.30375434027777776
           },
           "inkRtl": {
-            "left": 0.3497395833333333,
-            "right": 0.32957899305555555
+            "left": 0.34231770833333336,
+            "right": 0.31592881944444445
           }
         },
-        "ttfpMs": 14.5
+        "ttfpMs": 15.7
       }
     },
     "chartjs": {
@@ -434,15 +434,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.31373697916666665,
-            "right": 0.3330078125
+            "left": 0.3168185763888889,
+            "right": 0.337109375
           },
           "inkRtl": {
-            "left": 0.2848090277777778,
-            "right": 0.2992621527777778
+            "left": 0.2774739583333333,
+            "right": 0.29325086805555556
           }
         },
-        "ttfpMs": 27.4
+        "ttfpMs": 39.7
       },
       "grouped": {
         "supported": true,
@@ -461,15 +461,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.2959201388888889,
-            "right": 0.282421875
+            "left": 0.2965277777777778,
+            "right": 0.28619791666666666
           },
           "inkRtl": {
-            "left": 0.2676866319444444,
-            "right": 0.25386284722222224
+            "left": 0.2625,
+            "right": 0.251171875
           }
         },
-        "ttfpMs": 27.3
+        "ttfpMs": 43.5
       },
       "stacked": {
         "supported": true,
@@ -488,15 +488,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.3495876736111111,
-            "right": 0.334375
+            "left": 0.35260416666666666,
+            "right": 0.34053819444444444
           },
           "inkRtl": {
-            "left": 0.3161892361111111,
-            "right": 0.3009765625
+            "left": 0.3129340277777778,
+            "right": 0.30095486111111114
           }
         },
-        "ttfpMs": 26.7
+        "ttfpMs": 41.1
       },
       "horizontal": {
         "supported": true,
@@ -515,15 +515,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.377734375,
-            "right": 0.0767578125
+            "left": 0.37356770833333336,
+            "right": 0.08389756944444444
           },
           "inkRtl": {
-            "left": 0.377734375,
-            "right": 0.018663194444444444
+            "left": 0.37356770833333336,
+            "right": 0.01677517361111111
           }
         },
-        "ttfpMs": 25.5
+        "ttfpMs": 40.3
       },
       "line": {
         "supported": true,
@@ -542,15 +542,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.051432291666666664,
-            "right": 0.03463541666666667
+            "left": 0.04982638888888889,
+            "right": 0.034266493055555555
           },
           "inkRtl": {
-            "left": 0.05075954861111111,
-            "right": 0.03383246527777778
+            "left": 0.04889322916666667,
+            "right": 0.03333333333333333
           }
         },
-        "ttfpMs": 27
+        "ttfpMs": 43.1
       },
       "multiline": {
         "supported": true,
@@ -569,15 +569,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.06072048611111111,
-            "right": 0.045355902777777776
+            "left": 0.05802951388888889,
+            "right": 0.04481336805555555
           },
           "inkRtl": {
-            "left": 0.06050347222222222,
-            "right": 0.04453125
+            "left": 0.05783420138888889,
+            "right": 0.04401041666666667
           }
         },
-        "ttfpMs": 27.3
+        "ttfpMs": 45.7
       },
       "area": {
         "supported": true,
@@ -596,15 +596,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.2747829861111111,
-            "right": 0.5180772569444444
+            "left": 0.2804036458333333,
+            "right": 0.5279947916666666
           },
           "inkRtl": {
-            "left": 0.24997829861111112,
-            "right": 0.4655815972222222
+            "left": 0.2522786458333333,
+            "right": 0.4685546875
           }
         },
-        "ttfpMs": 28.1
+        "ttfpMs": 48.6
       },
       "scatter": {
         "supported": true,
@@ -623,15 +623,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.08122829861111111,
-            "right": 0.07612847222222222
+            "left": 0.07842881944444445,
+            "right": 0.07532552083333334
           },
           "inkRtl": {
-            "left": 0.07964409722222222,
-            "right": 0.07463107638888888
+            "left": 0.07682291666666667,
+            "right": 0.07437065972222222
           }
         },
-        "ttfpMs": 37
+        "ttfpMs": 70.7
       },
       "bubble": {
         "supported": true,
@@ -650,15 +650,15 @@
         "rtl": {
           "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.13980034722222223,
-            "right": 0.03127170138888889
+            "left": 0.14184027777777777,
+            "right": 0.030837673611111113
           },
           "inkRtl": {
-            "left": 0.09737413194444444,
-            "right": 0.02697482638888889
+            "left": 0.09372829861111111,
+            "right": 0.025824652777777776
           }
         },
-        "ttfpMs": 27.3
+        "ttfpMs": 40
       },
       "heatmap": {
         "supported": false,
@@ -746,7 +746,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 6728
+          "bytes": 6724
         },
         "axeSeriousCritical": null,
         "keyboard": null,
@@ -762,7 +762,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 9375
+          "bytes": 9373
         },
         "axeSeriousCritical": null,
         "keyboard": null,
@@ -778,7 +778,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 11581
+          "bytes": 11575
         },
         "axeSeriousCritical": null,
         "keyboard": null,
@@ -885,15 +885,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.29945031163434904,
-            "right": 0.30793369113573404
+            "left": 0.28726627423822715,
+            "right": 0.307544148199446
           },
           "inkRtl": {
-            "left": 0.2708189058171745,
-            "right": 0.33321069944598336
+            "left": 0.2682435941828255,
+            "right": 0.32464075484764543
           }
         },
-        "ttfpMs": 11.3
+        "ttfpMs": 17.2
       },
       "grouped": {
         "supported": true,
@@ -912,15 +912,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.2732860110803324,
-            "right": 0.1764196675900277
+            "left": 0.26198926592797783,
+            "right": 0.1761816135734072
           },
           "inkRtl": {
-            "left": 0.22119546398891968,
-            "right": 0.22565356648199447
+            "left": 0.22022160664819945,
+            "right": 0.21639110110803325
           }
         },
-        "ttfpMs": 13.3
+        "ttfpMs": 19.9
       },
       "stacked": {
         "supported": true,
@@ -939,15 +939,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.34273286011080334,
-            "right": 0.25307306094182824
+            "left": 0.330505540166205,
+            "right": 0.2526835180055402
           },
           "inkRtl": {
-            "left": 0.29014456371191133,
-            "right": 0.3030860457063712
+            "left": 0.28852146814404434,
+            "right": 0.2931094182825485
           }
         },
-        "ttfpMs": 12.2
+        "ttfpMs": 17.5
       },
       "horizontal": {
         "supported": true,
@@ -966,15 +966,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.374523891966759,
-            "right": 0.10240650969529086
+            "left": 0.36134435595567865,
+            "right": 0.10151921745152355
           },
           "inkRtl": {
-            "left": 0.3301159972299169,
-            "right": 0.1242858379501385
+            "left": 0.3290555747922438,
+            "right": 0.1148718836565097
           }
         },
-        "ttfpMs": 11.3
+        "ttfpMs": 16
       },
       "line": {
         "supported": true,
@@ -993,15 +993,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.050792070637119116,
-            "right": 0.011794494459833795
+            "left": 0.038889369806094184,
+            "right": 0.011210180055401663
           },
           "inkRtl": {
-            "left": 0.02174948060941828,
-            "right": 0.03737448060941828
+            "left": 0.01978012465373961,
+            "right": 0.02882617728531856
           }
         },
-        "ttfpMs": 11.1
+        "ttfpMs": 15.3
       },
       "multiline": {
         "supported": true,
@@ -1020,15 +1020,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.07396987534626039,
-            "right": 0.01395862188365651
+            "left": 0.05938365650969529,
+            "right": 0.013374307479224377
           },
           "inkRtl": {
-            "left": 0.02449792243767313,
-            "right": 0.05752250692520776
+            "left": 0.02222558864265928,
+            "right": 0.04650709833795014
           }
         },
-        "ttfpMs": 12.2
+        "ttfpMs": 17.5
       },
       "area": {
         "supported": true,
@@ -1047,15 +1047,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.3064404432132964,
-            "right": 0.4624740304709141
+            "left": 0.29356388504155123,
+            "right": 0.46243074792243766
           },
           "inkRtl": {
-            "left": 0.25101713988919666,
-            "right": 0.5116862880886427
+            "left": 0.24963209833795014,
+            "right": 0.5027484418282548
           }
         },
-        "ttfpMs": 12.8
+        "ttfpMs": 18.8
       },
       "scatter": {
         "supported": true,
@@ -1074,15 +1074,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.09258137119113573,
-            "right": 0.0687110457063712
+            "left": 0.0829077216066482,
+            "right": 0.06814837257617729
           },
           "inkRtl": {
-            "left": 0.06581111495844875,
-            "right": 0.09340373961218837
+            "left": 0.06429622576177285,
+            "right": 0.08437932825484765
           }
         },
-        "ttfpMs": 12.9
+        "ttfpMs": 20.3
       },
       "bubble": {
         "supported": true,
@@ -1101,15 +1101,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.05271814404432133,
-            "right": 0.010041551246537396
+            "left": 0.04155124653739612,
+            "right": 0.00902441135734072
           },
           "inkRtl": {
-            "left": 0.02570983379501385,
-            "right": 0.03250519390581717
+            "left": 0.02473597645429363,
+            "right": 0.02419494459833795
           }
         },
-        "ttfpMs": 12.1
+        "ttfpMs": 17.5
       },
       "heatmap": {
         "supported": true,
@@ -1128,15 +1128,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.33492036011080334,
-            "right": 0.3573623614958449
+            "left": 0.32163261772853186,
+            "right": 0.35677804709141275
           },
           "inkRtl": {
-            "left": 0.2995368767313019,
-            "right": 0.38675121191135736
+            "left": 0.29836824792243766,
+            "right": 0.3779648545706371
           }
         },
-        "ttfpMs": 13.3
+        "ttfpMs": 30.2
       },
       "treemap": {
         "supported": false,
@@ -1305,15 +1305,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.1939707409972299,
-            "right": 0.34864092797783935
+            "left": 0.18466499307479226,
+            "right": 0.3471909626038781
           },
           "inkRtl": {
-            "left": 0.17014369806094182,
-            "right": 0.3693299861495845
+            "left": 0.16841239612188366,
+            "right": 0.3617122576177285
           }
         },
-        "ttfpMs": 29.6
+        "ttfpMs": 54.5
       },
       "grouped": {
         "supported": true,
@@ -1332,15 +1332,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.20306007617728533,
-            "right": 0.24158154432132964
+            "left": 0.19152527700831026,
+            "right": 0.23712344182825484
           },
           "inkRtl": {
-            "left": 0.17931959833795014,
-            "right": 0.26192434210526316
+            "left": 0.17544581024930747,
+            "right": 0.2515581717451524
           }
         },
-        "ttfpMs": 42.9
+        "ttfpMs": 90.9
       },
       "stacked": {
         "supported": true,
@@ -1359,15 +1359,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.2600199099722992,
-            "right": 0.3513893698060942
+            "left": 0.2475978185595568,
+            "right": 0.3464118767313019
           },
           "inkRtl": {
-            "left": 0.23212430747922438,
-            "right": 0.3726411011080332
+            "left": 0.227990824099723,
+            "right": 0.36117122576177285
           }
         },
-        "ttfpMs": 42.6
+        "ttfpMs": 92.5
       },
       "horizontal": {
         "supported": true,
@@ -1386,15 +1386,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.3482946675900277,
-            "right": 0.10015581717451523
+            "left": 0.33479051246537395,
+            "right": 0.09974463296398892
           },
           "inkRtl": {
-            "left": 0.30007790858725764,
-            "right": 0.12036876731301939
+            "left": 0.2989309210526316,
+            "right": 0.1136816135734072
           }
         },
-        "ttfpMs": 28.3
+        "ttfpMs": 54.7
       },
       "line": {
         "supported": true,
@@ -1413,15 +1413,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.059794840720221606,
-            "right": 0.02304795706371191
+            "left": 0.047048130193905816,
+            "right": 0.022506925207756233
           },
           "inkRtl": {
-            "left": 0.03663867728531856,
-            "right": 0.04423476454293629
+            "left": 0.03248355263157895,
+            "right": 0.03566481994459834
           }
         },
-        "ttfpMs": 28.5
+        "ttfpMs": 54.7
       },
       "multiline": {
         "supported": true,
@@ -1440,15 +1440,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.06215373961218837,
-            "right": 0.029302285318559558
+            "left": 0.04971000692520776,
+            "right": 0.02843663434903047
           },
           "inkRtl": {
-            "left": 0.038781163434903045,
-            "right": 0.049385387811634346
+            "left": 0.03449619113573407,
+            "right": 0.04235197368421053
           }
         },
-        "ttfpMs": 39.4
+        "ttfpMs": 77.4
       },
       "area": {
         "supported": true,
@@ -1467,15 +1467,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.25443646121883656,
-            "right": 0.6241343490304709
+            "left": 0.24143005540166204,
+            "right": 0.6144390581717452
           },
           "inkRtl": {
-            "left": 0.2282288781163435,
-            "right": 0.6455375692520776
+            "left": 0.2230566135734072,
+            "right": 0.6284626038781164
           }
         },
-        "ttfpMs": 37.9
+        "ttfpMs": 70.9
       },
       "scatter": {
         "supported": true,
@@ -1494,15 +1494,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.10617209141274238,
-            "right": 0.12272766620498615
+            "left": 0.0973424515235457,
+            "right": 0.12266274238227147
           },
           "inkRtl": {
-            "left": 0.08271295013850416,
-            "right": 0.14298389889196675
+            "left": 0.08141447368421052,
+            "right": 0.13562586565096954
           }
         },
-        "ttfpMs": 56.4
+        "ttfpMs": 118.4
       },
       "bubble": {
         "supported": true,
@@ -1521,15 +1521,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.10909366343490305,
-            "right": 0.012508656509695291
+            "left": 0.10000432825484765,
+            "right": 0.01114525623268698
           },
           "inkRtl": {
-            "left": 0.08684643351800554,
-            "right": 0.033955159279778394
+            "left": 0.08455245844875346,
+            "right": 0.024887465373961217
           }
         },
-        "ttfpMs": 30.2
+        "ttfpMs": 59
       },
       "heatmap": {
         "supported": false,
@@ -1552,15 +1552,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.8239915166204986,
+            "left": 0.815832756232687,
             "right": 0.7931094182825484
           },
           "inkRtl": {
-            "left": 0.8027397853185596,
-            "right": 0.8141447368421053
+            "left": 0.8026748614958449,
+            "right": 0.8072195290858726
           }
         },
-        "ttfpMs": 20
+        "ttfpMs": 38.4
       },
       "sankey": {
         "supported": true,
@@ -1579,15 +1579,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.6899454639889196,
-            "right": 0.27523372576177285
+            "left": 0.6827172783933518,
+            "right": 0.2715547091412742
           },
           "inkRtl": {
-            "left": 0.6690399930747922,
-            "right": 0.2833275623268698
+            "left": 0.669018351800554,
+            "right": 0.27631578947368424
           }
         },
-        "ttfpMs": 30.5
+        "ttfpMs": 27.1
       }
     },
     "nivo": {
@@ -1608,15 +1608,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.20509435595567868,
-            "right": 0.2976757271468144
+            "left": 0.20074445983379502,
+            "right": 0.29869286703601106
           },
           "inkRtl": {
-            "left": 0.18074792243767313,
-            "right": 0.3137119113573407
+            "left": 0.18338815789473684,
+            "right": 0.30440616343490307
           }
         },
-        "ttfpMs": 25.3
+        "ttfpMs": 48.3
       },
       "grouped": {
         "supported": true,
@@ -1635,15 +1635,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.2571849030470914,
-            "right": 0.05354051246537396
+            "left": 0.25298649584487537,
+            "right": 0.055250173130193904
           },
           "inkRtl": {
-            "left": 0.23456977146814403,
-            "right": 0.06955505540166206
+            "left": 0.2374913434903047,
+            "right": 0.06420966066481995
           }
         },
-        "ttfpMs": 32.1
+        "ttfpMs": 68.8
       },
       "stacked": {
         "supported": true,
@@ -1662,15 +1662,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.2960742728531856,
-            "right": 0.07464075484764543
+            "left": 0.29261166897506924,
+            "right": 0.07635041551246538
           },
           "inkRtl": {
-            "left": 0.26709660664819945,
-            "right": 0.0915209487534626
+            "left": 0.27116516620498615,
+            "right": 0.08379501385041552
           }
         },
-        "ttfpMs": 32.3
+        "ttfpMs": 73.7
       },
       "horizontal": {
         "supported": true,
@@ -1687,17 +1687,17 @@
           "arrowStates": 0
         },
         "rtl": {
-          "yAxisMovedRight": true,
+          "yAxisMovedRight": false,
           "inkLtr": {
-            "left": 0.3573190789473684,
-            "right": 0.07751904432132964
+            "left": 0.35573926592797783,
+            "right": 0.07793022853185595
           },
           "inkRtl": {
-            "left": 0.31319252077562326,
-            "right": 0.08591585872576177
+            "left": 0.3155081371191136,
+            "right": 0.07784366343490305
           }
         },
-        "ttfpMs": 24.6
+        "ttfpMs": 44.6
       },
       "line": {
         "supported": true,
@@ -1716,15 +1716,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.06076869806094183,
-            "right": 0.014889196675900277
+            "left": 0.05711132271468144,
+            "right": 0.015538434903047092
           },
           "inkRtl": {
-            "left": 0.03657375346260388,
-            "right": 0.036011080332409975
+            "left": 0.04412655817174515,
+            "right": 0.028631405817174514
           }
         },
-        "ttfpMs": 25.1
+        "ttfpMs": 51.3
       },
       "multiline": {
         "supported": true,
@@ -1743,15 +1743,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.05592105263157895,
-            "right": 0.01928237534626039
+            "left": 0.0510950484764543,
+            "right": 0.020710699445983378
           },
           "inkRtl": {
-            "left": 0.03259175900277008,
-            "right": 0.03692001385041551
+            "left": 0.03648718836565097,
+            "right": 0.031163434903047092
           }
         },
-        "ttfpMs": 30.6
+        "ttfpMs": 58.9
       },
       "area": {
         "supported": true,
@@ -1770,15 +1770,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.19418715373961218,
-            "right": 0.08429276315789473
+            "left": 0.19033500692520774,
+            "right": 0.08587257617728532
           },
           "inkRtl": {
-            "left": 0.16994892659279778,
-            "right": 0.10136772853185595
+            "left": 0.17317347645429362,
+            "right": 0.09444252077562326
           }
         },
-        "ttfpMs": 29.1
+        "ttfpMs": 54.8
       },
       "scatter": {
         "supported": true,
@@ -1797,15 +1797,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.1021900969529086,
-            "right": 0.09719096260387812
+            "left": 0.09723424515235457,
+            "right": 0.09760214681440443
           },
           "inkRtl": {
-            "left": 0.07989958448753462,
-            "right": 0.11744719529085873
+            "left": 0.08191222299168975,
+            "right": 0.11056527008310249
           }
         },
-        "ttfpMs": 70.6
+        "ttfpMs": 150.2
       },
       "bubble": {
         "supported": true,
@@ -1824,15 +1824,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.08981128808864267,
-            "right": 0.017529432132963988
+            "left": 0.08608898891966758,
+            "right": 0.018676419667590028
           },
           "inkRtl": {
-            "left": 0.06957669667590027,
-            "right": 0.03891101108033241
+            "left": 0.0716759002770083,
+            "right": 0.03235370498614958
           }
         },
-        "ttfpMs": 28.8
+        "ttfpMs": 45.9
       },
       "heatmap": {
         "supported": true,
@@ -1851,15 +1851,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.27707323407202217,
-            "right": 0.4445117728531856
+            "left": 0.2753202908587258,
+            "right": 0.4470005193905817
           },
           "inkRtl": {
-            "left": 0.251428324099723,
-            "right": 0.46539560249307477
+            "left": 0.2556050900277008,
+            "right": 0.46098078254847646
           }
         },
-        "ttfpMs": 57
+        "ttfpMs": 125.6
       },
       "treemap": {
         "supported": true,
@@ -1878,15 +1878,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.8062023891966759,
-            "right": 0.7321459487534626
+            "left": 0.798021987534626,
+            "right": 0.732189231301939
           },
           "inkRtl": {
-            "left": 0.7821589335180056,
-            "right": 0.7530081371191135
+            "left": 0.7820290858725761,
+            "right": 0.7461262119113573
           }
         },
-        "ttfpMs": 23.6
+        "ttfpMs": 44.5
       },
       "sankey": {
         "supported": true,
@@ -1905,15 +1905,15 @@
         "rtl": {
           "yAxisMovedRight": true,
           "inkLtr": {
-            "left": 0.10188711911357341,
-            "right": 0.0804406163434903
+            "left": 0.09381492382271468,
+            "right": 0.07983466066481995
           },
           "inkRtl": {
-            "left": 0.08658673822714681,
-            "right": 0.10931007617728532
+            "left": 0.08500692520775623,
+            "right": 0.1001990997229917
           }
         },
-        "ttfpMs": 20.7
+        "ttfpMs": 37.3
       }
     },
     "plotly": {
@@ -2080,65 +2080,67 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 53.6,
-            "loadPaintMs": 61,
-            "updateP50Ms": 32.7,
-            "updateP95Ms": 33.6,
-            "heapMB": 3.8,
+            "firstPaintMs": 91.6,
+            "loadPaintMs": 103.5,
+            "updateP50Ms": 32.5,
+            "updateP95Ms": 50.7,
+            "heapMB": 4.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 198.2,
-            "loadPaintMs": 226.3,
-            "updateP50Ms": 74.7,
-            "updateP95Ms": 98.2,
+            "firstPaintMs": 373.7,
+            "loadPaintMs": 431.6,
+            "updateP50Ms": 144.2,
+            "updateP95Ms": 203.2,
             "heapMB": 3.8,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 206,
-            "loadPaintMs": 211.6,
-            "updateP50Ms": 157.9,
-            "updateP95Ms": 186.8,
-            "heapMB": 13.3,
+            "firstPaintMs": 391.3,
+            "loadPaintMs": 403.2,
+            "updateP50Ms": 279.7,
+            "updateP95Ms": 330.7,
+            "heapMB": 13,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 824.2,
-            "loadPaintMs": 849.9,
-            "updateP50Ms": 638.5,
-            "updateP95Ms": 733.2,
-            "heapMB": 13.1,
-            "runs": 4
+            "firstPaintMs": 1601.1,
+            "loadPaintMs": 1659.1,
+            "updateP50Ms": 1094.9,
+            "updateP95Ms": 1286.5,
+            "heapMB": 12.9,
+            "runs": 2,
+            "note": "page.waitForFunction: Timeout 1433ms exceeded."
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 1626,
-            "loadPaintMs": 1631.7,
-            "updateP50Ms": 1359.2,
-            "updateP95Ms": 1572.9,
-            "heapMB": 101.7,
-            "runs": 2
+            "firstPaintMs": 2785,
+            "loadPaintMs": 2799.8,
+            "updateP50Ms": 2351,
+            "updateP95Ms": 2609.4,
+            "heapMB": 100.4,
+            "runs": 1,
+            "note": "page.waitForFunction: Timeout 1000ms exceeded."
           },
           "throttled": {
-            "firstPaintMs": 5862.4,
-            "loadPaintMs": 5889.6,
-            "updateP50Ms": 5362.1,
-            "updateP95Ms": 6482.5,
-            "heapMB": 99.4,
+            "firstPaintMs": 10857.6,
+            "loadPaintMs": 10920.6,
+            "updateP50Ms": 9765.9,
+            "updateP95Ms": 9900,
+            "heapMB": 93.4,
             "runs": 1
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 14083.3,
-            "loadPaintMs": 14088.9,
-            "updateP50Ms": 13784.3,
-            "updateP95Ms": 14214.9,
-            "heapMB": 899.9,
+            "firstPaintMs": 23775,
+            "loadPaintMs": 23789.6,
+            "updateP50Ms": 22808.2,
+            "updateP95Ms": 23574.8,
+            "heapMB": 899.4,
             "runs": 1
           },
           "throttled": {
@@ -2149,65 +2151,66 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 49.1,
-            "loadPaintMs": 54.6,
-            "updateP50Ms": 32.7,
-            "updateP95Ms": 33.3,
-            "heapMB": 8,
+            "firstPaintMs": 93.6,
+            "loadPaintMs": 110.9,
+            "updateP50Ms": 35.6,
+            "updateP95Ms": 43.4,
+            "heapMB": 7.9,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 199.6,
-            "loadPaintMs": 225.6,
-            "updateP50Ms": 80.9,
-            "updateP95Ms": 86,
-            "heapMB": 7.7,
+            "firstPaintMs": 389.3,
+            "loadPaintMs": 440.8,
+            "updateP50Ms": 158.5,
+            "updateP95Ms": 178.4,
+            "heapMB": 5.6,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 198.9,
-            "loadPaintMs": 204.2,
-            "updateP50Ms": 154.7,
-            "updateP95Ms": 169,
-            "heapMB": 29.4,
+            "firstPaintMs": 366.2,
+            "loadPaintMs": 383.3,
+            "updateP50Ms": 273,
+            "updateP95Ms": 295.5,
+            "heapMB": 19.4,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 795.6,
-            "loadPaintMs": 820.1,
-            "updateP50Ms": 617.9,
-            "updateP95Ms": 640.2,
-            "heapMB": 10.3,
-            "runs": 4
+            "firstPaintMs": 1622.8,
+            "loadPaintMs": 1685.9,
+            "updateP50Ms": 1186.5,
+            "updateP95Ms": 1232.6,
+            "heapMB": 8,
+            "runs": 2,
+            "note": "page.waitForFunction: Timeout 1000ms exceeded."
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 1725.1,
-            "loadPaintMs": 1730.7,
-            "updateP50Ms": 1490.5,
-            "updateP95Ms": 1514.7,
-            "heapMB": 53.4,
-            "runs": 2
+            "firstPaintMs": 3008.3,
+            "loadPaintMs": 3020.5,
+            "updateP50Ms": 2605,
+            "updateP95Ms": 2642.9,
+            "heapMB": 51.5,
+            "runs": 1
           },
           "throttled": {
-            "firstPaintMs": 6549.3,
-            "loadPaintMs": 6572.1,
-            "updateP50Ms": 5955.4,
-            "updateP95Ms": 6088,
-            "heapMB": 51.7,
+            "firstPaintMs": 12941.4,
+            "loadPaintMs": 13000.5,
+            "updateP50Ms": 11198.8,
+            "updateP95Ms": 11419.6,
+            "heapMB": 51.4,
             "runs": 1
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 16276.2,
-            "loadPaintMs": 16282.7,
-            "updateP50Ms": 14809.8,
-            "updateP95Ms": 15043.2,
-            "heapMB": 485.5,
+            "firstPaintMs": 28661,
+            "loadPaintMs": 28672.8,
+            "updateP50Ms": 26104.8,
+            "updateP95Ms": 26647.7,
+            "heapMB": 488.8,
             "runs": 1
           },
           "throttled": {
@@ -2220,73 +2223,73 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 62.6,
-            "loadPaintMs": 89.1,
-            "updateP50Ms": 15.1,
-            "updateP95Ms": 19.3,
-            "heapMB": 12.6,
+            "firstPaintMs": 102.6,
+            "loadPaintMs": 163.2,
+            "updateP50Ms": 35.4,
+            "updateP95Ms": 52.9,
+            "heapMB": 12.5,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 237,
-            "loadPaintMs": 282.5,
-            "updateP50Ms": 53.3,
-            "updateP95Ms": 71.8,
-            "heapMB": 12.3,
+            "firstPaintMs": 422.5,
+            "loadPaintMs": 539.7,
+            "updateP50Ms": 151.4,
+            "updateP95Ms": 212.1,
+            "heapMB": 10.9,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 58.4,
-            "loadPaintMs": 83.2,
-            "updateP50Ms": 11,
-            "updateP95Ms": 14,
-            "heapMB": 10.1,
+            "firstPaintMs": 91.2,
+            "loadPaintMs": 146.3,
+            "updateP50Ms": 21.1,
+            "updateP95Ms": 33.8,
+            "heapMB": 11.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 223.7,
-            "loadPaintMs": 268.4,
-            "updateP50Ms": 39.3,
-            "updateP95Ms": 55.5,
-            "heapMB": 11.4,
+            "firstPaintMs": 341.8,
+            "loadPaintMs": 452.2,
+            "updateP50Ms": 90.1,
+            "updateP95Ms": 135.9,
+            "heapMB": 11.3,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 89.3,
-            "loadPaintMs": 113.5,
-            "updateP50Ms": 46.6,
-            "updateP95Ms": 67.7,
-            "heapMB": 41.7,
+            "firstPaintMs": 155.3,
+            "loadPaintMs": 208.1,
+            "updateP50Ms": 75.5,
+            "updateP95Ms": 145.6,
+            "heapMB": 42.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 331.6,
-            "loadPaintMs": 375.9,
-            "updateP50Ms": 164.1,
-            "updateP95Ms": 235.6,
-            "heapMB": 41.7,
-            "runs": 5
+            "firstPaintMs": 579.2,
+            "loadPaintMs": 708.5,
+            "updateP50Ms": 292.6,
+            "updateP95Ms": 502.6,
+            "heapMB": 41.8,
+            "runs": 4
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 379.5,
-            "loadPaintMs": 405.5,
-            "updateP50Ms": 390.1,
-            "updateP95Ms": 463.2,
-            "heapMB": 347.2,
-            "runs": 3
+            "firstPaintMs": 695.2,
+            "loadPaintMs": 750.3,
+            "updateP50Ms": 760.4,
+            "updateP95Ms": 1072.2,
+            "heapMB": 348.1,
+            "runs": 2
           },
           "throttled": {
-            "firstPaintMs": 1275.8,
-            "loadPaintMs": 1320.1,
-            "updateP50Ms": 1417.2,
-            "updateP95Ms": 1760.5,
-            "heapMB": 347.3,
+            "firstPaintMs": 2315,
+            "loadPaintMs": 2419.2,
+            "updateP50Ms": 2485.3,
+            "updateP95Ms": 3493.6,
+            "heapMB": 347.1,
             "runs": 1
           }
         }
@@ -2294,73 +2297,73 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 43.2,
-            "loadPaintMs": 68.5,
-            "updateP50Ms": 15.9,
-            "updateP95Ms": 17.5,
+            "firstPaintMs": 50,
+            "loadPaintMs": 104.8,
+            "updateP50Ms": 16,
+            "updateP95Ms": 18.4,
             "heapMB": 6.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 175.4,
-            "loadPaintMs": 222.5,
-            "updateP50Ms": 17.1,
-            "updateP95Ms": 33.4,
-            "heapMB": 6.2,
+            "firstPaintMs": 212,
+            "loadPaintMs": 345.6,
+            "updateP50Ms": 41.2,
+            "updateP95Ms": 73.7,
+            "heapMB": 6.1,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 51.4,
-            "loadPaintMs": 76.5,
-            "updateP50Ms": 14.7,
-            "updateP95Ms": 23.5,
-            "heapMB": 9.5,
+            "firstPaintMs": 69,
+            "loadPaintMs": 123.9,
+            "updateP50Ms": 29.1,
+            "updateP95Ms": 52.5,
+            "heapMB": 9.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 199.3,
-            "loadPaintMs": 243.8,
-            "updateP50Ms": 58.9,
-            "updateP95Ms": 86.7,
-            "heapMB": 9.5,
+            "firstPaintMs": 268.7,
+            "loadPaintMs": 384.8,
+            "updateP50Ms": 123.5,
+            "updateP95Ms": 195.6,
+            "heapMB": 9.4,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 106.6,
-            "loadPaintMs": 131.1,
-            "updateP50Ms": 118.4,
-            "updateP95Ms": 146.8,
-            "heapMB": 44.5,
+            "firstPaintMs": 183.6,
+            "loadPaintMs": 236.2,
+            "updateP50Ms": 220.8,
+            "updateP95Ms": 294.7,
+            "heapMB": 44.4,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 408.1,
-            "loadPaintMs": 453.9,
-            "updateP50Ms": 465.7,
-            "updateP95Ms": 548.8,
-            "heapMB": 44.4,
-            "runs": 4
+            "firstPaintMs": 705.5,
+            "loadPaintMs": 824.2,
+            "updateP50Ms": 891.8,
+            "updateP95Ms": 1109.6,
+            "heapMB": 44.3,
+            "runs": 3
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 623,
-            "loadPaintMs": 647.9,
-            "updateP50Ms": 1644.9,
-            "updateP95Ms": 1791.7,
-            "heapMB": 393.6,
-            "runs": 2
+            "firstPaintMs": 1117.2,
+            "loadPaintMs": 1175.6,
+            "updateP50Ms": 2660.7,
+            "updateP95Ms": 3111.2,
+            "heapMB": 393.3,
+            "runs": 1
           },
           "throttled": {
-            "firstPaintMs": 2358.9,
-            "loadPaintMs": 2403.8,
-            "updateP50Ms": 6379.2,
-            "updateP95Ms": 6871.6,
-            "heapMB": 393.3,
+            "firstPaintMs": 4304.9,
+            "loadPaintMs": 4409.2,
+            "updateP50Ms": 11425.9,
+            "updateP95Ms": 12152.8,
+            "heapMB": 393.2,
             "runs": 1
           }
         }
@@ -2370,61 +2373,56 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 85.5,
-            "loadPaintMs": 119.3,
-            "updateP50Ms": 91.7,
-            "updateP95Ms": 98.8,
+            "firstPaintMs": 189.5,
+            "loadPaintMs": 266.6,
+            "updateP50Ms": 173.2,
+            "updateP95Ms": 203.4,
             "heapMB": 15.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 328.5,
-            "loadPaintMs": 443.6,
-            "updateP50Ms": 347.7,
-            "updateP95Ms": 369.3,
+            "firstPaintMs": 856.7,
+            "loadPaintMs": 1128.7,
+            "updateP50Ms": 759.5,
+            "updateP95Ms": 946.8,
             "heapMB": 15.7,
-            "runs": 5
+            "runs": 4
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 550.7,
-            "loadPaintMs": 582.5,
-            "updateP50Ms": 817.8,
-            "updateP95Ms": 883,
-            "heapMB": 104.3,
-            "runs": 4
+            "firstPaintMs": 1218.7,
+            "loadPaintMs": 1289.2,
+            "updateP50Ms": 1686.6,
+            "updateP95Ms": 1881.5,
+            "heapMB": 104.2,
+            "runs": 2
           },
           "throttled": {
-            "firstPaintMs": 2118.7,
-            "loadPaintMs": 2225.3,
-            "updateP50Ms": 3293,
-            "updateP95Ms": 3559.6,
-            "heapMB": 104.2,
+            "firstPaintMs": 5344.2,
+            "loadPaintMs": 5598.5,
+            "updateP50Ms": 7449.1,
+            "updateP95Ms": 7794.6,
+            "heapMB": 104.3,
             "runs": 1
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 4691.7,
-            "loadPaintMs": 4725.2,
-            "updateP50Ms": 9229.2,
-            "updateP95Ms": 9548.2,
+            "firstPaintMs": 9663.7,
+            "loadPaintMs": 9732.2,
+            "updateP50Ms": 17608.5,
+            "updateP95Ms": 18633.7,
             "heapMB": 991.4,
             "runs": 1
           },
           "throttled": {
-            "firstPaintMs": 18183.9,
-            "loadPaintMs": 18293.6,
-            "updateP50Ms": 34293.9,
-            "updateP95Ms": 36195.3,
-            "heapMB": 991.3,
-            "runs": 1
+            "error": "skipped: failed or took over 5 s at a smaller size"
           }
         },
         "1000000": {
           "normal": {
-            "error": "page.waitForFunction: Timeout 30000ms exceeded."
+            "error": "skipped: failed or took over 5 s at a smaller size"
           },
           "throttled": {
             "error": "skipped: failed or took over 5 s at a smaller size"
@@ -2434,66 +2432,61 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 60.4,
-            "loadPaintMs": 93.3,
-            "updateP50Ms": 32.7,
-            "updateP95Ms": 34.4,
+            "firstPaintMs": 121.4,
+            "loadPaintMs": 192.1,
+            "updateP50Ms": 36.4,
+            "updateP95Ms": 49.2,
             "heapMB": 7.9,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 244,
-            "loadPaintMs": 355.6,
-            "updateP50Ms": 71.4,
-            "updateP95Ms": 85.3,
+            "firstPaintMs": 523.1,
+            "loadPaintMs": 760.1,
+            "updateP50Ms": 158.4,
+            "updateP95Ms": 190.7,
             "heapMB": 7.9,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 304.8,
-            "loadPaintMs": 336.1,
-            "updateP50Ms": 204.3,
-            "updateP95Ms": 216.5,
-            "heapMB": 29.8,
+            "firstPaintMs": 581.4,
+            "loadPaintMs": 648.3,
+            "updateP50Ms": 374.4,
+            "updateP95Ms": 435.7,
+            "heapMB": 29.9,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 1239.5,
-            "loadPaintMs": 1340.5,
-            "updateP50Ms": 814.3,
-            "updateP95Ms": 901,
+            "firstPaintMs": 2667.9,
+            "loadPaintMs": 2924.5,
+            "updateP50Ms": 1665.9,
+            "updateP95Ms": 1873.8,
             "heapMB": 29.8,
-            "runs": 3
+            "runs": 2
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 2808.6,
-            "loadPaintMs": 2839.1,
-            "updateP50Ms": 2079.7,
-            "updateP95Ms": 2259.9,
-            "heapMB": 211.2,
-            "runs": 2
+            "firstPaintMs": 5154.5,
+            "loadPaintMs": 5225.3,
+            "updateP50Ms": 3688.9,
+            "updateP95Ms": 4288.6,
+            "heapMB": 211.3,
+            "runs": 1
           },
           "throttled": {
-            "firstPaintMs": 11201.8,
-            "loadPaintMs": 11309.8,
-            "updateP50Ms": 8342.5,
-            "updateP95Ms": 8640.1,
-            "heapMB": 211.2,
+            "firstPaintMs": 22377.1,
+            "loadPaintMs": 22607,
+            "updateP50Ms": 16139,
+            "updateP95Ms": 17161,
+            "heapMB": 210.7,
             "runs": 1
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 29450.3,
-            "loadPaintMs": 29481.3,
-            "updateP50Ms": 33136.7,
-            "updateP95Ms": 39943.5,
-            "heapMB": 2073.1,
-            "runs": 1
+            "error": "skipped: failed or took over 5 s at a smaller size"
           },
           "throttled": {
             "error": "skipped: failed or took over 5 s at a smaller size"
@@ -2505,74 +2498,73 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 21.4,
-            "loadPaintMs": 26.2,
-            "updateP50Ms": 16.1,
-            "updateP95Ms": 17.2,
+            "firstPaintMs": 34.9,
+            "loadPaintMs": 45.5,
+            "updateP50Ms": 19.4,
+            "updateP95Ms": 40.2,
             "heapMB": 2.2,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 81.4,
-            "loadPaintMs": 103.3,
-            "updateP50Ms": 36.4,
-            "updateP95Ms": 82.8,
+            "firstPaintMs": 148.3,
+            "loadPaintMs": 195.6,
+            "updateP50Ms": 79.8,
+            "updateP95Ms": 90.3,
             "heapMB": 4.7,
-            "runs": 4,
-            "note": "page.waitForFunction: Timeout 26840ms exceeded."
+            "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 51.8,
-            "loadPaintMs": 56.3,
-            "updateP50Ms": 24.4,
-            "updateP95Ms": 36.1,
+            "firstPaintMs": 95.4,
+            "loadPaintMs": 106.6,
+            "updateP50Ms": 50.9,
+            "updateP95Ms": 79.9,
             "heapMB": 2.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 191.4,
-            "loadPaintMs": 215.3,
-            "updateP50Ms": 108.4,
-            "updateP95Ms": 116.8,
+            "firstPaintMs": 418.6,
+            "loadPaintMs": 448.5,
+            "updateP50Ms": 223,
+            "updateP95Ms": 267,
             "heapMB": 2.7,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 74.3,
-            "loadPaintMs": 79,
-            "updateP50Ms": 34,
-            "updateP95Ms": 50.8,
+            "firstPaintMs": 131.8,
+            "loadPaintMs": 143.8,
+            "updateP50Ms": 61.5,
+            "updateP95Ms": 111.4,
             "heapMB": 7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 301.8,
-            "loadPaintMs": 323.2,
-            "updateP50Ms": 145.8,
-            "updateP95Ms": 190.1,
-            "heapMB": 74.7,
-            "runs": 5
+            "firstPaintMs": 544.6,
+            "loadPaintMs": 595.6,
+            "updateP50Ms": 254.6,
+            "updateP95Ms": 351,
+            "heapMB": 7,
+            "runs": 4
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 311.7,
-            "loadPaintMs": 317.2,
-            "updateP50Ms": 148.1,
-            "updateP95Ms": 156.2,
-            "heapMB": 50.2,
-            "runs": 4
+            "firstPaintMs": 449.4,
+            "loadPaintMs": 459.1,
+            "updateP50Ms": 215.3,
+            "updateP95Ms": 238.9,
+            "heapMB": 355.8,
+            "runs": 3
           },
           "throttled": {
-            "firstPaintMs": 1243.3,
-            "loadPaintMs": 1263.6,
-            "updateP50Ms": 597,
-            "updateP95Ms": 655.4,
-            "heapMB": 50.2,
+            "firstPaintMs": 1841.5,
+            "loadPaintMs": 1885.2,
+            "updateP50Ms": 913.4,
+            "updateP95Ms": 1190.2,
+            "heapMB": 119.9,
             "runs": 1
           }
         }
@@ -2580,73 +2572,73 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 18.1,
-            "loadPaintMs": 22.7,
-            "updateP50Ms": 16.1,
-            "updateP95Ms": 16.4,
+            "firstPaintMs": 29.2,
+            "loadPaintMs": 41.5,
+            "updateP50Ms": 15.6,
+            "updateP95Ms": 19.3,
             "heapMB": 2.4,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 71,
-            "loadPaintMs": 91.6,
-            "updateP50Ms": 21.1,
-            "updateP95Ms": 41.8,
+            "firstPaintMs": 129.9,
+            "loadPaintMs": 177.7,
+            "updateP50Ms": 44.6,
+            "updateP95Ms": 61.1,
             "heapMB": 2.4,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 21.1,
-            "loadPaintMs": 25.4,
-            "updateP50Ms": 10.9,
-            "updateP95Ms": 14.4,
-            "heapMB": 3,
+            "firstPaintMs": 32.9,
+            "loadPaintMs": 44.5,
+            "updateP50Ms": 12.8,
+            "updateP95Ms": 27.9,
+            "heapMB": 3.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 81.7,
-            "loadPaintMs": 104,
-            "updateP50Ms": 29.1,
-            "updateP95Ms": 44.5,
-            "heapMB": 3,
+            "firstPaintMs": 135.9,
+            "loadPaintMs": 181.3,
+            "updateP50Ms": 55.8,
+            "updateP95Ms": 107.8,
+            "heapMB": 3.1,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 37,
-            "loadPaintMs": 41.4,
-            "updateP50Ms": 19.6,
-            "updateP95Ms": 25.5,
-            "heapMB": 83.1,
+            "firstPaintMs": 82.3,
+            "loadPaintMs": 92.5,
+            "updateP50Ms": 37.1,
+            "updateP95Ms": 53.9,
+            "heapMB": 9.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 136.4,
-            "loadPaintMs": 158.4,
-            "updateP50Ms": 80.3,
-            "updateP95Ms": 113.4,
-            "heapMB": 53.5,
+            "firstPaintMs": 238.1,
+            "loadPaintMs": 286.8,
+            "updateP50Ms": 147.6,
+            "updateP95Ms": 212.3,
+            "heapMB": 38.9,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 178.3,
-            "loadPaintMs": 183,
-            "updateP50Ms": 165.7,
-            "updateP95Ms": 217.6,
+            "firstPaintMs": 306.8,
+            "loadPaintMs": 317.9,
+            "updateP50Ms": 275.2,
+            "updateP95Ms": 352.6,
             "heapMB": 74.4,
-            "runs": 4
+            "runs": 3
           },
           "throttled": {
-            "firstPaintMs": 671.6,
-            "loadPaintMs": 695.7,
-            "updateP50Ms": 598.3,
-            "updateP95Ms": 678.6,
-            "heapMB": 74.3,
+            "firstPaintMs": 1173.9,
+            "loadPaintMs": 1215.5,
+            "updateP50Ms": 1070.5,
+            "updateP95Ms": 1298.3,
+            "heapMB": 74.5,
             "runs": 1
           }
         }
@@ -2656,146 +2648,141 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 14.2,
-            "loadPaintMs": 28.6,
-            "updateP50Ms": 16,
-            "updateP95Ms": 16.4,
+            "firstPaintMs": 25.3,
+            "loadPaintMs": 54.9,
+            "updateP50Ms": 15.7,
+            "updateP95Ms": 16.1,
             "heapMB": 2.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 61.7,
-            "loadPaintMs": 115.3,
-            "updateP50Ms": 17.7,
-            "updateP95Ms": 23,
+            "firstPaintMs": 112.3,
+            "loadPaintMs": 210.6,
+            "updateP50Ms": 41.5,
+            "updateP95Ms": 54.7,
             "heapMB": 2.8,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 42.5,
-            "loadPaintMs": 56.5,
-            "updateP50Ms": 33.3,
-            "updateP95Ms": 46.6,
+            "firstPaintMs": 90.1,
+            "loadPaintMs": 116,
+            "updateP50Ms": 72.5,
+            "updateP95Ms": 98.8,
             "heapMB": 3.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 171.6,
-            "loadPaintMs": 225.7,
-            "updateP50Ms": 126.9,
-            "updateP95Ms": 162.1,
+            "firstPaintMs": 381,
+            "loadPaintMs": 479.3,
+            "updateP50Ms": 293.5,
+            "updateP95Ms": 416.6,
             "heapMB": 3.8,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 331.6,
-            "loadPaintMs": 345.4,
-            "updateP50Ms": 333.8,
-            "updateP95Ms": 443.4,
+            "firstPaintMs": 727.3,
+            "loadPaintMs": 754.6,
+            "updateP50Ms": 667.9,
+            "updateP95Ms": 1108.8,
             "heapMB": 14.5,
-            "runs": 5
+            "runs": 3
           },
           "throttled": {
-            "firstPaintMs": 1321.2,
-            "loadPaintMs": 1376.9,
-            "updateP50Ms": 1359.1,
-            "updateP95Ms": 1842.9,
+            "firstPaintMs": 3124.8,
+            "loadPaintMs": 3223,
+            "updateP50Ms": 2756.2,
+            "updateP95Ms": 3809.5,
             "heapMB": 14.5,
-            "runs": 2
+            "runs": 1
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 3367.8,
-            "loadPaintMs": 3381.8,
-            "updateP50Ms": 7829.8,
-            "updateP95Ms": 10115.2,
-            "heapMB": 122.1,
+            "firstPaintMs": 8111.5,
+            "loadPaintMs": 8136.4,
+            "updateP50Ms": 7655.6,
+            "updateP95Ms": 9916.1,
+            "heapMB": 122,
             "runs": 1
           },
           "throttled": {
-            "firstPaintMs": 15192.5,
-            "loadPaintMs": 15254.8,
-            "updateP50Ms": 25398.1,
-            "updateP95Ms": 30724.5,
-            "heapMB": 122,
-            "runs": 1
+            "error": "page.waitForFunction: Timeout 30000ms exceeded."
           }
         }
       },
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 12.6,
-            "loadPaintMs": 28.9,
-            "updateP50Ms": 15.8,
-            "updateP95Ms": 16.6,
+            "firstPaintMs": 20.8,
+            "loadPaintMs": 61.9,
+            "updateP50Ms": 15.6,
+            "updateP95Ms": 16,
             "heapMB": 3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 59.8,
-            "loadPaintMs": 122.4,
-            "updateP50Ms": 14.2,
-            "updateP95Ms": 15.9,
+            "firstPaintMs": 90.5,
+            "loadPaintMs": 200.8,
+            "updateP50Ms": 18,
+            "updateP95Ms": 37.1,
             "heapMB": 3,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 22.8,
-            "loadPaintMs": 37.6,
-            "updateP50Ms": 11.1,
-            "updateP95Ms": 13.6,
-            "heapMB": 4.3,
+            "firstPaintMs": 39,
+            "loadPaintMs": 67.1,
+            "updateP50Ms": 22.1,
+            "updateP95Ms": 30.2,
+            "heapMB": 4.4,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 90.6,
-            "loadPaintMs": 144.9,
-            "updateP50Ms": 42.5,
-            "updateP95Ms": 51.9,
+            "firstPaintMs": 160.6,
+            "loadPaintMs": 256.1,
+            "updateP50Ms": 74.2,
+            "updateP95Ms": 97.1,
             "heapMB": 4.3,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 105.3,
-            "loadPaintMs": 119.9,
-            "updateP50Ms": 91.1,
-            "updateP95Ms": 108.6,
+            "firstPaintMs": 182.8,
+            "loadPaintMs": 208.7,
+            "updateP50Ms": 164.5,
+            "updateP95Ms": 222.1,
             "heapMB": 18,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 408.8,
-            "loadPaintMs": 467.1,
-            "updateP50Ms": 412,
-            "updateP95Ms": 440.5,
+            "firstPaintMs": 702.7,
+            "loadPaintMs": 795.1,
+            "updateP50Ms": 773.3,
+            "updateP95Ms": 853.4,
             "heapMB": 18,
-            "runs": 5
+            "runs": 3
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 957.6,
-            "loadPaintMs": 972.2,
-            "updateP50Ms": 1180.2,
-            "updateP95Ms": 1237.8,
+            "firstPaintMs": 1552.1,
+            "loadPaintMs": 1577.2,
+            "updateP50Ms": 1889,
+            "updateP95Ms": 2101,
             "heapMB": 155.9,
-            "runs": 2
+            "runs": 1
           },
           "throttled": {
-            "firstPaintMs": 3748.4,
-            "loadPaintMs": 3801.8,
-            "updateP50Ms": 4430.1,
-            "updateP95Ms": 4533.1,
+            "firstPaintMs": 6343,
+            "loadPaintMs": 6442.4,
+            "updateP50Ms": 7355,
+            "updateP95Ms": 7823.9,
             "heapMB": 155.9,
             "runs": 1
           }
@@ -2806,54 +2793,54 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 45.5,
-            "loadPaintMs": 69.4,
-            "updateP50Ms": 16.2,
-            "updateP95Ms": 20.7,
+            "firstPaintMs": 84.7,
+            "loadPaintMs": 137.3,
+            "updateP50Ms": 38,
+            "updateP95Ms": 55.1,
             "heapMB": 22.5,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 181.7,
-            "loadPaintMs": 228.6,
-            "updateP50Ms": 63,
-            "updateP95Ms": 73.2,
+            "firstPaintMs": 384.6,
+            "loadPaintMs": 491.4,
+            "updateP50Ms": 149.9,
+            "updateP95Ms": 172.4,
             "heapMB": 22.5,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 129.9,
-            "loadPaintMs": 153.6,
-            "updateP50Ms": 112.1,
-            "updateP95Ms": 123,
-            "heapMB": 120.3,
+            "firstPaintMs": 291.3,
+            "loadPaintMs": 339,
+            "updateP50Ms": 253,
+            "updateP95Ms": 290.9,
+            "heapMB": 120.2,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 524.9,
-            "loadPaintMs": 569.3,
-            "updateP50Ms": 434.6,
-            "updateP95Ms": 465.7,
-            "heapMB": 120.4,
-            "runs": 5
+            "firstPaintMs": 1257.8,
+            "loadPaintMs": 1366.1,
+            "updateP50Ms": 995.8,
+            "updateP95Ms": 1134.3,
+            "heapMB": 120.3,
+            "runs": 3
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 1114.2,
-            "loadPaintMs": 1138.3,
-            "updateP50Ms": 1142.8,
-            "updateP95Ms": 1781.6,
+            "firstPaintMs": 2541.1,
+            "loadPaintMs": 2587,
+            "updateP50Ms": 2462,
+            "updateP95Ms": 3272.6,
             "heapMB": 1109.4,
-            "runs": 2
+            "runs": 1
           },
           "throttled": {
-            "firstPaintMs": 4161.2,
-            "loadPaintMs": 4204.5,
-            "updateP50Ms": 4320.5,
-            "updateP95Ms": 5418.4,
+            "firstPaintMs": 10304.7,
+            "loadPaintMs": 10406.2,
+            "updateP50Ms": 9723.4,
+            "updateP95Ms": 10979.3,
             "heapMB": 1109.4,
             "runs": 1
           }
@@ -2863,63 +2850,63 @@
             "error": "page.evaluate: Target crashed "
           },
           "throttled": {
-            "error": "page.waitForFunction: Timeout 30000ms exceeded."
+            "error": "skipped: failed or took over 5 s at a smaller size"
           }
         }
       },
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 36.9,
-            "loadPaintMs": 60.3,
-            "updateP50Ms": 16,
-            "updateP95Ms": 16.2,
+            "firstPaintMs": 73.3,
+            "loadPaintMs": 131.4,
+            "updateP50Ms": 21.2,
+            "updateP95Ms": 27.1,
             "heapMB": 17.6,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 150,
-            "loadPaintMs": 198.5,
-            "updateP50Ms": 31.7,
-            "updateP95Ms": 40.1,
+            "firstPaintMs": 343.1,
+            "loadPaintMs": 456.5,
+            "updateP50Ms": 82.6,
+            "updateP95Ms": 106.8,
             "heapMB": 17.6,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 60.2,
-            "loadPaintMs": 84.3,
-            "updateP50Ms": 29.3,
-            "updateP95Ms": 38.2,
+            "firstPaintMs": 116.5,
+            "loadPaintMs": 166,
+            "updateP50Ms": 58.8,
+            "updateP95Ms": 90.9,
             "heapMB": 69.9,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 226.6,
-            "loadPaintMs": 271,
-            "updateP50Ms": 110.9,
-            "updateP95Ms": 120.2,
+            "firstPaintMs": 507.7,
+            "loadPaintMs": 620.5,
+            "updateP50Ms": 244.1,
+            "updateP95Ms": 286.1,
             "heapMB": 69.9,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 234.2,
-            "loadPaintMs": 256.5,
-            "updateP50Ms": 233.5,
-            "updateP95Ms": 284,
+            "firstPaintMs": 510.1,
+            "loadPaintMs": 560.4,
+            "updateP50Ms": 478.5,
+            "updateP95Ms": 599.9,
             "heapMB": 649.9,
-            "runs": 5
+            "runs": 4
           },
           "throttled": {
-            "firstPaintMs": 894.1,
-            "loadPaintMs": 936.9,
-            "updateP50Ms": 897,
-            "updateP95Ms": 1022.4,
+            "firstPaintMs": 1955.9,
+            "loadPaintMs": 2065.7,
+            "updateP50Ms": 1861,
+            "updateP95Ms": 2671.6,
             "heapMB": 649.9,
-            "runs": 3
+            "runs": 2
           }
         },
         "1000000": {
@@ -2936,37 +2923,36 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 147,
-            "loadPaintMs": 177.3,
-            "updateP50Ms": 54.5,
-            "updateP95Ms": 76.5,
-            "heapMB": 22.9,
+            "firstPaintMs": 256.2,
+            "loadPaintMs": 316.6,
+            "updateP50Ms": 93.7,
+            "updateP95Ms": 136.4,
+            "heapMB": 22.5,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 510.4,
-            "loadPaintMs": 613.2,
-            "updateP50Ms": 177.7,
-            "updateP95Ms": 259.7,
-            "heapMB": 22.9,
+            "firstPaintMs": 1077.3,
+            "loadPaintMs": 1299,
+            "updateP50Ms": 380.1,
+            "updateP95Ms": 548.7,
+            "heapMB": 22.4,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 5189.4,
-            "loadPaintMs": 5219,
-            "updateP50Ms": 796.5,
-            "updateP95Ms": 1565.8,
-            "heapMB": 176.6,
-            "runs": 2,
-            "note": "page.waitForFunction: Timeout 1060ms exceeded."
+            "firstPaintMs": 6165.7,
+            "loadPaintMs": 6226,
+            "updateP50Ms": 1413.4,
+            "updateP95Ms": 2634.7,
+            "heapMB": 176.1,
+            "runs": 2
           },
           "throttled": {
-            "firstPaintMs": 18766.9,
-            "loadPaintMs": 18863.1,
-            "updateP50Ms": 3179.9,
-            "updateP95Ms": 6359.8,
+            "firstPaintMs": 27107.8,
+            "loadPaintMs": 27328.7,
+            "updateP50Ms": 6060.4,
+            "updateP95Ms": 11235,
             "heapMB": 175.1,
             "runs": 1
           }
@@ -3027,67 +3013,61 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 46.8,
-            "loadPaintMs": 592.7,
-            "updateP50Ms": 19.4,
-            "updateP95Ms": 21.9,
+            "firstPaintMs": 104.1,
+            "loadPaintMs": 1277.6,
+            "updateP50Ms": 46.5,
+            "updateP95Ms": 52.5,
             "heapMB": 10.7,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 189.3,
-            "loadPaintMs": 2261.6,
-            "updateP50Ms": 76.2,
-            "updateP95Ms": 88.1,
+            "firstPaintMs": 465.6,
+            "loadPaintMs": 5481.9,
+            "updateP50Ms": 206.1,
+            "updateP95Ms": 234.4,
             "heapMB": 10.7,
-            "runs": 5
+            "runs": 4
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 188,
-            "loadPaintMs": 735.7,
-            "updateP50Ms": 138.9,
-            "updateP95Ms": 147.7,
+            "firstPaintMs": 442.3,
+            "loadPaintMs": 1613.6,
+            "updateP50Ms": 314.8,
+            "updateP95Ms": 343,
             "heapMB": 12,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 772.7,
-            "loadPaintMs": 2852.9,
-            "updateP50Ms": 557.9,
-            "updateP95Ms": 586.6,
+            "firstPaintMs": 2098.5,
+            "loadPaintMs": 6996.2,
+            "updateP50Ms": 1386,
+            "updateP95Ms": 1496.2,
             "heapMB": 12,
-            "runs": 3,
-            "note": "page.waitForFunction: Timeout 2781ms exceeded."
+            "runs": 2
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 1644.3,
-            "loadPaintMs": 2200.7,
-            "updateP50Ms": 1349.1,
-            "updateP95Ms": 1424.1,
-            "heapMB": 24.5,
-            "runs": 2
+            "firstPaintMs": 3653.3,
+            "loadPaintMs": 4806.6,
+            "updateP50Ms": 2886,
+            "updateP95Ms": 3069.6,
+            "heapMB": 24.7,
+            "runs": 1
           },
           "throttled": {
-            "firstPaintMs": 6281.7,
-            "loadPaintMs": 8373.9,
-            "updateP50Ms": 5450.6,
-            "updateP95Ms": 5622.2,
-            "heapMB": 24.6,
+            "firstPaintMs": 15681.4,
+            "loadPaintMs": 20592.2,
+            "updateP50Ms": 12823.5,
+            "updateP95Ms": 13829,
+            "heapMB": 24.4,
             "runs": 1
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 18513.3,
-            "loadPaintMs": 19061.6,
-            "updateP50Ms": 21062.9,
-            "updateP95Ms": 23465.7,
-            "heapMB": 142.5,
-            "runs": 1
+            "error": "page.waitForFunction: Timeout 30000ms exceeded."
           },
           "throttled": {
             "error": "skipped: failed or took over 5 s at a smaller size"
@@ -3097,73 +3077,74 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 31.1,
-            "loadPaintMs": 584.8,
-            "updateP50Ms": 16,
-            "updateP95Ms": 16.2,
+            "firstPaintMs": 59.9,
+            "loadPaintMs": 1224.1,
+            "updateP50Ms": 15.5,
+            "updateP95Ms": 19.7,
             "heapMB": 10.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 122.3,
-            "loadPaintMs": 2204.4,
-            "updateP50Ms": 22.4,
-            "updateP95Ms": 32.3,
+            "firstPaintMs": 266.7,
+            "loadPaintMs": 5096.8,
+            "updateP50Ms": 54.2,
+            "updateP95Ms": 81.2,
             "heapMB": 10.8,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 39.2,
-            "loadPaintMs": 590.9,
-            "updateP50Ms": 12.2,
-            "updateP95Ms": 17.2,
+            "firstPaintMs": 76.8,
+            "loadPaintMs": 1232.4,
+            "updateP50Ms": 26.4,
+            "updateP95Ms": 39.6,
             "heapMB": 11.9,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 153.6,
-            "loadPaintMs": 2230.9,
-            "updateP50Ms": 48.4,
-            "updateP95Ms": 62.1,
+            "firstPaintMs": 312.3,
+            "loadPaintMs": 5200.2,
+            "updateP50Ms": 111.7,
+            "updateP95Ms": 147.9,
             "heapMB": 11.9,
-            "runs": 5
+            "runs": 4,
+            "note": "page.waitForFunction: Timeout 2126ms exceeded."
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 88.7,
-            "loadPaintMs": 639,
-            "updateP50Ms": 59.1,
-            "updateP95Ms": 70.1,
+            "firstPaintMs": 171.8,
+            "loadPaintMs": 1334.5,
+            "updateP50Ms": 111.2,
+            "updateP95Ms": 134.5,
             "heapMB": 22,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 341.4,
-            "loadPaintMs": 2420.8,
-            "updateP50Ms": 229.5,
-            "updateP95Ms": 271.9,
+            "firstPaintMs": 696.7,
+            "loadPaintMs": 5464.7,
+            "updateP50Ms": 459.7,
+            "updateP95Ms": 560.1,
             "heapMB": 22,
-            "runs": 4,
-            "note": "page.waitForFunction: Timeout 1000ms exceeded."
+            "runs": 2,
+            "note": "page.waitForFunction: Timeout 1868ms exceeded."
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 557.6,
-            "loadPaintMs": 1108.2,
-            "updateP50Ms": 529.1,
-            "updateP95Ms": 613.6,
+            "firstPaintMs": 1021.8,
+            "loadPaintMs": 2170.8,
+            "updateP50Ms": 971.3,
+            "updateP95Ms": 1131.7,
             "heapMB": 122.6,
-            "runs": 3
+            "runs": 2
           },
           "throttled": {
-            "firstPaintMs": 2058.1,
-            "loadPaintMs": 4130.2,
-            "updateP50Ms": 2104.7,
-            "updateP95Ms": 2188.6,
+            "firstPaintMs": 3962.9,
+            "loadPaintMs": 8703.1,
+            "updateP50Ms": 3837.5,
+            "updateP95Ms": 4071.1,
             "heapMB": 122.6,
             "runs": 1
           }
