@@ -98,13 +98,13 @@
   },
   "mayaSize": {
     "dist/index.js": 30464,
-    "dist/element.js": 43520,
+    "dist/element.js": 45056,
     "dist/theme.css": 4096,
-    "dist/hierarchy.js": 3940,
+    "dist/hierarchy.js": 4198,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 52224
+    "dist/maya.global.js": 53760
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

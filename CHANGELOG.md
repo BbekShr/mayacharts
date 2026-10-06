@@ -12,6 +12,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Changed
 
+- Size budgets (gzip): global 52.5 KB (was 51), element 44 KB (was 42.5), hierarchy 4.1 KB (was 3.85). The correctness, accessibility and motion fixes in this release account for the growth; core stays at 29.75 KB after trimming validation prose.
 - Install: the compare harness's rival libraries and the Anthropic SDK moved out of the root `devDependencies` into `compare/package.json` with its own lockfile. A root `npm ci` now installs only the library toolchain; the `compare*` scripts run `npm install --prefix compare` themselves, and `test/eval-score.test.ts` skips its ECharts cases when `compare/node_modules` is absent.
 
 ### Fixed
