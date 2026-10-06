@@ -40,6 +40,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Size budgets are the human's call: report an overage with the cut that would fix it. Ponytail trims of repeated code save almost nothing in gzip; quote the feature's real cost instead.
 - Haiku docs drafts invent plausible facts (0.4: claimed a bare year "2024" is a date, labelled `data-t` as tone, added a second CHANGELOG section). Diff every Haiku doc against the source before committing.
 - Give an agent that needs its own build `isolation: "worktree"`; everyone else shares the tree and never builds.
+- `isolation: "worktree"` branches from `main`, not the run branch: tell a worktree editor to `git reset --hard <run branch>` as its first step when the run branch has commits.
 - Before any e2e run, free port 4173 (`lsof -i :4173`): Playwright reuses a running preview server, so a stale one silently tests an old build.
 - Two editors that each need `theme.ts` in separate worktrees still collide on its rules: read both theme diffs together when folding (2026-10-05: one set light-mode ink dark, the other light, for the same hexmap steps).
 
