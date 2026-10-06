@@ -8,7 +8,7 @@
 import type { Mark } from "./types.ts";
 
 // ponytail: kept in sync with package.json by hand; test/registry.test.ts fails when it drifts.
-export const VERSION = "0.6.0";
+export const VERSION = "0.7.0";
 // ponytail: keyed by major; pre-1.0 Mark-contract breaks must bump this by hand.
 export const MAJOR = "0";
 
