@@ -201,7 +201,13 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     series: "weekday",
     aggregate: "sum",
     labels: false,
-    data: DAILY.map(({ week, weekday, orders }) => ({ week, weekday, orders })),
+    titles: { orders: "Orders" },
+    // Rows follow first appearance, so start on the first Monday: weeks run Mon to Sun.
+    data: DAILY.filter((d) => d.week > 1).map(({ week, weekday, orders }) => ({
+      week: week - 1,
+      weekday,
+      orders,
+    })),
   });
 
   // 11 and 12. Hierarchy.
@@ -242,6 +248,19 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     y: "sales",
     format: "compact",
     data: tree.filter((r) => top.has(String(r.item))),
+  });
+
+  // 13b. Sankey you can drill: a family opens into its items and the regions that buy them.
+  tile("sankey-drill", {
+    type: "sankey",
+    title: "Family to item to region",
+    path: ["family", "item", "region"],
+    y: "sales",
+    drill: true,
+    format: "compact",
+    data: (rollup(FACTS, ["family", "item", "region"], { sales: sum("sales") }) as Row[]).filter(
+      (r) => top.has(String(r.item)),
+    ),
   });
 
   // 14. Hexmap.

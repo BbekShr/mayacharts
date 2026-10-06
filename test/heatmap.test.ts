@@ -82,4 +82,15 @@ describe("heatmap", () => {
     expect(t.length).toBe(11);
     expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(5); // q >= 6 of 11 cells
   });
+  it("small cells are squares, large ones fill the band; the legend names the field", () => {
+    const wh = (svg: string) => {
+      const t = marks(svg)[0]!;
+      return [/ width="([\d.]+)"/, / height="([\d.]+)"/].map((re) => Number(re.exec(t)![1]));
+    };
+    const [w, h] = wh(render(spec, { width: 400, height: 400 }));
+    expect(w).not.toBe(h);
+    const small = wh(render(spec, { width: 160, height: 400 }));
+    expect(small[0]).toBe(small[1]);
+    expect(renderParts(spec).legend).toContain("<b>v</b>");
+  });
 });

@@ -17,18 +17,19 @@ export const heatmap: Mark = {
     let lo = Infinity;
     let hi = -Infinity;
     for (const c of cells) ((lo = Math.min(lo, c.value!)), (hi = Math.max(hi, c.value!)));
-    const q = (v: number) =>
-      hi > lo ? Math.min(9, Math.max(0, Math.floor(((v - lo) / (hi - lo)) * 10))) : 9;
+    const q = (v: number) => (hi > lo ? Math.min(9, Math.floor(((v - lo) / (hi - lo)) * 10)) : 9);
+    // Small cells (no room for a label) are squares centred in their band, not tall pills.
+    const s = Math.min(cx.bandwidth, cy.bandwidth);
+    const w = Math.max(0, (s < 26 ? s : cx.bandwidth) - 2);
+    const h = Math.max(0, (s < 26 ? s : cy.bandwidth) - 2);
     let marks = "";
     let hits = "";
     let labels = "";
     for (const [n, c] of cells.entries()) {
       const v = c.value!;
       const row = shaped.visible.indexOf(c.si);
-      const x = cx.at(c.ci) + 1;
-      const y = cy.at(row) + 1;
-      const w = Math.max(0, cx.bandwidth - 2);
-      const h = Math.max(0, cy.bandwidth - 2);
+      const x = cx.at(c.ci) + (cx.bandwidth - w) / 2;
+      const y = cy.at(row) + (cy.bandwidth - h) / 2;
       const col = shaped.categories[c.ci]!;
       const ser = shaped.series[c.si]!;
       const d = {
@@ -58,7 +59,7 @@ export const heatmap: Mark = {
     }
     const legend =
       cells.length > 0
-        ? `<div class="maya-legend" data-maya="ramp"><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
+        ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
         : "";
     return { marks, hits, labels, grid: "", legend };
   },

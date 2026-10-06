@@ -34,7 +34,12 @@ export const radial: Mark = {
     // Many categories: labels run along the radius (short, so they never collide);
     // otherwise they sit level, truncated to a fifth of the width.
     const along = n > 16;
-    const names = shaped.categories.map((c) => ctx.fmt(spec.x, c));
+    let names = shaped.categories.map((c) => ctx.fmt(spec.x, c));
+    // One shared trailing year (dates): the ring names drop it and the centre states it once.
+    // ponytail: the centre label hides below ~170 px, taking the year with it; a year-first locale keeps full names.
+    const y = /\s\d{4}$/.exec(names[0]!)?.[0] ?? "";
+    const yr = names.every((s) => s.endsWith(y)) ? y : "";
+    names = names.map((s) => s.replace(yr, ""));
     const room = along ? 7 : Math.max(4, Math.floor((plot.w * 0.2) / W));
     const shown = names.map((s) => cut(s, room));
     // One series: a name rides on its bar when it fits, so the outer ring of names is only
@@ -227,7 +232,7 @@ export const radial: Mark = {
           "font-size": 11,
           "data-ring": "",
         },
-        esc(cut(tt, Math.floor(inner / 6.2))),
+        esc(cut(tt + yr, Math.floor(inner / 6.2))),
       );
 
     labels += tipText;
