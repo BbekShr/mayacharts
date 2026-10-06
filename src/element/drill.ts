@@ -163,19 +163,18 @@ export const mount = (host: Host): Handlers => {
                   ) === (want as { value: string }).value,
               );
       want = undefined;
-      const focus = () => {
-        if (m) {
-          if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
-          (m as unknown as HTMLElement).focus?.({ preventScroll: true });
-        }
-        // Keyboard must keep working after a pointer drill: fall back to the chart itself.
-        if (!host.root.activeElement || !host.root.contains(host.root.activeElement))
-          host.root.querySelector<HTMLElement>(".maya-svg")?.focus({ preventScroll: true });
+      // The chart takes focus at once so keys keep working; the mark follows the landing, if
+      // focus is still on the chart (a mark focused mid-zoom draws its outline scaled over the plot).
+      const svg = host.root.querySelector<HTMLElement>(".maya-svg");
+      svg?.focus({ preventScroll: true });
+      const go = () => {
+        if (!m || host.root.activeElement !== svg) return;
+        if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
+        (m as unknown as HTMLElement).focus?.({ preventScroll: true });
       };
-      // A mark focused mid-zoom draws its outline scaled over the plot: wait for the landing.
       const zoom = host.root.querySelector("[data-maya=marks]")?.getAnimations?.() ?? [];
-      if (m && zoom.length) Promise.allSettled(zoom.map((a) => a.finished)).then(focus);
-      else focus();
+      if (m && zoom.length) Promise.allSettled(zoom.map((a) => a.finished)).then(go);
+      else go();
     },
     off: listen(host.root, ["click", click]),
   };

@@ -779,15 +779,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 7,094 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 7,176 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 797,614,193 total, 1,708,875 output
-- claude-sonnet-5-5: 276,382,116 total, 53,109 output
+- claude-opus-5-5: 804,860,737 total, 1,712,663 output
+- claude-sonnet-5-5: 279,042,154 total, 53,602 output
 - claude-fable-5-1: 74,794,840 total, 178,397 output
 - claude-haiku-4-5-20251001: 23,593,580 total, 943 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,180,182,588 total, 1,984,637 output
+- all: 1,190,089,170 total, 1,988,918 output
 
 <!-- tokens:end -->
 

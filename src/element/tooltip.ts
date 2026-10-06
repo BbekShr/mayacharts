@@ -109,19 +109,21 @@ export function tooltip(
 
   // In-bar labels of dimmed marks take the page ink: the bar fades toward the page, the label must not.
   const dim = (m?: Element) => {
-    const on = m
-      ? [m, ...peers].filter(
-          (e) =>
-            e.localName === "rect" && !e.hasAttribute("data-depth") && !e.hasAttribute("data-q"),
-        )
-      : [];
+    const on = (m ? [m, ...peers] : [])
+      .filter((e) => /^(rect|path)$/.test(e.localName) && !e.hasAttribute("data-q"))
+      .map((e): number[] => {
+        if (e.localName === "path") {
+          const b = (e as SVGGraphicsElement).getBBox();
+          return [b.x, b.y, b.width, b.height];
+        }
+        return ["x", "y", "width", "height"].map((k) => +a(e, k));
+      });
     for (const t of box.querySelectorAll("[data-maya=labels] [data-in]")) {
       const [x, y] = [+a(t, "x"), +a(t, "y")];
-      const at = (e: Element, k: string, l: string) =>
-        +a(e, k) <= (k === "x" ? x : y) && (k === "x" ? x : y) <= +a(e, k) + +a(e, l);
       t.toggleAttribute(
         "data-dim",
-        !!on.length && !on.some((e) => at(e, "x", "width") && at(e, "y", "height")),
+        !!on.length &&
+          !on.some((r) => r[0]! <= x && x <= r[0]! + r[2]! && r[1]! <= y && y <= r[1]! + r[3]!),
       );
     }
   };
