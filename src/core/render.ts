@@ -225,7 +225,8 @@
  *   (line and area: 2 to 8 series, all visible, no value labels, no y2) gets a right gutter of
  *   endGutter() px (30% of the width at most; 0 below 400 px). It draws <text data-end data-s>
  *   (and a <line data-lead> when nudged more than 3 px) into the labels group, and the legend is
- *   dropped. A hidden series, narrow width or labels:true keep the legend and draw no end labels.
+ *   dropped unless the spec sets legend:true explicitly (then both show). A hidden series, narrow
+ *   width or labels:true keep the legend and draw no end labels; endLabels:false turns them off.
  *
  * Legend and title are HTML, not SVG (free wrapping and font metrics). render() — the
  * bare SVG — therefore has no legend; renderShell() is the full-fidelity output.
@@ -383,7 +384,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   };
 
   // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
-  const ends = mark.ends?.(s, shaped, fmt);
+  const ends = spec.endLabels === false ? null : mark.ends?.(s, shaped, fmt);
   const gutter = ends?.length ? endGutter(ends, W) : 0;
   const f =
     mark.axes && s.data.length
@@ -519,7 +520,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let legend = "";
   let tbl: string | undefined;
-  if ((s.series !== null || s.y2 !== null) && s.legend && !gutter)
+  if ((s.series !== null || s.y2 !== null) && s.legend && (!gutter || spec.legend))
     legend =
       `<div class="maya-legend" data-maya="legend">` +
       (s.series === null && s.y2 !== null

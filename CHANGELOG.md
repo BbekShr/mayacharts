@@ -8,7 +8,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Changed
 
-- Line and area charts with 2 to 8 series, all visible, `labels` off and no y2 name each series at its right end in its colour with its last value, in a reserved right gutter (at most 30% of the width), and drop the legend. Below 400 px wide, when a series is hidden, or with `labels: true`, the legend returns.
+- Line and area charts with 2 to 8 series, all visible, `labels` off and no y2 name each series at its right end in its colour with its last value, in a reserved right gutter (at most 30% of the width), and drop the legend. Below 400 px wide, when a series is hidden, or with `labels: true`, the legend returns. New `endLabels: false` turns them off (legend back, no gutter); an explicit `legend: true` keeps the legend and its series toggle alongside them.
 - Value labels on lines avoid crossing their own line (tried above, below, and to either side; dropped when none is clear).
 - Hover marks the active mark with an ink outline instead of changing its fill, so labels inside it keep their contrast. Ramp cells are no longer dimmed on hover.
 - Heatmap and density ramps start at 3:1 contrast against the background and span further.

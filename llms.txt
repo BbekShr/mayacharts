@@ -36,7 +36,8 @@ description: string = "". Accessible description; auto-generated when omitted.
 yDomain: [min, max] = null. Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). Not with y array.
 xDomain: [min, max] = null. Fixed x domain. scatter only.
 tooltip: boolean = true. Hover/keyboard tooltip.
-legend: boolean = true if series, waffle, hexmap. Legend; clicking toggles series. Line and area: dropped when direct end labels show (2 to 8 visible series, no value labels, no y2, width >= 400 px).
+legend: boolean = true if series, waffle, hexmap. Legend; clicking toggles series. Line and area: dropped when direct end labels show, unless set to true explicitly.
+endLabels: boolean = true. line area. Name each series at its right end with its last value (2 to 8 visible series, no value labels, no y2, width >= 400 px). false brings back the legend.
 drill: boolean = false. Click/Enter zooms into branch of path; breadcrumb, Back, Escape pop. treemap sunburst sankey; bar line area dumbbell with path.
 drillOut: boolean = true. With drill, a click on empty chart space goes back up one level.
 select: true|"multi" = off. Click/Enter/legend selects marks; Escape clears. Not with drill. All types but sankey.

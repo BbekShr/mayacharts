@@ -173,6 +173,9 @@ export interface ChartSpec<R extends object = Row> {
   /** Legend; clicking toggles series. Default: true when `series` is set, and for waffle and hexmap (colour ramp).
    * @example legend: false */
   legend?: boolean;
+  /** Line and area: name each series at its right end and drop the legend (keep it with `legend: true`). Default true.
+   * @example endLabels: false */
+  endLabels?: boolean;
   /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop.
    * @example drill: true */
   drill?: boolean;

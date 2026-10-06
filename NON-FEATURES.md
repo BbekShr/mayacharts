@@ -87,7 +87,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Parallel end labels**: colliding end labels are dropped, not nudged apart, so lines that end close together share one label.
 - **Radial year**: a shared trailing four-digit year moves to the centre caption, which hides below about 170 px.
 - **Small heatmap cells**: cells under 26 px become squares with a 2 px gap, so a 52-week calendar at 360 px draws 3 px dots.
-- **Line end labels**: drawn for 2 to 8 series at 400 px and wider; otherwise the legend names the series.
+- **Line end labels**: drawn for 2 to 8 series at 400 px and wider; otherwise the legend names the series. `endLabels: false` always uses the legend.
 - **Parallel end labels**: nudged apart only while they fit the plot height at 13 px each; with more lines a colliding name is dropped.
 - **Bar value labels that would print over a taller neighbour are dropped, not thinned.
 - **Sunburst ring names are cut with an ellipsis when the ring is too thin; the tooltip carries the full name.

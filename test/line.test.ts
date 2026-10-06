@@ -177,6 +177,14 @@ describe("line end labels", () => {
     expect(h.svg).not.toContain("data-end");
     expect(ends({ ...spec, labels: true })).toEqual([]);
   });
+  it("turn off with endLabels: false, and keep the legend alongside with an explicit legend: true", () => {
+    const off = renderParts({ ...spec, endLabels: false }, { width: 640 });
+    expect(off.legend).toContain("maya-legend");
+    expect(off.svg).not.toContain("data-end");
+    const both = renderParts({ ...spec, legend: true }, { width: 640 });
+    expect(both.legend).toContain("maya-legend");
+    expect(both.svg).toContain("data-end");
+  });
   it("drop the value when the name alone fits the gutter", () => {
     const long = data.map((d) => ({ ...d, s: d.s.repeat(18) }));
     expect(ends({ ...spec, data: long }, 500).every((t) => !/\d/.test(t))).toBe(true);

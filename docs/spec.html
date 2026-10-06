@@ -328,8 +328,17 @@
               <td>boolean</td>
               <td>
                 Legend; clicking toggles series (default true when series is set, and for waffle and
-                hexmap). Line and area charts drop the legend when 2 to 8 visible series show direct
-                end labels (no value labels, no y2, width >= 400 px).
+                hexmap). Line and area charts drop the legend when direct end labels show, unless
+                legend is set to true explicitly.
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="endLabels"></a><code>endLabels</code></td>
+              <td>boolean</td>
+              <td>
+                Line and area: name each series at its right end with its last value (default true;
+                2 to 8 visible series, no value labels, no y2, width >= 400 px). false brings back
+                the legend.
               </td>
             </tr>
             <tr>
