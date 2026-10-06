@@ -4,6 +4,10 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Needs a decision from the human
 
+- **`frame: "<field>"` playback** (2026-10-06 showcase): folds the 21 to 23 line host loop of each motion tile into one spec line. About +200 B index, +500 B element and global. Needs a budget decision and the SSR frame choice (audit suggests the last frame). Owner: human, then core and element engineers.
+- **New types in an opt-in `mayacharts/stat` module**: donut, funnel, then box plot and histogram (about 400 to 600 B each, own budget). 100% stack (`stack: "percent"`, about 100 B core) and per-field `aggregate` / `cumulative: true` (50 to 70 B) also wait on budget. Owner: human.
+- **Bar race label placement**: values centred in one-colour bars read as a default; a Flourish-style race needs value-at-tip labels. Owner: human, then chart designer.
+
 - **Unnamed scatter keys are row indexes**, so prepending data moves a selection to another dot. Changing it is a key contract change. Owner: human, then core engineer.
 
 - **Zero rows reject treemap, sunburst, sankey and chord** (`non-positive-value`). One 0 in a BI extract fails the whole chart; skipping zeros like nulls changes the error contract. Owner: human, then core engineer.
@@ -21,6 +25,6 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 - **Waffle share change**: cells keyed by name slide through each other (about 8% overlap mid-flight); key by grid position and let the fill transition carry the change. Owner: chart designer.
 - **Treemap rank swaps**: tiles that change order cross mid-flight (15 to 36% overlap). Keep order stable or record a ceiling. Owner: chart designer.
 - **WebKit area crossfade** dips to about 75% coverage mid-flight (motion M12). Owner: element engineer.
-- **Labels blink on fast streaming bar updates** (hbar, kpi under 500 ms spec swaps): crossfade in place when keys are unchanged. Owner: element engineer.
+- **Labels blink on streamed updates** (hbar, kpi, and the gallery bar race at 900 ms and live line at 600 ms): value and end labels vanish for part of every step. Top item for the motion showcase; crossfade in place when keys are unchanged. Element has 25 B headroom. Owner: element engineer.
 - **Enter after an arrow key mid-zoom** following a keyboard drill-out does nothing (tooltip blur clears the active mark). Owner: element engineer.
 - **Builder snippet SRI** and quoted keys in generated code (security L-2, L-3). Owner: release manager, core engineer.
