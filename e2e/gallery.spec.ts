@@ -33,6 +33,10 @@ const TILES = [
   "time-line",
   "time-bar",
   "scatter-dense",
+  "race",
+  "drift",
+  "feed",
+  "rules",
 ];
 
 test("gallery: every tile renders marks, no errors, spec shown as JSON", async ({ page }) => {

@@ -35,6 +35,7 @@
     <main>
       <div class="toolbar">
         <ul class="toc">
+          <li><a href="#motion">In motion</a></li>
           <li><a href="#trend">Trend over time</a></li>
           <li><a href="#comparison">Comparison and ranking</a></li>
           <li><a href="#relationship">Relationship and distribution</a></li>
@@ -49,6 +50,67 @@
         All data on this page is synthetic sample data. Re-roll draws a new year of it. Spec blocks
         show the first three rows only.
       </p>
+      <div class="group" id="motion">
+        <div class="group-head">
+          <h2>In motion</h2>
+          <p>
+            Set <code>chart.spec</code> again and the marks glide to their new places. The host code
+            under each spec is the whole loop.
+          </p>
+        </div>
+        <div class="tiles">
+          <section>
+            <div class="tile-head">
+              <h2>Sales race by state</h2>
+              <div>
+                <button type="button" id="race-play">Play</button>
+                <button type="button" data-reroll="race">Re-roll</button>
+              </div>
+            </div>
+            <p>
+              Running sales total by state, January to December. Bars re-sort as the leaders change.
+            </p>
+            <maya-chart id="race" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec and host code</summary>
+              <pre><code id="race-code"></code></pre>
+              <pre><code id="race-loop"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Moving bubbles</h2>
+              <div>
+                <button type="button" id="drift-play">Play</button>
+                <button type="button" data-reroll="drift">Re-roll</button>
+              </div>
+            </div>
+            <p>One bubble per state, sales against margin, month by month.</p>
+            <maya-chart id="drift" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec and host code</summary>
+              <pre><code id="drift-code"></code></pre>
+              <pre><code id="drift-loop"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Live sensor feed</h2>
+              <div>
+                <button type="button" id="feed-play">Play</button>
+                <button type="button" data-reroll="feed">Re-roll</button>
+              </div>
+            </div>
+            <p>A new reading every 600 ms, the last 40 kept. The end labels ride the line ends.</p>
+            <maya-chart id="feed" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec and host code</summary>
+              <pre><code id="feed-code"></code></pre>
+              <pre><code id="feed-loop"></code></pre>
+            </details>
+          </section>
+        </div>
+      </div>
       <div class="group" id="trend">
         <div class="group-head">
           <h2>Trend over time</h2>
@@ -92,6 +154,20 @@
             <details>
               <summary>Spec</summary>
               <pre><code id="area-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Monthly sales against target</h2>
+              <button type="button" data-reroll="rules">Re-roll</button>
+            </div>
+            <p>
+              Dashed lines mark a target above the bars and the average, so the goal stays in view.
+            </p>
+            <maya-chart id="rules" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="rules-code"></code></pre>
             </details>
           </section>
           <section>
