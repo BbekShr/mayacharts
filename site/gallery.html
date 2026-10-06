@@ -9,6 +9,13 @@
       content="Every mayaCharts chart type with the exact spec that draws it."
     />
     <link rel="stylesheet" href="./site.css" />
+    <!-- Apply the saved theme before first paint; theme.ts keeps the button in step. -->
+    <script>
+      try {
+        const m = localStorage.getItem("maya-theme");
+        if (m === "light" || m === "dark") document.documentElement.style.colorScheme = m;
+      } catch {}
+    </script>
   </head>
   <body class="wide">
     <header class="site">
@@ -16,6 +23,7 @@
       <p class="tagline">Every chart type, each drawn from the spec shown beneath it.</p>
       <nav>
         <a href="./index.html">Home</a>
+        <a href="./builder.html">Builder</a>
         <a href="./gallery.html" aria-current="page">Gallery</a>
         <a href="./compare.html">Compare</a>
         <a href="./errors.html">Errors</a>

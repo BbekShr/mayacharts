@@ -2,7 +2,11 @@ import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 import { existsSync } from "node:fs";
 
-const PAGES = ["index.html", ...(existsSync("site/gallery.html") ? ["gallery.html"] : [])];
+const PAGES = [
+  "index.html",
+  "builder.html",
+  ...(existsSync("site/gallery.html") ? ["gallery.html"] : []),
+];
 // `page#chart-id` -> axe rule id: a real library violation, tracked as fixme.
 const FIXME: Record<string, string> = {};
 test.use({ reducedMotion: "reduce" });

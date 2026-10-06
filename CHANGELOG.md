@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
+### Added
+
+- A chart builder on the demo site (`builder.html`). Pick one of the 20 chart types, start from sample data or paste CSV, TSV or JSON, map fields, set options, re-roll the sample numbers to watch the chart animate, and copy code for plain HTML, a ThoughtSpot custom chart (Muze Studio), React, Vue, Svelte, Angular, a JSON spec or Node server rendering. Each field gets its own format (a style for numbers and dates, words before and after a text category), and an i button by every field and option says what it does. Options a chart cannot use are hidden, options that clash with the current settings are disabled with the reason, and a spec the library rejects is explained in the builder's words with an undo. Chart types and options are read from `schema.json` and `validate.ts`, and the copied code pins the current `package.json` version, so the builder follows each release. Pasted data stays in the browser and is capped at 1 MB, 5,000 rows and 50 columns.
+
 ### Changed
 
 - Install: the compare harness's rival libraries and the Anthropic SDK moved out of the root `devDependencies` into `compare/package.json` with its own lockfile. A root `npm ci` now installs only the library toolchain; the `compare*` scripts run `npm install --prefix compare` themselves, and `test/eval-score.test.ts` skips its ECharts cases when `compare/node_modules` is absent.

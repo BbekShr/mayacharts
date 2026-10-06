@@ -10,6 +10,8 @@ Existing chart libraries were designed 2011-2016 and hand-roll animation, toolti
 
 ## Quick start
 
+No code yet? The [chart builder](https://bbekshr.github.io/mayacharts/builder.html) lets you pick a chart, paste your data, map the fields and copy ready code for HTML, ThoughtSpot, React, Vue, Svelte, Angular or Node.
+
 HTML:
 
 ```html
@@ -738,15 +740,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 5,602 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 6,156 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 659,047,103 total, 1,358,511 output
-- claude-sonnet-5-5: 225,712,632 total, 44,916 output
+- claude-opus-5-5: 723,897,455 total, 1,594,825 output
+- claude-sonnet-5-5: 250,768,197 total, 48,529 output
 - claude-fable-5-1: 74,794,840 total, 178,397 output
-- claude-haiku-4-5-20251001: 18,481,843 total, 761 output
+- claude-haiku-4-5-20251001: 19,393,818 total, 833 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 985,834,277 total, 1,625,898 output
+- all: 1,076,652,169 total, 1,865,897 output
 
 <!-- tokens:end -->
 
