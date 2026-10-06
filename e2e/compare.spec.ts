@@ -56,7 +56,7 @@ const sizes = (only("COMPARE_SIZES") ?? ["1000", "10000", "100000", "1000000"]).
 
 const version = (pkg: string): string | null => {
   try {
-    return JSON.parse(readFileSync(`node_modules/${pkg}/package.json`, "utf-8")).version;
+    return JSON.parse(readFileSync(`compare/node_modules/${pkg}/package.json`, "utf-8")).version;
   } catch {
     return null;
   }
@@ -319,7 +319,7 @@ async function ssr(lib: Lib, chart: Chart, spec: unknown, rows: unknown): Promis
       svg = m.render(spec, SIZE);
     } else if (lib === "echarts") {
       echartsScratch ||= mkdtempSync(join(tmpdir(), "compare-ssr-"));
-      const inner = resolve("node_modules/echarts/index.js");
+      const inner = resolve("compare/node_modules/echarts/index.js");
       const file = join(echartsScratch, `${chart}.mjs`);
       await build({
         entryPoints: [`e2e/compare/ref/echarts/${chart}.js`],
@@ -327,6 +327,7 @@ async function ssr(lib: Lib, chart: Chart, spec: unknown, rows: unknown): Promis
         bundle: true,
         format: "esm",
         platform: "node",
+        nodePaths: [resolve("compare/node_modules")],
         logLevel: "silent",
         plugins: [
           {

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
-import * as echarts from "echarts";
 import { existsSync } from "node:fs";
 import { countMarks, parseJson, score, summarize } from "../eval/score.ts";
 import { render, validateSpec } from "../src/index.ts";
 
+// echarts lives in compare/ (npm ci --prefix compare); without it the echarts cases skip.
+const echarts = await import(
+  new URL("../compare/node_modules/echarts/index.js", import.meta.url).href
+).catch(() => null);
 const libs = { validateSpec, render, echarts } as never;
 const rows = [
   { region: "North", revenue: 120 },
@@ -53,11 +56,11 @@ describe("score", () => {
     expect(s.renders).toBe(false);
     expect(s.error).toBeTruthy();
   });
-  it("scores prose as invalid JSON", () => {
+  it.skipIf(!echarts)("scores prose as invalid JSON", () => {
     const s = score("echarts", "Here is the option", rows, libs);
     expect(s).toMatchObject({ validJson: false, renders: false, nonBlank: false });
   });
-  it("scores a good ECharts option, and an empty one as blank", () => {
+  it.skipIf(!echarts)("scores a good ECharts option, and an empty one as blank", () => {
     const good = {
       xAxis: { type: "category" },
       yAxis: {},
