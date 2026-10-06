@@ -14,6 +14,7 @@ const TILES = [
   "treemap",
   "sunburst",
   "sankey",
+  "sankey-drill",
   "hexmap",
   "hbar",
   "bar-y2",
@@ -44,7 +45,7 @@ test("gallery: every tile renders marks, no errors, spec shown as JSON", async (
   for (const id of TILES) {
     const section = page.locator(`section:has(#${id})`);
     await expect(section.locator("h2")).toHaveCount(1);
-    await expect(page.locator(`#${id}`)).toHaveCSS("height", "320px");
+    await expect(page.locator(`#${id}`)).toHaveCSS("height", id === "calendar" ? "210px" : "320px");
     await expect
       .poll(() => page.locator(`#${id} [data-maya=mark]`).count(), { message: id })
       .toBeGreaterThan(0);

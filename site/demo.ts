@@ -22,9 +22,10 @@ const revenue = [
 ];
 show("simple", {
   type: "bar",
-  title: "Revenue by month",
+  title: "Revenue more than tripled in 2025",
   x: "month",
   y: "revenue",
+  labels: true,
   format: "compact",
   data: months.map((month, i) => ({ month, revenue: revenue[i] ?? 0 })),
 });
