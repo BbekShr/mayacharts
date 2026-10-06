@@ -46,6 +46,10 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 **Process**
 
+- In gallery runs, let critics walk a worktree pinned to the run branch; editors' live edits reload Vite mid-probe (2026-10-06).
+- A theme `transform-origin` on a mark breaks the FLIP's 0 0 contract; set any other origin inside the WAAPI keyframes instead.
+- Check a CSS hook beats `[data-maya=labels] text{fill}` before trusting a wip rule: the end-label colour lost on specificity after folding.
+
 - Defaults that vary by chart type go in `resolve()` (`validate.ts`), not as type checks in `render.ts`.
 - Changing a spec default is a docs change too: `types.ts`, README, `schema.json` if described, `llms.txt`, `docs/spec.html`, CHANGELOG.
 
