@@ -4,6 +4,25 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Changed
+
+- Line and area charts with 2 to 8 series, all visible, `labels` off and no y2 name each series at its right end in its colour with its last value, in a reserved right gutter (at most 30% of the width), and drop the legend. Below 400 px wide, when a series is hidden, or with `labels: true`, the legend returns.
+- Value labels on lines avoid crossing their own line (tried above, below, and to either side; dropped when none is clear).
+- Hover marks the active mark with an ink outline instead of changing its fill, so labels inside it keep their contrast. Ramp cells are no longer dimmed on hover.
+- Heatmap and density ramps start at 3:1 contrast against the background and span further.
+- `--maya-good` and `--maya-bad` are now teal and orange (colour-blind safer).
+- Bars: outside labels that would print over a taller neighbour are dropped; waterfall first and last labels stay in their own column; the waterfall start bar is neutral like Total; a clipped Other bar shows a break.
+- Parallel coordinates name every line, nudging names apart with short leaders.
+- Scatter tooltips name each field and include the colour field.
+- Table in-cell bars use one accent colour.
+- Ridgelines overlap by about 40% and show each ridge's peak value.
+- Radial bars use one label placement for every bar; sankey keeps every node name at narrow widths and colours items by their first-level branch.
+- Marimekko keeps a narrow column's share on a second line. Waffle hover lights the whole category.
+- KPI delta uses a true minus sign. The first time-axis tick keeps its year at narrow widths.
+- Fixed: marimekko tooltips listed rows twice (hit targets were indexed as marks).
+
 ## 0.6.0 - 2026-10-05
 
 ### Added
