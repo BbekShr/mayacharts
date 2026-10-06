@@ -51,7 +51,7 @@ describe("scatter", () => {
 
   it("tooltip payload: name title, x · y · size", () => {
     const c = circles(renderParts(bubbles).svg).find((m) => attr(m, "data-x") === "big")!;
-    expect(attr(c, "data-f")).toBe("2 · 2 · 1,000");
+    expect(attr(c, "data-f")).toBe("a 2 · b 2 · z 1,000");
     expect(attr(c, "data-y")).toBe("2");
     expect(attr(c, "data-key")).toBe("~big");
   });

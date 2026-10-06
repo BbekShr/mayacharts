@@ -12,6 +12,17 @@ const tags = (s: string, re: string) =>
   [...s.matchAll(new RegExp(`<${re}[^>]*>`, "g"))].map((m) => m[0]);
 
 describe("parallel", () => {
+  it("end labels are repelled, never dropped", () => {
+    const flat = regions.flatMap((region) => [{ region, sales: 10, units: 10, margin: 3 }]);
+    const s = render({ ...spec, data: flat });
+    const ys = [
+      ...s.matchAll(/<text x="[\d.]+" y="([\d.]+)" text-anchor="start" dominant-baseline/g),
+    ].map((m) => +m[1]!);
+    expect(ys).toHaveLength(4);
+    ys.sort((a, b) => a - b).forEach(
+      (y, i) => i && expect(y - ys[i - 1]!).toBeGreaterThanOrEqual(13),
+    );
+  });
   it("one line per category, one point per measure, keyed", () => {
     const s = render(spec);
     const lines = tags(s, 'path data-maya="line"');

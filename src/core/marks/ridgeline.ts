@@ -19,15 +19,15 @@ export const ridgeline: Mark = {
   draw(ctx) {
     const { spec, shaped, plot } = ctx;
     const cat = ctx.x as BandScale;
-    const row = ctx.y as BandScale;
     const cvOf = colorVals(spec);
     const px = (ci: number) => r(cat.at(ci) + cat.bandwidth / 2);
     let max = 0;
     for (const c of shaped.cells) if (c.value !== null && c.value > max) max = c.value;
     if (max <= 0) max = 1;
-    // Baseline = bottom of each band; the peak reaches 1.4 bands up unless the top row would leave the plot.
-    const base = (ri: number) => row.at(ri) + row.bandwidth / 2 + row.step / 2;
-    const tall = Math.min(1.4 * row.step, base(0) - plot.y);
+    // Rows are 1 / (n + 0.4) of the plot tall and every peak reaches 1.4 rows up, so the tallest ridge overlaps the row above by 40%.
+    const step = plot.h / (shaped.visible.length + 0.4);
+    const tall = 1.4 * step;
+    const base = (ri: number) => plot.y + tall + ri * step;
 
     // Categories to draw: all, or the thinned union over the visible series.
     // shape lays cells out category by category, one per visible series.
@@ -42,11 +42,19 @@ export const ridgeline: Mark = {
 
     let rows = "";
     let dots = "";
+    let grid = "";
     shaped.visible.forEach((si, ri) => {
       const ser = shaped.series[si]!;
       const b = base(ri);
       const py = (v: number) => r(b - (v / max) * tall);
       const cells: Cell[] = shaped.cells.filter((c) => c.si === si && kept.has(c.ci));
+      // Each ridge gets its own zero rule and a label on its peak, so the scale is readable.
+      grid += el("line", { x1: r(plot.x), x2: r(plot.x + plot.w), y1: r(b), y2: r(b) });
+      const top = cells.reduce<Cell | null>(
+        (m, c) => (c.value !== null && (!m || c.value > m.value!) ? c : m),
+        null,
+      );
+      if (top) ctx.label(Number(px(top.ci)), py(top.value!), ctx.fmt(spec.y, top.value!), "above");
       const runs: Cell[][] = [[]];
       for (const c of cells) {
         if (c.value === null) {
@@ -101,6 +109,7 @@ export const ridgeline: Mark = {
     return {
       marks: rows + dots,
       hits: plotHit(plot),
+      grid,
       cross: el("line", { x1: 0, x2: 0, y1: r(plot.y), y2: r(plot.y + plot.h) }),
     };
   },

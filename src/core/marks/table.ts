@@ -145,7 +145,7 @@ export const table: Mark = {
         const d = {
           "data-key": key(m, rw.name),
           "data-c": ri,
-          "data-s": ms.length > 1 ? mi % 8 : 0,
+          "data-s": 0, // one accent: colour never encodes the column
           "data-x": name,
           "data-series": title(m),
           "data-f": text,

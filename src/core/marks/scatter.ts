@@ -186,7 +186,7 @@ export const scatter: Mark = {
       const x = ctx.fmt(spec.x, p.x);
       const y = ctx.fmt(spec.y, p.y);
       const cv = cb ? p.row[cb] : null;
-      const named = p.name !== null || p.sz !== null;
+      const named = p.name !== null || p.sz !== null || typeof cv === "number";
       const cx = sx.of(p.x);
       const cy = sy.of(p.y);
       marks += el("circle", {
@@ -199,8 +199,14 @@ export const scatter: Mark = {
         "data-y": p.y,
         "data-f": !named
           ? y
-          : [x, y, p.sz === null ? null : ctx.fmt(spec.size!, p.sz)]
-              .filter((v) => v !== null)
+          : [
+              [spec.x, x],
+              [spec.y, y],
+              [spec.size, p.sz === null ? null : ctx.fmt(spec.size!, p.sz)],
+              [cb, typeof cv === "number" ? ctx.fmt(cb!, cv) : null],
+            ]
+              .map(([f, v]) => v !== null && `${spec.titles.get(f!) ?? f} ${v}`)
+              .filter(Boolean)
               .join(" · "),
         // Guide pills: only when data-x / data-f are not already the formatted x and y.
         "data-gx": named ? x : null,
