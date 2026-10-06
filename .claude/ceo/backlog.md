@@ -4,10 +4,6 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Needs a decision from the human
 
-- **Size budgets after the 2026-10-06 gallery run**: index 31.15, element 44.68, global 53.59 KB gzip, over the current and the 2026-10-05 approved budgets. Suggested 32000, 45824, 54912 bytes, or the cuts listed in reports/2026-10-06-gallery.md. Owner: human.
-- **Builder "ThoughtSpot" tab** (security L-1, policy): confirm it uses public docs only, or make it a generic host snippet. Owner: human.
-- **Line legend toggle**: 2 to 8 series lines and areas now drop the legend for end labels, so they lose legend toggling. Confirm or keep both. Owner: human.
-- **Apply the approved size budgets** (approved 2026-10-05, second round): index 31488, element 44544, hierarchy 4096, global 53760 bytes (30.75, 43.5, 4.0, 52.5 KB). The guard hook blocks agents from editing `mayaSize`. Owner: human.
 - **Unnamed scatter keys are row indexes**, so prepending data moves a selection to another dot. Changing it is a key contract change. Owner: human, then core engineer.
 
 ## Open
