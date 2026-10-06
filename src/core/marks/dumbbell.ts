@@ -13,7 +13,11 @@ export const dumbbell: Mark = {
     const { spec, shaped } = ctx;
     const hz = spec.horizontal;
     const cat = (hz ? ctx.y : ctx.x) as BandScale;
-    const val = (hz ? ctx.x : ctx.y) as LinearScale;
+    const { of, range } = (hz ? ctx.x : ctx.y) as LinearScale;
+    // A yDomain can exclude data: it sits on the plot edge (range is [lo, hi] or [hi, lo]).
+    const val = {
+      of: (v: number) => Math.min(Math.max(of(v), Math.min(...range)), Math.max(...range)),
+    };
     const rad = Math.max(3, Math.min(5, cat.bandwidth / 2 - 1));
     // ponytail: sort stays shape's total-across-series order; sorting by the gap is out of scope.
     const pairs = new Map<number, [number?, number?]>();

@@ -29,7 +29,9 @@ const ends: NonNullable<Mark["ends"]> = (spec, shaped, fmt) =>
 function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   const { spec, shaped, plot } = ctx;
   const cat = ctx.x as BandScale;
-  const val = ctx.y as LinearScale;
+  const { of } = ctx.y as LinearScale;
+  // A yDomain can exclude data: it sits on the plot edge.
+  const val = { of: (v: number) => Math.min(Math.max(of(v), plot.y), plot.y + plot.h) };
   const cvOf = colorVals(spec);
   const px = (ci: number) => r(cat.at(ci) + cat.bandwidth / 2);
 
@@ -108,6 +110,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         const k = [f, 0, 1, 2, 3].find((k) => {
           const l = lx + [-w / 2, -w / 2, -5 - w, 5][k]!;
           const t = ly + (k === 1 ? 2 : -16);
+          if (k === 1 && spec.yDomain && ly >= plot.y + plot.h) return false; // would sit on the axis
           return path.every(([x1, y1], j) => {
             const [x0, y0] = path[j - 1] ?? [x1, y1];
             const [a, b] = [Math.max(x0, l), Math.min(x1, l + w)];

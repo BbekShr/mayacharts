@@ -190,3 +190,56 @@ describe("line end labels", () => {
     expect(ends({ ...spec, data: long }, 500).every((t) => !/\d/.test(t))).toBe(true);
   });
 });
+
+describe("yDomain narrower than the data", () => {
+  const data = [
+    { c: "a", v: 30 },
+    { c: "b", v: -3 },
+    { c: "c", v: 2 },
+  ];
+  // Every mark, line d and area d coordinate lies inside data-plot.
+  const inside = (spec: ChartSpec) => {
+    const svg = renderParts(spec).svg;
+    const [x, y, w, h] = svg
+      .match(/data-plot="([^"]+)"/)![1]!
+      .split(" ")
+      .map(Number) as number[] as [number, number, number, number];
+    const pts: [number, number][] = [];
+    for (const m of svg.matchAll(/ d="([^"]+)"/g))
+      for (const p of m[1]!.matchAll(/(-?[\d.]+) (-?[\d.]+)/g)) pts.push([+p[1]!, +p[2]!]);
+    for (const m of svg.matchAll(/<circle[^>]*cx="([^"]+)"[^>]*cy="([^"]+)"/g))
+      pts.push([+m[1]!, +m[2]!]);
+    expect(pts.length).toBeGreaterThan(3);
+    for (const [px, py] of pts) {
+      expect(px).toBeGreaterThanOrEqual(x - 0.1);
+      expect(px).toBeLessThanOrEqual(x + w + 0.1);
+      expect(py).toBeGreaterThanOrEqual(y - 0.1);
+      expect(py).toBeLessThanOrEqual(y + h + 0.1);
+    }
+    return svg;
+  };
+  it("pins line points to the plot edge and keeps the real value", () => {
+    const svg = inside({ type: "line", x: "c", y: "v", yDomain: [0, 5], data });
+    expect(svg).toContain('data-y="30"');
+  });
+  it("keeps a reversed yDomain inside too", () => {
+    inside({ type: "line", x: "c", y: "v", yDomain: [5, 0], data });
+  });
+  it("keeps area and its fill inside", () => {
+    inside({ type: "area", x: "c", y: "v", yDomain: [0, 5], data });
+  });
+  it("keeps stacked area inside", () => {
+    inside({
+      type: "area",
+      x: "c",
+      y: "v",
+      series: "s",
+      stack: true,
+      yDomain: [0, 5],
+      data: data.flatMap((d) => [
+        { ...d, s: "p" },
+        { ...d, v: 4, s: "q" },
+      ]),
+    });
+  });
+});
