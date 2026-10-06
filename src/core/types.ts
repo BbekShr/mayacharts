@@ -464,6 +464,8 @@ export interface MarkCtx {
   width: number;
   height: number;
   plot: Box;
+  /** Right gutter (px) reserved for direct end labels; 0 = none, and the legend is dropped. */
+  gutter: number;
   /** Scale of the bottom (horizontal) axis; null when the mark has none. */
   x: Scale | null;
   /** Scale of the left (vertical) axis; null when the mark has none. */
@@ -502,6 +504,8 @@ export interface Mark {
   noun: string;
   /** Bottom and left axes, plus an optional right linear axis (bar with y2). Absent: no axes (path types, kpi). */
   axes?(spec: ResolvedSpec, shaped: Shaped): [bottom: Axis, left: Axis, right?: Axis];
+  /** `[name, last value]` per series when the mark draws direct end labels; absent or empty otherwise. */
+  ends?(spec: ResolvedSpec, shaped: Shaped, fmt: MarkCtx["fmt"]): [string, string][];
   /** Extra validation after the core checks (e.g. hexmap `unknown-state`). */
   check?(spec: ChartSpec, fail: Fail): void;
   draw(ctx: MarkCtx): MarkOut;

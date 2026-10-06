@@ -154,6 +154,8 @@ export const css =
   "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
   "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of]){fill:var(--maya-fg-muted)}" +
   "[data-line] i{height:2px;border-radius:1px}" +
+  // Direct end labels of line and area, in their series colour.
+  "[data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
   // Break marks on a clipped Other bar; parallel tick halos and end-label leaders.
   "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none;pointer-events:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
   // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.

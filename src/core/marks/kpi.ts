@@ -55,7 +55,7 @@ function draw(ctx: MarkCtx) {
   const prev = live[live.length - 2];
   if (last && prev && prev.value) {
     const chg = (value - prev.value) / Math.abs(prev.value);
-    const s = pct({ signDisplay: "exceptZero" }).format(chg);
+    const s = pct({ signDisplay: "exceptZero" }).format(chg).replace("-", "\u2212");
     labels += text(
       {
         "data-kpi": "delta",
@@ -165,7 +165,17 @@ function draw(ctx: MarkCtx) {
         {
           "data-kpi": "period",
           x: px(last!.ci),
-          y: Math.max(top, +py(last!.value!) - 24),
+          // Above every point under the caption, so the line never crosses it.
+          y: Math.max(
+            top,
+            Math.min(
+              ...shown
+                .filter(
+                  (c) => c.value !== null && +px(c.ci) > +px(last!.ci) - period.length * 6 - 6,
+                )
+                .map((c) => +py(c.value!)),
+            ) - 18,
+          ),
           "font-size": 11,
           "text-anchor": "end",
           "dominant-baseline": "hanging",
