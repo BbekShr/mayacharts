@@ -134,6 +134,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `description` | string                      | auto                                                                               | Accessible description                                                                      |
 | `yDomain`     | [min, max]                  | -                                                                                  | Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top)                         |
 | `xDomain`     | [min, max]                  | -                                                                                  | Fixed x domain (scatter only)                                                               |
+| `rules`       | array                       | -                                                                                  | Up to 4 value-axis reference lines: n, "mean", or {y, label}; bar line area scatter         |
 
 ### Interaction
 
@@ -780,15 +781,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 7,372 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 7,714 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 835,120,719 total, 1,789,788 output
-- claude-sonnet-5-5: 280,984,158 total, 54,193 output
+- claude-opus-5-5: 860,933,962 total, 1,858,950 output
+- claude-sonnet-5-5: 293,020,985 total, 55,810 output
 - claude-fable-5-1: 74,794,840 total, 178,397 output
 - claude-haiku-4-5-20251001: 23,593,580 total, 943 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,222,291,156 total, 2,066,634 output
+- all: 1,260,141,226 total, 2,137,413 output
 
 <!-- tokens:end -->
 

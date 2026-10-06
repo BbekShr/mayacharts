@@ -166,6 +166,9 @@ export interface ChartSpec<R extends object = Row> {
   /** Fixed x domain. scatter only.
    * @example xDomain: [0, 1] */
   xDomain?: readonly [number, number];
+  /** Reference lines across the value axis (at most 4): a number, or "mean" of the visible values (stacked: of the category totals), optionally labelled. bar line area scatter.
+   * @example rules: [100, "mean"] or rules: [{ y: 100, label: "Target" }] */
+  rules?: readonly (number | "mean" | { readonly y: number | "mean"; readonly label?: string })[];
 
   /** Hover/keyboard tooltip. Default true.
    * @example tooltip: false */
@@ -342,6 +345,8 @@ export interface ResolvedSpec {
   currency: string;
   yDomain: readonly [number, number] | null;
   xDomain: readonly [number, number] | null;
+  /** spec.rules in object form ([] when unset). */
+  rules: readonly { y: number | "mean"; label: string | null }[];
   table: boolean;
   animate: boolean;
   colors: readonly string[] | ReadonlyMap<string, string> | null;

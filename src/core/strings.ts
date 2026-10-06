@@ -57,6 +57,10 @@ export const TEXT = {
   density: "Shown as {0} density cells, {1} to {2} points each",
   /** Title of the density colour legend. */
   perCell: "Points per cell",
+  /** Label of an unlabelled rules: ["mean"] line. */
+  mean: "Average",
+  /** Description name of an unlabelled numeric rule ("Reference line: 100."). */
+  rule: "Reference line",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

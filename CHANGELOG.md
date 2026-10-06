@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
+### Added
+
+- `rules` draws up to 4 reference lines across the value axis on bar (horizontal too), line, area and scatter: `rules: [100, "mean"]` or `rules: [{ y: 100, label: "Target" }]`. `"mean"` is the average of the visible values of the active measure (stacked: of the category totals) and is labelled "Average" by default. Each line shows its formatted value beside its label ("Target 100"). A numeric rule widens the value axis so a target above the data stays visible; a fixed `yDomain` wins and a rule outside it is not drawn. Each drawn rule adds a sentence to the auto description ("Target: 100."). New `text` keys `mean` and `rule`. Specs without `rules` render exactly as before.
+
 ### Fixed
 
 - Small values no longer print as "0". Without a tick step (value labels, the KPI headline, tooltips), `auto`, `compact` and `percent` give a non-zero value below 0.05 two significant digits: 0.004 is "0.004", 0.0012 is "0.0012", 0.012 is "0.012". Axis ticks are unchanged.

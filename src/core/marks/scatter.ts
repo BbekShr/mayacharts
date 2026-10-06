@@ -19,7 +19,7 @@ const memo = new WeakMap<Shaped, Pt[]>(); // axes() and draw() share one pass
  * outside an explicit xDomain/yDomain are skipped (domains clip; they never draw off-plot).
  * A 4-element view.window (scatter zoom box) clips the same way as the domains.
  */
-function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
+export function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
   const hit = memo.get(shaped);
   if (hit) return hit;
   const out: Pt[] = [];

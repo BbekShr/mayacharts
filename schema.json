@@ -243,7 +243,9 @@
           "point",
           "range",
           "density",
-          "perCell"
+          "perCell",
+          "mean",
+          "rule"
         ]
       }
     },
@@ -282,6 +284,26 @@
       "minItems": 2,
       "maxItems": 2,
       "description": "Fixed x domain. scatter only."
+    },
+    "rules": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "oneOf": [
+          { "type": "number" },
+          { "const": "mean" },
+          {
+            "type": "object",
+            "properties": {
+              "y": { "oneOf": [{ "type": "number" }, { "const": "mean" }] },
+              "label": { "type": "string", "maxLength": 40 }
+            },
+            "required": ["y"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Reference lines across the value axis (at most 4): a number, or \"mean\" of the visible values (stacked: of the category totals), optionally labelled. bar line area scatter."
     },
     "tooltip": {
       "type": "boolean",

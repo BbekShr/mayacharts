@@ -70,7 +70,7 @@ const S: Record<string, "string" | "boolean"> = Object.fromEntries([
 /** Every spec key (schema.json is tested against this). */
 export const KEYS = [
   ...w(
-    "type data y path totals aggregate sort limit format titles text yDomain xDomain select xType",
+    "type data y path totals aggregate sort limit format titles text yDomain xDomain rules select xType",
   ),
   ...w("colors colorBy theme"),
   ...Object.keys(S),
@@ -88,7 +88,7 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter endLabels:line,area`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -417,6 +417,19 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
           ? "Expected [min, max] (or [max, min] to reverse) with two different finite numbers."
           : "Expected [min, max] with finite numbers and min < max, e.g. [0, 100].",
       );
+  }
+
+  if (s.rules !== undefined) {
+    const v = s.rules;
+    if (!Array.isArray(v) || v.length > 4) bad("rules", v, "an array of at most 4 rules");
+    (v as unknown[]).forEach((e, i) => {
+      const o = isObj(e) ? e : { y: e };
+      // ponytail: |y| <= 1e15 keeps the widened axis span finite.
+      const okY = o.y === "mean" || (Number.isFinite(o.y) && Math.abs(o.y as number) <= 1e15);
+      const okL = o.label === undefined || (typeof o.label === "string" && o.label.length <= 40);
+      if (!okY || !okL || Object.keys(o).some((k) => k !== "y" && k !== "label"))
+        bad(`rules[${i}]`, e, 'a number, "mean" or { y, label?: string of at most 40 characters }');
+    });
   }
 
   let locale = "en-US";
@@ -796,6 +809,9 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     currency: spec.currency ?? "USD",
     yDomain: spec.yDomain ?? null,
     xDomain: spec.xDomain ?? null,
+    rules: (spec.rules ?? []).map((e) =>
+      typeof e === "object" ? { y: e.y, label: e.label ?? null } : { y: e, label: null },
+    ),
     table: spec.table ?? true,
     animate: spec.animate ?? true,
     colors: Array.isArray(spec.colors)

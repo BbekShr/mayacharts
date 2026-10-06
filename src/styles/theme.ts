@@ -40,14 +40,12 @@ const B = "border:0;background:none;font:inherit;color:var(--maya-fg-muted);curs
 const RADIAL =
   ":where(path[data-polar]){stroke:var(--maya-bg);stroke-width:1.5;stroke-linejoin:round}" +
   "[data-maya=grid] circle[data-disc]{fill:var(--maya-fg);fill-opacity:.035;stroke:none}" +
-  "text[data-total]{pointer-events:none}" +
-  "[data-maya=labels] [data-tip]{fill:var(--maya-fg-muted);font-size:11px;font-weight:600}" +
-  "[data-maya=labels] [data-name]{font-size:11px;font-weight:600}";
+  "[data-maya=labels] [data-tip],[data-maya=labels] [data-name]{font-size:11px;font-weight:600}";
 
 // marimekko
 const MEKKO =
   "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}[data-maya=labels] [data-ink=b]{fill:var(--maya-bg)}" +
-  "[data-maya=labels] [data-ax]{fill:var(--maya-fg-muted);stroke:none;font-size:11px}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
+  "[data-maya=labels] [data-ax]{stroke:none;font-size:11px}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
   "[data-maya=marks]:has([data-active]) [data-mm]:not([data-active],[data-lit]){opacity:.62}";
 
 // flow
@@ -64,7 +62,7 @@ const FLOW =
   ).replaceAll("M", "[data-maya=marks]") +
   "rect[data-n]{rx:4px}" +
   "path[data-maya][data-arc]{stroke:var(--c);stroke-width:4;stroke-linejoin:round}path[data-arc][data-active]{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 12%)}" +
-  "[data-maya=labels] [data-nm]{font-weight:600}[data-maya=labels] [data-v]{fill:var(--maya-fg-muted);font-weight:400;font-size:.9em}";
+  "[data-maya=labels] [data-nm]{font-weight:600}[data-maya=labels] [data-v]{font-weight:400;font-size:.9em}";
 
 // hexmap
 // Hexes: stronger ramp (36% floor), same-colour round-join stroke for soft corners, ring on hover.
@@ -98,7 +96,7 @@ const SCATTER =
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
   "[data-on][data-maya=cross] [data-g]{transition:transform .25s var(--maya-ease)}" +
   "[data-maya=cross] line[data-g]{stroke-dasharray:3 3;stroke-opacity:.7}" +
-  "[data-maya=cross] text{font-size:11px;font-weight:600;fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:4;stroke-linejoin:round}";
+  "[data-maya=cross] text,[data-maya=rules] text{font-size:11px;font-weight:600;fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:4;stroke-linejoin:round}";
 
 export const css =
   L +
@@ -121,7 +119,7 @@ export const css =
   ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
   ".maya-reset{position:absolute;top:4px;right:4px;border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}" +
   ".maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;align-self:flex-start;margin:0 0 8px;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
-  ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);box-shadow:0 1px 3px #00000024;transition:transform .3s var(--maya-ease)}" +
+  ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a;transition:transform .3s var(--maya-ease)}" +
   C +
   `.maya-ctl [role=radio]{${B};position:relative;padding:4px 12px;border-radius:6px;transition:color .2s}` +
   ".maya-ctl [aria-checked=true]{color:var(--maya-fg);font-weight:600}" +
@@ -137,7 +135,6 @@ export const css =
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
-  "[data-ghost]{pointer-events:none}" +
   "[data-stack] rect[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1}" +
   // Active mark: an ink ring, fill untouched, so in-mark labels keep their contrast.
   ":is(rect,path)[data-maya=mark][data-active]{stroke:var(--maya-fg);stroke-width:1.5}" +
@@ -151,15 +148,15 @@ export const css =
   // Dumbbell connector, kpi parts, y2 legend swatch.
   "line[data-maya=link]{stroke:var(--c,var(--maya-fg-muted));opacity:1}" +
   "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
-  "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of]){fill:var(--maya-fg-muted)}" +
+  "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of],[data-ring],[data-tip],[data-ax],[data-v]){fill:var(--maya-fg-muted)}" +
   "[data-line] i{height:2px;border-radius:1px}" +
   // Direct end labels of line and area, in their series colour.
   "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
   // Break marks on a clipped Other bar; parallel tick halos and end-label leaders.
-  "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none;pointer-events:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
+  "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
   // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.
   "svg:not([data-stack]) [data-maya=area][data-ridge]{fill:color-mix(in oklab,var(--c) 40%,var(--maya-bg))}[data-maya=grid] circle{fill:none;shape-rendering:auto}" +
-  "[data-maya=labels] [data-ring]{fill:var(--maya-fg-muted)}[data-maya=marks] text{fill:var(--maya-fg)}" +
+  "[data-maya=marks] text{fill:var(--maya-fg)}" +
   "[data-maya=sort]{cursor:pointer}[data-maya=sort] rect{fill:transparent}[data-maya=sort] text{font-weight:600}[data-maya=sort]:focus-visible{outline:2px solid var(--maya-focus)}" +
   ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks]:has(path[data-active]) path[data-maya=line]:not([data-active]){opacity:.25}" +
   ":not(circle)[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
@@ -177,15 +174,15 @@ export const css =
   "[data-maya=marks]:has([data-selected]){--o:.35}" +
   "[data-selected]{stroke:var(--maya-fg);stroke-width:2;--o:1}" +
   H +
-  "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}[data-maya=cross],[data-maya=band]{opacity:0;transition:opacity .2s}" +
+  "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}[data-maya=rules],[data-maya=brush],[data-ghost],[data-brk],text[data-total]{pointer-events:none}[data-maya=rules] line{stroke:var(--maya-fg);stroke-dasharray:3 3}[data-maya=cross],[data-maya=band]{opacity:0;transition:opacity .2s}" +
   "[data-on]:is([data-maya=cross],[data-maya=band]){opacity:1;transition:opacity .2s,transform .25s var(--maya-ease)}[data-maya=band]{fill:var(--maya-fg);fill-opacity:.05;rx:6px}" +
   "[data-maya=labels] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}[data-maya=labels] [data-dark]{fill:light-dark(#12161c,var(--maya-bg))}" +
   "[data-maya=cross] line{stroke:var(--maya-fg-muted);stroke-opacity:.55}" +
-  "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke;pointer-events:none}" +
+  "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke}" +
   ".maya-svg:focus{outline:none}.maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +
   ".maya-sr caption{position:absolute;clip-path:inset(50%)}.maya-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}" +
   ".maya-probe{position:absolute;width:0;height:0;pointer-events:none;anchor-name:--maya-probe}" +
-  ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
+  ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
   "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}.maya-tip[data-side]{position-area:inline-end span-block-end;position-try-fallbacks:flip-inline;margin:0 12px}}" +
   ".maya-tip.maya-open{opacity:1;translate:none}" +
   ".maya-tip b{display:block;margin:0 0 4px;font-weight:600}" +

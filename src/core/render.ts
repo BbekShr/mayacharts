@@ -97,6 +97,14 @@
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
  *     <g data-maya="axis-x">   category labels (thinned to fit), axis title
  *     <g data-maya="marks">    only [data-key] children, one tag per key
+ *     <g data-maya="rules">    only with spec.rules, after marks: per drawn rule a <line>
+ *                              across the value axis, then its <text text-anchor=end> (label and value, or the
+ *                              value alone) above the line at the plot end (vertical line: beside it at the top). Labels dodge nothing, not
+ *                              value labels either. "mean" averages the visible plotted values
+ *                              (stacked: the category totals; Other left out). Numeric rules widen
+ *                              the value domain; a yDomain wins and hides rules outside it. No
+ *                              data-key: animate.ts diffs only marks, so the group crossfades with
+ *                              the other non-mark groups.
  *     <g data-maya="labels">   value labels (text), from ctx.label
  *     <g data-maya="cross">    crosshair (line/area), moved via CSSOM transform
  *     <g data-maya="hits">     invisible enlarged targets (see below)
@@ -159,7 +167,7 @@
  *   .maya-ctl [role=radio][aria-checked]  .maya-crumbs  .maya-reset  .maya-err
  *   [data-maya=brush]  [data-maya=cross] (scatter: guide lines + text pills, --x/--y)
  *   [data-maya=link]  [data-depth]  [data-selected]
- *   svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
+ *   [data-maya=rules] line|text  svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
  *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
  *   key on `svg[data-xd]` (both axes linear). Rules whose subject is a mark avoid a `:has()` on
@@ -244,7 +252,7 @@ import { kpi } from "./marks/kpi.ts";
 import { parallel } from "./marks/parallel.ts";
 import { ridgeline } from "./marks/ridgeline.ts";
 import { area, line } from "./marks/line.ts";
-import { scatter } from "./marks/scatter.ts";
+import { points, scatter } from "./marks/scatter.ts";
 import { table } from "./marks/table.ts";
 import { MODULES } from "./registry.ts";
 import { agg, shape } from "./shape.ts";
@@ -254,13 +262,16 @@ import { el, esc, OTHER, r } from "./svg.ts";
 import { ALL_Y, fail, MAX_MARKS, resolve, validateOptions, validateSpec } from "./validate.ts";
 import type {
   Aggregate,
+  Axis,
   ChartSpec,
   LabelPlace,
   Mark,
   MarkCtx,
   Parts,
   RenderOptions,
+  ResolvedSpec,
   Row,
+  Shaped,
 } from "./types.ts";
 
 const CORE: Readonly<Record<string, Mark>> = {
@@ -277,6 +288,33 @@ const CORE: Readonly<Record<string, Mark>> = {
   parallel,
   table,
 };
+
+/** Numeric rules widen the value axis (a target above the data stays visible); a yDomain still wins. */
+function withRules(s: ResolvedSpec, axes: [Axis, Axis, Axis?]): [Axis, Axis, Axis?] {
+  const n = s.rules.flatMap((u) => (u.y === "mean" ? [] : [u.y]));
+  if (!n.length) return axes;
+  return axes.map((a) =>
+    a?.kind === "linear" && a.field === s.y
+      ? { ...a, domain: [Math.min(a.domain[0], ...n), Math.max(a.domain[1], ...n)] }
+      : a,
+  ) as [Axis, Axis, Axis?];
+}
+
+/**
+ * "mean" for rules: the average of the plotted values of the active measure (visible series,
+ * window and measure applied, the limit's Other left out); stacked: of the category totals.
+ * Scatter averages y over the points it draws. NaN when nothing is plotted.
+ */
+function average(s: ResolvedSpec, shaped: Shaped): number {
+  const by = new Map<number, number>();
+  const add = (k: number, v: number) => by.set(k, (by.get(k) ?? 0) + v);
+  if (s.type === "scatter") points(s, shaped).forEach((p, i) => add(i, p.y));
+  else
+    shaped.cells.forEach((c, i) => {
+      if (c.value !== null && shaped.categories[c.ci] !== OTHER) add(s.stack ? c.ci : i, c.value);
+    });
+  return [...by.values()].reduce((a, b) => a + b, 0) / by.size;
+}
 
 const kebab = (s: string) => s.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase());
 
@@ -391,7 +429,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const empty = !s.data.some((r) => [...s.measures, s.y2].some((m) => typeof r[m!] === "number"));
   const f =
     mark.axes && !empty
-      ? frame(s0, mark.axes(s, shaped), { width: W, height: H, gutter }, fmt)
+      ? frame(s0, withRules(s, mark.axes(s, shaped)), { width: W, height: H, gutter }, fmt)
       : null;
   const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
   const ctx: MarkCtx = {
@@ -422,6 +460,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let markLegend: string | null = null;
   let note = "";
+  let said = ""; // rule sentences for the auto description
   let body = "";
   if (empty) {
     body = el(
@@ -437,6 +476,39 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     );
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
+    // Reference lines, drawn over the marks.
+    // ponytail: value axis only, at most 4, no bands or x rules; labels dodge nothing (NON-FEATURES).
+    let rules = "";
+    const v = s.horizontal ? f?.x : f?.y;
+    if (v && !("bandwidth" in v))
+      s.rules.forEach((u) => {
+        const at = u.y === "mean" ? average(s, shaped) : u.y;
+        // outside a yDomain, or NaN (no data)
+        if (!((at - v.domain[0]) * (at - v.domain[1]) <= 0)) return;
+        const p = r(v.of(at));
+        const name = u.label ?? (u.y === "mean" ? t(s, "mean") : null);
+        const val = fmt(s.y, at);
+        const text = name ? `${name} ${val}` : val;
+        said += ` ${name ?? t(s, "rule")}: ${val}.`;
+        const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
+        rules +=
+          el(
+            "line",
+            s.horizontal
+              ? { x1: p, x2: p, y1: y0, y2: r(plot.y + plot.h) }
+              : { x1: r(plot.x), x2: x0, y1: p, y2: p },
+          ) +
+          // above the line at its end; beside the line at the top for a vertical one
+          el(
+            "text",
+            {
+              x: s.horizontal ? p - 4 : x0,
+              y: s.horizontal ? y0 + 10 : p - 4,
+              "text-anchor": "end",
+            },
+            esc(text),
+          );
+      });
     const m = mark.draw(ctx);
     // Scatter and modules draw per row/node. Counted in place: a split would copy every mark.
     let nm = 0;
@@ -467,6 +539,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       g("axis-y", f?.ay ?? "") +
       g("axis-x", f?.ax ?? "") +
       g("marks", m.marks) +
+      (rules && g("rules", rules)) +
       g("labels", (m.labels ?? "") + labels) +
       g("cross", m.cross ?? "") +
       g("hits", m.hits);
@@ -515,7 +588,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         "desc",
         { id: sheet === null ? "maya-d" : null },
         esc(
-          describe(s, shaped, fmt, mark.noun) + (note && s.description === null ? " " + note : ""),
+          describe(s, shaped, fmt, mark.noun) +
+            (s.description === null ? (note && " " + note) + said : ""),
         ),
       ) +
       body,

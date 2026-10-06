@@ -261,7 +261,7 @@
                 Localised UI strings with {0} placeholders: noData other back reset showing
                 drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
                 crumbs positive negative above below vs ofTarget total shareOf sortedBy ascending
-                descending
+                descending fromTo reduced points point range density perCell mean rule
               </td>
             </tr>
             <tr>
@@ -302,6 +302,17 @@
               <td>[min, max]</td>
               <td>-</td>
               <td>Fixed x domain (scatter only)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="rules"></a><code>rules</code></td>
+              <td>(number | "mean" | {y, label?})[]</td>
+              <td>-</td>
+              <td>
+                Reference lines across the value axis, at most 4, labels at most 40 characters.
+                "mean" is the average of the visible values (stacked: of the category totals) and
+                reads "Average" without a label. Numbers widen the value axis; outside a yDomain
+                they are not drawn. bar line area scatter
+              </td>
             </tr>
           </tbody>
         </table>
