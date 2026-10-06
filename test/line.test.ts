@@ -2,6 +2,24 @@ import { describe, expect, it } from "vitest";
 import { renderParts } from "../src/index.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
+describe("line value labels", () => {
+  it("sit above a peak and below a trough", () => {
+    const svg = renderParts({
+      type: "line",
+      x: "m",
+      y: "v",
+      labels: true,
+      data: [10, 25, 10, 25, 10, 30].map((v, i) => ({ m: `m${i}`, v })),
+    }).svg;
+    const g = svg.slice(svg.indexOf('data-maya="labels"'));
+    const y = (t: string) => Number(g.match(new RegExp(`<text[^>]*y="([\\d.]+)"[^>]*>${t}<`))![1]);
+    const dot = (t: string) =>
+      Number(svg.match(new RegExp(`data-y="${t}"[^>]*cy="([\\d.]+)"`))![1]);
+    expect(y("25")).toBeLessThan(dot("25")); // above its peak
+    expect(y("10")).toBeGreaterThan(dot("10")); // below its trough
+  });
+});
+
 const months = ["Jan", "Feb", "Mar"];
 const one: ChartSpec = {
   type: "line",
