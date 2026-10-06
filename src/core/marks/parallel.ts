@@ -32,7 +32,12 @@ export const parallel: Mark = {
     });
 
     const x0 = LEFT;
-    const x1 = Math.max(x0 + 1, W - RIGHT);
+    // Room right of the last axis for each line's category name (end labels).
+    const room = Math.min(
+      lines.reduce((m, l) => Math.max(m, ctx.fmt(spec.x, l.cat).length * 7.2 + 12), 0),
+      W * 0.3,
+    );
+    const x1 = Math.max(x0 + 1, W - Math.max(RIGHT, room));
     const [y0, y1] = [TOP, Math.max(TOP + 1, H - BOTTOM)];
     const at = (i: number) => r(ms.length < 2 ? x0 : x0 + ((x1 - x0) * i) / (ms.length - 1));
     let grid = "";
@@ -49,7 +54,7 @@ export const parallel: Mark = {
         grid += el("line", { x1: x - 3, x2: x, y1: y, y2: y });
         labels += el(
           "text",
-          { x: x - 6, y, "text-anchor": "end", "dominant-baseline": "middle", "data-in": true },
+          { x: x - 6, y, "text-anchor": "end", "dominant-baseline": "middle", "data-ax": true },
           esc(ctx.fmt(m, v, t.step)),
         );
       }
@@ -74,12 +79,14 @@ export const parallel: Mark = {
       const x = ctx.fmt(spec.x, cat);
       let d = "";
       let gap = true;
+      let end = [0, 0];
       vals.forEach((v, i) => {
         if (v === null) {
           gap = true;
           return;
         }
         const [cx, cy] = [at(i), scales[i]!(v)];
+        end = [cx, cy];
         d += `${gap ? "M" : "L"}${cx} ${cy}`;
         gap = false;
         dots += el("circle", {
@@ -98,6 +105,8 @@ export const parallel: Mark = {
         });
       });
       if (!d) continue;
+      // End label (dropped when it collides or leaves the svg); a line that stops early has none.
+      if (vals.at(-1) !== null) ctx.label(end[0]! + 7, end[1]!, x, "start");
       paths += el("path", {
         "data-maya": "line",
         "data-key": key("l", cat),
