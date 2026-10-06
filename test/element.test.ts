@@ -130,6 +130,31 @@ describe("<maya-chart>", () => {
     expect(m.hasAttribute("data-active")).toBe(true);
   });
 
+  it("a multi-measure line without a series names the active measure in the tooltip", async () => {
+    const data = [
+      { m: "Jan", a: 1, b: 7 },
+      { m: "Feb", a: 2, b: 8 },
+    ];
+    const el = await mount(
+      (e) =>
+        (e.spec = { type: "line", x: "m", y: ["a", "b"], titles: { b: "Bee" }, data } as ChartSpec),
+    );
+    const tip = el.shadowRoot!.querySelector(".maya-tip")!;
+    const hover = () => {
+      const m = marks(el)[0]!;
+      m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+      m.dispatchEvent(
+        Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+      );
+    };
+    hover();
+    expect(tip.querySelector("div")!.textContent).toMatch(/^a/);
+    el.view = { measure: 1 };
+    await frame();
+    hover();
+    expect(tip.querySelector("div")!.textContent).toMatch(/^Bee/);
+  });
+
   it("routes markup through the Trusted Types policy", async () => {
     const createHTML = vi.fn((x: string) => x);
     const createPolicy = vi.fn(() => ({ createHTML }));

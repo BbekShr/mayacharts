@@ -421,11 +421,19 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
 /** An outgoing group: unaddressable while it fades, then removed. */
 function ghost(g: Element): void {
   const op = getComputedStyle(g).opacity; // mid-fade-in (or still waiting): leave from there
+  // Sunburst drill: ring names go at once, the centre text stays until the new labels arrive.
+  const hold = zoom && g.getAttribute("data-maya") === "labels";
+  if (hold)
+    for (const t of g.querySelectorAll(":nth-last-child(n+3)"))
+      run(t, [{ opacity: 1 }, { opacity: 0 }], { ...UI, fill: "forwards" });
   g.removeAttribute("data-maya");
   for (const d of g.querySelectorAll("[data-maya]")) d.removeAttribute("data-maya");
   g.setAttribute("data-ghost", "");
   for (const a of g.getAnimations?.() ?? []) a.cancel();
-  run(g, [{ opacity: op }, { opacity: 0 }], { ...UI, fill: "forwards" }, () => g.remove());
+  const d = hold ? Number(ZOOM.duration) * 0.75 : 0;
+  run(g, [{ opacity: op }, { opacity: 0 }], { ...UI, delay: d, fill: "forwards" }, () =>
+    g.remove(),
+  );
 }
 
 /** The first draw: scaffolding fades in, marks enter by `kind`, labels and numbers follow. */

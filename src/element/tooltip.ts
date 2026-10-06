@@ -1,5 +1,5 @@
 import { t as str } from "../core/strings.ts";
-import type { ChartSpec } from "../core/types.ts";
+import type { ChartSpec, View } from "../core/types.ts";
 import { listen } from "./listen.ts";
 
 const a = (e: Element, k: string) => e.getAttribute(k) ?? "";
@@ -262,7 +262,8 @@ export function tooltip(
     if (!on()) return say && speak();
     // Rows without a series name the measure ("Sales  1.2M"); scatter values carry their own.
     const sp = spec(),
-      y = sp?.y,
+      ys = sp?.y,
+      y = Array.isArray(ys) ? ys[(host as { view?: View }).view?.measure ?? 0] : ys,
       label =
         typeof y === "string" && sp?.type !== "scatter"
           ? sp?.titles && Object.hasOwn(sp.titles, y)
