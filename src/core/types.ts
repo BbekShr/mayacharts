@@ -466,6 +466,8 @@ export interface MarkCtx {
   plot: Box;
   /** Right gutter (px) reserved for direct end labels; 0 = none, and the legend is dropped. */
   gutter: number;
+  /** The [name, last value] pairs those end labels show (empty when there is no gutter). */
+  ends: readonly [string, string][];
   /** Scale of the bottom (horizontal) axis; null when the mark has none. */
   x: Scale | null;
   /** Scale of the left (vertical) axis; null when the mark has none. */

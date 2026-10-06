@@ -1,6 +1,6 @@
 import { clip, tw } from "../layout.ts";
 import { colorVals } from "../shape.ts";
-import { el, esc, key, OTHER, plotHit, r } from "../svg.ts";
+import { el, esc, key, OTHER, plotHit, r, repel } from "../svg.ts";
 import type { Axis, BandScale, Cell, LinearScale, Mark, MarkCtx, MarkOut } from "../types.ts";
 
 const axes: Mark["axes"] = (spec, shaped) => [
@@ -36,7 +36,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   let areas = "";
   let lines = "";
   let dots = "";
-  const tx = ctx.gutter ? ends(spec, shaped, ctx.fmt) : [];
+  const tx = ctx.ends;
   const ep: [number, number, number, [string, string]][] = [];
   for (const si of shaped.visible) {
     const ser = shaped.series[si]!;
@@ -165,10 +165,12 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   let end = "";
   if (ctx.gutter) {
     const o = ep.sort((a, b) => a[0] - b[0]);
-    const ys = o.map((e) => e[0]);
-    for (const [i, y] of ys.entries()) ys[i] = Math.max(y, (ys[i - 1] ?? plot.y - 14) + 14);
-    for (let i = ys.length - 1; i >= 0; i--)
-      ys[i] = Math.min(ys[i]!, (ys[i + 1] ?? plot.y + plot.h + 14) - 14);
+    const ys = repel(
+      o.map((e) => e[0]),
+      plot.y,
+      plot.y + plot.h,
+      14,
+    );
     o.forEach(([ey, x, si, [n, v]], i) => {
       const ok = tw(`${n} ${v}`) <= ctx.gutter - 12;
       if (Math.abs(ys[i]! - ey) > 3)

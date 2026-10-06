@@ -312,17 +312,18 @@ export function tooltip(
       }),
       ...(stk && sp ? [h("div", "", { "data-t": "" })] : []),
     );
-    if (stk && sp) {
-      const row = tip.lastElementChild!;
-      const f = formatter(
-        resolve(sp, (host as { view?: View }).view),
-        typeof y === "string" ? y : (sp.y as string),
-      );
-      row.append(
+    if (stk && sp)
+      tip.lastElementChild!.append(
         h("span", str(sp, "total")),
-        h("span", f(g.reduce((t, k) => t + +a(k, "data-y"), 0)), { "data-v": "" }),
+        h(
+          "span",
+          formatter(
+            resolve(sp, (host as { view?: View }).view),
+            typeof y === "string" ? y : (sp.y as string),
+          )(g.reduce((t, k) => t + +a(k, "data-y"), 0)),
+          { "data-v": "" },
+        ),
       );
-    }
     cross(m);
     shade(m);
     // The probe's containing block is the host's padding box (:host is position:relative).

@@ -397,6 +397,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     height: H,
     plot,
     gutter,
+    ends: gutter ? ends! : [],
     x: f?.x ?? null,
     y: f?.y ?? null,
     y2: f?.y2 ?? null,

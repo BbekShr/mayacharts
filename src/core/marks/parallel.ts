@@ -1,4 +1,4 @@
-import { el, esc, key, OTHER, r } from "../svg.ts";
+import { el, esc, key, OTHER, r, repel } from "../svg.ts";
 import { niceTicks } from "../ticks.ts";
 import type { Mark, Row } from "../types.ts";
 
@@ -132,9 +132,12 @@ export const parallel: Mark = {
     // Repel: sorted by y, at least GAP apart (down pass, then up pass from the bottom edge); a moved label gets a leader.
     const GAP = 13;
     ends.sort((a, b) => a.y - b.y);
-    ends.forEach((e, i) => (e.y = Math.max(e.y, i ? ends[i - 1]!.y + GAP : 0)));
-    for (let i = ends.length; i--;)
-      ends[i]!.y = Math.min(ends[i]!.y, (ends[i + 1]?.y ?? H - 4) - GAP);
+    repel(
+      ends.map((e) => e.y),
+      0,
+      H - 4,
+      GAP,
+    ).forEach((y, i) => (ends[i]!.y = y));
     const ex = at(ms.length - 1);
     // ponytail: more lines than fit a 13 px column keep the old rule, a colliding name is dropped.
     if (ends.length * GAP > H) for (const e of ends) ctx.label(ex + 7, e.ey, e.x, "start");

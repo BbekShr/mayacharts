@@ -88,3 +88,10 @@ export const plotHit = (b: { x: number; y: number; w: number; h: number }) =>
     height: r(b.h),
     fill: "transparent",
   });
+
+/** Nudge sorted label ys at least `g` apart inside [lo, hi]: a down pass, then an up pass. */
+export function repel(ys: number[], lo: number, hi: number, g: number): number[] {
+  ys.forEach((y, i) => (ys[i] = Math.max(y, (ys[i - 1] ?? lo - g) + g)));
+  for (let i = ys.length; i--;) ys[i] = Math.min(ys[i]!, (ys[i + 1] ?? hi + g) - g);
+  return ys;
+}
