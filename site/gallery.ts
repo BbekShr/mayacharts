@@ -29,48 +29,20 @@ function show(id: string, spec: ChartSpec): void {
   $(`${id}-code`).textContent = shown;
 }
 
-/** Round up to the next whole step of the leading digit: 738K becomes 800K. */
-const niceMax = (v: number) =>
-  Math.ceil(v / 10 ** Math.floor(Math.log10(v))) * 10 ** Math.floor(Math.log10(v));
 const R = (n: number, d = 0) => +n.toFixed(d);
 const rows = (r: Record<string, unknown>[], f: (x: Record<string, any>) => Row): Row[] => r.map(f);
 const mon = (ms: number) =>
   new Date(ms).toLocaleString("en-US", { month: "short", timeZone: "UTC" });
 
-/** In-motion tiles: frames to step through, and the host loop printed beside the spec. */
-const film = new Map<string, { frames: ChartSpec[]; ms: number; loop: string }>();
-const reel = (id: string, ms: number, frames: ChartSpec[], step: string, setup = "") =>
-  film.set(id, {
-    frames,
-    ms,
-    loop: `const chart = document.querySelector("maya-chart");
-const play = document.querySelector("#play");
-// spec: the object above, rows: its data
-${setup}let i = 0, timer;
-play.onclick = () => {
-  if (timer) {
-    clearInterval(timer);
-    timer = 0;
-    play.textContent = "Play";
-    return;
-  }
-  play.textContent = "Pause";
-  timer = setInterval(() => {
-${step}
-  }, ${ms});
-};`,
-  });
-/** Setup and step for a tile that cuts `rows` by month: op "<=" is a running total, "===" one month. */
-const MONTHS = `const months = [...new Set(rows.map((r) => r.month))];
-const mon = (m) =>
-  new Date(m).toLocaleString("en", { month: "short", timeZone: "UTC" });
-`;
-const byMonth = (title: string, op: string) => `    const m = months[i++ % months.length];
-    chart.spec = {
-      ...spec,
-      title: \`${title} \${mon(m)}\`,
-      data: rows.filter((r) => r.month ${op} m),
-    };`;
+/** The live feed has no frame field: its windows are stepped by the loop printed beside it. */
+let feedWindows: ChartSpec[] = [];
+const feedLoop = `const chart = document.querySelector("maya-chart");
+const rows = spec.data; // spec: the object above
+let i = 0;
+setInterval(() => {
+  const n = 3 * (i++ % (rows.length / 3 - 39));
+  chart.spec = { ...spec, data: rows.slice(n, n + 120) };
+}, 600);`;
 
 /** Every tile's spec, built from one dataset. Re-rolling a tile rebuilds it from a new seed. */
 function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
@@ -431,6 +403,18 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     data: FACTS,
   });
 
+  // 23b. Percent stack: every bar filled to 100%, so the mix compares across regions.
+  tile("share-bar", {
+    type: "bar",
+    title: "Family mix by region",
+    titles: { sales: "Share of sales" },
+    x: "region",
+    y: "sales",
+    series: "family",
+    stack: "percent",
+    data: FACTS,
+  });
+
   // 24. Radial bars: monthly sales (one series, so the tip totals show).
   tile("radial", {
     type: "radial",
@@ -545,9 +529,8 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     data: makeMonths(seedOf(FACTS)),
   });
 
-  // 32. Bar race: the running total by state, one frame per month.
-  const months = [...new Set(FACTS.map((r) => r.month))];
-  const topStates = new Set(
+  // 32. Bar race: one frame per month. A running total is host prep: one row per state and month.
+  const best = new Set(
     (
       rollup(FACTS, ["stateName"], { sales: sum("sales") }) as {
         stateName: string;
@@ -558,43 +541,34 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
       .slice(0, 12)
       .map((r) => r.stateName),
   );
-  const rows12 = FACTS.filter((r) => topStates.has(r.stateName));
-  const race: ChartSpec = {
+  const cum = new Map<string, number>();
+  tile("race", {
     type: "bar",
-    title: "Sales by state",
+    title: "Sales race by state",
     titles: { sales: "Sales ($)" },
     horizontal: true,
     x: "stateName",
     y: "sales",
     sort: "desc",
     labels: true,
-    format: "compact",
-    data: rows12,
-  };
-  const upTo = months.map((m) => ({
-    ...race,
-    title: `Sales to ${mon(Date.parse(m))}`,
-    data: rows12.filter((r) => r.month <= m),
-  }));
-  reel(
-    "race",
-    900,
-    upTo,
-    byMonth("Sales to", "<="),
-    "// rows: the 12 states with the highest year total\n" + MONTHS,
-  );
+    frame: "month",
+    format: { month: { month: "short" }, sales: "compact" },
+    data: rows(
+      rollup(
+        FACTS.filter((r) => best.has(r.stateName)),
+        ["month", "stateName"],
+        { sales: sum("sales") },
+      ),
+      (r) => {
+        const t = (cum.get(r.stateName) ?? 0) + r.sales;
+        cum.set(r.stateName, t);
+        return { month: r.month, stateName: r.stateName, sales: t };
+      },
+    ),
+  });
 
-  // 33. Moving bubbles: one per state and month, on fixed axes so only the bubbles move.
-  const perMonth = rollup(FACTS, ["month", "stateName", "region"], {
-    sales: sum("sales"),
-    units: sum("units"),
-    margin: mean("margin"),
-  }) as { month: string; sales: number; margin: number }[];
-  const span = (k: "sales" | "margin") => [
-    Math.min(...perMonth.map((r) => r[k])),
-    Math.max(...perMonth.map((r) => r[k])),
-  ];
-  const drift: ChartSpec = {
+  // 33. Moving bubbles: one per state and month; the axes span every frame, so only the bubbles move.
+  tile("drift", {
     type: "scatter",
     title: "Sales and margin by state",
     titles: { sales: "Sales ($)", margin: "Margin", units: "Units", stateName: "State" },
@@ -603,17 +577,14 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     size: "units",
     name: "stateName",
     series: "region",
-    xDomain: [0, niceMax(span("sales")[1]!)],
-    yDomain: [span("margin")[0]!, span("margin")[1]!],
-    format: { sales: "compact", margin: "percent", units: "compact" },
-    data: perMonth,
-  };
-  const each = months.map((m) => ({
-    ...drift,
-    title: `Sales and margin, ${mon(Date.parse(m))}`,
-    data: perMonth.filter((r) => r.month === m),
-  }));
-  reel("drift", 900, each, byMonth("Sales and margin,", "==="), MONTHS);
+    frame: "month",
+    format: { month: { month: "short" }, sales: "compact", margin: "percent", units: "compact" },
+    data: rollup(FACTS, ["month", "stateName", "region"], {
+      sales: sum("sales"),
+      units: sum("units"),
+      margin: mean("margin"),
+    }) as Row[],
+  });
 
   // 34. Live line: three sensors, a new reading every 600 ms, the last 40 kept.
   const live = makeLive(seedOf(FACTS));
@@ -624,24 +595,17 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     x: "time",
     y: "load",
     series: "sensor",
-    legend: true,
     yDomain: [
       Math.floor(Math.min(...live.map((r) => r.load)) / 20) * 20,
       Math.ceil(Math.max(...live.map((r) => r.load)) / 20) * 20,
     ],
     data: live,
   };
-  const windows = Array.from({ length: live.length / 3 - 39 }, (_, i) => ({
+  feedWindows = Array.from({ length: live.length / 3 - 39 }, (_, i) => ({
     ...feed,
     data: live.slice(3 * i, 3 * i + 120),
   }));
-  reel(
-    "feed",
-    600,
-    windows,
-    "    const n = 3 * (i++ % (rows.length / 3 - 39));\n    chart.spec = { ...spec, data: rows.slice(n, n + 120) };",
-  );
-  for (const [id, { frames }] of film) out[id] = frames[id === "feed" ? 0 : frames.length - 1]!;
+  tile("feed", feedWindows[0]!);
   return out;
 }
 
@@ -650,36 +614,28 @@ const seedOf = (f: Dataset["FACTS"]) => Math.round(f.reduce((a, r) => a + r.sale
 const seed = () => (Math.random() * 2 ** 32) >>> 0;
 for (const [id, spec] of Object.entries(specs(makeData(7)))) show(id, spec);
 
-// Play and Pause step a tile through its frames; scrolling a tile away pauses it.
-const stops = new Map<Element, () => void>();
-const away = new IntersectionObserver((es) =>
-  es.forEach((e) => e.isIntersecting || stops.get(e.target)?.()),
-);
-for (const [id, { loop }] of film) {
-  const chart = $<Chart>(id);
-  const btn = $(`${id}-play`);
-  let i = 0;
-  let timer = 0;
-  const stop = () => {
-    clearInterval(timer);
-    timer = 0;
-    btn.textContent = "Play";
-  };
-  const tick = () => {
-    const { frames } = film.get(id)!;
-    chart.spec = frames[i++]!;
-    if (i === frames.length) ((i = 0), stop());
-  };
-  btn.onclick = () => {
-    if (timer) return stop();
-    btn.textContent = "Pause";
-    tick();
-    timer = window.setInterval(tick, film.get(id)!.ms);
-  };
-  stops.set(chart, stop);
-  away.observe(chart);
-  $(`${id}-loop`).textContent = loop;
-}
+// The feed's Play button steps its windows; scrolling it away, or a re-roll, pauses it.
+const feedChart = $<Chart>("feed");
+const feedBtn = $("feed-play");
+let i = 0;
+let timer = 0;
+const stop = () => {
+  clearInterval(timer);
+  timer = 0;
+  feedBtn.textContent = "Play";
+};
+const tick = () => {
+  feedChart.spec = feedWindows[i++]!;
+  if (i === feedWindows.length) ((i = 0), stop());
+};
+feedBtn.onclick = () => {
+  if (timer) return stop();
+  feedBtn.textContent = "Pause";
+  tick();
+  timer = window.setInterval(tick, 600);
+};
+new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting || stop())).observe(feedChart);
+$("feed-loop").textContent = feedLoop;
 
 // Re-roll one tile, or every tile from the header button.
 document.addEventListener("click", (e) => {
@@ -688,7 +644,7 @@ document.addEventListener("click", (e) => {
   const all = specs(makeData(seed()));
   const id = btn.dataset.reroll;
   for (const [k, spec] of Object.entries(all)) if (!id || k === id) show(k, spec);
-  for (const f of stops.values()) f();
+  stop();
 });
 
 theme();

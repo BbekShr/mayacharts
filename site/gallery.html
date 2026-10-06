@@ -54,43 +54,36 @@
         <div class="group-head">
           <h2>In motion</h2>
           <p>
-            Set <code>chart.spec</code> again and the marks glide to their new places. The host code
-            under each spec is the whole loop.
+            Add <code>frame: "month"</code> to a spec and the chart plays through that field with
+            its own Play button, the marks gliding between frames. The live feed has no frame, so
+            its host loop is printed under the spec.
           </p>
         </div>
         <div class="tiles">
           <section>
             <div class="tile-head">
               <h2>Sales race by state</h2>
-              <div>
-                <button type="button" id="race-play">Play</button>
-                <button type="button" data-reroll="race">Re-roll</button>
-              </div>
+              <button type="button" data-reroll="race">Re-roll</button>
             </div>
             <p>
               Running sales total by state, January to December. Bars re-sort as the leaders change.
             </p>
             <maya-chart id="race" style="height: 320px"></maya-chart>
             <details>
-              <summary>Spec and host code</summary>
+              <summary>Spec</summary>
               <pre><code id="race-code"></code></pre>
-              <pre><code id="race-loop"></code></pre>
             </details>
           </section>
           <section>
             <div class="tile-head">
               <h2>Moving bubbles</h2>
-              <div>
-                <button type="button" id="drift-play">Play</button>
-                <button type="button" data-reroll="drift">Re-roll</button>
-              </div>
+              <button type="button" data-reroll="drift">Re-roll</button>
             </div>
             <p>One bubble per state, sales against margin, month by month.</p>
             <maya-chart id="drift" style="height: 320px"></maya-chart>
             <details>
-              <summary>Spec and host code</summary>
+              <summary>Spec</summary>
               <pre><code id="drift-code"></code></pre>
-              <pre><code id="drift-loop"></code></pre>
             </details>
           </section>
           <section>
@@ -410,6 +403,21 @@
             <details>
               <summary>Spec</summary>
               <pre><code id="marimekko-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Family mix by region</h2>
+              <button type="button" data-reroll="share-bar">Re-roll</button>
+            </div>
+            <p>
+              <code>stack: "percent"</code> fills every bar to 100%, so the segments compare each
+              region's mix and not its size.
+            </p>
+            <maya-chart id="share-bar" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="share-bar-code"></code></pre>
             </details>
           </section>
           <section>

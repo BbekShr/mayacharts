@@ -27,6 +27,7 @@ const TILES = [
   "radial",
   "waffle",
   "marimekko",
+  "share-bar",
   "chord",
   "beeswarm",
   "kpi",
@@ -60,5 +61,6 @@ test("gallery: every tile renders marks, no errors, spec shown as JSON", async (
     const json = JSON.parse(code.replace(/,?\s*\/\/ … more rows/g, ""));
     expect(json.data.length, id).toBeLessThanOrEqual(3);
   }
+  for (const id of ["race", "drift"]) await expect(page.locator(`#${id} .maya-play`)).toBeVisible();
   expect(errors).toEqual([]);
 });
