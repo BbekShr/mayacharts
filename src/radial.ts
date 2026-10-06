@@ -47,8 +47,10 @@ export const radial: Mark = {
     const solo = shaped.series.length === 1 && n <= 40;
     const tips = n <= 40;
     const fv = (v: number) => ctx.fmt(spec.y, v);
+    // Names ride on the bars only when every bar holds its name and its value; else all of
+    // them join the outer ring (one rule for the chart, never a mix).
     const fit = (t: number, nm: string, Rc: number) =>
-      (t / top) * Rc * 0.58 - 12 >= nm.length * 6.6;
+      (t / top) * Rc * 0.58 - 12 >= (nm.length + fv(t).length) * 6.6 + 8;
     const allFit = shown.every((nm, i) => fit(totals[i]!, nm, Math.min(plot.w, plot.h) / 2 - 8));
     const lw = solo && allFit ? 8 : Math.max(...shown.map((s) => s.length)) * W + 8;
     const [cx, cy] = [plot.x + plot.w / 2, plot.y + plot.h / 2];
@@ -58,7 +60,7 @@ export const radial: Mark = {
         ? Math.min(plot.w, plot.h) / 2 - lw
         : Math.min(plot.w / 2 - lw, plot.h / 2 - 16),
     );
-    const R0 = R * 0.42;
+    const R0 = R * 0.4;
     const rad = (v: number) => R0 + (v / top) * (R - R0);
     const pt = (rr: number, a: number) => `${r(cx + rr * Math.sin(a))} ${r(cy - rr * Math.cos(a))}`;
     // A clear wedge at 12 o'clock holds the ring labels, so they never sit on a bar.
@@ -153,13 +155,12 @@ export const radial: Mark = {
       const a = G / 2 + (ci + 0.5) * step;
       const [rt, f] = [rad(t), fv(t)];
       if (!tips || !t || (step - 2 * gap) * Math.max(rt, 1) < 11) return;
-      const [nm, w] = [shown[ci]!, f.length * 6.6];
+      const [nm, w] = [shown[ci]!, f.length * 6.2];
       // Inside the tip only the top segment's own length counts.
       const [out, len] = [rt + 6 + w <= R - 2, rt - rad(t - topV[ci]!) - 8];
-      // The name goes on the bar only when the value fits as well; else it joins the outer ring.
-      const on = solo && (step - 2 * gap) * (R0 + 8) >= 12 && fit(t, nm, R);
+      const on = solo && allFit;
       const both = on && (out || len >= w + nm.length * 6.6 + 8);
-      if (both) {
+      if (on) {
         named.add(ci);
         tipText += spoke(nm, R0 + 7, a, { "data-in": true, "data-dark": true, "data-name": "" });
       }
@@ -221,6 +222,7 @@ export const radial: Mark = {
       },
       esc(f),
     );
+    const cap = Math.floor((R0 * 1.8) / 6.2);
     if (sub)
       labels += el(
         "text",
@@ -232,7 +234,7 @@ export const radial: Mark = {
           "font-size": 11,
           "data-ring": "",
         },
-        esc(cut(tt + yr, Math.floor(inner / 6.2))),
+        esc(cut((tt + yr).length > cap ? tt : tt + yr, cap)), // the year goes before an ellipsis does
       );
 
     labels += tipText;
