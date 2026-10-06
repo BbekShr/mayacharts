@@ -144,10 +144,10 @@
           </section>
           <section>
             <div class="tile-head">
-              <h2>Sales by month and region</h2>
+              <h2>Sales by month</h2>
               <button type="button" data-reroll="radial">Re-roll</button>
             </div>
-            <p>Bars around a circle, stacked outward by region.</p>
+            <p>Bars arranged in a circle by month.</p>
             <maya-chart id="radial" style="height: 320px"></maya-chart>
             <details>
               <summary>Spec</summary>
@@ -164,10 +164,12 @@
         <div class="tiles">
           <section>
             <div class="tile-head">
-              <h2>Sales by product family</h2>
+              <h2>Sales by product family and item</h2>
               <button type="button" data-reroll="hbar">Re-roll</button>
             </div>
-            <p>Horizontal bars with value labels, longest first.</p>
+            <p>
+              Horizontal bars with value labels, longest first. Click a family to drill into items.
+            </p>
             <maya-chart id="hbar" style="height: 320px"></maya-chart>
             <details>
               <summary>Spec</summary>

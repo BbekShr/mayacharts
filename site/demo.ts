@@ -82,7 +82,9 @@ let twoSeries = false;
 function liveSpec(): ChartSpec {
   const rows: Row[] = cats.map((cat, i) => ({ cat, series: "A", value: a[i] ?? 0 }));
   if (twoSeries) rows.push(...cats.map((cat, i) => ({ cat, series: "B", value: b[i] ?? 0 })));
-  return { type: "bar", title: "Live data", x: "cat", y: "value", series: "series", data: rows };
+  const spec: ChartSpec = { type: "bar", title: "Live data", x: "cat", y: "value", data: rows };
+  if (twoSeries) spec.series = "series";
+  return spec;
 }
 show("live", liveSpec());
 
