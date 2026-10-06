@@ -115,7 +115,11 @@ function timeAxis(
               : plain
         ).format(v),
   );
-  return { values: tk.values, labels };
+  return {
+    values: tk.values,
+    labels,
+    end: (v: number) => (custom ? fmt(a.field, v) : dated.format(v)),
+  };
 }
 
 /** Axes, grid, plot box and scales for the two axes a mark asks for. */
@@ -281,6 +285,12 @@ export function frame(
           out += el("text", { x: r(px), y: ty, "text-anchor": "middle" }, esc(t.labels[i]!));
         });
         ax += out;
+        // Narrow plot: fewer than 2 ticks survived, so label the first and last point at the plot edges.
+        if (target <= 2 && out.split("<text").length < 3 && bx.t.length > 1)
+          ax =
+            ax.slice(0, ax.length - out.length) +
+            el("text", { x: r(lo), y: ty, "text-anchor": "start" }, esc(t.end(bx.t[0]!))) +
+            el("text", { x: r(hi), y: ty, "text-anchor": "end" }, esc(t.end(bx.t.at(-1)!)));
         if (!dropped || target <= 2) break;
         ax = ax.slice(0, ax.length - out.length);
         target--;
@@ -301,14 +311,17 @@ export function frame(
       });
     } else {
       const b = x as { at(i: number): number; bandwidth: number };
-      const every = Math.max(1, Math.ceil(maxW(bLab) / (plot.w / Math.max(1, bLab.length))));
+      // Up to 8 categories are never thinned: each label is cut to its slot instead.
+      const few = bLab.length <= 8;
+      const every = few ? 1 : Math.max(1, Math.ceil(maxW(bLab) / (plot.w / bLab.length)));
       bLab.forEach((c, i) => {
-        if (i % every === 0)
-          ax += el(
-            "text",
-            { x: r(b.at(i) + b.bandwidth / 2), y: ty, "text-anchor": "middle" },
-            esc(c),
-          );
+        if (i % every) return;
+        const t = few ? clip(c, plot.w / bLab.length - 8) : c;
+        ax += el(
+          "text",
+          { x: r(b.at(i) + b.bandwidth / 2), y: ty, "text-anchor": "middle" },
+          esc(t) + (t === c ? "" : el("title", {}, esc(c))),
+        );
       });
     }
   }

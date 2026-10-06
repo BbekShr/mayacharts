@@ -8,6 +8,10 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Fixed
 
+- A scatter with a `size` field now shows its colour key and the size key together. The size key used to replace the colour legend.
+- A category axis with 8 or fewer categories no longer drops labels at narrow widths. Each label is clipped to its slot with an ellipsis and keeps its full text in a title.
+- A time axis on a narrow plot always shows at least its first and last point, instead of a single tick.
+- The README and spec reference now state which source wins when a `<maya-chart>` has a `spec` property, a JSON script child and a `spec` attribute.
 - Downsampling a long time axis no longer drops a series' first point, last point, minimum or maximum when many series or sparse runs overshoot the budget. A one-point spike in a gappy line, or a kpi sparkline's extremes, now survive.
 - The exported `version` and `<maya-chart>.version` now read 0.5.0 instead of 0.3.0, so the double-registration warning can fire between versions. A test compares it with package.json so the next release cannot drift.
 - Scatter and beeswarm marks with names like "3", "3" and "3#2" no longer share a `data-key`.

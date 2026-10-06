@@ -38,6 +38,8 @@ chart.spec = { type: "bar", data, x: "month", y: "revenue", series: "region", st
 chart.data = newRows; // animates the update
 ```
 
+Where the element reads its spec from, in order of precedence: the `spec` property (and `data`, which sets it), then the JSON `<script>` child, then the `spec` attribute. A `spec` property you have set wins over any later change to the attribute, so set one source and leave the others alone. Assign `chart.spec = undefined` to fall back to the script child or the attribute.
+
 Server-side rendering:
 
 ```js
@@ -711,7 +713,7 @@ Fully conformant with WCAG 2.2 AA, verified by axe-core on every gallery tile in
 
 Implemented: semantic role and title, accessible description, data table for screen readers, keyboard navigation (Tab, arrows, Enter, Space, Escape), live region updates, focus management, forced-colors support, reduced motion support, ≥3:1 contrast in both light and dark modes, non-colour cues (text tone), 12 px touch target enlargement.
 
-Known ceilings: label truncation at 40% width; UTC dates unless Intl options say otherwise; scatter keyboard order follows draw order (not spatial); stacked bar labels show segments, not totals.
+Known ceilings: left labels are cut at 40% width and bottom category labels at their slot width; UTC dates unless Intl options say otherwise; scatter keyboard order follows draw order (not spatial); stacked bar labels show segments, not totals.
 
 See [STABILITY.md](STABILITY.md) for the full accessibility and performance envelope.
 

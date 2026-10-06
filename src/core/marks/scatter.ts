@@ -223,8 +223,7 @@ export const scatter: Mark = {
       const d = r(q * 2 + 2);
       return `<svg width="${d}" height="${d}" aria-hidden="true"><circle cx="${r(q + 1)}" cy="${r(q + 1)}" r="${r(q)}"/></svg><span>${esc(ctx.fmt(spec.size!, v))}</span>`;
     };
-    // No size field: no legend here, so the series or colour legend renders.
-    // ponytail: with a size field the size key replaces the series/colour legend (render.ts takes a mark legend whole).
+    // No size field: no size key; the series or colour legend renders alone.
     const legend =
       max > 0
         ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.size!) ?? spec.size!)}</b>${ref.map(key3).join("")}</div>`

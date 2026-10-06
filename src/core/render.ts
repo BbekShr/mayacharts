@@ -527,8 +527,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let legend = "";
   let tbl: string | undefined;
-  if (markLegend !== null && spec.legend !== false) legend = markLegend;
-  else if ((s.series !== null || s.y2 !== null) && s.legend)
+  if ((s.series !== null || s.y2 !== null) && s.legend)
     legend =
       `<div class="maya-legend" data-maya="legend">` +
       (s.series === null && s.y2 !== null
@@ -564,6 +563,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         : hi > lo
           ? `<div class="maya-legend" data-maya="ramp"><b>${esc(s.titles.get(cb) ?? cb)}</b><span>${esc(fmt(cb, lo))}</span><i></i><span>${esc(fmt(cb, hi))}</span></div>`
           : "";
+  // A mark legend replaces the normal one, except scatter's size key, which stacks below it.
+  if (markLegend !== null && spec.legend !== false)
+    legend = s.type === "scatter" ? legend + markLegend : markLegend;
   return {
     svg,
     legend,

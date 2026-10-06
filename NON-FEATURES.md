@@ -23,7 +23,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Late data table**: the hidden data table is inserted when the browser is next idle after a render (2 s at most), and only the latest one, so a screen reader sees it a moment after the marks. A server-rendered table stays in place until then.
 - **Y-domain origin**: value axes (lines included) are 0-anchored. Negative values are supported; set `yDomain` to override the origin.
 - **Ramp depth**: 10-step sequential ramp for colorBy numeric fields (not user-tunable).
-- **Label truncation**: long x labels are thinned by code point; text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
+- **Label truncation**: a category axis with 8 or fewer labels is never thinned, each label is clipped to its slot with an ellipsis (full text in a title); longer axes are thinned. Text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
 - **Time axis scope**: line, area and vertical bar only, on the bottom axis. UTC only (no time zones or DST), no fiscal or ISO-week calendars, no sub-second ticks; a bare year like "2024" is a category. Numbers become epoch ms only with `xType: "time"`.
 - **Time line gaps**: a line breaks where the gap between readings exceeds 5 times the series' median step (fixed factor); use null rows for gaps it should not guess.
 - **Time bar width**: bars on a time axis take 0.8 of the smallest gap between dates, so one close pair makes every bar thin.
@@ -76,7 +76,6 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Legend for many series**: a multi-series legend needs the data, so the first paint of such a chart draws twice.
 - **Version constant**: `version` is written by hand in `registry.ts` and a test fails when it differs from `package.json`.
 - **Beeswarm dodge**: each point checks only the 50 most recently placed neighbours, so a very dense tie cluster can overlap a little; the swarm is clamped to its row past about 25 points anyway.
-- **Bubble legend**: a scatter with a `size` field shows the size key in place of the series or colour legend.
 - **Sunburst names**: a name runs straight along its arc, upright, cut so its chord stays inside the ring; it is never curved, and a slice too short for 4 characters has no name (the tooltip names it).
 - **Treemap ramp ink**: treemap tiles coloured by a `colorBy` ramp use dark ink on every step, so the darkest steps can fall under 4.5 to 1.
 
