@@ -65,12 +65,13 @@ const items = (spec: ResolvedSpec, shaped: Shaped): Item[] =>
 export const bar: Mark = {
   noun: "Bar",
   axes(spec, shaped) {
-    let lo = shaped.extent[0];
-    let hi = shaped.extent[1];
-    if (spec.type === "waterfall") {
+    let [lo, hi] = shaped.extent;
+    // The limit roll-up is drawn clipped at the plot edge: it never sets the value domain.
+    const all = items(spec, shaped);
+    const rows = all.filter((i) => shaped.categories[i.ci] !== OTHER);
+    if (spec.type === "waterfall" || (rows.length && rows.length < all.length)) {
       lo = hi = 0;
-      for (const i of steps(shaped))
-        ((lo = Math.min(lo, i.y0, i.y1)), (hi = Math.max(hi, i.y0, i.y1)));
+      for (const i of rows) ((lo = Math.min(lo, i.y0, i.y1)), (hi = Math.max(hi, i.y0, i.y1)));
     }
     const cat: Axis = shaped.time
       ? { kind: "time", field: spec.x, domain: shaped.categories, t: shaped.time }
@@ -95,9 +96,15 @@ export const bar: Mark = {
     const keys = shaped.visible.map((j) => shaped.series[j]!);
     const inner = bandScale(keys, [0, cat.bandwidth], 0.1, 0);
     const cvOf = colorVals(spec);
+    // A bar past the plot edge (the Other roll-up, a yDomain) is cut there; its label keeps the real value.
+    const [e0, e1] = hz
+      ? [ctx.plot.x, ctx.plot.x + ctx.plot.w]
+      : [ctx.plot.y, ctx.plot.y + ctx.plot.h];
+    const clip = (v: number) => Math.min(Math.max(v, e0), e1);
     let marks = "";
     let hits = "";
     let labels = "";
+    const tags: [Item, number, number, number, number, Record<string, any>][] = [];
     for (const c of items(spec, shaped)) {
       const k = shaped.visible.indexOf(c.si);
       const full = spec.stack || spec.type === "waterfall" ? cat.bandwidth : inner.bandwidth;
@@ -107,7 +114,7 @@ export const bar: Mark = {
         cat.at(c.ci) +
         (spec.stack || spec.type === "waterfall" ? 0 : inner.at(k)) +
         (full - th) / 2;
-      const [a, b] = [val.of(c.y0), val.of(c.y1)];
+      const [a, b] = [clip(val.of(c.y0)), clip(val.of(c.y1))];
       const lo = Math.min(a, b);
       const len = Math.abs(a - b);
       const [x, y, w, h] = hz ? [lo, pos, len, th] : [pos, lo, th, len];
@@ -138,10 +145,20 @@ export const bar: Mark = {
         height: r(h),
       });
       hits += hit(d, x, y, w, h);
-      if (spec.labels) {
+      tags.push([c, x, y, w, h, d]);
+    }
+    if (spec.labels && tags.length) {
+      // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
+      // step label must fit inside its own column or it is dropped.
+      // ponytail: no thinning to a subset of steps: a label wider than its column is dropped.
+      const wf = spec.type === "waterfall";
+      const [first, last] = [tags[0]!, tags.at(-1)!];
+      for (const t of wf ? new Set([first, last, ...tags]) : tags) {
+        const [c, x, y, w, h, d] = t;
         // Inside when it fits, else outside the bar end (collisions are dropped by ctx.label).
         const text = ctx.fmt(spec.y, c.v);
         const est = text.length * 7.2 + 4;
+        if (wf && est > cat.step && t !== first && t !== last) continue;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;
         if (est <= w && h >= (hz ? 14 : 16))
