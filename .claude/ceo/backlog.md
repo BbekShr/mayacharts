@@ -4,7 +4,6 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Needs a decision from the human
 
-- **Employer name in README.** `README.md:496` and `:622` name the employer product and its SDK calls (security MEDIUM-2, 2026-10-05). Remove or generalise until a signed release exists, or decide it is acceptable. Owner: human.
 - **Apply the approved size budgets** (approved 2026-10-05, second round): index 31488, element 44544, hierarchy 4096, global 53760 bytes (30.75, 43.5, 4.0, 52.5 KB). The guard hook blocks agents from editing `mayaSize`. Owner: human.
 - **Unnamed scatter keys are row indexes**, so prepending data moves a selection to another dot. Changing it is a key contract change. Owner: human, then core engineer.
 
