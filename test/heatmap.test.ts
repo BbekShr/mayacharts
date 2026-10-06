@@ -71,16 +71,17 @@ describe("heatmap", () => {
     };
     expect(marks(render(tiny, { width: 200, height: 100 }))).toMatchInlineSnapshot(`
       [
-        "<rect data-maya="mark" data-key="r1~a" data-c="0" data-x="a" data-series="r1" data-y="1" data-f="1" data-q="0" x="41.18" y="17.6" width="60.24" height="50.8"/>",
-        "<rect data-maya="mark" data-key="r1~b" data-c="1" data-x="b" data-series="r1" data-y="3" data-f="3" data-q="9" x="118.98" y="17.6" width="60.24" height="50.8"/>",
+        "<rect data-maya="mark" data-hm="" data-key="r1~a" data-c="0" data-x="a" data-series="r1" data-y="1" data-f="1" data-q="0" x="41.18" y="17.6" width="60.24" height="50.8"/>",
+        "<rect data-maya="mark" data-hm="" data-key="r1~b" data-c="1" data-x="b" data-series="r1" data-y="3" data-f="3" data-q="9" x="118.98" y="17.6" width="60.24" height="50.8"/>",
       ]
     `);
   });
-  it("marks labels on dark ramp steps with data-dark and no halo", () => {
+  it("inks labels by ramp step: dark on the two palest, page background on the rest", () => {
     const svg = render(spec, { width: 800, height: 400 });
     const t = svg.match(/<text [^>]*data-in[^>]*>/g) ?? [];
     expect(t.length).toBe(11);
-    expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(5); // q >= 6 of 11 cells
+    expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(3); // q < 2 of 11 cells
+    expect(t.filter((x) => x.includes('data-ink="b"'))).toHaveLength(8);
   });
   it("small cells are squares, large ones fill the band; the legend names the field", () => {
     const wh = (svg: string) => {

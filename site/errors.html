@@ -159,7 +159,8 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <h2><code>unsafe-css-value</code></h2>
         <p>
           Theme and color values are written into CSS custom properties, so they must be plain CSS
-          values. Characters such as ; { } < > \ and url( or expression( are rejected for security.
+          values. Characters such as ; { } &lt; > \ and url( or expression( are rejected for
+          security.
         </p>
         <pre><code>{ "colors": ["#2563eb", "rgb(249 115 22)"] }</code></pre>
       </section>

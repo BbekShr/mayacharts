@@ -67,8 +67,8 @@ export function hit(d: Parameters<typeof el>[1], x: number, y: number, w: number
   const [gw, gh] = [Math.max(w, 24), Math.max(h, 24)];
   return w < 24 || h < 24
     ? el("rect", {
-        "data-maya": "hit",
-        ...d,
+        // data-maya leads the attributes and always wins over a caller's "mark".
+        ...Object.assign({ "data-maya": "hit" }, d, { "data-maya": "hit" }),
         x: r(x - (gw - w) / 2),
         y: r(y - (gh - h) / 2),
         width: r(gw),
@@ -88,3 +88,10 @@ export const plotHit = (b: { x: number; y: number; w: number; h: number }) =>
     height: r(b.h),
     fill: "transparent",
   });
+
+/** Nudge sorted label ys at least `g` apart inside [lo, hi]: a down pass, then an up pass. */
+export function repel(ys: number[], lo: number, hi: number, g: number): number[] {
+  ys.forEach((y, i) => (ys[i] = Math.max(y, (ys[i - 1] ?? lo - g) + g)));
+  for (let i = ys.length; i--;) ys[i] = Math.min(ys[i]!, (ys[i + 1] ?? hi + g) - g);
+  return ys;
+}

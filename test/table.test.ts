@@ -28,7 +28,7 @@ describe("table", () => {
     ]);
     expect(s).toMatch(/data-key="rev~Snacks"[^>]*data-y="100"/);
     expect(s).toContain('data-series="units"');
-    expect(s).toContain('data-s="1"');
+    expect(s).not.toContain('data-s="1"'); // one accent: colour never encodes the column
   });
   it("orders by spec.sort, then view.sortBy, keys stable", () => {
     expect(order(svg({ ...base, sort: "desc" }))).toEqual(["Snacks", "Dairy", "Beverages"]);

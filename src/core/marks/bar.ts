@@ -104,6 +104,8 @@ export const bar: Mark = {
     let marks = "";
     let hits = "";
     let labels = "";
+    let brk = "";
+    const wf = spec.type === "waterfall";
     const tags: [Item, number, number, number, number, Record<string, any>][] = [];
     for (const c of items(spec, shaped)) {
       const k = shaped.visible.indexOf(c.si);
@@ -116,8 +118,17 @@ export const bar: Mark = {
         (full - th) / 2;
       const [a, b] = [clip(val.of(c.y0)), clip(val.of(c.y1))];
       const lo = Math.min(a, b);
+      // Clipped end: two slanted gaps in the page colour mark the break (CSS: [data-brk]).
+      const cut = val.of(c.y1) !== b ? b : val.of(c.y0) !== a ? a : null;
       const len = Math.abs(a - b);
       const [x, y, w, h] = hz ? [lo, pos, len, th] : [pos, lo, th, len];
+      if (cut !== null)
+        for (const o of [8, 13]) {
+          const q = cut + (cut === lo ? o : -o);
+          brk += hz
+            ? `M${r(q)} ${r(y + h + 1)}l5 ${r(-h - 2)}`
+            : `M${r(x - 1)} ${r(q)}l${r(w + 2)} -5`;
+        }
       const cname = shaped.categories[c.ci]!;
       const ser = shaped.series[c.si]!;
       const cv = cvOf(cname, ser);
@@ -134,7 +145,8 @@ export const bar: Mark = {
         "data-tone": ctx.tone(c.v),
         "data-q": cv === null ? null : ctx.q(cv),
         "data-other": cname === OTHER,
-        "data-total": shaped.totals[c.ci], // waterfall running total: neutral colour
+        // waterfall start and running total: neutral, so colour keeps one meaning (up or down)
+        "data-total": shaped.totals[c.ci] || (wf && !tags.length),
       };
       marks += el("rect", {
         "data-maya": "mark",
@@ -151,7 +163,6 @@ export const bar: Mark = {
       // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
       // step label must fit inside its own column or it is dropped.
       // ponytail: no thinning to a subset of steps: a label wider than its column is dropped.
-      const wf = spec.type === "waterfall";
       const [first, last] = [tags[0]!, tags.at(-1)!];
       for (const t of wf ? new Set([first, last, ...tags]) : tags) {
         const [c, x, y, w, h, d] = t;
@@ -161,20 +172,51 @@ export const bar: Mark = {
         if (wf && est > cat.step && t !== first && t !== last) continue;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;
-        if (est <= w && h >= (hz ? 14 : 16))
-          // Over the bar's own fill: ink picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps).
-          labels += inText(cx, cy, text, {
-            "data-ink":
-              d["data-q"] === null
-                ? d["data-other"] || d["data-total"] || d["data-tone"]
-                  ? "b"
-                  : ""
-                : d["data-q"] >= 6
-                  ? ""
-                  : null,
-          });
-        else if (hz) ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start");
-        else ctx.label(cx, neg ? y + h : y, text, neg ? "below" : "above");
+        // Over the bar's own fill: ink picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps).
+        const ink =
+          d["data-q"] === null
+            ? d["data-other"] || d["data-total"] || d["data-tone"]
+              ? "b"
+              : ""
+            : d["data-q"] >= 6
+              ? ""
+              : null;
+        if (est <= w && h >= (hz ? 14 : 16)) labels += inText(cx, cy, text, { "data-ink": ink });
+        else if (hz) {
+          // Outside the bar end when it fits (a negative one keeps clear of the axis labels), else inside the end.
+          if (
+            !(
+              (!neg || x - 4 - est >= ctx.plot.x) &&
+              ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start")
+            ) &&
+            est + 8 <= w &&
+            h >= 10
+          )
+            labels += inText(neg ? x + 4 : x + w - 4, cy, text, {
+              "data-ink": ink,
+              "text-anchor": neg ? "start" : "end",
+            });
+        } else {
+          const ey = neg ? y + h : y;
+          // A waterfall's first and last tag hug their column's outer edge instead of straddling a step.
+          const end = t === last;
+          const edge = wf && (end || t === first);
+          const ax = edge ? (end ? x + w : x) : cx;
+          const l0 = edge ? (end ? ax - est : ax) : cx - est / 2;
+          const [t0, t1] = neg ? [ey + 3, ey + 16] : [ey - 16, ey - 3];
+          // One scan of the column's neighbours. Not an edge tag: a taller neighbour under the label
+          // drops it. An edge tag clears a neighbour poking into its band by sitting beyond its end.
+          let e = ey;
+          let over = false;
+          for (const [, bx, by, bw, bh] of tags)
+            if (bx !== x && l0 < bx + bw && l0 + est > bx) {
+              over ||= t0 < by + bh && t1 > by;
+              if (neg ? by + bh > e && by < e + 16 : by < e && by + bh > e - 16)
+                e = neg ? by + bh : by;
+            }
+          if (edge) ctx.label(ax, neg ? e + 9 : e - 9, text, end ? "end" : "start");
+          else if (!over) ctx.label(cx, ey, text, neg ? "below" : "above");
+        }
       }
     }
     if (ctx.y2 && spec.y2 !== null && shaped.y2.length) {
@@ -219,6 +261,6 @@ export const bar: Mark = {
           d: d || null,
         }) + dots;
     }
-    return { marks, hits, labels };
+    return { marks, hits, labels: labels + (brk ? el("path", { "data-brk": true, d: brk }) : "") };
   },
 };

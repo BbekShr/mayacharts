@@ -1,5 +1,5 @@
 const L =
-  ":host,.maya-root{--maya-font:system-ui,sans-serif;--maya-font-size:12px;--maya-fg:light-dark(#1f2328,#e6edf3);--maya-fg-muted:light-dark(#656d76,#9198a1);--maya-grid:color-mix(in oklab,var(--maya-fg) 10%,transparent);--maya-bg:light-dark(#fff,#0d1117);--maya-accent:oklch(.6 .17 255);--maya-radius:3px;--maya-ease:cubic-bezier(.22,1,.36,1);--maya-tooltip-bg:color-mix(in oklab,var(--maya-bg) 92%,transparent);--maya-tooltip-fg:var(--maya-fg);--maya-focus:var(--maya-accent);--maya-good:light-dark(#1a7f37,#3fb950);--maya-bad:light-dark(#cf222e,#f85149);--maya-series-1:var(--maya-accent);--maya-series-2:oklch(.66 .16 50);--maya-series-3:oklch(.62 .15 160);--maya-series-4:oklch(.66 .17 330);--maya-series-5:oklch(.62 .14 90);--maya-series-6:oklch(.62 .12 205);--maya-series-7:oklch(.64 .19 22);--maya-series-8:oklch(.62 .16 295);color-scheme:light dark}";
+  ":host,.maya-root{--maya-font:system-ui,sans-serif;--maya-font-size:12px;--maya-fg:light-dark(#1f2328,#e6edf3);--maya-fg-muted:light-dark(#656d76,#9198a1);--maya-grid:color-mix(in oklab,var(--maya-fg) 10%,transparent);--maya-bg:light-dark(#fff,#0d1117);--maya-accent:oklch(.6 .17 255);--maya-radius:3px;--maya-ease:cubic-bezier(.22,1,.36,1);--maya-tooltip-bg:color-mix(in oklab,var(--maya-bg) 92%,transparent);--maya-tooltip-fg:var(--maya-fg);--maya-focus:var(--maya-accent);--maya-good:light-dark(#0b7a75,#4fb3a9);--maya-bad:light-dark(#b5471b,#f08a5d);--maya-series-1:var(--maya-accent);--maya-series-2:oklch(.66 .16 50);--maya-series-3:oklch(.62 .15 160);--maya-series-4:oklch(.66 .17 330);--maya-series-5:oklch(.62 .14 90);--maya-series-6:oklch(.62 .12 205);--maya-series-7:oklch(.64 .19 22);--maya-series-8:oklch(.62 .16 295);color-scheme:light dark}";
 const D = "--maya-fg:#1f2328;--maya-fg-muted:#656d76;--maya-bg:#fff";
 const N = "--maya-fg:#e6edf3;--maya-fg-muted:#9198a1;--maya-bg:#0d1117";
 const rng = (n: number, from = 0) => Array.from({ length: n }, (_, i) => i + from);
@@ -72,17 +72,14 @@ const HEX = 'path[data-key^="g~"]';
 const HEXMAP =
   `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--c);stroke-width:1.5;stroke-linejoin:round}` +
   `${HEX}:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2.5}` +
-  // Dimmed cells (hex or heatmap) lose their fill, so their dark-step labels revert to the normal text colour.
-  `svg:has([data-maya=mark][data-active]) [data-dark]{fill:var(--maya-fg)}` +
   "[data-maya=grid] [data-none]{stroke-opacity:.7;shape-rendering:auto}" +
   "[data-hex] i{width:120px;height:10px;border-radius:3px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}";
 
 // scatter
 // SCAT = a chart with two linear axes (scatter only).
 const SCAT = "[data-xd] ";
-// Density cells: floor of 88% accent (>= 3:1 on --maya-bg in both themes), darkening toward --maya-fg.
-const DENS = (p: string) =>
-  `color-mix(in oklab,color-mix(in oklab,var(--maya-accent) 88%,var(--maya-bg)),var(--maya-fg) ${p})`;
+// Density and heatmap cells: the accent (3.9:1 on --maya-bg in light, 4.8:1 in dark) at the floor, shifting toward --maya-fg (to 75%) so the ramp keeps its range.
+const DENS = (p: string) => `color-mix(in oklab,var(--maya-accent),var(--maya-fg) ${p})`;
 // Speed: points without a series (no data-s) inherit fill, stroke and its width from the marks
 // group, resolved once (a var() and color-mix() per point cost ~3 ms of first paint at 1000
 // points); other slots, tones and ramp steps (OWN) mix their own --c. A dense plot's first point
@@ -94,8 +91,8 @@ const SCATTER =
   `${SCAT}[data-maya=marks]{--p:58%;stroke-width:1.25;${P("var(--maya-series-1)")}}${SCAT}[data-maya=marks]:has(>[data-dense]){--p:30%}` +
   `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit;transform-origin:center}` +
   `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))")}}` +
-  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q]{--c:${DENS("calc((var(--q) - 20%)*.5)")}}` +
-  `[data-d] i{width:80px;background:linear-gradient(90deg,${DENS("0%")},${DENS("40%")})}[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("20%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("20%")},${DENS("40%")})}` +
+  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q],[data-hm]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 35%)*1.15)))")}}` +
+  `[data-d] i{flex:none;width:80px;background:linear-gradient(90deg,${DENS("0%")},${DENS("75%")})}[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("37%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("37%")},${DENS("75%")})}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
@@ -118,7 +115,7 @@ export const css =
   "i{width:10px;height:10px;border-radius:3px;background:var(--c)}" +
   "[data-maya=ramp]{display:flex;align-items:center;gap:6px}[data-maya=ramp] b{font-weight:500;color:var(--maya-fg);margin-inline-end:4px}" +
   "[data-maya=ramp] circle{fill:none;stroke:var(--maya-fg-muted)}" +
-  "[data-maya=ramp] i{width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 35%,var(--b)),var(--maya-accent))}" +
+  `[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,${DENS("0%")},${DENS("75%")})}` +
   // Ramp floor: the background, lifted toward the accent in dark mode so low steps stay visible.
   // Declared once where the theme overrides live, not on every ramp mark (speed).
   ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
@@ -140,10 +137,10 @@ export const css =
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
-  "[data-dir=h] [data-neg]{transform-origin:100% 0}" +
   "[data-ghost]{pointer-events:none}" +
-  "[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)),var(--maya-fg) 12%)}" +
   "[data-stack] rect[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1}" +
+  // Active mark: an ink ring, fill untouched, so in-mark labels keep their contrast.
+  ":is(rect,path)[data-maya=mark][data-active]{stroke:var(--maya-fg);stroke-width:1.5}" +
   "[data-pt] circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
   "[data-pt] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2}[data-pt] circle[data-lit]{r:4px}" +
   "circle[data-maya=mark][data-active]{filter:drop-shadow(0 0 4px color-mix(in oklab,var(--c) 70%,transparent))}" +
@@ -156,8 +153,12 @@ export const css =
   "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
   "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of]){fill:var(--maya-fg-muted)}" +
   "[data-line] i{height:2px;border-radius:1px}" +
+  // Direct end labels of line and area, in their series colour.
+  "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
+  // Break marks on a clipped Other bar; parallel tick halos and end-label leaders.
+  "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none;pointer-events:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
   // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.
-  "[data-ridge]{fill:color-mix(in oklab,var(--c) 40%,var(--maya-bg))}[data-maya=grid] circle{fill:none;shape-rendering:auto}" +
+  "svg:not([data-stack]) [data-maya=area][data-ridge]{fill:color-mix(in oklab,var(--c) 40%,var(--maya-bg))}[data-maya=grid] circle{fill:none;shape-rendering:auto}" +
   "[data-maya=labels] [data-ring]{fill:var(--maya-fg-muted)}[data-maya=marks] text{fill:var(--maya-fg)}" +
   "[data-maya=sort]{cursor:pointer}[data-maya=sort] rect{fill:transparent}[data-maya=sort] text{font-weight:600}[data-maya=sort]:focus-visible{outline:2px solid var(--maya-focus)}" +
   ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks]:has(path[data-active]) path[data-maya=line]:not([data-active]){opacity:.25}" +
@@ -168,7 +169,9 @@ export const css =
   '[data-tint="2"]{--t:70%}[data-tint="3"]{--t:48%}' +
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
-  "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text){opacity:.4}" +
+  "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text,:is(rect,path)[data-q],[data-kpi=fill]){opacity:.4}" +
+  // A dimmed mark fades toward the page: its in-bar label flips to the page ink (tooltip.ts dim()).
+  ".maya-svg [data-maya=labels] [data-in][data-dim]{fill:var(--maya-fg)}" +
   '[data-maya=marks]:has(circle[data-depth="0"][data-active]) [data-depth]{opacity:1}' +
   'svg[data-drill] :is([data-maya=mark],[data-maya=hit]),circle[data-depth="0"][data-s]{cursor:pointer}' +
   "[data-maya=marks]:has([data-selected]){--o:.35}" +
@@ -189,7 +192,7 @@ export const css =
   ".maya-tip div{display:flex;align-items:center;gap:8px;color:color-mix(in oklab,var(--maya-tooltip-fg) 72%,transparent)}.maya-tip i{width:8px;height:8px;border-radius:50%}" +
   ".maya-tip [data-v]{margin-inline-start:auto;padding-inline-start:12px;font-weight:600;color:var(--maya-tooltip-fg)}.maya-tip [data-on]{color:var(--maya-tooltip-fg)}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
-  "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend i{width:8px;height:8px}.maya-title{font-size:12px}}" +
+  "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend :not([data-line])>i{width:8px;height:8px}.maya-title{font-size:12px}}" +
   RADIAL +
   MEKKO +
   FLOW +
@@ -197,13 +200,13 @@ export const css =
   "svg:has(rect[data-depth]) [data-maya=labels] [data-in]{fill:#12161c}" +
   "rect[data-tint]{fill:color-mix(in oklab,var(--c) var(--t,100%),#fff)}" +
   // Hexmap label ink by ramp step (4.5:1 each): black on steps 8 and 9, white on dark steps 6 and 7.
-  "svg:not(:has([data-active])) [data-maya=labels] text[data-q][data-dark]{fill:#000}" +
+  "[data-maya=labels] text[data-q][data-dark]{fill:light-dark(#12161c,#000)}" +
   '[data-maya=labels] :is([data-q="6"],[data-q="7"]){fill:light-dark(var(--maya-fg),#fff)}' +
   HEXMAP +
   SCATTER +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +
   "@media (forced-colors:active){.maya-svg,i{forced-color-adjust:none}[data-maya=mark]:not(circle[data-depth]){stroke:CanvasText;stroke-width:1}[data-tone=bad]{stroke-dasharray:4 2}}" +
-  "@media (prefers-reduced-motion:no-preference){[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}" +
+  "@media (prefers-reduced-motion:no-preference){[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}[data-maya=labels] [data-in]{transition:fill .25s var(--maya-ease)}" +
   `${SCAT}circle[data-maya=mark]{transition:opacity .25s var(--maya-ease),fill .2s,stroke-width .2s,transform .2s var(--maya-ease)}` +
   "[data-pt] circle[data-maya=mark]{transition:fill-opacity .15s,stroke-opacity .15s}}" +
   "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}";

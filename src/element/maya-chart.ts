@@ -413,7 +413,7 @@ export class MayaChart extends HTMLElement {
       if (this.#last[k] === parts[k]) return;
       changed = true;
       this.#last[k] = parts[k] as string;
-      root.querySelector(sel)?.remove();
+      root.querySelectorAll(sel).forEach((e) => e.remove());
       const next = SLOTS.slice(i + 1).map(([, s]) => root.querySelector(s));
       (next.find(Boolean) ?? box).insertAdjacentHTML("beforebegin", html(parts[k] as string));
     });

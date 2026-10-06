@@ -221,13 +221,19 @@
  *   (ctx.label) as chars * 7.2 + 4. Axis labels are never rotated. Band axes draw every nth label
  *   (bottom: by width, left: 14 px per step); left band labels are cut at 40% of the width.
  *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
+ *   Direct end labels: a mark with `ends(spec, shaped, fmt)` returning [name, last value] pairs
+ *   (line and area: 2 to 8 series, all visible, no value labels, no y2) gets a right gutter of
+ *   endGutter() px (30% of the width at most; 0 below 400 px). It draws <text data-end data-s>
+ *   (and a <line data-lead> when nudged more than 3 px) into the labels group, and the legend is
+ *   dropped unless the spec sets legend:true explicitly (then both show). A hidden series, narrow
+ *   width or labels:true keep the legend and draw no end labels; endLabels:false turns them off.
  *
  * Legend and title are HTML, not SVG (free wrapping and font metrics). render() — the
  * bare SVG — therefore has no legend; renderShell() is the full-fidelity output.
  */
 import { dataTable, describe, titleText } from "./a11y.ts";
 import { formatter } from "./format.ts";
-import { frame } from "./layout.ts";
+import { endGutter, frame } from "./layout.ts";
 import { bar } from "./marks/bar.ts";
 import { beeswarm } from "./marks/beeswarm.ts";
 import { dumbbell } from "./marks/dumbbell.ts";
@@ -378,9 +384,11 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   };
 
   // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
+  const ends = spec.endLabels === false ? null : mark.ends?.(s, shaped, fmt);
+  const gutter = ends?.length ? endGutter(ends, W) : 0;
   const f =
     mark.axes && s.data.length
-      ? frame(s0, mark.axes(s, shaped), { width: W, height: H }, fmt)
+      ? frame(s0, mark.axes(s, shaped), { width: W, height: H, gutter }, fmt)
       : null;
   const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
   const ctx: MarkCtx = {
@@ -389,6 +397,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     width: W,
     height: H,
     plot,
+    gutter,
+    ends: gutter ? ends! : [],
     x: f?.x ?? null,
     y: f?.y ?? null,
     y2: f?.y2 ?? null,
@@ -510,7 +520,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let legend = "";
   let tbl: string | undefined;
-  if ((s.series !== null || s.y2 !== null) && s.legend)
+  if ((s.series !== null || s.y2 !== null) && s.legend && (!gutter || spec.legend))
     legend =
       `<div class="maya-legend" data-maya="legend">` +
       (s.series === null && s.y2 !== null

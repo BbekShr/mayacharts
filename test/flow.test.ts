@@ -70,6 +70,25 @@ describe("sankey", () => {
     expect(s).toContain("n~0~__proto__");
   });
 
+  it("colours a branching tree by its root", () => {
+    const s = render(
+      spec([
+        { a: "F1", b: "i1", c: "R", v: 2 },
+        { a: "F1", b: "i2", c: "S", v: 1 },
+        { a: "F2", b: "i3", c: "R", v: 1 },
+      ]),
+    );
+    const slot = (name: string) =>
+      at(
+        tags(s, "mark").find((t) => at(t, "data-x") === name)!,
+        "data-s",
+      );
+    expect(slot("i1")).toBe(slot("F1"));
+    expect(slot("i2")).toBe(slot("F1"));
+    expect(slot("i3")).toBe(slot("F2"));
+    expect(slot("F1")).not.toBe(slot("F2"));
+  });
+
   it("matches the 3-level snapshot", () => {
     const s = render(
       spec(
@@ -83,14 +102,14 @@ describe("sankey", () => {
     );
     expect([...tags(s, "link"), ...tags(s, "mark")]).toMatchInlineSnapshot(`
       [
-        "<path data-maya="link" data-key="k~0~A~B" data-c="0" data-s="0" data-a="0 1 2" data-x="A → B" data-series="" data-y="2" data-f="2" d="M14 8C53.5 8 53.5 8 93 8L93 57.33C53.5 57.33 53.5 57.33 14 57.33Z"/>",
-        "<path data-maya="link" data-key="k~1~B~C" data-c="1" data-s="0" data-a="1 0 2" data-x="B → C" data-series="" data-y="2" data-f="2" d="M107 8C146.5 8 146.5 8 186 8L186 57.33C146.5 57.33 146.5 57.33 107 57.33Z"/>",
-        "<path data-maya="link" data-key="k~0~A~D" data-c="2" data-s="1" data-a="0 3 2" data-x="A → D" data-series="" data-y="1" data-f="1" d="M14 57.33C53.5 57.33 53.5 67.33 93 67.33L93 92C53.5 92 53.5 82 14 82Z"/>",
-        "<path data-maya="link" data-key="k~1~D~C" data-c="3" data-s="1" data-a="3 0 2" data-x="D → C" data-series="" data-y="1" data-f="1" d="M107 67.33C146.5 67.33 146.5 57.33 186 57.33L186 82C146.5 82 146.5 92 107 92Z"/>",
+        "<path data-maya="link" data-key="k~0~A~B" data-c="0" data-s="0" data-a="0 1 2" data-x="A → B" data-series="" data-y="2" data-f="2" d="M14 8C47.7 8 47.7 8 81.4 8L81.4 57.33C47.7 57.33 47.7 57.33 14 57.33Z"/>",
+        "<path data-maya="link" data-key="k~1~B~C" data-c="1" data-s="0" data-a="1 0 2" data-x="B → C" data-series="" data-y="2" data-f="2" d="M95.4 8C129.1 8 129.1 8 162.8 8L162.8 57.33C129.1 57.33 129.1 57.33 95.4 57.33Z"/>",
+        "<path data-maya="link" data-key="k~0~A~D" data-c="2" data-s="1" data-a="0 3 2" data-x="A → D" data-series="" data-y="1" data-f="1" d="M14 57.33C47.7 57.33 47.7 67.33 81.4 67.33L81.4 92C47.7 92 47.7 82 14 82Z"/>",
+        "<path data-maya="link" data-key="k~1~D~C" data-c="3" data-s="1" data-a="3 0 2" data-x="D → C" data-series="" data-y="1" data-f="1" d="M95.4 67.33C129.1 67.33 129.1 57.33 162.8 57.33L162.8 82C129.1 82 129.1 92 95.4 92Z"/>",
         "<rect data-maya="mark" data-key="n~0~A" data-c="4" data-neu="" data-n="0" data-a="0 1 2 3" data-x="A" data-series="" data-y="3" data-f="3" data-depth="0" x="0" y="8" width="14" height="74"/>",
-        "<rect data-maya="mark" data-key="n~1~B" data-c="5" data-s="0" data-n="1" data-a="1 0 2" data-x="B" data-series="" data-y="2" data-f="2" data-depth="1" x="93" y="8" width="14" height="49.33"/>",
-        "<rect data-maya="mark" data-key="n~2~C" data-c="6" data-neu="" data-n="2" data-a="2 1 0 3" data-x="C" data-series="" data-y="3" data-f="3" data-depth="2" x="186" y="8" width="14" height="74"/>",
-        "<rect data-maya="mark" data-key="n~1~D" data-c="7" data-s="1" data-n="3" data-a="3 0 2" data-x="D" data-series="" data-y="1" data-f="1" data-depth="1" x="93" y="67.33" width="14" height="24.67"/>",
+        "<rect data-maya="mark" data-key="n~1~B" data-c="5" data-s="0" data-n="1" data-a="1 0 2" data-x="B" data-series="" data-y="2" data-f="2" data-depth="1" x="81.4" y="8" width="14" height="49.33"/>",
+        "<rect data-maya="mark" data-key="n~2~C" data-c="6" data-neu="" data-n="2" data-a="2 1 0 3" data-x="C" data-series="" data-y="3" data-f="3" data-depth="2" x="162.8" y="8" width="14" height="74"/>",
+        "<rect data-maya="mark" data-key="n~1~D" data-c="7" data-s="1" data-n="3" data-a="3 0 2" data-x="D" data-series="" data-y="1" data-f="1" data-depth="1" x="81.4" y="67.33" width="14" height="24.67"/>",
       ]
     `);
   });

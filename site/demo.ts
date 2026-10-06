@@ -82,7 +82,9 @@ let twoSeries = false;
 function liveSpec(): ChartSpec {
   const rows: Row[] = cats.map((cat, i) => ({ cat, series: "A", value: a[i] ?? 0 }));
   if (twoSeries) rows.push(...cats.map((cat, i) => ({ cat, series: "B", value: b[i] ?? 0 })));
-  return { type: "bar", title: "Live data", x: "cat", y: "value", series: "series", data: rows };
+  const spec: ChartSpec = { type: "bar", title: "Live data", x: "cat", y: "value", data: rows };
+  if (twoSeries) spec.series = "series";
+  return spec;
 }
 show("live", liveSpec());
 
@@ -93,7 +95,7 @@ $("update").addEventListener("click", () => {
 });
 $("toggle-series").addEventListener("click", () => {
   twoSeries = !twoSeries;
-  live.data = liveSpec().data as Row[];
+  show("live", liveSpec()); // the series field comes and goes with the second series
 });
 
 // Re-roll: scale each value of the first-drawn data by 0.4 to 1.6 so the change animates.

@@ -8,7 +8,7 @@ const WIDE =
   /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]/;
 
 // ponytail: no text measurement in Node; 0.6 em per code point, 1 em for East-Asian-wide ones.
-const tw = (s: string) => {
+export const tw = (s: string) => {
   const a = [...s];
   const k = a.filter((c) => WIDE.test(c)).length;
   return (a.length - k) * 7.2 + k * 12;
@@ -17,7 +17,7 @@ const w = (s: string) => tw(s) + 8;
 const maxW = (a: readonly string[]) => a.reduce((m, s) => Math.max(m, w(s)), 0);
 
 /** Cut `s` to `max` px (by code point), ending in an ellipsis. */
-function clip(s: string, max: number): string {
+export function clip(s: string, max: number): string {
   if (tw(s) <= max) return s;
   let o = "";
   let n = 0;
@@ -27,6 +27,15 @@ function clip(s: string, max: number): string {
     o += ch;
   }
   return o + "…";
+}
+
+/**
+ * Right gutter (px) for direct end labels of `[name, value]` pairs; 0 when the chart is too narrow
+ * (< 400). Name and value when that fits in 30% of the width, else the name alone (clipped at 30%).
+ */
+export function endGutter(p: readonly [string, string][], W: number): number {
+  const m = (k: number) => Math.max(...p.map((a) => tw(a.slice(0, k).join(" ")))) + 14;
+  return W < 400 ? 0 : Math.min(W * 0.3, m(2) <= W * 0.3 ? m(2) : m(1));
 }
 
 export interface Frame {
@@ -92,6 +101,7 @@ function timeAxis(
   const plain = mk(TIME_FMT(tk.unit));
   const yeared = mk({ month: "short", year: "numeric" });
   const dated = mk({ month: "short", day: "numeric" });
+  const datedYear = mk({ month: "short", day: "numeric", year: "numeric" });
   const datedTime = mk({ ...TIME_FMT("day"), ...TIME_FMT(tk.unit) });
   const custom = spec.format.has(a.field);
   const month = tk.unit === "quarter" || tk.unit === "month";
@@ -101,17 +111,21 @@ function timeAxis(
       ? fmt(a.field, v)
       : (month && (i === 0 || new Date(v).getUTCMonth() === 0)
           ? yeared
-          : sub && v % 864e5 === 0
-            ? dated
-            : sub && i === 0
-              ? datedTime
-              : plain
+          : i === 0 && (tk.unit === "day" || tk.unit === "week")
+            ? datedYear
+            : sub && v % 864e5 === 0
+              ? dated
+              : sub && i === 0
+                ? datedTime
+                : plain
         ).format(v),
   );
   return {
     values: tk.values,
     labels,
-    end: (v: number) => (custom ? fmt(a.field, v) : dated.format(v)),
+    // The first end label keeps the year the day ticks drop.
+    end: (v: number, first = false) =>
+      custom ? fmt(a.field, v) : (first ? datedYear : dated).format(v),
   };
 }
 
@@ -119,7 +133,7 @@ function timeAxis(
 export function frame(
   spec: ResolvedSpec,
   [bx, ly, ry]: [Axis, Axis, Axis?],
-  size: { width: number; height: number },
+  size: { width: number; height: number; gutter?: number },
   fmt: Fmt,
 ): Frame {
   const { width: W, height: H } = size;
@@ -154,7 +168,7 @@ export function frame(
         left -
         (rt
           ? (spec.yAxis ? maxW(rt.labels) + 4 : 8) + (rTitle ? 18 : 0)
-          : Math.max(12, edge ? tw(edge.labels.at(-1) ?? "") / 2 + 2 : 0)),
+          : Math.max(12, size.gutter ?? 0, edge ? tw(edge.labels.at(-1) ?? "") / 2 + 2 : 0)),
     ),
     h: Math.max(1, H - 10 - bottom),
   };
@@ -282,7 +296,7 @@ export function frame(
         if (target <= 2 && out.split("<text").length < 3 && bx.t.length > 1)
           ax =
             ax.slice(0, ax.length - out.length) +
-            el("text", { x: r(lo), y: ty, "text-anchor": "start" }, esc(t.end(bx.t[0]!))) +
+            el("text", { x: r(lo), y: ty, "text-anchor": "start" }, esc(t.end(bx.t[0]!, true))) +
             el("text", { x: r(hi), y: ty, "text-anchor": "end" }, esc(t.end(bx.t.at(-1)!)));
         if (!dropped || target <= 2) break;
         ax = ax.slice(0, ax.length - out.length);

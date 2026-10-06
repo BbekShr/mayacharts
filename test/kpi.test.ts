@@ -35,7 +35,7 @@ describe("kpi", () => {
     expect(up[1]).toBe("+22.2% vs Mar");
     const down = delta(svg({ ...base, data: base.data.slice(0, 2) }))!;
     expect(down[0]).toContain('data-tone="bad"');
-    expect(down[1]).toBe("-20% vs Jan");
+    expect(down[1]).toBe("\u221220% vs Jan");
   });
   it("no delta for a single category or a zero previous", () => {
     expect(delta(svg({ ...base, data: base.data.slice(0, 1) }))).toBeNull();

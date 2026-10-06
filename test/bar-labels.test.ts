@@ -42,3 +42,29 @@ describe("bar value labels over the bar", () => {
     expect(l.some((t) => !t.includes("data-ink"))).toBe(true);
   });
 });
+
+describe("bar breaks and waterfall start", () => {
+  it("draws break marks only for a clipped Other bar", () => {
+    const data = [..."abcdefg"].map((k, i) => ({ k, v: i < 3 ? 200 - i : 100 }));
+    const s: ChartSpec = { type: "bar", x: "k", y: "v", limit: 3, data, horizontal: true };
+    expect(render(s, { width: 600, height: 300 })).toContain("<path data-brk");
+    expect(render({ ...s, limit: 99 }, { width: 600, height: 300 })).not.toContain(
+      "<path data-brk",
+    );
+  });
+  it("makes the waterfall start bar neutral like the total", () => {
+    const s: ChartSpec = {
+      type: "waterfall",
+      x: "k",
+      y: "v",
+      totals: ["T"],
+      data: [
+        { k: "a", v: 5 },
+        { k: "b", v: 2 },
+        { k: "T", v: 0 },
+      ],
+    };
+    const svg = render(s, { width: 600, height: 300 });
+    expect(svg.match(/<rect data-maya="mark"[^>]*data-total/g)?.length).toBe(2);
+  });
+});

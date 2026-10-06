@@ -1,4 +1,6 @@
+import { formatter } from "../core/format.ts";
 import { t as str } from "../core/strings.ts";
+import { resolve } from "../core/validate.ts";
 import type { ChartSpec, View } from "../core/types.ts";
 import { listen } from "./listen.ts";
 
@@ -105,6 +107,27 @@ export function tooltip(
     for (const l of peers) l.setAttribute("data-lit", "");
   };
 
+  // In-bar labels of dimmed marks take the page ink: the bar fades toward the page, the label must not.
+  const dim = (m?: Element) => {
+    const on = (m ? [m, ...peers] : [])
+      .filter((e) => /^(rect|path)$/.test(e.localName) && !e.hasAttribute("data-q"))
+      .map((e): number[] => {
+        if (e.localName === "path") {
+          const b = (e as SVGGraphicsElement).getBBox();
+          return [b.x, b.y, b.width, b.height];
+        }
+        return ["x", "y", "width", "height"].map((k) => +a(e, k));
+      });
+    for (const t of box.querySelectorAll("[data-maya=labels] [data-in]")) {
+      const [x, y] = [+a(t, "x"), +a(t, "y")];
+      t.toggleAttribute(
+        "data-dim",
+        !!on.length &&
+          !on.some((r) => r[0]! <= x && x <= r[0]! + r[2]! && r[1]! <= y && y <= r[1]! + r[3]!),
+      );
+    }
+  };
+
   const cross = (m: Element | undefined) => {
     const g = box.querySelector<SVGElement>("[data-maya=cross]");
     if (!g || (!m && g.style.opacity !== "1")) return; // hidden by CSS until first shown
@@ -125,6 +148,9 @@ export function tooltip(
       g.style.setProperty("--y", py + "px");
       tx[0]!.textContent = a(m, "data-gx") || a(m, "data-x");
       tx[1]!.textContent = a(m, "data-gy") || a(m, "data-f");
+      // Corner: the y pill hops over the x pill when both sit in the bottom-left.
+      const [pl, pt, , ph] = a(svg, "data-plot").split(" ").map(Number) as number[];
+      tx[1]!.setAttribute("y", py > pt! + ph! - 16 && px < pl! + 120 ? "-22" : "-6");
     }
     // Glide between categories once visible; the first placement jumps (flush, then enable).
     if (!was) getComputedStyle(g).transform;
@@ -144,6 +170,7 @@ export function tooltip(
     let lo = Infinity,
       hi = -Infinity;
     for (const k of group(m)) {
+      if (k.localName !== "rect") continue; // a y2 line's points share the group
       const p = +a(k, hz ? "y" : "x"),
         q = p + +a(k, hz ? "height" : "width");
       ((lo = Math.min(lo, p)), (hi = Math.max(hi, q)));
@@ -172,6 +199,7 @@ export function tooltip(
   const hide = () => {
     cur?.removeAttribute("data-active");
     light(undefined);
+    dim();
     cur = undefined;
     pin = false;
     cross(undefined);
@@ -253,6 +281,7 @@ export function tooltip(
     cur = m;
     m.setAttribute("data-active", "");
     light(m);
+    dim(m);
     const g = group(m);
     const speak = () =>
       announce(
@@ -270,21 +299,48 @@ export function tooltip(
             ? sp.titles[y]!
             : y
           : "";
+    // Stacked: rows top-down like the stack, then the total.
+    const stk = sp?.stack && /^(bar|area)$/.test(sp.type) && g.length > 1;
+    const rows = stk ? [...g].reverse() : g;
     tip.replaceChildren(
       h("b", a(m, "data-x")),
-      ...g.map((k) => {
+      ...rows.flatMap((k) => {
         const row = h("div", "", k === m ? { "data-on": "" } : {});
         const s = a(k, "data-series");
+        // Scatter names its fields: "label\tvalue" lines, one row each under the series row.
+        const f = a(k, "data-f");
+        const tab = f.includes("\t");
         if (s) {
           if (k.hasAttribute("data-s")) row.append(h("i", "", { "data-s": a(k, "data-s") }));
           row.append(h("span", s));
-        } else if (label) row.append(h("span", label));
-        row.append(h("span", a(k, "data-f"), { "data-v": "" }));
+        } else if (label && !tab) row.append(h("span", label));
+        if (!tab) row.append(h("span", f, { "data-v": "" }));
         const tn = tone(k);
         if (tn) row.append(h("span", tn));
-        return row;
+        const more = tab
+          ? f.split("\n").map((p) => {
+              const [l, v] = p.split("\t"),
+                d = h("div");
+              d.append(h("span", l), h("span", v, { "data-v": "" }));
+              return d;
+            })
+          : [];
+        return row.childElementCount ? [row, ...more] : more;
       }),
+      ...(stk && sp ? [h("div", "", { "data-t": "" })] : []),
     );
+    if (stk && sp)
+      tip.lastElementChild!.append(
+        h("span", str(sp, "total")),
+        h(
+          "span",
+          formatter(
+            resolve(sp, (host as { view?: View }).view),
+            typeof y === "string" ? y : (sp.y as string),
+          )(g.reduce((t, k) => t + +a(k, "data-y"), 0)),
+          { "data-v": "" },
+        ),
+      );
     cross(m);
     shade(m);
     // The probe's containing block is the host's padding box (:host is position:relative).

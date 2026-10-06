@@ -184,14 +184,19 @@ export const sankey: Mark = {
     const { nodes, ls } = graph(ctx, "sankey");
 
     // Colour: column 0 neutral, column 1 palette slots in first-seen order, deeper nodes the slot
-    // of their single level-1 ancestor (several different ones: neutral).
-    neutral(nodes.filter((n) => n.lv === 0));
+    // of their single level-1 ancestor (several different ones: neutral). A branching tree (several
+    // roots, every column-1 node with one parent) colours by root instead: colour follows the branch.
+    const roots = nodes.filter((n) => n.lv === 0);
+    const tree =
+      roots.length > 1 &&
+      nodes.every((n) => n.lv !== 1 || ls.filter((l) => l.t === n).length === 1);
+    tree ? roots.forEach((n, j) => (n.s = j % 8)) : neutral(roots);
     let slot = 0;
     for (let lv = 1; lv < cols; lv++)
       for (const n of nodes.filter((n) => n.lv === lv)) {
         const from = new Set(ls.filter((l) => l.t === n).map((l) => l.s.s));
         const [one] = from;
-        if (lv === 1) n.s = slot++ % 8;
+        if (lv === 1) n.s = tree ? one! : slot++ % 8;
         else n.s = from.size === 1 ? one! : -1;
       }
     // A link takes its target's colour out of column 0, else its source's.
@@ -217,16 +222,16 @@ export const sankey: Mark = {
     for (let lv = 1; lv < cols; lv++) sweep(lv, lv - 1);
     for (let lv = cols - 2; lv > 0; lv--) sweep(lv, lv + 1);
 
-    // Label room: a wide tile keeps the outer labels beside the columns (clear of the flows);
-    // a narrow one puts them inside, over the flows, behind a halo.
+    // Label room: the last column always keeps its labels beside it, clear of the flows; the first
+    // does too on a wide tile, else its labels ride in the gap, over the flows, behind a halo.
     const val = (n: N) => ctx.fmt(spec.y, n.v);
+    const wide = plot.w >= 420;
     const room = (lv: number) =>
       Math.min(
-        plot.w * 0.22,
+        plot.w * (wide ? 0.22 : 0.28),
         Math.max(0, ...order[lv]!.map((n) => Math.min(20, [...n.name].length) * CH)) + 16, // 4 px over the cap's 12: no float round-down
       );
-    const wide = plot.w >= 420;
-    const [padL, padR] = wide ? [room(0), room(cols - 1)] : [0, 0];
+    const [padL, padR] = [wide ? room(0) : 0, room(cols - 1)];
     const gap = (plot.w - padL - padR - W) / (cols - 1);
     const x = (n: N) => plot.x + padL + n.lv * gap;
 
@@ -275,14 +280,12 @@ export const sankey: Mark = {
     // Labels, biggest node first so a crowded column keeps the important ones.
     // ponytail: a label that collides with a bigger one is dropped (the tooltip still names it).
     const taken = order.map(() => slots(plot.y, plot.y + plot.h));
-    // Narrow: the last two columns share one gap (labels right of one, left of the next).
-    if (!wide) taken[cols - 1] = taken[cols - 2]!;
     const lab: string[] = []; // by node index
     for (const n of [...nodes].sort((a, b) => b.v - a.v || a.i - b.i)) {
       const [first, last] = [n.lv === 0, n.lv === cols - 1];
-      const left = wide ? first : last;
-      const w = wide && first ? padL : wide && last ? padR : gap;
-      const cap = Math.max(3, Math.floor((w - (wide && (first || last) ? 12 : W + 14)) / CH));
+      const left = wide && first;
+      const w = left ? padL : last ? padR : gap;
+      const cap = Math.max(3, Math.floor((w - (left || last ? 12 : W + 14)) / CH));
       const cy = n.y + (n.v * k) / 2;
       const slack = Math.max(0, (n.v * k) / 2 - 16); // a tall node slides its label up or down to find room
       for (const d of [0, -1, 1])
@@ -294,7 +297,8 @@ export const sankey: Mark = {
             n.name,
             val(n),
             cap,
-            taken[n.lv]!,
+            // A sliver of a node gets one line (a second would crowd its neighbours out).
+            n.v * k < 12 ? (a, b) => b - a < 20 && taken[n.lv]!(a, b) : taken[n.lv]!,
           ))
         )
           break;

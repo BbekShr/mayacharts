@@ -21,6 +21,14 @@ describe("marimekko", () => {
     expect(m[0]).toContain('data-y="10"');
     expect(m[0]).toContain("(33%)");
   });
+  it("thin segments get hit rects that stay hits, so the tooltip never lists a row twice", () => {
+    const thin = { ...spec, data: [...data, { r: "North", t: "Tiny", v: 0.5 }] };
+    const s = svg(thin);
+    expect(s).toMatch(/<rect data-maya="hit" data-key="Tiny~North"/);
+    expect(marks(s)).toHaveLength(
+      new Set(marks(s).map((m) => m.match(/data-key="([^"]*)"/)![1])).size,
+    );
+  });
   it("shows each segment's share of its column, with the series name when tall", () => {
     const s = svg(spec);
     expect(s).toMatch(/data-ink="">33%</);
@@ -31,6 +39,11 @@ describe("marimekko", () => {
     const s = svg(spec);
     expect(s).toMatch(/data-col="">North · 17%</);
     expect(s).toMatch(/data-col="">East · 50%</);
+  });
+  it("a column too narrow for name and share keeps both on two lines", () => {
+    const s = renderParts(spec, { width: 280, height: 300 }).svg;
+    expect(s).toMatch(/data-col="">North</);
+    expect(s).toMatch(/data-col="">17%</);
   });
   it("draws a 0 to 100% scale with gridlines inside the plot", () => {
     const s = svg(spec);

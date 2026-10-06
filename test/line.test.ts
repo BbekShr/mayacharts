@@ -135,3 +135,58 @@ describe("area", () => {
     );
   });
 });
+
+describe("line end labels", () => {
+  const data = ["a", "b"].flatMap((s, k) =>
+    [1, 2, 3].map((m) => ({ m: `m${m}`, s, v: m * 10 + k })),
+  );
+  const spec: ChartSpec = { type: "line", x: "m", y: "v", series: "s", data };
+  const ends = (c: ChartSpec, width = 640) => {
+    const g = renderParts(c, { width }).svg;
+    return [...g.matchAll(/<text data-end[^>]*>(.*?)<\/text>/g)].map((m) =>
+      m[1]!.replace(/<[^>]*>/g, ""),
+    );
+  };
+  it("name each series and its last value at the right end, never one for a single series", () => {
+    expect(ends(spec)).toEqual(["b31", "a30"]);
+    expect(ends({ ...spec, data: data.filter((d) => d.s === "a") })).toEqual([]);
+  });
+  it("reserve a right gutter and drop the legend", () => {
+    const p = renderParts(spec, { width: 640 });
+    expect(p.legend).toBe("");
+    const [x, , w] = p.svg
+      .match(/data-plot="([^"]*)"/)![1]!
+      .split(" ")
+      .map(Number);
+    expect(x! + w!).toBeLessThan(640 - 20);
+  });
+  it("nudge colliding labels at least 13px apart", () => {
+    const close = ["a", "b"].flatMap((s, k) =>
+      [1, 2].map((m) => ({ m: `m${m}`, s, v: 5 + k * 0.01 * m })),
+    );
+    const ys = [
+      ...renderParts({ ...spec, data: close }).svg.matchAll(/<text data-end[^>]* y="([\d.]+)"/g),
+    ].map((m) => +m[1]!);
+    expect(Math.abs(ys[0]! - ys[1]!)).toBeGreaterThanOrEqual(13);
+  });
+  it("fall back to the legend when narrow, with a hidden series, or with labels on", () => {
+    expect(ends(spec, 360)).toEqual([]);
+    expect(renderParts(spec, { width: 360 }).legend).toContain("maya-legend");
+    const h = renderParts(spec, { width: 640, view: { hidden: ["a"] } });
+    expect(h.legend).toContain("maya-legend");
+    expect(h.svg).not.toContain("data-end");
+    expect(ends({ ...spec, labels: true })).toEqual([]);
+  });
+  it("turn off with endLabels: false, and keep the legend alongside with an explicit legend: true", () => {
+    const off = renderParts({ ...spec, endLabels: false }, { width: 640 });
+    expect(off.legend).toContain("maya-legend");
+    expect(off.svg).not.toContain("data-end");
+    const both = renderParts({ ...spec, legend: true }, { width: 640 });
+    expect(both.legend).toContain("maya-legend");
+    expect(both.svg).toContain("data-end");
+  });
+  it("drop the value when the name alone fits the gutter", () => {
+    const long = data.map((d) => ({ ...d, s: d.s.repeat(18) }));
+    expect(ends({ ...spec, data: long }, 500).every((t) => !/\d/.test(t))).toBe(true);
+  });
+});

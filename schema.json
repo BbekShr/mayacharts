@@ -292,6 +292,11 @@
       "type": "boolean",
       "description": "Legend; clicking toggles series. Default: true when `series` is set."
     },
+    "endLabels": {
+      "type": "boolean",
+      "default": true,
+      "description": "Line and area: name each series at its right end and drop the legend (legend: true keeps it)."
+    },
     "drill": {
       "type": "boolean",
       "description": "Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop."

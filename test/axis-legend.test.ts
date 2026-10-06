@@ -45,6 +45,6 @@ describe("narrow axes", () => {
       x: new Date(Date.UTC(2025, 0, 1 + d)).toISOString(),
       y: d,
     }));
-    expect(texts(axisX({ type: "line", x: "x", y: "y", data }))).toEqual(["Jan 1", "Jan 12"]);
+    expect(texts(axisX({ type: "line", x: "x", y: "y", data }))).toEqual(["Jan 1, 2025", "Jan 12"]);
   });
 });

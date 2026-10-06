@@ -123,6 +123,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     format: "percent",
     sort: "desc",
     limit: 15,
+    labels: true,
     data: [...sorted.slice(0, 8), ...sorted.slice(-7)],
   });
 
@@ -201,10 +202,10 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     series: "weekday",
     aggregate: "sum",
     labels: false,
-    titles: { orders: "Orders" },
+    titles: { orders: "Orders", week: "Week" },
     // Rows follow first appearance, so start on the first Monday: weeks run Mon to Sun.
     data: DAILY.filter((d) => d.week > 1).map(({ week, weekday, orders }) => ({
-      week: week - 1,
+      week: `Week ${week - 1}`,
       weekday,
       orders,
     })),
@@ -254,6 +255,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("sankey-drill", {
     type: "sankey",
     title: "Family to item to region",
+    titles: { sales: "Sales ($)", family: "Family", item: "Item", region: "Region" },
     path: ["family", "item", "region"],
     y: "sales",
     drill: true,
@@ -335,6 +337,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     titles: { sales: "Sales ($)", units: "Units", margin: "Margin" },
     x: "region",
     y: ["sales", "units", "margin"],
+    series: "region",
     format: { sales: "compact", units: "compact", margin: "percent" },
     data: rollup(FACTS, ["region"], {
       sales: sum("sales"),
@@ -350,7 +353,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     x: "item",
     y: ["sales", "units", "margin"],
     format: { sales: "compact", units: "compact", margin: "percent" },
-    titles: { sales: "Sales", units: "Units", margin: "Margin" },
+    titles: { item: "Item", sales: "Sales", units: "Units", margin: "Margin" },
     data: rollup(FACTS, ["item"], {
       sales: sum("sales"),
       units: sum("units"),
@@ -362,7 +365,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("chord", {
     type: "chord",
     title: "Region to product family",
-    titles: { sales: "Sales ($)" },
+    titles: { sales: "Sales ($)", region: "Region", family: "Family" },
     path: ["region", "family"],
     y: "sales",
     format: "compact",
@@ -481,6 +484,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("time-bar", {
     type: "bar",
     title: "Orders by month",
+    titles: { orders: "Orders", month: "Month" },
     x: "month",
     y: "orders",
     format: { orders: "compact" },

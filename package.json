@@ -9,7 +9,20 @@
     "web-component",
     "custom-element",
     "dataviz",
-    "ssr"
+    "ssr",
+    "charts-library",
+    "data-visualization",
+    "accessibility",
+    "a11y",
+    "wcag",
+    "csp",
+    "trusted-types",
+    "zero-dependency",
+    "d3-alternative",
+    "sankey",
+    "treemap",
+    "heatmap",
+    "json-schema"
   ],
   "license": "MIT",
   "author": "Bibek Shrestha",
@@ -86,7 +99,7 @@
     "size": "node scripts/size.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "e2e": "playwright test",
+    "e2e": "playwright test --project=chromium --project=firefox --project=webkit --project=mobile-webkit",
     "compare": "npm run compare:install && npm run build && E2E_NO_SERVER=1 playwright test --project=compare",
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts",
     "tokens": "node scripts/tokens.mjs",
@@ -97,14 +110,14 @@
     "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
   },
   "mayaSize": {
-    "dist/index.js": 30464,
-    "dist/element.js": 45056,
+    "dist/index.js": 32000,
+    "dist/element.js": 45824,
     "dist/theme.css": 4096,
     "dist/hierarchy.js": 4198,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 53760
+    "dist/maya.global.js": 54912
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

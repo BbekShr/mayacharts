@@ -390,6 +390,48 @@ describe("table header sort", () => {
   });
 });
 
+describe("stacked tooltip", () => {
+  it("lists rows top-down and ends with a formatted Total", async () => {
+    const data = [
+      { m: "Jan", s: "A", v: 1000 },
+      { m: "Jan", s: "B", v: 2000 },
+      { m: "Feb", s: "A", v: 1500 },
+      { m: "Feb", s: "B", v: 2500 },
+    ];
+    const el = await mount((e) => {
+      e.spec = { type: "bar", x: "m", y: "v", series: "s", stack: true, data } as ChartSpec;
+    });
+    const m = marks(el)[0]!;
+    m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+    m.dispatchEvent(
+      Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    const rows = [...el.shadowRoot!.querySelectorAll(".maya-tip div")].map((d) => d.textContent);
+    expect(rows[0]).toContain("B");
+    expect(rows[1]).toContain("A");
+    expect(rows[2]).toMatch(/Total.*3,?000|Total.*3K/);
+  });
+});
+
+describe("legend part with two blocks", () => {
+  it("a legend change replaces every block, never stacks another copy", async () => {
+    const data = [
+      { a: 1, b: 2, c: 10, s: "x" },
+      { a: 3, b: 4, c: 90, s: "x" },
+      { a: 5, b: 1, c: 40, s: "y" },
+    ];
+    const el = await mount((e) => {
+      e.spec = { type: "scatter", x: "a", y: "b", size: "c", series: "s", data } as ChartSpec;
+    });
+    const n = () => el.shadowRoot!.querySelectorAll(".maya-legend").length;
+    const start = n();
+    expect(start).toBeGreaterThan(1);
+    el.shadowRoot!.querySelector<HTMLElement>("[data-maya=legend] button")!.click();
+    await frame();
+    expect(n()).toBe(start);
+  });
+});
+
 describe("scatter without hit circles", () => {
   const pts = [
     { a: 10, b: 10, n: "p1" },

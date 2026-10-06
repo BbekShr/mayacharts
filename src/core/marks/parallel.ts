@@ -1,4 +1,4 @@
-import { el, esc, key, OTHER, r } from "../svg.ts";
+import { el, esc, key, OTHER, r, repel } from "../svg.ts";
 import { niceTicks } from "../ticks.ts";
 import type { Mark, Row } from "../types.ts";
 
@@ -54,7 +54,14 @@ export const parallel: Mark = {
         grid += el("line", { x1: x - 3, x2: x, y1: y, y2: y });
         labels += el(
           "text",
-          { x: x - 6, y, "text-anchor": "end", "dominant-baseline": "middle", "data-ax": true },
+          {
+            x: x - 6,
+            y,
+            "text-anchor": "end",
+            "dominant-baseline": "middle",
+            "data-ax": true,
+            "data-h": true,
+          },
           esc(ctx.fmt(m, v, t.step)),
         );
       }
@@ -75,6 +82,7 @@ export const parallel: Mark = {
     let dots = "";
     let paths = "";
     let hits = "";
+    const ends: { y: number; ey: number; x: string; si: number }[] = [];
     for (const { cat, ci, vals, si } of lines) {
       const x = ctx.fmt(spec.x, cat);
       let d = "";
@@ -105,8 +113,8 @@ export const parallel: Mark = {
         });
       });
       if (!d) continue;
-      // End label (dropped when it collides or leaves the svg); a line that stops early has none.
-      if (vals.at(-1) !== null) ctx.label(end[0]! + 7, end[1]!, x, "start");
+      // End labels are repelled below, never dropped; a line that stops early has none.
+      if (vals.at(-1) !== null) ends.push({ y: end[1]!, ey: end[1]!, x, si });
       paths += el("path", {
         "data-maya": "line",
         "data-key": key("l", cat),
@@ -121,6 +129,28 @@ export const parallel: Mark = {
         d,
       });
     }
+    // Repel: sorted by y, at least GAP apart (down pass, then up pass from the bottom edge); a moved label gets a leader.
+    const GAP = 13;
+    ends.sort((a, b) => a.y - b.y);
+    repel(
+      ends.map((e) => e.y),
+      0,
+      H - 4,
+      GAP,
+    ).forEach((y, i) => (ends[i]!.y = y));
+    const ex = at(ms.length - 1);
+    // ponytail: more lines than fit a 13 px column keep the old rule, a colliding name is dropped.
+    if (ends.length * GAP > H) for (const e of ends) ctx.label(ex + 7, e.ey, e.x, "start");
+    else
+      for (const e of ends) {
+        if (Math.abs(e.y - e.ey) > 2)
+          grid += el("line", { "data-s": e.si % 8, x1: ex + 2, x2: ex + 7, y1: e.ey, y2: r(e.y) });
+        labels += el(
+          "text",
+          { x: ex + 8, y: r(e.y), "text-anchor": "start", "dominant-baseline": "middle" },
+          esc(e.x),
+        );
+      }
     // Points first: the line~circle CSS rule (hide points until active) only matches circles after a line.
     // The hit paths share their stroke: set once on a group instead of on every row.
     return {
