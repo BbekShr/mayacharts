@@ -108,3 +108,41 @@ describe("dumbbell drill", () => {
     expect(down.crumbs).toContain("West");
   });
 });
+
+describe("dumbbell yDomain narrower than the data", () => {
+  const d = [
+    { c: "a", s: "p", v: 30 },
+    { c: "a", s: "q", v: 2 },
+    { c: "b", s: "p", v: -3 },
+    { c: "b", s: "q", v: 4 },
+  ];
+  for (const horizontal of [false, true])
+    it(`pins dots and connectors inside the plot (${horizontal ? "horizontal" : "vertical"})`, () => {
+      const s = svg({
+        type: "dumbbell",
+        x: "c",
+        y: "v",
+        series: "s",
+        yDomain: [0, 5],
+        horizontal,
+        data: d,
+      });
+      const [x, y, w, h] = s
+        .match(/data-plot="([^"]+)"/)![1]!
+        .split(" ")
+        .map(Number) as [number, number, number, number];
+      const [a, b] = horizontal ? [x, x + w] : [y, y + h];
+      const attrs = horizontal ? ["cx", "x1", "x2"] : ["cy", "y1", "y2"];
+      const vals = [...dots(s), ...links(s)].flatMap((t) =>
+        attrs.flatMap((k) =>
+          [...t.matchAll(new RegExp(` ${k}="([^"]+)"`, "g"))].map((m) => +m[1]!),
+        ),
+      );
+      expect(vals.length).toBe(8);
+      for (const v of vals) {
+        expect(v).toBeGreaterThanOrEqual(a - 0.1);
+        expect(v).toBeLessThanOrEqual(b + 0.1);
+      }
+      expect(s).toContain('data-y="30"');
+    });
+});

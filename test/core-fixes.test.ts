@@ -5,6 +5,7 @@ import { nf } from "../src/core/format.ts";
 import { shape, thin } from "../src/core/shape.ts";
 import { resolve, MayaSpecError } from "../src/core/validate.ts";
 import "../src/flow.ts";
+import "../src/hierarchy.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 const T0 = Date.UTC(2020, 0, 1);
@@ -115,5 +116,42 @@ describe("chord drill and css allowlist", () => {
       expect(() =>
         render({ type: "bar", x: "a", y: "b", data: [{ a: "p", b: 1 }], theme: { accent } }),
       ).toThrow(/unsafe/);
+  });
+});
+
+describe("all-null measures take the empty path", () => {
+  const data = [
+    { c: "a", v: null },
+    { c: "b", v: null },
+  ];
+  for (const type of ["bar", "line", "heatmap"])
+    it(type, () => {
+      const svg = render({
+        type,
+        x: "c",
+        y: "v",
+        ...(type === "heatmap" ? { series: "c" } : {}),
+        data,
+      } as ChartSpec);
+      expect(svg).toContain('data-maya="empty"');
+      expect(svg).not.toContain('data-maya="axes"');
+    });
+  it("treemap", () => {
+    const svg = render({ type: "treemap", path: ["c"], y: "v", data } as ChartSpec);
+    expect(svg).toContain('data-maya="empty"');
+  });
+  it("a hidden series keeps its axes", () => {
+    const spec = {
+      type: "bar",
+      x: "c",
+      y: "v",
+      series: "s",
+      data: [
+        { c: "a", s: "p", v: 1 },
+        { c: "b", s: "p", v: 2 },
+      ],
+    } as ChartSpec;
+    const svg = render(spec, { view: { hidden: ["p"] } });
+    expect(svg).not.toContain('data-maya="empty"');
   });
 });

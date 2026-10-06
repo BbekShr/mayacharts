@@ -13,6 +13,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 **Verification**
 
 - axe passes non-text contrast it cannot compute (SVG fills, ramps). Compute 1.4.11 contrast from rendered fills for any new ramp or density view.
+- An edge probe (every type times empty, one row, all null, zeros, negatives, 1e-300, 1e300, a yDomain that excludes data) found three bugs 947 tests missed; rerun it after any mark or format change. Check rendered text and coordinates, not just throws.
 - Feed every new numeric input the extremes (0, 8.64e15, 1e300, NaN-producing dates) before shipping; a loop guarded by `t > max` never ends on NaN.
 
 - Run the e2e baseline in apply runs and open every failing diff: a Firefox-only duplicate title from the late data table hid behind CI retries (2026-10-05).

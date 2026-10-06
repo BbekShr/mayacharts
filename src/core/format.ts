@@ -102,7 +102,7 @@ export function formatter(
   let [prefix, suffix] = tpl ? [tpl[1]!, tpl[3]!] : ["", ""];
   let date: F | null = null;
   let num: F | null = null;
-  let fine: F | null = null; // step-less percent below 1%: 0.0025 is "0.25%", not "0.3%"
+  let fine: F | null = null; // step-less values below 0.05, see below
   const preset = typeof e === "string" ? e : "auto";
   if (typeof e === "string" && Object.hasOwn(DATE_PRESETS, e)) {
     date = dtf(locale, { timeZone: "UTC", ...DATE_PRESETS[e] });
@@ -136,8 +136,10 @@ export function formatter(
                   }
                 : { maximumFractionDigits: Math.max(d, 2) };
     num = nf(locale, o);
-    if (preset === "percent" && step === undefined)
-      fine = nf(locale, { ...o, maximumFractionDigits: 2 });
+    // Step-less, a value under 0.05 gets 2 significant digits (they win over fraction digits),
+    // so 0.004 is "0.004" and 0.0025 is "0.25%", not "0".
+    if (step === undefined && preset !== "integer" && preset !== "decimal" && preset !== "currency")
+      fine = nf(locale, { ...o, maximumSignificantDigits: 2 });
   }
   return (v) => {
     if (v == null) return "";
@@ -154,7 +156,7 @@ export function formatter(
     } else
       out =
         typeof v === "number"
-          ? (fine && v && Math.abs(v) < 0.01 ? fine : num!).format(v)
+          ? (fine && v && Math.abs(v) < 0.05 ? fine : num!).format(v)
           : String(v);
     return prefix + out + suffix;
   };

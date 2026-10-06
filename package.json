@@ -110,14 +110,14 @@
     "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
   },
   "mayaSize": {
-    "dist/index.js": 32000,
-    "dist/element.js": 45824,
+    "dist/index.js": 32128,
+    "dist/element.js": 45952,
     "dist/theme.css": 4096,
     "dist/hierarchy.js": 4198,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 54912
+    "dist/maya.global.js": 55040
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

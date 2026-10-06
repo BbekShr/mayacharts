@@ -189,3 +189,49 @@ describe("en-US fast path (no ICU load) equals Intl", () => {
     expect(covered).toBeGreaterThanOrEqual(14); // the presets and every time-axis label format
   });
 });
+
+describe("step-less tiny values keep their digits", () => {
+  it("auto", () => {
+    const g = f("auto");
+    expect(g(0.004)).toBe("0.004");
+    expect(g(0.0012)).toBe("0.0012");
+    expect(g(0.00002)).toBe("0.00002");
+    expect(g(-0.004)).toBe("-0.004");
+    expect(g(1e-300)).not.toBe("0");
+    expect(g(0.012)).toBe("0.012");
+    expect(g(0.05)).toBe("0.05");
+    expect(g(0.123)).toBe("0.12");
+    expect(g(0)).toBe("0");
+  });
+  it("compact", () => {
+    expect(f("compact")(0.004)).toBe("0.004");
+    expect(f("compact")(0.06)).toBe("0.1");
+  });
+  it("ticks with a step are unchanged", () => {
+    expect(f("auto", "v", 1)(0.004)).toBe("0");
+  });
+  it("renders labels and a kpi headline", () => {
+    const bar = render({
+      type: "bar",
+      x: "c",
+      y: "v",
+      labels: true,
+      data: [
+        { c: "a", v: 0.0012 },
+        { c: "b", v: 0.004 },
+      ],
+    } as ChartSpec);
+    expect(bar).toContain(">0.0012<");
+    expect(
+      render({
+        type: "kpi",
+        x: "c",
+        y: "v",
+        data: [
+          { c: "a", v: 0.00002 },
+          { c: "b", v: 0.00004 },
+        ],
+      } as ChartSpec),
+    ).toContain("0.00004");
+  });
+});
