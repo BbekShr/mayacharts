@@ -302,17 +302,28 @@ export function tooltip(
     const rows = stk ? [...g].reverse() : g;
     tip.replaceChildren(
       h("b", a(m, "data-x")),
-      ...rows.map((k) => {
+      ...rows.flatMap((k) => {
         const row = h("div", "", k === m ? { "data-on": "" } : {});
         const s = a(k, "data-series");
+        // Scatter names its fields: "label\tvalue" lines, one row each under the series row.
+        const f = a(k, "data-f");
+        const tab = f.includes("\t");
         if (s) {
           if (k.hasAttribute("data-s")) row.append(h("i", "", { "data-s": a(k, "data-s") }));
           row.append(h("span", s));
-        } else if (label) row.append(h("span", label));
-        row.append(h("span", a(k, "data-f"), { "data-v": "" }));
+        } else if (label && !tab) row.append(h("span", label));
+        if (!tab) row.append(h("span", f, { "data-v": "" }));
         const tn = tone(k);
         if (tn) row.append(h("span", tn));
-        return row;
+        const more = tab
+          ? f.split("\n").map((p) => {
+              const [l, v] = p.split("\t"),
+                d = h("div");
+              d.append(h("span", l), h("span", v, { "data-v": "" }));
+              return d;
+            })
+          : [];
+        return row.childElementCount ? [row, ...more] : more;
       }),
       ...(stk && sp ? [h("div", "", { "data-t": "" })] : []),
     );

@@ -49,9 +49,9 @@ describe("scatter", () => {
     expect(attr(circles(svg)[0]!, "data-x")).toBe("big");
   });
 
-  it("tooltip payload: name title, x · y · size", () => {
+  it("tooltip payload: one label-tab-value line per field", () => {
     const c = circles(renderParts(bubbles).svg).find((m) => attr(m, "data-x") === "big")!;
-    expect(attr(c, "data-f")).toBe("a 2 · b 2 · z 1,000");
+    expect(attr(c, "data-f")).toBe("a\t2\nb\t2\nz\t1,000");
     expect(attr(c, "data-y")).toBe("2");
     expect(attr(c, "data-key")).toBe("~big");
   });

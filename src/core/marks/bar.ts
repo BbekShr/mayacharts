@@ -172,20 +172,31 @@ export const bar: Mark = {
         if (wf && est > cat.step && t !== first && t !== last) continue;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;
-        if (est <= w && h >= (hz ? 14 : 16))
-          // Over the bar's own fill: ink picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps).
-          labels += inText(cx, cy, text, {
-            "data-ink":
-              d["data-q"] === null
-                ? d["data-other"] || d["data-total"] || d["data-tone"]
-                  ? "b"
-                  : ""
-                : d["data-q"] >= 6
-                  ? ""
-                  : null,
-          });
-        else if (hz) ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start");
-        else {
+        // Over the bar's own fill: ink picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps).
+        const ink =
+          d["data-q"] === null
+            ? d["data-other"] || d["data-total"] || d["data-tone"]
+              ? "b"
+              : ""
+            : d["data-q"] >= 6
+              ? ""
+              : null;
+        if (est <= w && h >= (hz ? 14 : 16)) labels += inText(cx, cy, text, { "data-ink": ink });
+        else if (hz) {
+          // Outside the bar end when it fits (a negative one keeps clear of the axis labels), else inside the end.
+          if (
+            !(
+              (!neg || x - 4 - est >= ctx.plot.x) &&
+              ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start")
+            ) &&
+            est + 8 <= w &&
+            h >= 10
+          )
+            labels += inText(neg ? x + 4 : x + w - 4, cy, text, {
+              "data-ink": ink,
+              "text-anchor": neg ? "start" : "end",
+            });
+        } else {
           const ey = neg ? y + h : y;
           // A waterfall's first and last tag hug their column's outer edge instead of straddling a step.
           const end = t === last;

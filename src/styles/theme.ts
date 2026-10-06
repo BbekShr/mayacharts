@@ -169,7 +169,7 @@ export const css =
   '[data-tint="2"]{--t:70%}[data-tint="3"]{--t:48%}' +
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
-  "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text,:is(rect,path)[data-q]){opacity:.4}" +
+  "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text,:is(rect,path)[data-q],[data-kpi=fill]){opacity:.4}" +
   // A dimmed mark fades toward the page: its in-bar label flips to the page ink (tooltip.ts dim()).
   "[data-maya=labels] [data-in][data-dim]{fill:var(--maya-fg)}" +
   '[data-maya=marks]:has(circle[data-depth="0"][data-active]) [data-depth]{opacity:1}' +

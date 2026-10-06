@@ -205,9 +205,9 @@ export const scatter: Mark = {
               [spec.size, p.sz === null ? null : ctx.fmt(spec.size!, p.sz)],
               [cb, typeof cv === "number" ? ctx.fmt(cb!, cv) : null],
             ]
-              .map(([f, v]) => v !== null && `${spec.titles.get(f!) ?? f} ${v}`)
+              .map(([f, v]) => v !== null && `${spec.titles.get(f!) ?? f}\t${v}`)
               .filter(Boolean)
-              .join(" · "),
+              .join("\n"),
         // Guide pills: only when data-x / data-f are not already the formatted x and y.
         "data-gx": named ? x : null,
         "data-gy": named ? y : null,
