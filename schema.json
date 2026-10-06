@@ -89,6 +89,10 @@
       "type": "string",
       "description": "Second value field, drawn as a line on a right axis over the bars. Vertical bar only."
     },
+    "frame": {
+      "type": "string",
+      "description": "Playback: one frame per distinct value of this field (data order). Shows one frame, the last by default, names it in the title, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and \"1\" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell."
+    },
     "series": {
       "type": "string",
       "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to). bar line area scatter heatmap dumbbell."
@@ -117,8 +121,16 @@
       "description": "x values drawn as running-total bars. waterfall only."
     },
     "stack": {
-      "type": "boolean",
-      "description": "Stack series instead of grouping them. bar and area only."
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": ["percent"]
+        }
+      ],
+      "description": "Stack series instead of grouping them; \"percent\" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0). bar and area only."
     },
     "horizontal": {
       "type": "boolean",
@@ -245,7 +257,11 @@
           "density",
           "perCell",
           "mean",
-          "rule"
+          "rule",
+          "play",
+          "pause",
+          "frameOf",
+          "frame"
         ]
       }
     },
@@ -290,13 +306,29 @@
       "maxItems": 4,
       "items": {
         "oneOf": [
-          { "type": "number" },
-          { "const": "mean" },
+          {
+            "type": "number"
+          },
+          {
+            "const": "mean"
+          },
           {
             "type": "object",
             "properties": {
-              "y": { "oneOf": [{ "type": "number" }, { "const": "mean" }] },
-              "label": { "type": "string", "maxLength": 40 }
+              "y": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "const": "mean"
+                  }
+                ]
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 40
+              }
             },
             "required": ["y"],
             "additionalProperties": false

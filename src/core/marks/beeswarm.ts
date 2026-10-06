@@ -117,7 +117,7 @@ export const beeswarm: Mark = {
         const cx = xs[k]!;
         const cy = mid + off[k]!;
         marks += el("circle", { "data-maya": "mark", ...d, r: r(rad), cx: r(cx), cy: r(cy) });
-        if (spec.labels) ctx.label(cx, cy - rad, f, "above");
+        if (spec.labels) ctx.label(cx, cy - rad, f, "above", d["data-key"]);
       });
     }
     return { marks, hits: "" }; // no hit squares: the tooltip picks the nearest dot, as for scatter

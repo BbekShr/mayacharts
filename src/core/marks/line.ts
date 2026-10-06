@@ -128,6 +128,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
             ly - (k > 1 ? 9 : 0),
             text,
             (["above", "below", "end", "start"] as const)[k]!,
+            key(ser, cname),
           );
       }
     }
@@ -189,6 +190,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         "text",
         {
           "data-end": true,
+          "data-key": key("l", shaped.series[si]),
           "data-s": si % 8,
           x: r(x + 8),
           y: r(ys[i]!),

@@ -9,6 +9,12 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 ### Added
 
 - `rules` draws up to 4 reference lines across the value axis on bar (horizontal too), line, area and scatter: `rules: [100, "mean"]` or `rules: [{ y: 100, label: "Target" }]`. `"mean"` is the average of the visible values of the active measure (stacked: of the category totals) and is labelled "Average" by default. Each line shows its formatted value beside its label ("Target 100"). A numeric rule widens the value axis so a target above the data stays visible; a fixed `yDomain` wins and a rule outside it is not drawn. Each drawn rule adds a sentence to the auto description ("Target: 100."). New `text` keys `mean` and `rule`. Specs without `rules` render exactly as before.
+- `stack: "percent"` on bar and area shows each category's visible values as shares of its total: the value axis runs 0 to 100%, a hidden series renormalises the rest, and y is formatted as percent unless `format` sets it. Labels, tooltips and the data table show the share, not the raw value. Negative values are shares of the category's summed magnitudes and stack below 0. Numeric `rules` are shares (0.5 is 50%); `"mean"` is the mean share of the drawn segments, since every category totals 100%.
+- `frame: "<field>"` (bar, line, area, scatter, dumbbell) splits the rows into one frame per distinct value, in data order. A render shows one frame, the last by default; `view.frame` (an index, larger values clamp to the last) picks another, so SSR can render any frame. The title becomes the title plus the formatted frame value (new `text.frameOf`, "{0}, {1}"), the auto description adds "Frame 12 of 12." (`text.frame`), and every value axis spans all frames so it holds still while the frames play. With two or more frames the controls slot holds a `<button class="maya-play" data-maya="play">` labelled `text.play`; `text.pause` is the label while playing. `Parts.frame` is `[index, count]`. Specs without `frame` or `stack: "percent"` render exactly as before.
+
+### Changed
+
+- Value labels and band-axis category ticks carry `data-key` (the key of the mark they label, or of the category), so the element can move them with their marks on a data update instead of matching by index. A scatter with `frame` and `size` scales radii by the largest size over all frames, so one size is one radius in every frame.
 
 ### Fixed
 

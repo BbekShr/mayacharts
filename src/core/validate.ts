@@ -16,14 +16,14 @@
  *   unknown-option      top-level key not in ChartSpec (HINTS, else "did you mean")
  *   invalid-option      wrong type/value for a known option
  *   option-unsupported  option not valid for this type or pair
- *   stack-unsupported   stack: true with type "line"
+ *   stack-unsupported   stack (true or "percent") with type "line"
  *   invalid-domain      yDomain/xDomain not [lo, hi] with lo < hi
  *   invalid-format      unknown preset, bad Intl options, unsupported locale, bad currency
  *   invalid-theme       unknown theme token
  *   unsafe-css-value    colors/theme value outside the CSS allowlist
  *   invalid-size        RenderOptions width/height not finite > 0
  *   unknown-state       hexmap x names no US state (geo's Mark.check)
- *   too-many-marks      more than MAX_MARKS marks (thrown by render)
+ *   too-many-marks      more than MAX_MARKS marks or MAX_FRAMES frames (thrown by render)
  *   invalid-date        xType "time" with an x that is neither ISO 8601 nor epoch ms
  * "Did you mean": smallest score (|len diff| + chars not shared; ties to longest prefix), only if <= 3.
  * Lookups keyed by user input go through Object.hasOwn or Array#includes.
@@ -57,20 +57,25 @@ export class MayaSpecError extends Error {
 
 // ponytail: hard cap instead of virtualisation; suggest limit/aggregate.
 export const MAX_MARKS = 5000;
+/** Most distinct `frame` values (every render shapes every frame). */
+export const MAX_FRAMES = 200;
 // ponytail: fixed downsampling target; a time axis keeps at most this many categories (LTTB).
 export const MAX_POINTS = 1000;
 
 const w = (s: string) => s.split(" ");
 const S: Record<string, "string" | "boolean"> = Object.fromEntries([
-  ...w("$schema x y2 series size name title description locale currency").map((k) => [k, "string"]),
+  ...w("$schema x y2 series size name title description locale currency frame").map((k) => [
+    k,
+    "string",
+  ]),
   ...w(
-    "stack horizontal labels legend endLabels tooltip drill drillOut zoom grid xAxis yAxis table animate",
+    "horizontal labels legend endLabels tooltip drill drillOut zoom grid xAxis yAxis table animate",
   ).map((k) => [k, "boolean"]),
 ]);
 /** Every spec key (schema.json is tested against this). */
 export const KEYS = [
   ...w(
-    "type data y path totals aggregate sort limit format titles text yDomain xDomain rules select xType",
+    "type data y path totals aggregate sort limit format titles text yDomain xDomain rules select xType stack",
   ),
   ...w("colors colorBy theme"),
   ...Object.keys(S),
@@ -88,7 +93,7 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -117,6 +122,7 @@ const USE: Record<string, string> = {
   colorBy: "colouring marks by value",
   format: "formatting that field",
   titles: "naming that field",
+  frame: "the playback frames",
 };
 const HORIZ = "Use horizontal: true.";
 const SIZED = "Size comes from CSS, or render(spec, { width, height }).";
@@ -140,6 +146,7 @@ const HINTS: Record<string, string> = {
   formatter: "Functions are not supported (the spec is JSON). Use presets or Intl options.",
   "size:number": "spec.size names a field for bubble area. " + SIZED,
   "select:boolean": 'Use select: true or "multi".',
+  timeline: 'Use frame: "<field>".',
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -273,6 +280,7 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ],
   ["limit", "a positive integer", (v) => Number.isInteger(v) && v > 0],
   ["select", 'true or "multi"', (v) => v === true || v === "multi"],
+  ["stack", 'a boolean or "percent"', (v) => v === !!v || v === "percent"],
   [
     "colorBy",
     '"sign", { target: number } or a numeric field name',
@@ -486,7 +494,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       css(`theme.${k}`, v, k === "font");
   }
 
-  if (s.stack === true && t === "line")
+  if (s.stack && t === "line")
     fail(
       "stack-unsupported",
       "stack",
@@ -577,6 +585,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       ["name", s.name],
       ...arr("path", (path as string[] | undefined) ?? []),
       ["colorBy", colorBy === "sign" ? undefined : colorBy],
+      ["frame", s.frame],
     ];
     for (const [p, f] of fields) {
       if (typeof f !== "string" || has(f)) continue;
@@ -693,9 +702,9 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   const { view: v, selected: sel, nonce } = o;
   if (v !== undefined) {
     if (!isObj(v)) inv("view", v, "an object");
-    const vk = w("measure drill window hidden sortBy");
+    const vk = w("measure drill window hidden sortBy frame");
     for (const k of Object.keys(v as object)) if (!vk.includes(k)) unknown("options.view", k, vk);
-    const { measure, drill, window: win, hidden, sortBy } = v as Record<string, unknown>;
+    const { drill, window: win, hidden, sortBy } = v as Record<string, unknown>;
     if (
       sortBy !== undefined &&
       !(
@@ -706,8 +715,11 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
       )
     )
       inv("view.sortBy", sortBy, '[field, "asc" | "desc"]');
-    if (measure !== undefined && !(Number.isInteger(measure) && (measure as number) >= 0))
-      inv("view.measure", measure, "an index (integer >= 0)");
+    for (const k of ["measure", "frame"]) {
+      const n = (v as Record<string, unknown>)[k];
+      if (n !== undefined && !(Number.isInteger(n) && (n as number) >= 0))
+        inv("view." + k, n, "an index (integer >= 0)");
+    }
     if (drill !== undefined && !strs(drill)) inv("view.drill", drill, "an array of strings");
     if (hidden !== undefined && !strs(hidden)) inv("view.hidden", hidden, "an array of strings");
     if (
@@ -740,9 +752,10 @@ function rank(rows: readonly Row[], f: string, y: string): string[] {
 }
 
 /**
- * Apply defaults plus the view's measure and drill. Assumes `spec` passed validateSpec.
- * Drill keeps rows whose path[i] equals drill[i], then advances: bar/line/area take the next
- * level as x; path types keep the remaining levels.
+ * Apply defaults plus the view's measure, frame and drill. Assumes `spec` passed validateSpec.
+ * Frame keeps the rows of one `frame` value (view.frame, default the last). Drill keeps rows
+ * whose path[i] equals drill[i], then advances: bar/line/area take the next level as x; path
+ * types keep the remaining levels.
  */
 export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const measures = typeof spec.y === "string" ? [spec.y] : [...spec.y];
@@ -753,13 +766,18 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const drilled = spec.drill ? (view.drill ?? []).slice(0, Math.max(0, full.length - keep)) : [];
   const path = full.slice(drilled.length);
   const f = spec.format;
+  const F = spec.frame;
+  const fv = F ? [...new Set(spec.data.flatMap((r) => (r[F] == null ? [] : [String(r[F])])))] : [];
+  const fi = Math.min(view.frame ?? fv.length, fv.length - 1);
+  const rows = F ? spec.data.filter((r) => String(r[F]) === fv[fi]) : spec.data;
   const entries = <T>(o: Readonly<Partial<Record<string, T>>> | undefined) =>
     Object.entries(o ?? {}).filter((e): e is [string, T] => e[1] !== undefined);
   return {
     type: spec.type,
     data: drilled.length
-      ? spec.data.filter((r) => drilled.every((d, i) => String(r[full[i]!]) === d))
-      : spec.data,
+      ? rows.filter((r) => drilled.every((d, i) => String(r[full[i]!]) === d))
+      : rows,
+    frame: F ? [F, fv, fi] : null,
     x: spec.x ?? (PATHX.includes(spec.type) ? (path[0] ?? "") : ""),
     xType: spec.xType ?? "auto",
     y: measures[measure]!,
@@ -780,7 +798,11 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     sort: spec.sort ?? null,
     sortBy: view.sortBy ?? null,
     limit: spec.limit ?? null,
-    format: new Map(typeof f === "string" ? measures.map((m) => [m, f]) : entries<FieldFormat>(f)),
+    // stack "percent" shows shares: percent unless the spec formats the measure.
+    format: new Map<string, FieldFormat>([
+      ...measures.flatMap((m) => (spec.stack === "percent" ? [[m, "percent"] as const] : [])),
+      ...(typeof f === "string" ? measures.map((m) => [m, f] as const) : entries<FieldFormat>(f)),
+    ]),
     // A scatter names its axes by field: two numeric axes say nothing otherwise.
     titles: new Map([
       ...(spec.type === "scatter" ? [spec.x!, measures[measure]!] : []).map(

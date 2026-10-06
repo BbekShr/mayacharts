@@ -54,7 +54,14 @@ export const ridgeline: Mark = {
         (m, c) => (c.value !== null && (!m || c.value > m.value!) ? c : m),
         null,
       );
-      if (top) ctx.label(Number(px(top.ci)), py(top.value!), ctx.fmt(spec.y, top.value!), "above");
+      if (top)
+        ctx.label(
+          Number(px(top.ci)),
+          py(top.value!),
+          ctx.fmt(spec.y, top.value!),
+          "above",
+          key(ser, shaped.categories[top.ci]!),
+        );
       const runs: Cell[][] = [[]];
       for (const c of cells) {
         if (c.value === null) {

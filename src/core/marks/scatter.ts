@@ -164,8 +164,9 @@ export const scatter: Mark = {
     const sy = ctx.y as { of(v: number): number };
     const pts = points(spec, shaped);
     if (pts.length > MAX_MARKS) return bins(ctx, pts);
-    let max = 0;
-    for (const p of pts) if (p.sz !== null) max = Math.max(max, Math.abs(p.sz));
+    let max = ctx.sizeMax ?? 0;
+    if (ctx.sizeMax === null)
+      for (const p of pts) if (p.sz !== null) max = Math.max(max, Math.abs(p.sz));
     const scale = Math.min(plot.w, plot.h) / 16;
     const radius = (v: number) => 3 + Math.sqrt(Math.abs(v) / max) * scale;
     // Dense plots read as density: points shrink and thin out as they multiply (isolated ones keep their outline).
@@ -220,7 +221,7 @@ export const scatter: Mark = {
         cx: r(cx),
         cy: r(cy),
       });
-      if (spec.labels) ctx.label(cx, cy - rad(p), y, "above");
+      if (spec.labels) ctx.label(cx, cy - rad(p), y, "above", key(ser, ids?.get(p) ?? p.i));
     }
     // Size key: three reference circles drawn with the marks' own radius rule, values rounded to one digit.
     const ref = [0.1, 0.25, 0.5].map((f) => Number((max * f).toPrecision(1)));

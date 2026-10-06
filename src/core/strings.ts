@@ -61,6 +61,13 @@ export const TEXT = {
   mean: "Average",
   /** Description name of an unlabelled numeric rule ("Reference line: 100."). */
   rule: "Reference line",
+  /** Frame playback button (spec.frame), and its label while playing. */
+  play: "Play",
+  pause: "Pause",
+  /** Title with spec.frame: {0} = title, {1} = formatted frame value. */
+  frameOf: "{0}, {1}",
+  /** Auto description with spec.frame: {0} = frame number, {1} = frame count. */
+  frame: "Frame {0} of {1}",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

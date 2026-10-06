@@ -54,7 +54,6 @@ const MEKKO =
 // (the tooltip sets data-lit where `data-a` lists the node) and dims the rest; hovering a link
 // lifts it and keeps every node bright.
 const FLOW =
-  "[data-neu]{--c:var(--maya-fg-muted)}" +
   (
     "[data-maya=link]{opacity:.45;fill:var(--c)}" +
     "M:has([data-active]) [data-maya=link]{opacity:.08}" +
@@ -71,7 +70,7 @@ const HEXMAP =
   `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--c);stroke-width:1.5;stroke-linejoin:round}` +
   `${HEX}:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2.5}` +
   "[data-maya=grid] [data-none]{stroke-opacity:.7;shape-rendering:auto}" +
-  "[data-hex] i{width:120px;height:10px;border-radius:3px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}";
+  "[data-hex] i{width:120px;height:10px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}";
 
 // scatter
 // SCAT = a chart with two linear axes (scatter only).
@@ -90,7 +89,7 @@ const SCATTER =
   `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit;transform-origin:center}` +
   `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))")}}` +
   `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q],[data-hm]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 35%)*1.15)))")}}` +
-  `[data-d] i{flex:none;width:80px;background:linear-gradient(90deg,${DENS("0%")},${DENS("75%")})}[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("37%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("37%")},${DENS("75%")})}` +
+  `[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("37%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("37%")},${DENS("75%")})}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
@@ -106,10 +105,10 @@ export const css =
   ".maya-title{font-weight:600;font-size:15px;letter-spacing:-.01em;margin:0 0 6px}" +
   ".maya-legend,.maya-crumbs{color:var(--maya-fg-muted);display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;margin:0 0 8px}" +
   ".maya-crumbs{min-height:1.25em;line-height:1.25}" +
-  `.maya-legend :is(button,span),.maya-crumbs button,.maya-reset{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
+  `.maya-legend :is(button,span),.maya-crumbs button,.maya-reset,.maya-play{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
   ":is(.maya-legend,.maya-crumbs) button:hover{background:var(--maya-grid);color:var(--maya-fg)}" +
   ".maya-legend [aria-pressed=false]{opacity:.5}.maya-legend [aria-pressed=false] i{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}" +
-  ":is(.maya-legend,.maya-crumbs) button:focus-visible,.maya-reset:focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
+  ":is(button,a):focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
   "i{width:10px;height:10px;border-radius:3px;background:var(--c)}" +
   "[data-maya=ramp]{display:flex;align-items:center;gap:6px}[data-maya=ramp] b{font-weight:500;color:var(--maya-fg);margin-inline-end:4px}" +
   "[data-maya=ramp] circle{fill:none;stroke:var(--maya-fg-muted)}" +
@@ -117,8 +116,8 @@ export const css =
   // Ramp floor: the background, lifted toward the accent in dark mode so low steps stay visible.
   // Declared once where the theme overrides live, not on every ramp mark (speed).
   ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
-  ".maya-reset{position:absolute;top:4px;right:4px;border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}" +
-  ".maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;align-self:flex-start;margin:0 0 8px;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
+  ".maya-reset,.maya-play{border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-reset{position:absolute;top:4px;right:4px}" +
+  ".maya-ctl,.maya-play{margin:0 0 8px;align-self:flex-start}.maya-play{min-height:24px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
   ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a;transition:transform .3s var(--maya-ease)}" +
   C +
   `.maya-ctl [role=radio]{${B};position:relative;padding:4px 12px;border-radius:6px;transition:color .2s}` +
@@ -130,12 +129,12 @@ export const css =
   ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:11px}" +
   "[data-maya=grid] *{stroke:var(--maya-grid);shape-rendering:crispEdges}" +
   S +
-  "[data-other],[data-total]{--c:var(--maya-fg-muted)}" +
+  "[data-other],[data-total],[data-neu]{--c:var(--maya-fg-muted)}" +
   "[data-tone=good]{--c:var(--maya-good)}[data-tone=bad]{--c:var(--maya-bad)}" +
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
-  "[data-stack] rect[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1}" +
+  "[data-stack] rect[data-maya=mark],:not(circle)[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
   // Active mark: an ink ring, fill untouched, so in-mark labels keep their contrast.
   ":is(rect,path)[data-maya=mark][data-active]{stroke:var(--maya-fg);stroke-width:1.5}" +
   "[data-pt] circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
@@ -159,7 +158,6 @@ export const css =
   "[data-maya=marks] text{fill:var(--maya-fg)}" +
   "[data-maya=sort]{cursor:pointer}[data-maya=sort] rect{fill:transparent}[data-maya=sort] text{font-weight:600}[data-maya=sort]:focus-visible{outline:2px solid var(--maya-focus)}" +
   ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks]:has(path[data-active]) path[data-maya=line]:not([data-active]){opacity:.25}" +
-  ":not(circle)[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
   // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
   // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.
   "circle[data-depth][data-maya]{fill:none;stroke:color-mix(in oklab,var(--c) var(--t,100%),var(--maya-bg));transition:stroke .5s}" +
