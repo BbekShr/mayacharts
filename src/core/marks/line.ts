@@ -22,14 +22,8 @@ const ends: NonNullable<Mark["ends"]> = (spec, shaped, fmt) =>
     ? []
     : shaped.visible.flatMap((si) => {
         const c = shaped.cells.filter((c) => c.si === si && c.value !== null).at(-1);
-        return c
-          ? [
-              [spec.titles.get(shaped.series[si]!) ?? shaped.series[si]!, fmt(spec.y, c.value)] as [
-                string,
-                string,
-              ],
-            ]
-          : [];
+        const n = shaped.series[si]!;
+        return c ? [[spec.titles.get(n) ?? n, fmt(spec.y, c.value)] as [string, string]] : [];
       });
 
 function draw(ctx: MarkCtx, fill: boolean): MarkOut {
@@ -42,7 +36,8 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   let areas = "";
   let lines = "";
   let dots = "";
-  const ep: [number, number, string, number][] = [];
+  const tx = ctx.gutter ? ends(spec, shaped, ctx.fmt) : [];
+  const ep: [number, number, number, [string, string]][] = [];
   for (const si of shaped.visible) {
     const ser = shaped.series[si]!;
     const cells: Cell[] = shaped.cells.filter((c) => c.si === si); // ascending ci, as shape lays them out
@@ -108,15 +103,12 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         const [p, q] = [at(i - 1), at(i + 1)];
         const [lx, ly, text] = [+px(c.ci), val.of(c.y1), ctx.fmt(spec.y, c.value)];
         const w = text.length * 7.2 + 4;
-        const C = [
-          [lx, ly, "above", lx - w / 2, ly - 16],
-          [lx, ly, "below", lx - w / 2, ly + 2],
-          [lx - 5, ly - 9, "end", lx - 5 - w, ly - 16],
-          [lx + 5, ly - 9, "start", lx + 5, ly - 16],
-        ] as const;
         const f = p <= c.y1 && q <= c.y1 ? 0 : p >= c.y1 && q >= c.y1 ? 1 : p < c.y1 ? 2 : 3;
-        const o = [C[f], ...C.filter((_, k) => k !== f)].find(([, , , l, t]) =>
-          path.every(([x1, y1], j) => {
+        // k: 0 above, 1 below, 2 end (left), 3 start (right); l, t the box's left and top.
+        const k = [f, 0, 1, 2, 3].find((k) => {
+          const l = lx + [-w / 2, -w / 2, -5 - w, 5][k]!;
+          const t = ly + (k === 1 ? 2 : -16);
+          return path.every(([x1, y1], j) => {
             const [x0, y0] = path[j - 1] ?? [x1, y1];
             const [a, b] = [Math.max(x0, l), Math.min(x1, l + w)];
             if (a > b || x1 === x0) return true;
@@ -125,13 +117,19 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
               number,
             ];
             return Math.max(ya, yb) < t || Math.min(ya, yb) > t + 14;
-          }),
-        );
-        if (o) ctx.label(o[0], o[1], text, o[2]);
+          });
+        });
+        if (k !== undefined)
+          ctx.label(
+            lx + [0, 0, -5, 5][k]!,
+            ly - (k > 1 ? 9 : 0),
+            text,
+            (["above", "below", "end", "start"] as const)[k]!,
+          );
       }
     }
     const e = path.at(-1);
-    if (e) ep.push([e[1], e[0], ser, si]);
+    if (e) ep.push([e[1], e[0], si, tx[ep.length]!]);
     if (fill) {
       const sh = runs
         .filter((run) => run.length > 0)
@@ -166,16 +164,13 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   // does not fit), nudged 14 px apart; a short leader when moved more than 3 px.
   let end = "";
   if (ctx.gutter) {
-    const tx = ends(spec, shaped, ctx.fmt);
-    const o = ep.map((e, i) => [...e, tx[i]!] as const).sort((a, b) => a[0] - b[0]);
+    const o = ep.sort((a, b) => a[0] - b[0]);
     const ys = o.map((e) => e[0]);
-    ys.forEach((y, i) => (ys[i] = Math.max(y, i ? ys[i - 1]! + 14 : plot.y)));
+    for (const [i, y] of ys.entries()) ys[i] = Math.max(y, (ys[i - 1] ?? plot.y - 14) + 14);
     for (let i = ys.length - 1; i >= 0; i--)
-      ys[i] = Math.min(ys[i]!, i < ys.length - 1 ? ys[i + 1]! - 14 : plot.y + plot.h);
-    o.forEach(([ey, x, , si, [n, v]], i) => {
-      const full = `${n} ${v}`;
-      const fit = ctx.gutter - 12;
-      const lab = tw(full) <= fit ? full : clip(n, fit);
+      ys[i] = Math.min(ys[i]!, (ys[i + 1] ?? plot.y + plot.h + 14) - 14);
+    o.forEach(([ey, x, si, [n, v]], i) => {
+      const ok = tw(`${n} ${v}`) <= ctx.gutter - 12;
       if (Math.abs(ys[i]! - ey) > 3)
         end += el("line", {
           "data-lead": true,
@@ -194,8 +189,8 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
           y: r(ys[i]!),
           "dominant-baseline": "middle",
         },
-        esc(lab === full ? n : lab) +
-          (lab === full ? `<tspan data-v="" dx="4">${esc(v)}</tspan>` : ""),
+        esc(ok ? n : clip(n, ctx.gutter - 12)) +
+          (ok ? `<tspan data-v="" dx="4">${esc(v)}</tspan>` : ""),
       );
     });
   }

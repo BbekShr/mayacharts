@@ -188,24 +188,23 @@ export const bar: Mark = {
         else {
           const ey = neg ? y + h : y;
           // A waterfall's first and last tag hug their column's outer edge instead of straddling a step.
-          const edge = wf && (t === first || t === last);
-          const ax = edge ? (t === last ? x + w : x) : cx;
-          const l0 = edge ? (t === last ? ax - est : ax) : cx - est / 2;
+          const end = t === last;
+          const edge = wf && (end || t === first);
+          const ax = edge ? (end ? x + w : x) : cx;
+          const l0 = edge ? (end ? ax - est : ax) : cx - est / 2;
           const [t0, t1] = neg ? [ey + 3, ey + 16] : [ey - 16, ey - 3];
-          // A label that would print over a taller neighbour is dropped, not smeared across it.
-          const over = tags.some(
-            ([, bx, by, bw, bh]) =>
-              bx !== x && l0 < bx + bw && l0 + est > bx && t0 < by + bh && t1 > by,
-          );
-          if (edge) {
-            // Clear a neighbour that pokes into the label's band: sit just beyond its end.
-            let e = ey;
-            for (const [, bx, by, bw, bh] of tags)
-              if (bx !== x && l0 < bx + bw && l0 + est > bx)
-                if (neg ? by + bh > e && by < e + 16 : by < e && by + bh > e - 16)
-                  e = neg ? by + bh : by;
-            ctx.label(ax, neg ? e + 9 : e - 9, text, t === last ? "end" : "start");
-          } else if (!over) ctx.label(cx, ey, text, neg ? "below" : "above");
+          // One scan of the column's neighbours. Not an edge tag: a taller neighbour under the label
+          // drops it. An edge tag clears a neighbour poking into its band by sitting beyond its end.
+          let e = ey;
+          let over = false;
+          for (const [, bx, by, bw, bh] of tags)
+            if (bx !== x && l0 < bx + bw && l0 + est > bx) {
+              over ||= t0 < by + bh && t1 > by;
+              if (neg ? by + bh > e && by < e + 16 : by < e && by + bh > e - 16)
+                e = neg ? by + bh : by;
+            }
+          if (edge) ctx.label(ax, neg ? e + 9 : e - 9, text, end ? "end" : "start");
+          else if (!over) ctx.label(cx, ey, text, neg ? "below" : "above");
         }
       }
     }

@@ -34,13 +34,8 @@ export function clip(s: string, max: number): string {
  * (< 400). Name and value when that fits in 30% of the width, else the name alone (clipped at 30%).
  */
 export function endGutter(p: readonly [string, string][], W: number): number {
-  const m = (f: (a: [string, string]) => string) => Math.max(...p.map((a) => tw(f(a)))) + 14;
-  return W < 400
-    ? 0
-    : Math.min(
-        W * 0.3,
-        m(([n, v]) => `${n} ${v}`) <= W * 0.3 ? m(([n, v]) => `${n} ${v}`) : m(([n]) => n),
-      );
+  const m = (k: number) => Math.max(...p.map((a) => tw(a.slice(0, k).join(" ")))) + 14;
+  return W < 400 ? 0 : Math.min(W * 0.3, m(2) <= W * 0.3 ? m(2) : m(1));
 }
 
 export interface Frame {
