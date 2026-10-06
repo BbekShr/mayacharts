@@ -103,3 +103,10 @@ describe("kpi", () => {
     expect(() => renderParts({ ...base, colorBy: "sign" })).toThrow(/option-unsupported|colorBy/);
   });
 });
+
+describe("kpi period caption", () => {
+  it("is right-aligned over the sparkline's last point", () => {
+    const t = svg(base).match(/<text[^>]*data-kpi="period"[^>]*>/)![0];
+    expect(t).toContain('text-anchor="end"');
+  });
+});
