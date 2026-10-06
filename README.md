@@ -495,7 +495,7 @@ Four events, all `bubbles: true, composed: true`:
 - `maya-select {selected: Sel[], target: (Sel & {value}) | null}` - mark selected
 - `maya-view {measure, drill, window, hidden}` - measure toggled, drilled, zoomed, or a legend series hidden (user actions only; `window` is the zoom slice)
 - `maya-error {code, path, message}` - spec error (cancelable; preventDefault() hides error box)
-- `maya-render {}` - render complete (ThoughtSpot: call `viz.events.emitRenderCompletedEvent()`)
+- `maya-render {}` - render complete (use it to tell a host the chart has painted)
 
 Properties: `el.view` and `el.selected` (getters and setters; no events on set).
 
@@ -619,19 +619,6 @@ const data = Object.entries(columns).map(([field, values]) =>
 );
 const spec = { type: "bar", x: "month", y: "revenue", data };
 chart.spec = spec;
-```
-
-**ThoughtSpot**: Call `viz.getDataFromSearchQuery().getData()` to get the columnar table, then `viz.events.emitRenderCompletedEvent()` on `maya-render`:
-
-```js
-const table = viz.getDataFromSearchQuery().getData();
-const rows = table.columns.map((col) =>
-  Object.fromEntries(col.values.map((v, i) => [col.name, v])),
-);
-chart.data = rows;
-chart.addEventListener("maya-render", () => {
-  viz.events.emitRenderCompletedEvent();
-});
 ```
 
 ## Theming
