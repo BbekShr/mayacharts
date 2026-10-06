@@ -4,6 +4,14 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- Small values no longer print as "0". Without a tick step (value labels, the KPI headline, tooltips), `auto`, `compact` and `percent` give a non-zero value below 0.05 two significant digits: 0.004 is "0.004", 0.0012 is "0.0012", 0.012 is "0.012". Axis ticks are unchanged.
+- Data with rows but no number in any measure (every value null) shows the "No data" text instead of an empty 0 to 1 axis. A hidden series or a zoom window over nothing still keeps its axes.
+- Line, area and dumbbell points outside a fixed `yDomain` sit on the plot edge instead of being drawn over the axis labels and title, as bars already were. Tooltips keep the real value.
+
 ## 0.7.0 - 2026-10-06
 
 ### Changed
