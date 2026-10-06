@@ -100,7 +100,9 @@
  *     <g data-maya="labels">   value labels (text), from ctx.label
  *     <g data-maya="cross">    crosshair (line/area), moved via CSSOM transform
  *     <g data-maya="hits">     invisible enlarged targets (see below)
- *   Empty data: grid/axes/groups omitted, `<text data-maya="empty">` (text.noData) centered.
+ *   Empty: no row holds a number in any measure or y2. Grid/axes/groups
+ *   omitted, `<text data-maya="empty">` (text.noData) centered. Judged on the data, not on what
+ *   drew: a hidden series or a zoom window over nothing keeps its axes and legend.
  *   Marks group attributes are synced on patch.
  *
  * Hydration contract — the ONLY selectors the element layer may rely on:
@@ -386,8 +388,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
   const ends = spec.endLabels === false ? null : mark.ends?.(s, shaped, fmt);
   const gutter = ends?.length ? endGutter(ends, W) : 0;
+  const empty = !s.data.some((r) => [...s.measures, s.y2].some((m) => typeof r[m!] === "number"));
   const f =
-    mark.axes && s.data.length
+    mark.axes && !empty
       ? frame(s0, mark.axes(s, shaped), { width: W, height: H, gutter }, fmt)
       : null;
   const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
@@ -420,7 +423,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   let markLegend: string | null = null;
   let note = "";
   let body = "";
-  if (s.data.length === 0) {
+  if (empty) {
     body = el(
       "text",
       {
