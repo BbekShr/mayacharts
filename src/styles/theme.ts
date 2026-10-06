@@ -91,7 +91,7 @@ const SCATTER =
   `${SCAT}[data-maya=marks]{--p:58%;stroke-width:1.25;${P("var(--maya-series-1)")}}${SCAT}[data-maya=marks]:has(>[data-dense]){--p:30%}` +
   `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit}` +
   `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))")}}` +
-  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q],[data-hm]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 42%)*1.7)))")}}` +
+  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q],[data-hm]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 35%)*1.15)))")}}` +
   `[data-d] i{flex:none;width:80px;background:linear-gradient(90deg,${DENS("0%")},${DENS("75%")})}[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("37%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("37%")},${DENS("75%")})}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);transform-origin:center;filter:none}` +
@@ -154,7 +154,7 @@ export const css =
   "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of]){fill:var(--maya-fg-muted)}" +
   "[data-line] i{height:2px;border-radius:1px}" +
   // Direct end labels of line and area, in their series colour.
-  "[data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
+  "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
   // Break marks on a clipped Other bar; parallel tick halos and end-label leaders.
   "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none;pointer-events:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
   // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.
@@ -200,7 +200,7 @@ export const css =
   "svg:has(rect[data-depth]) [data-maya=labels] [data-in]{fill:#12161c}" +
   "rect[data-tint]{fill:color-mix(in oklab,var(--c) var(--t,100%),#fff)}" +
   // Hexmap label ink by ramp step (4.5:1 each): black on steps 8 and 9, white on dark steps 6 and 7.
-  "[data-maya=labels] text[data-q][data-dark]{fill:#12161c}" +
+  "[data-maya=labels] text[data-q][data-dark]{fill:light-dark(#12161c,#000)}" +
   '[data-maya=labels] :is([data-q="6"],[data-q="7"]){fill:light-dark(var(--maya-fg),#fff)}' +
   HEXMAP +
   SCATTER +

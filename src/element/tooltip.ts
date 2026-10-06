@@ -110,7 +110,10 @@ export function tooltip(
   // In-bar labels of dimmed marks take the page ink: the bar fades toward the page, the label must not.
   const dim = (m?: Element) => {
     const on = m
-      ? [m, ...peers].filter((e) => e.localName === "rect" && !e.hasAttribute("data-depth"))
+      ? [m, ...peers].filter(
+          (e) =>
+            e.localName === "rect" && !e.hasAttribute("data-depth") && !e.hasAttribute("data-q"),
+        )
       : [];
     for (const t of box.querySelectorAll("[data-maya=labels] [data-in]")) {
       const [x, y] = [+a(t, "x"), +a(t, "y")];
@@ -165,6 +168,7 @@ export function tooltip(
     let lo = Infinity,
       hi = -Infinity;
     for (const k of group(m)) {
+      if (k.localName !== "rect") continue; // a y2 line's points share the group
       const p = +a(k, hz ? "y" : "x"),
         q = p + +a(k, hz ? "height" : "width");
       ((lo = Math.min(lo, p)), (hi = Math.max(hi, q)));
