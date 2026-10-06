@@ -59,6 +59,7 @@ export const heatmap: Mark = {
       if (text.length * 7.2 + 4 > w) text = ctx.fmt(spec.y, +v.toPrecision(2));
       if (spec.labels !== false && w >= 24 && h >= 24 && text.length * 7.2 + 4 <= w)
         labels += inText(x + w / 2, y + h / 2, text, {
+          "data-key": d["data-key"],
           "data-dark": d["data-q"] < 2,
           "data-ink": d["data-q"] < 2 ? null : "b",
         });

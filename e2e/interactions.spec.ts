@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
+import { FRAME } from "./specs.ts";
 
 async function settle(page: Page): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
@@ -360,5 +361,27 @@ test.describe("tooltip clamp", () => {
     expect(r.t).toBeGreaterThanOrEqual(0);
     expect(r.b).toBeLessThanOrEqual(r.h);
     await ctx.close();
+  });
+});
+
+test.describe("frame playback", () => {
+  test("Play steps from the first frame to the last and stops", async ({ page }) => {
+    await open(page);
+    await page.evaluate((spec) => {
+      const el = document.createElement("maya-chart") as any;
+      el.id = "frames";
+      el.style.cssText = "display:block;width:640px;height:320px";
+      document.body.prepend(el);
+      el.spec = spec;
+    }, FRAME);
+    const title = page.locator("#frames .maya-title");
+    const play = page.locator("#frames .maya-play");
+    await expect(title).toContainText("2023");
+    await play.click();
+    await expect(play).toHaveText("Pause");
+    await expect(title).toContainText("2021");
+    await expect(title).toContainText("2023", { timeout: 5000 });
+    await expect(play).toHaveText("Play");
+    expect((await view(page, "frames")).frame).toBe(2);
   });
 });

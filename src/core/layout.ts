@@ -1,6 +1,6 @@
 import { dtf } from "./format.ts";
 import { bandScale, linearScale, timeScale } from "./scale.ts";
-import { el, esc, r } from "./svg.ts";
+import { el, esc, key, r } from "./svg.ts";
 import { niceTicks, timeTicks } from "./ticks.ts";
 import type { Axis, Box, LinearScale, ResolvedSpec, Scale, TimeScale } from "./types.ts";
 
@@ -231,6 +231,7 @@ export function frame(
             y: r(b.at(i) + b.bandwidth / 2),
             "text-anchor": "end",
             "dominant-baseline": "middle",
+            "data-key": key(ly.domain[i]),
           },
           esc(t) + (t === c ? "" : el("title", {}, esc(c))),
         );
@@ -326,7 +327,12 @@ export function frame(
         const t = few ? clip(c, plot.w / bLab.length - 8) : c;
         ax += el(
           "text",
-          { x: r(b.at(i) + b.bandwidth / 2), y: ty, "text-anchor": "middle" },
+          {
+            x: r(b.at(i) + b.bandwidth / 2),
+            y: ty,
+            "text-anchor": "middle",
+            "data-key": key(bx.domain[i]),
+          },
           esc(t) + (t === c ? "" : el("title", {}, esc(c))),
         );
       });

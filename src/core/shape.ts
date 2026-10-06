@@ -193,15 +193,25 @@ export function shape(
   cats.forEach((c, i) => {
     let pos = 0;
     let neg = 0;
+    // ponytail: stack "percent" keeps only the share (no raw value for tooltips), NON-FEATURES.
+    // stack "percent": shares of the category's visible total of magnitudes (0 when it is 0), so
+    // negatives stack below 0 and the span is 1. Running sums are divided, not summed shares, so
+    // an all-positive stack tops out at exactly 1.
+    // Values are pre-divided by the series count so two 1e308 cells do not overflow the total.
+    const d = s.stack === "percent" ? visible.length : 1;
+    const k =
+      (s.stack === "percent" && visible.reduce((a, j) => a + Math.abs((c.vals[j] ?? 0) / d), 0)) ||
+      1;
     for (const j of visible) {
-      const value = c.vals[j] ?? null;
-      const v = value ?? 0;
+      const raw = c.vals[j] ?? null;
+      const value = raw === null ? null : raw / d / k;
+      const v = (raw ?? 0) / d;
       // Plain assignments: array destructuring is slow in V8's interpreter (first render).
       let y0 = wf ? spans.get(c)![0] : 0,
         y1 = wf ? spans.get(c)![1] : v;
       if (s.stack) {
-        y0 = v < 0 ? neg : pos;
-        y1 = v < 0 ? (neg += v) : (pos += v);
+        y0 = (v < 0 ? neg : pos) / k;
+        y1 = (v < 0 ? (neg += v) : (pos += v)) / k;
       }
       lo = Math.min(lo, y0, y1);
       hi = Math.max(hi, y0, y1);

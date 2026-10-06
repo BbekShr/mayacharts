@@ -277,6 +277,7 @@ export const SKIP = new Set([
   "text",
   "yDomain",
   "xDomain",
+  "rules",
   "colors",
   "colorBy",
   "theme",

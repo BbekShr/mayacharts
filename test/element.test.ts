@@ -85,9 +85,9 @@ describe("<maya-chart>", () => {
     const box = document.createElement("div");
     const svg = (d: typeof rows) => renderParts(spec(d), { width: 640, height: 320 }).svg;
     patch(box, svg(rows), false);
-    const first = [...box.querySelectorAll("[data-key]")];
+    const first = [...box.querySelectorAll("[data-maya=marks] [data-key]")];
     patch(box, svg([rows[0]!, rows[2]!, { q: "Q3", r: "N", v: 1 }]), true);
-    const now = [...box.querySelectorAll("[data-key]")];
+    const now = [...box.querySelectorAll("[data-maya=marks] [data-key]")];
     expect(now.map((m) => m.getAttribute("data-key"))).toEqual(["N~Q1", "N~Q2", "N~Q3"]);
     expect(now[0]).toBe(first[0]);
     expect(now[1]).toBe(first[2]);

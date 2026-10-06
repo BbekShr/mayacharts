@@ -72,8 +72,16 @@ export const dumbbell: Mark = {
           const text = ctx.fmt(spec.y, v);
           const down = hz ? cx >= ox : cy >= oy;
           const side = other === undefined ? hz : si === 1 ? down : !down;
-          if (hz) ctx.label(cx + (side ? rad + 4 : -rad - 4), cy, text, side ? "start" : "end");
-          else ctx.label(cx, cy + (side ? rad : -rad), text, side ? "below" : "above");
+          if (hz)
+            ctx.label(
+              cx + (side ? rad + 4 : -rad - 4),
+              cy,
+              text,
+              side ? "start" : "end",
+              d["data-key"],
+            );
+          else
+            ctx.label(cx, cy + (side ? rad : -rad), text, side ? "below" : "above", d["data-key"]);
         }
       }
     }

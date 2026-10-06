@@ -17,6 +17,8 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Feed every new numeric input the extremes (0, 8.64e15, 1e300, NaN-producing dates) before shipping; a loop guarded by `t > max` never ends on NaN.
 
 - Run the e2e baseline in apply runs and open every failing diff: a Firefox-only duplicate title from the late data table hid behind CI retries (2026-10-05).
+- Agents sharing one scratchpad overwrite each other's baselines: give every agent its own scratch subdirectory.
+- Price a new spec field with a scratch build before promising it: `rules` was estimated at 250 B and measured 950 B.
 - Screenshot every visual change at 2x in light, dark, hovered, 360px and one hostile case, and open the files. Agent-reported screenshots have been mislabelled; look at the chart yourself before shipping.
 - Motion is verified by frames (0, 120, 270 ms, landed) in chromium AND webkit, never by unit tests alone.
 - Playwright per-pixel tolerance let a full sunburst recolour pass against the old baseline. Regenerate changed baselines on purpose, darwin locally and linux in the CI image, then `npm ci`.

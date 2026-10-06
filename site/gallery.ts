@@ -6,6 +6,7 @@ import "mayacharts/radial";
 import type { ChartSpec, Row } from "../src/index.ts";
 import {
   makeData,
+  makeLive,
   makeMonths,
   makePoints,
   makeReadings,
@@ -33,6 +34,16 @@ const rows = (r: Record<string, unknown>[], f: (x: Record<string, any>) => Row):
 const mon = (ms: number) =>
   new Date(ms).toLocaleString("en-US", { month: "short", timeZone: "UTC" });
 
+/** The live feed has no frame field: its windows are stepped by the loop printed beside it. */
+let feedWindows: ChartSpec[] = [];
+const feedLoop = `const chart = document.querySelector("maya-chart");
+const rows = spec.data; // spec: the object above
+let i = 0;
+setInterval(() => {
+  const n = 3 * (i++ % (rows.length / 3 - 39));
+  chart.spec = { ...spec, data: rows.slice(n, n + 120) };
+}, 600);`;
+
 /** Every tile's spec, built from one dataset. Re-rolling a tile rebuilds it from a new seed. */
 function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   const out: Record<string, ChartSpec> = {};
@@ -47,7 +58,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     format: { monthMs: "month", sales: "compact", units: "compact" },
     titles: { sales: "Sales ($)", units: "Units" },
     zoom: true,
-    data: rollup(FACTS, ["monthMs"], { sales: sum("sales"), units: sum("units") }) as Row[],
+    data: FACTS,
   });
 
   // 2. Cumulative sales by region.
@@ -79,7 +90,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     series: "family",
     stack: true,
     format: { monthMs: "month", sales: "compact" },
-    data: rollup(FACTS, ["monthMs", "family"], { sales: sum("sales") }) as Row[],
+    data: FACTS,
   });
 
   // 4. Waterfall of monthly deltas.
@@ -139,7 +150,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     limit: 10,
     labels: true,
     format: "compact",
-    data: rollup(FACTS, ["state"], { sales: sum("sales") }) as Row[],
+    data: FACTS,
   });
 
   // 7. Bubble.
@@ -187,10 +198,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     series: "region",
     format: "compact",
     titles: { sales: "Sales", units: "Units" },
-    data: rollup(FACTS, ["region", "family"], {
-      sales: sum("sales"),
-      units: sum("units"),
-    }) as Row[],
+    data: FACTS,
   });
 
   // 10. Calendar heatmap.
@@ -287,7 +295,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     x: "month",
     y: "sales",
     colorBy: { target: Math.round((monthTotals[11]!.sales * 1.05) / 1e5) * 1e5 },
-    format: { sales: "compact" },
+    format: "compact",
     titles: { sales: "Sales ($)" },
     data: monthTotals.map((m) => ({ month: mon(m.monthMs), sales: m.sales })),
   });
@@ -315,7 +323,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     y: "sales",
     series: "region",
     format: { monthMs: "month", sales: "compact" },
-    data: byRegionMonth as Row[],
+    data: FACTS,
   });
 
   // 18. Beeswarm: every item's margin, grouped by family.
@@ -326,7 +334,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     x: "family",
     y: "margin",
     name: "item",
-    format: { margin: "percent" },
+    format: "percent",
     data: rollup(FACTS, ["item", "family"], { margin: mean("margin") }) as Row[],
   });
 
@@ -369,7 +377,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     path: ["region", "family"],
     y: "sales",
     format: "compact",
-    data: rollup(FACTS, ["region", "family"], { sales: sum("sales") }) as Row[],
+    data: FACTS,
   });
 
   // 22. Marimekko: column width is the region total, segments are families.
@@ -381,7 +389,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     y: "sales",
     series: "family",
     format: "compact",
-    data: rollup(FACTS, ["region", "family"], { sales: sum("sales") }) as Row[],
+    data: FACTS,
   });
 
   // 23. Waffle: one hundred cells, one per percent of sales.
@@ -392,7 +400,19 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     x: "family",
     y: "sales",
     format: "compact",
-    data: rollup(FACTS, ["family"], { sales: sum("sales") }) as Row[],
+    data: FACTS,
+  });
+
+  // 23b. Percent stack: every bar filled to 100%, so the mix compares across regions.
+  tile("share-bar", {
+    type: "bar",
+    title: "Family mix by region",
+    titles: { sales: "Share of sales" },
+    x: "region",
+    y: "sales",
+    series: "family",
+    stack: "percent",
+    data: FACTS,
   });
 
   // 24. Radial bars: monthly sales (one series, so the tip totals show).
@@ -403,7 +423,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     x: "monthMs",
     y: "sales",
     format: { monthMs: "month", sales: "compact" },
-    data: monthTotals as Row[],
+    data: FACTS,
   });
 
   // 25. Bar with a second axis: sales as bars, units as the right axis.
@@ -415,7 +435,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     y2: "units",
     format: { sales: "compact", units: "compact" },
     titles: { sales: "Sales ($)", units: "Units" },
-    data: rollup(FACTS, ["family"], { sales: sum("sales"), units: sum("units") }) as Row[],
+    data: FACTS,
   });
 
   // 26. Horizontal bars with value labels; click a family to drill into its items.
@@ -430,7 +450,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     sort: "desc",
     labels: true,
     format: "compact",
-    data: rollup(FACTS, ["family", "item"], { sales: sum("sales") }) as Row[],
+    data: FACTS,
   });
 
   // 27. Single-series area, which gets the gradient fill.
@@ -442,6 +462,24 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     y: "sales",
     format: { monthMs: "month", sales: "compact" },
     data: monthTotals as Row[],
+  });
+
+  // 27b. Reference lines: a numeric target above most of the data widens the axis, "mean" is computed.
+  tile("rules", {
+    type: "bar",
+    title: "Monthly sales against target",
+    titles: { sales: "Sales ($)" },
+    x: "month",
+    y: "sales",
+    rules: [
+      {
+        y: Math.round((Math.max(...monthTotals.map((m) => m.sales)) * 1.15) / 1e5) * 1e5,
+        label: "Target",
+      },
+      "mean",
+    ],
+    format: "compact",
+    data: monthTotals.map((m) => ({ month: mon(m.monthMs), sales: m.sales })),
   });
 
   // 28. Line with value labels.
@@ -487,9 +525,87 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     titles: { orders: "Orders", month: "Month" },
     x: "month",
     y: "orders",
-    format: { orders: "compact" },
+    format: "compact",
     data: makeMonths(seedOf(FACTS)),
   });
+
+  // 32. Bar race: one frame per month. A running total is host prep: one row per state and month.
+  const best = new Set(
+    (
+      rollup(FACTS, ["stateName"], { sales: sum("sales") }) as {
+        stateName: string;
+        sales: number;
+      }[]
+    )
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 12)
+      .map((r) => r.stateName),
+  );
+  const cum = new Map<string, number>();
+  tile("race", {
+    type: "bar",
+    title: "Sales race by state",
+    titles: { sales: "Sales ($)" },
+    horizontal: true,
+    x: "stateName",
+    y: "sales",
+    sort: "desc",
+    labels: true,
+    frame: "month",
+    format: { month: { month: "short" }, sales: "compact" },
+    data: rows(
+      rollup(
+        FACTS.filter((r) => best.has(r.stateName)),
+        ["month", "stateName"],
+        { sales: sum("sales") },
+      ),
+      (r) => {
+        const t = (cum.get(r.stateName) ?? 0) + r.sales;
+        cum.set(r.stateName, t);
+        return { month: r.month, stateName: r.stateName, sales: t };
+      },
+    ),
+  });
+
+  // 33. Moving bubbles: one per state and month; the axes span every frame, so only the bubbles move.
+  tile("drift", {
+    type: "scatter",
+    title: "Sales and margin by state",
+    titles: { sales: "Sales ($)", margin: "Margin", units: "Units", stateName: "State" },
+    x: "sales",
+    y: "margin",
+    size: "units",
+    name: "stateName",
+    series: "region",
+    frame: "month",
+    format: { month: { month: "short" }, sales: "compact", margin: "percent", units: "compact" },
+    data: rollup(FACTS, ["month", "stateName", "region"], {
+      sales: sum("sales"),
+      units: sum("units"),
+      margin: mean("margin"),
+    }) as Row[],
+  });
+
+  // 34. Live line: three sensors, a new reading every 600 ms, the last 40 kept.
+  const live = makeLive(seedOf(FACTS));
+  const feed: ChartSpec = {
+    type: "line",
+    title: "Sensor load, last 40 readings",
+    titles: { load: "Load" },
+    x: "time",
+    y: "load",
+    series: "sensor",
+    yDomain: [
+      Math.floor(Math.min(...live.map((r) => r.load)) / 20) * 20,
+      Math.ceil(Math.max(...live.map((r) => r.load)) / 20) * 20,
+    ],
+    data: live,
+  };
+  feedWindows = Array.from({ length: live.length / 3 - 39 }, (_, i) => ({
+    ...feed,
+    data: live.slice(3 * i, 3 * i + 120),
+  }));
+  tile("feed", feedWindows[0]!);
   return out;
 }
 
@@ -498,6 +614,29 @@ const seedOf = (f: Dataset["FACTS"]) => Math.round(f.reduce((a, r) => a + r.sale
 const seed = () => (Math.random() * 2 ** 32) >>> 0;
 for (const [id, spec] of Object.entries(specs(makeData(7)))) show(id, spec);
 
+// The feed's Play button steps its windows; scrolling it away, or a re-roll, pauses it.
+const feedChart = $<Chart>("feed");
+const feedBtn = $("feed-play");
+let i = 0;
+let timer = 0;
+const stop = () => {
+  clearInterval(timer);
+  timer = 0;
+  feedBtn.textContent = "Play";
+};
+const tick = () => {
+  feedChart.spec = feedWindows[i++]!;
+  if (i === feedWindows.length) ((i = 0), stop());
+};
+feedBtn.onclick = () => {
+  if (timer) return stop();
+  feedBtn.textContent = "Pause";
+  tick();
+  timer = window.setInterval(tick, 600);
+};
+new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting || stop())).observe(feedChart);
+$("feed-loop").textContent = feedLoop;
+
 // Re-roll one tile, or every tile from the header button.
 document.addEventListener("click", (e) => {
   const btn = (e.target as Element).closest<HTMLElement>("[data-reroll]");
@@ -505,6 +644,7 @@ document.addEventListener("click", (e) => {
   const all = specs(makeData(seed()));
   const id = btn.dataset.reroll;
   for (const [k, spec] of Object.entries(all)) if (!id || k === id) show(k, spec);
+  stop();
 });
 
 theme();

@@ -50,3 +50,15 @@ export const SPECS: Record<string, object> = {
     ],
   },
 };
+
+/** Playback: three frames of one bar chart (not in SPECS: the gallery specs are one per type). */
+export const FRAME: object = {
+  type: "bar",
+  title: "Sales",
+  x: "k",
+  y: "v",
+  frame: "yr",
+  data: ["2021", "2022", "2023"].flatMap((yr, i) =>
+    rows.map((r) => ({ ...r, yr, v: r.v * (i + 1) })),
+  ),
+};

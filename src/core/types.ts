@@ -126,12 +126,15 @@ export interface ChartSpec<R extends object = Row> {
   /** x values drawn as running-total bars. waterfall only.
    * @example totals: ["Q1", "FY"] */
   totals?: readonly string[];
-  /** Stack series instead of grouping them. bar and area only.
-   * @example stack: true */
-  stack?: boolean;
+  /** Stack series instead of grouping them; "percent" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0). bar and area only.
+   * @example stack: "percent" */
+  stack?: boolean | "percent";
   /** Categories on the left axis. bar and dumbbell.
    * @example horizontal: true */
   horizontal?: boolean;
+  /** Playback: one frame per distinct value (data order); the chart shows one frame at a time, the last by default, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and "1" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell; not with `drill` or `zoom`.
+   * @example frame: "year" */
+  frame?: Field<R>;
   /** Second value field, drawn as a line on a right axis over the bars. Vertical bar only.
    * @example y2: "units" */
   y2?: Field<R>;
@@ -166,6 +169,9 @@ export interface ChartSpec<R extends object = Row> {
   /** Fixed x domain. scatter only.
    * @example xDomain: [0, 1] */
   xDomain?: readonly [number, number];
+  /** Reference lines across the value axis (at most 4): a number, or "mean" of the visible values (stacked: of the category totals), optionally labelled. bar line area scatter.
+   * @example rules: [100, "mean"] or rules: [{ y: 100, label: "Target" }] */
+  rules?: readonly (number | "mean" | { readonly y: number | "mean"; readonly label?: string })[];
 
   /** Hover/keyboard tooltip. Default true.
    * @example tooltip: false */
@@ -234,6 +240,8 @@ export interface View {
   hidden?: readonly string[];
   /** Table column sort from a header click: [field, direction]. */
   sortBy?: readonly [field: string, dir: "asc" | "desc"];
+  /** Index into the distinct `frame` values (data order). Default: the last; larger is clamped. */
+  frame?: number;
 }
 
 export interface RenderOptions {
@@ -315,7 +323,9 @@ export interface ResolvedSpec {
   size: string | null;
   name: string | null;
   totals: string[];
-  stack: boolean;
+  stack: boolean | "percent";
+  /** spec.frame: [field, distinct values in data order, index shown]; `data` holds that frame's rows. */
+  frame: readonly [field: string, values: readonly string[], i: number] | null;
   horizontal: boolean;
   aggregate: Aggregate;
   sort: "asc" | "desc" | null;
@@ -342,6 +352,8 @@ export interface ResolvedSpec {
   currency: string;
   yDomain: readonly [number, number] | null;
   xDomain: readonly [number, number] | null;
+  /** spec.rules in object form ([] when unset). */
+  rules: readonly { y: number | "mean"; label: string | null }[];
   table: boolean;
   animate: boolean;
   colors: readonly string[] | ReadonlyMap<string, string> | null;
@@ -469,6 +481,8 @@ export interface MarkCtx {
   plot: Box;
   /** Right gutter (px) reserved for direct end labels; 0 = none, and the legend is dropped. */
   gutter: number;
+  /** With spec.frame and spec.size: the largest |size| over every frame (so a radius means one value in all frames); else null. */
+  sizeMax: number | null;
   /** The [name, last value] pairs those end labels show (empty when there is no gutter). */
   ends: readonly [string, string][];
   /** Scale of the bottom (horizontal) axis; null when the mark has none. */
@@ -479,8 +493,8 @@ export interface MarkCtx {
   y2: LinearScale | null;
   /** Display text for a raw value of `field` (step = tick step for number decimals). */
   fmt(field: string, v: unknown, step?: number): string;
-  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. */
-  label(x: number, y: number, text: string, place: LabelPlace): boolean;
+  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. `key` = the data-key of the mark it labels. */
+  label(x: number, y: number, text: string, place: LabelPlace, key?: string): boolean;
   /** colorBy tone for a value: "good" | "bad", or null when colorBy is not sign/target. */
   tone(v: number): "good" | "bad" | null;
   /** colorBy ramp bucket 0..9 for a value of the colorBy field; null when colorBy is not a field. */
@@ -536,6 +550,8 @@ export interface Parts {
   vars: [string, string][];
   /** Non-fatal notes for the developer (never rendered). */
   warnings: string[];
+  /** With spec.frame: [index shown, frame count]. */
+  frame?: readonly [i: number, n: number];
 }
 
 /* ------------------------------------------------------------------ */

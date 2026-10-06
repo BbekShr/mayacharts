@@ -203,4 +203,90 @@ describe("motion", () => {
     expect(new Set(out.map((c) => c.e)).size).toBe(out.length);
     el.remove();
   });
+
+  it("value labels and axes are patched in place on a data update, never crossfaded away", async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    const at = (k: number) =>
+      ({
+        type: "bar",
+        x: "x",
+        y: "v",
+        labels: true,
+        data: [
+          { x: "a", v: k },
+          { x: "b", v: 2 * k },
+        ],
+      }) as unknown as ChartSpec;
+    el.spec = at(100);
+    document.body.append(el);
+    await frame();
+    const g = (k: string) => root(el).querySelector(`[data-maya=${k}]`);
+    const [labels, axis] = [g("labels"), g("axis-y")];
+    const s = spy();
+    el.spec = at(300);
+    await frame();
+    s.done();
+    expect(g("labels")).toBe(labels);
+    expect(g("axis-y")).toBe(axis);
+    expect(root(el).querySelectorAll("[data-ghost] text").length).toBe(0);
+    expect(s.calls.some((c) => (c.e === labels || c.e === axis) && c.k.at(-1)?.opacity === 0)).toBe(
+      false,
+    );
+    el.remove();
+  });
+
+  it("a value label whose digit count changes never counts up from zero", async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    const at = (k: number) =>
+      ({
+        type: "bar",
+        x: "x",
+        y: "v",
+        labels: true,
+        data: [
+          { x: "a", v: k },
+          { x: "b", v: 2 * k },
+        ],
+      }) as unknown as ChartSpec;
+    el.spec = at(4);
+    document.body.append(el);
+    await frame();
+    el.spec = at(6); // 4 -> 6 counts; 8 -> 12 changes digit count and must not start at 0
+    await frame();
+    const t = [...root(el).querySelectorAll("[data-maya=labels] text")].map((e) => +e.textContent!);
+    expect(Math.min(...t)).toBeGreaterThanOrEqual(4);
+    el.remove();
+  });
+
+  it("labels follow their own key, keep tspans, and a rotated axis title is not slid", () => {
+    const box = document.createElement("div");
+    const lab = (k: string, y: number, v: string) =>
+      `<text data-key="${k}" x="10" y="${y}">${k}<tspan data-v dx="4">${v}</tspan></text>`;
+    const svg = (labels: string, ax: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="10 10 80 80"><g data-maya="marks"></g><g data-maya="labels">${labels}</g><g data-maya="axis-y">${ax}</g></svg>`;
+    const title = (y: number) => `<text transform="rotate(-90)" x="-50" y="${y}">T</text>`;
+    patch(
+      box,
+      svg(lab("a", 20, "10") + lab("b", 40, "20"), `<text x="1" y="5">5</text>` + title(5)),
+      false,
+    );
+    const [a, b] = [...box.querySelectorAll("[data-maya=labels] text")];
+    const s = spy();
+    patch(
+      box,
+      svg(lab("b", 20, "20") + lab("a", 40, "10"), `<text x="1" y="5">5</text>` + title(9)),
+      true,
+    );
+    s.done();
+    const now = [...box.querySelectorAll("[data-maya=labels] text")];
+    expect(now).toEqual([a, b]); // nodes kept by key, not by index
+    expect(a!.getAttribute("y")).toBe("40");
+    expect(a!.querySelector("tspan[data-v]")!.textContent).toBe("10");
+    const slid = s.calls.filter((c) => c.k.some((f) => f.transform && f.transform !== "none"));
+    expect(new Set(slid.map((c) => c.e))).toEqual(new Set([a, b]));
+    expect(box.querySelectorAll("[transform]").length).toBe(2); // old and new title, old one fading
+    expect(s.calls.some((c) => c.e.hasAttribute("transform") && c.k.some((f) => f.transform))).toBe(
+      false,
+    );
+  });
 });

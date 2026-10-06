@@ -171,6 +171,19 @@
               <td>Second value field, drawn as a line on a right axis. Vertical bars only</td>
             </tr>
             <tr>
+              <td><a class="spec-anchor" id="frame"></a><code>frame</code></td>
+              <td>field</td>
+              <td>bar line area scatter dumbbell</td>
+              <td>
+                Playback: one frame per distinct value of the field, in data order (values match as
+                strings, null rows belong to no frame, at most 200 frames). The chart shows one
+                frame, the last by default (view.frame picks another), and its title becomes the
+                title plus the frame value (text.frameOf, formatted by the field's format). Value
+                axes span every frame, so they hold still while it plays. The element adds a Play
+                button
+              </td>
+            </tr>
+            <tr>
               <td><a class="spec-anchor" id="series"></a><code>series</code></td>
               <td>field</td>
               <td>bar line area scatter heatmap dumbbell</td>
@@ -202,9 +215,15 @@
             </tr>
             <tr>
               <td><a class="spec-anchor" id="stack"></a><code>stack</code></td>
-              <td>boolean</td>
+              <td>boolean | "percent"</td>
               <td>bar area</td>
-              <td>Stack series instead of grouping</td>
+              <td>
+                Stack series instead of grouping. "percent" shows each category's visible values as
+                shares of its total: the axis runs 0 to 100%, hidden series renormalise, and y is
+                formatted as percent unless format sets it. Labels, tooltips and the table show the
+                share, not the raw value. Negative values are shares of the summed magnitudes and
+                stack below 0
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="horizontal"></a><code>horizontal</code></td>
@@ -261,7 +280,8 @@
                 Localised UI strings with {0} placeholders: noData other back reset showing
                 drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
                 crumbs positive negative above below vs ofTarget total shareOf sortedBy ascending
-                descending
+                descending fromTo reduced points point range density perCell mean rule play pause
+                frameOf frame
               </td>
             </tr>
             <tr>
@@ -302,6 +322,18 @@
               <td>[min, max]</td>
               <td>-</td>
               <td>Fixed x domain (scatter only)</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="rules"></a><code>rules</code></td>
+              <td>(number | "mean" | {y, label?})[]</td>
+              <td>-</td>
+              <td>
+                Reference lines across the value axis, at most 4, labels at most 40 characters.
+                "mean" is the average of the visible values (stacked: of the category totals; stack
+                "percent": of the segment shares, and numbers are shares such as 0.5) and reads
+                "Average" without a label. Numbers widen the value axis; outside a yDomain they are
+                not drawn. bar line area scatter
+              </td>
             </tr>
           </tbody>
         </table>
