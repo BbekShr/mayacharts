@@ -4,21 +4,14 @@ import { el, esc, r } from "./svg.ts";
 import { niceTicks, timeTicks } from "./ticks.ts";
 import type { Axis, Box, LinearScale, ResolvedSpec, Scale, TimeScale } from "./types.ts";
 
-const wide = (c: number) =>
-  (c >= 0x1100 && c <= 0x115f) ||
-  (c >= 0x2e80 && c <= 0xa4cf) ||
-  (c >= 0xac00 && c <= 0xd7a3) ||
-  (c >= 0xf900 && c <= 0xfaff) ||
-  (c >= 0xfe30 && c <= 0xfe4f) ||
-  (c >= 0xff00 && c <= 0xff60) ||
-  (c >= 0xffe0 && c <= 0xffe6);
+const WIDE =
+  /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]/;
 
 // ponytail: no text measurement in Node; 0.6 em per code point, 1 em for East-Asian-wide ones.
 const tw = (s: string) => {
-  let n = 0;
-  let k = 0;
-  for (const ch of s) wide(ch.codePointAt(0)!) ? k++ : n++;
-  return n * 7.2 + k * 12;
+  const a = [...s];
+  const k = a.filter((c) => WIDE.test(c)).length;
+  return (a.length - k) * 7.2 + k * 12;
 };
 const w = (s: string) => tw(s) + 8;
 const maxW = (a: readonly string[]) => a.reduce((m, s) => Math.max(m, w(s)), 0);

@@ -218,8 +218,7 @@
  *
  * Layout (layout.ts frame()): no text measurement exists in Node, so axis label widths are
  *   estimated as 0.6 em per code point (1 em for East-Asian-wide) * 12 + 8, value labels
- *   (ctx.label) as chars * 7.2 + 4. Only a mark that fits its own label may rotate it (sunburst,
- *   along the radius); axis labels are never rotated. Band axes draw every nth label
+ *   (ctx.label) as chars * 7.2 + 4. Axis labels are never rotated. Band axes draw every nth label
  *   (bottom: by width, left: 14 px per step); left band labels are cut at 40% of the width.
  *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
  *
@@ -350,23 +349,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
   const boxes: number[][] = [];
   let labels = "";
-  const label = (x: number, y: number, text: string, place: LabelPlace, rotate?: number) => {
-    // Rotated labels skip the overlap scan: the mark has already fitted them inside itself.
-    if (rotate !== undefined) {
-      labels += el(
-        "text",
-        {
-          x: r(x),
-          y: r(y),
-          transform: `rotate(${r(rotate)} ${r(x)} ${r(y)})`,
-          "text-anchor": "middle",
-          "dominant-baseline": "middle",
-          "data-in": true,
-        },
-        esc(text),
-      );
-      return true;
-    }
+  const label = (x: number, y: number, text: string, place: LabelPlace) => {
     const w = text.length * 7.2 + 4;
     const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
     const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;

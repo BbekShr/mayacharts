@@ -472,9 +472,8 @@ export interface MarkCtx {
   y2: LinearScale | null;
   /** Display text for a raw value of `field` (step = tick step for number decimals). */
   fmt(field: string, v: unknown, step?: number): string;
-  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped.
-   * `rotate` (degrees about the anchor) skips the overlap scan: the mark must fit it itself. */
-  label(x: number, y: number, text: string, place: LabelPlace, rotate?: number): boolean;
+  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. */
+  label(x: number, y: number, text: string, place: LabelPlace): boolean;
   /** colorBy tone for a value: "good" | "bad", or null when colorBy is not sign/target. */
   tone(v: number): "good" | "bad" | null;
   /** colorBy ramp bucket 0..9 for a value of the colorBy field; null when colorBy is not a field. */
