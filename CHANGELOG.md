@@ -48,6 +48,19 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - Sankey and chord outer columns use one neutral, the muted foreground, instead of a grey ramp that fell to 1.58 to 1.
 - Hexmap labels on ramp steps 7 and 8 use the theme foreground in both modes.
 - The gallery radial tile is single series so its tip totals show, the horizontal bar tile drills, and tiles show display titles instead of raw field names.
+- Sunburst drills keep the centre label readable: the old centre text crossfades into the new one instead of leaving a blank disc.
+- The tooltip of a line chart with several measures and no series field names the active measure instead of showing an empty cell.
+- At narrow widths a tall sankey node slides its label to find room, so the biggest leaves keep their names, and two-line labels keep clear of neighbours and the plot edge.
+- Hexmap value labels are solid ink and every label measures at least 4.5 to 1 against its fill in light and dark mode.
+- A sunburst ring of slivers keeps its largest child as a thin slice ahead of "Other".
+- A `limit` roll-up bar no longer sets the value scale; it runs to the plot edge with its full value in the label and tooltip.
+- Waterfall charts always label the first bar and the Total; a step label that does not fit its column is dropped instead of overlapping.
+- Line value labels sit above peaks, below troughs and to the free side on slopes, instead of on the line.
+- Parallel charts label each line's category at the last axis when it fits, and their tick labels are muted.
+- The kpi period caption sits above the sparkline's last point.
+- Radial bars state a year shared by every date label once, in the centre, instead of on every category.
+- Heatmap cells too small for a label are squares centred in their band, and the heatmap ramp legend shows the measure name.
+- Gallery: calendar weeks run Monday to Sunday, margin varies per item, a drillable sankey tile was added, and the demo's first chart has a title and value labels.
 
 ## 0.5.0 - 2026-10-05
 

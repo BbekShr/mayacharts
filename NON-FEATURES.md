@@ -58,7 +58,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **kpi delta is against the previous period only**: compare with a year earlier by passing two rows (for example "2025 YTD" and "2026 YTD") as the x periods.
 - **One y2 line**: `y2` takes one field, aggregated per category across every series, on a 0-anchored right axis.
 - **Dumbbell sort**: `sort` orders categories by the total of both values, not by the gap between them.
-- **Ridgeline scale**: rows share one value scale with no per-row axis; peaks overlap the row above by at most 40%.
+- **Ridgeline scale**: rows share one value scale from zero with no per-row axis; peaks overlap the row above by at most 40%. A scale from the data minimum does not help when rows differ in magnitude, and per-row scaling would exaggerate small movements.
 - **Beeswarm height**: a swarm taller than its row is clamped to the row, so overflow points overlap.
 - **Parallel axes**: every axis runs from 0 (or the minimum) to a nice maximum; no per-axis domain, and nulls break a line.
 - **Table height**: rows that do not fit the chart's height are not drawn (no scroll or paging); `limit` cuts to the top N with no Other row.
@@ -78,6 +78,14 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Beeswarm dodge**: each point checks only the 50 most recently placed neighbours, so a very dense tie cluster can overlap a little; the swarm is clamped to its row past about 25 points anyway.
 - **Sunburst names**: a name runs straight along its arc, upright, cut so its chord stays inside the ring; it is never curved, and a slice too short for 4 characters has no name (the tooltip names it).
 - **Treemap ramp ink**: treemap tiles coloured by a `colorBy` ramp use dark ink on every step, so the darkest steps can fall under 4.5 to 1.
+- **Sunburst of slivers**: a ring of hundreds of equal slices shows its largest as a thin slice and the rest as "Other (n)"; drill or filter to see them.
+- **Sankey narrow labels**: a label slides only within its own node's height; small nodes crowded beside a bigger one lose their label (the tooltip still names them).
+- **Hexmap hover ink**: while a hex is hovered, every label takes the text colour, so the hovered hex's own label can fall under 4.5 to 1.
+- **Waterfall labels**: a step label wider than its column is dropped, with no thinning; the first bar and the Total are always labelled.
+- **Roll-up bar**: the Other bar from `limit` never sets the value scale and is clipped at the plot edge, with no clip mark; its value is in the label and tooltip.
+- **Parallel end labels**: colliding end labels are dropped, not nudged apart, so lines that end close together share one label.
+- **Radial year**: a shared trailing four-digit year moves to the centre caption, which hides below about 170 px.
+- **Small heatmap cells**: cells under 26 px become squares with a 2 px gap, so a 52-week calendar at 360 px draws 3 px dots.
 
 ## What you can do instead
 
