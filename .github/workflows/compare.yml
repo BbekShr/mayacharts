@@ -1,18 +1,29 @@
 name: Compare
 
-# Re-measures every library in e2e/compare/ref (compare.json), their bundle sizes (compare-size.json)
+# Measures the libraries in e2e/compare/ref (compare.json), their bundle sizes (compare-size.json)
 # and the code it takes to write each chart (compare-ease.json), and commits the three files when
-# they changed.
+# they changed. A release tag re-measures mayaCharts only (COMPARE_LIBS=maya) and keeps the other
+# libraries' last numbers: their code is pinned by compare/package-lock.json. Every library is
+# re-measured when that lockfile or a reference module changes on main, or by hand with full: true.
 # The LLM eval (eval/run.mjs) calls a paid API and never runs here.
 # The measuring job installs npm packages and has read-only access. Only the second job can write,
 # and it runs no repository code.
 on:
-  schedule:
-    - cron: "0 6 * * 1"
   push:
     tags:
       - "v*"
+    branches:
+      - main
+    paths:
+      - compare/package.json
+      - compare/package-lock.json
+      - e2e/compare/ref/**
   workflow_dispatch:
+    inputs:
+      full:
+        description: Re-measure every library, not only mayaCharts
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -36,7 +47,13 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run compare
+      # Tag pushes and default manual runs measure mayaCharts only; a push to main (lockfile or
+      # reference change) or full: true measures every library.
+      - run: |
+          if [ "$FULL" != "true" ]; then export COMPARE_LIBS=maya; fi
+          npm run compare
+        env:
+          FULL: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.full }}
       - run: npm run compare:size --if-present
       - run: npm run compare:ease --if-present
 
