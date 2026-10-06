@@ -2,9 +2,48 @@
 
 Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.
 
-**Status:** Milestone 2 in progress. Not yet published to npm.
+[![npm](https://img.shields.io/npm/v/mayacharts)](https://www.npmjs.com/package/mayacharts) [![license](https://img.shields.io/npm/l/mayacharts)](LICENSE) [![gzip](https://img.shields.io/bundlejs/size/mayacharts)](https://bundlejs.com/?q=mayacharts)
 
-## Why
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/hero-dark.png">
+  <img alt="Six mayaCharts: a multi-series line, a ranked bar with an Other bucket, a heatmap, a sunburst, a sankey and a US state hexmap" src="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/hero-light.png">
+</picture>
+
+**[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Chart builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[Compare with other libraries](https://bbekshr.github.io/mayacharts/compare.html)** · **[Spec reference](#the-spec)**
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/mayacharts/dist/element.js"></script>
+<maya-chart
+  style="height: 300px"
+  spec='{"type":"bar","x":"month","y":"revenue","data":[{"month":"Jan","revenue":12},{"month":"Feb","revenue":19}]}'
+></maya-chart>
+```
+
+That is a complete, animated, keyboard-navigable chart with a tooltip, a screen-reader data table and dark mode. No build step, no framework.
+
+## Why mayaCharts
+
+- **Small.** Twelve chart types with tooltips, drill, zoom, selection and animation in about 45 KB gzip, with no runtime dependencies. Eight more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, hexmap) are optional modules of 3 to 4 KB each.
+- **Passes the enterprise checklist.** Works under a strict CSP with Trusted Types, meets WCAG 2.2 AA (axe-clean in light and dark), supports RTL, and every user-visible string is localisable.
+- **Renders on the server.** `render(spec)` is a pure function that returns an SVG string in Node or any runtime without a DOM. `renderShell` returns a full chart that works before any JavaScript loads.
+- **One JSON spec.** No callbacks in the config, so a spec can be stored in a database, sent over the wire, or written by an LLM. A [JSON Schema](schema.json) and [llms.txt](llms.txt) ship with the package.
+- **Any framework, or none.** It is a custom element, so it works in React, Vue, Svelte, Angular, Astro and plain HTML.
+
+## How it compares
+
+Measured on 2026-10-05 by the [compare page](https://bbekshr.github.io/mayacharts/compare.html): each library draws the same charts the way its own docs show.
+
+|                                                    | mayaCharts | Chart.js | ECharts | Recharts | Plotly   |
+| -------------------------------------------------- | ---------- | -------- | ------- | -------- | -------- |
+| Bundle for the compare set, gzip                   | 51 KB      | 71 KB    | 382 KB  | 202 KB   | 1,471 KB |
+| Lines of user code for the compare set             | 150        | 223      | 213     | 264      | 157      |
+| Renders under `require-trusted-types-for 'script'` | yes        | yes      | no      | yes      | no       |
+| Server-side SVG with no DOM                        | yes        | no       | yes     | no       | no       |
+| Keyboard navigation of data points                 | yes        | no       | no      | yes      | no       |
+
+Chart.js covers 9 of the 12 compare charts and Recharts 11; the others cover all 12. The compare page also has speed, memory, accessibility and RTL results.
+
+## The idea
 
 Existing chart libraries were designed 2011-2016 and hand-roll animation, tooltip positioning, theming and framework wrappers. mayaCharts uses the modern platform instead: Custom Elements, Web Animations API, CSS Anchor Positioning + Popover, CSS custom properties with light-dark(), and container queries. This means it ships small, is accessible and SSR-safe by default, and stays low-maintenance. See the [full landscape research](docs/research/reports/Open%20source%20chart%20library%20landscape.md) for what exists.
 
@@ -740,15 +779,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 6,845 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 6,913 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 769,754,618 total, 1,665,862 output
-- claude-sonnet-5-5: 270,798,822 total, 52,235 output
+- claude-opus-5-5: 771,974,520 total, 1,679,960 output
+- claude-sonnet-5-5: 275,536,316 total, 52,647 output
 - claude-fable-5-1: 74,794,840 total, 178,397 output
 - claude-haiku-4-5-20251001: 23,593,580 total, 943 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,146,739,719 total, 1,940,750 output
+- all: 1,153,697,115 total, 1,955,260 output
 
 <!-- tokens:end -->
 

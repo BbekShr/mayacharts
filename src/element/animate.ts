@@ -134,7 +134,9 @@ const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () =
 };
 
 /** Stagger: a mark's delay follows its category, so bars rise left to right. */
-const delay = (e: Element) => (e.hasAttribute("data-c") ? n(e, "data-c") * lag : 0);
+// Only cartesian charts (svg carries data-n or data-xd): in space-filling and flow marks data-c is an index and a stagger overlaps neighbours.
+const delay = (e: Element) =>
+  e.hasAttribute("data-c") && e.closest("svg[data-n],svg[data-xd]") ? n(e, "data-c") * lag : 0;
 
 function sync(o: Element, w: Element): void {
   // `style` holds element-owned CSSOM writes (bloom origin), never markup: keep it.
@@ -203,10 +205,13 @@ function retire(e: Element): void {
   e.setAttribute("data-ghost", "");
 }
 
+const gk = new WeakMap<Element, string>(); // exiting node -> the key it had
+
 function exit(e: Element, origin?: Box): void {
+  gk.set(e, e.getAttribute("data-key")!);
   retire(e);
   const g = geo(e);
-  const done = () => e.remove();
+  const done = () => e.hasAttribute("data-ghost") && e.remove(); // revived by marks(): stays
   const o = { ...DATA, fill: "forwards" as const };
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, true);
@@ -313,6 +318,10 @@ function marks(o: Element, w: Element, origin?: Box): void {
   const old = new Map<string, Element>();
   for (const e of o.children)
     if (e.hasAttribute("data-key")) old.set(e.getAttribute("data-key")!, e);
+  // A key that comes back while its old node still leaves revives that node (drill out right after in).
+  const gh = new Map<string, Element>();
+  for (const e of o.children) if (gk.has(e) && e.hasAttribute("data-ghost")) gh.set(gk.get(e)!, e);
+  const at = (k: string) => old.get(k) ?? gh.get(k);
   // Sunburst drill: the branch whose slice becomes the centre disk, or the disk that becomes a
   // slice again. Its slice's span is the zoom window the rest folds out of or in from.
   const hub = (g: Element) => g.querySelector(':scope > circle[data-depth="0"]');
@@ -322,13 +331,12 @@ function marks(o: Element, w: Element, origin?: Box): void {
   const slice =
     ko === kw
       ? undefined
-      : ((kw && old.get(kw)) ??
-        [...w.children].find((e) => ko && e.getAttribute("data-key") === ko));
+      : ((kw && at(kw)) ?? [...w.children].find((e) => ko && e.getAttribute("data-key") === ko));
   zoom = slice && ring(slice) ? span(slice) : undefined;
   const order: Element[] = [];
   for (const e of [...w.children]) {
     const k = e.getAttribute("data-key")!;
-    const m = old.get(k);
+    const m = at(k);
     if (!m || m.localName !== e.localName) {
       // Unknown key, or same key with another tag: replace (old one exits).
       order.push(e);
@@ -345,6 +353,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
     }
     const g0 = geo(m);
     const v = g0 && visual(m, g0);
+    if (m.hasAttribute("data-ghost")) for (const a of m.getAnimations?.() ?? []) a.cancel();
     const d0 = m.getAttribute("d") ?? "",
       d1 = e.getAttribute("d") ?? "";
     const shaped = !g0 && d0 !== d1;
@@ -413,9 +422,11 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   // Start every fade after the swap: animations on template children stay pending forever in
   // WebKit and Firefox, and a ghost removed synchronously would be re-inserted by the swap.
   for (const g of ghosts) ghost(g);
-  // After a drill zoom, value labels wait for the marks to land; axes swap at once.
-  const late = zoom || zm ? { ...UI, delay: Number(ZOOM.duration) * 0.75 } : UI;
-  for (const c of fadeIn) fade(c, false, undefined, id(c) === "labels" ? late : UI);
+  // Value labels wait for the marks to land; axes swap at once (on a drill, after the marks are under way).
+  const z = !!(zoom || zm);
+  const late = { ...UI, delay: Number((z ? ZOOM : DATA).duration) * 0.75 };
+  for (const c of fadeIn)
+    fade(c, false, undefined, id(c) === "labels" ? late : z ? { ...UI, delay: 160 } : UI);
 }
 
 /** An outgoing group: unaddressable while it fades, then removed. */
@@ -423,9 +434,16 @@ function ghost(g: Element): void {
   const op = getComputedStyle(g).opacity; // mid-fade-in (or still waiting): leave from there
   // Sunburst drill: ring names go at once, the centre text stays until the new labels arrive.
   const hold = zoom && g.getAttribute("data-maya") === "labels";
-  if (hold)
-    for (const t of g.querySelectorAll(":nth-last-child(n+3)"))
-      run(t, [{ opacity: 1 }, { opacity: 0 }], { ...UI, fill: "forwards" });
+  if (hold) {
+    // The centre text sits on the plot centre (no centre label: nothing is held).
+    const p = (g.closest("svg")?.getAttribute("data-plot") ?? "").split(" ").map(Number);
+    for (const t of g.children)
+      if (
+        Math.abs(n(t, "x") - p[0]! - p[2]! / 2) > 1 ||
+        Math.abs(n(t, "y") - p[1]! - p[3]! / 2) > 9
+      )
+        run(t, [{ opacity: 1 }, { opacity: 0 }], { ...UI, fill: "forwards" });
+  }
   g.removeAttribute("data-maya");
   for (const d of g.querySelectorAll("[data-maya]")) d.removeAttribute("data-maya");
   g.setAttribute("data-ghost", "");

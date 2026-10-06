@@ -89,12 +89,12 @@ const P = (c: string) =>
 const OWN = ':is([data-tone],[data-q],[data-s]:not([data-s="0"]))';
 const SCATTER =
   `${SCAT}[data-maya=marks]{--p:58%;stroke-width:1.25;${P("var(--maya-series-1)")}}${SCAT}[data-maya=marks]:has(>[data-dense]){--p:30%}` +
-  `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit;transform-origin:center}` +
+  `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit}` +
   `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))")}}` +
   `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q],[data-hm]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 42%)*1.7)))")}}` +
   `[data-d] i{flex:none;width:80px;background:linear-gradient(90deg,${DENS("0%")},${DENS("75%")})}[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("37%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("37%")},${DENS("75%")})}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
-  `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
+  `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);transform-origin:center;filter:none}` +
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
   "[data-on][data-maya=cross] [data-g]{transition:transform .25s var(--maya-ease)}" +
   "[data-maya=cross] line[data-g]{stroke-dasharray:3 3;stroke-opacity:.7}" +
@@ -137,7 +137,6 @@ export const css =
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
-  "[data-dir=h] [data-neg]{transform-origin:100% 0}" +
   "[data-ghost]{pointer-events:none}" +
   "[data-stack] rect[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1}" +
   // Active mark: an ink ring, fill untouched, so in-mark labels keep their contrast.
@@ -171,6 +170,8 @@ export const css =
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
   "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text,:is(rect,path)[data-q]){opacity:.4}" +
+  // A dimmed mark fades toward the page: its in-bar label flips to the page ink (tooltip.ts dim()).
+  "[data-maya=labels] [data-in][data-dim]{fill:var(--maya-fg)}" +
   '[data-maya=marks]:has(circle[data-depth="0"][data-active]) [data-depth]{opacity:1}' +
   'svg[data-drill] :is([data-maya=mark],[data-maya=hit]),circle[data-depth="0"][data-s]{cursor:pointer}' +
   "[data-maya=marks]:has([data-selected]){--o:.35}" +

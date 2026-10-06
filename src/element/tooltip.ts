@@ -1,4 +1,6 @@
+import { formatter } from "../core/format.ts";
 import { t as str } from "../core/strings.ts";
+import { resolve } from "../core/validate.ts";
 import type { ChartSpec, View } from "../core/types.ts";
 import { listen } from "./listen.ts";
 
@@ -105,6 +107,22 @@ export function tooltip(
     for (const l of peers) l.setAttribute("data-lit", "");
   };
 
+  // In-bar labels of dimmed marks take the page ink: the bar fades toward the page, the label must not.
+  const dim = (m?: Element) => {
+    const on = m
+      ? [m, ...peers].filter((e) => e.localName === "rect" && !e.hasAttribute("data-depth"))
+      : [];
+    for (const t of box.querySelectorAll("[data-maya=labels] [data-in]")) {
+      const [x, y] = [+a(t, "x"), +a(t, "y")];
+      const at = (e: Element, k: string, l: string) =>
+        +a(e, k) <= (k === "x" ? x : y) && (k === "x" ? x : y) <= +a(e, k) + +a(e, l);
+      t.toggleAttribute(
+        "data-dim",
+        !!on.length && !on.some((e) => at(e, "x", "width") && at(e, "y", "height")),
+      );
+    }
+  };
+
   const cross = (m: Element | undefined) => {
     const g = box.querySelector<SVGElement>("[data-maya=cross]");
     if (!g || (!m && g.style.opacity !== "1")) return; // hidden by CSS until first shown
@@ -125,6 +143,9 @@ export function tooltip(
       g.style.setProperty("--y", py + "px");
       tx[0]!.textContent = a(m, "data-gx") || a(m, "data-x");
       tx[1]!.textContent = a(m, "data-gy") || a(m, "data-f");
+      // Corner: the y pill hops over the x pill when both sit in the bottom-left.
+      const [pl, pt, , ph] = a(svg, "data-plot").split(" ").map(Number) as number[];
+      tx[1]!.setAttribute("y", py > pt! + ph! - 16 && px < pl! + 120 ? "-22" : "-6");
     }
     // Glide between categories once visible; the first placement jumps (flush, then enable).
     if (!was) getComputedStyle(g).transform;
@@ -172,6 +193,7 @@ export function tooltip(
   const hide = () => {
     cur?.removeAttribute("data-active");
     light(undefined);
+    dim();
     cur = undefined;
     pin = false;
     cross(undefined);
@@ -253,6 +275,7 @@ export function tooltip(
     cur = m;
     m.setAttribute("data-active", "");
     light(m);
+    dim(m);
     const g = group(m);
     const speak = () =>
       announce(
@@ -270,9 +293,12 @@ export function tooltip(
             ? sp.titles[y]!
             : y
           : "";
+    // Stacked: rows top-down like the stack, then the total.
+    const stk = sp?.stack && /^(bar|area)$/.test(sp.type) && g.length > 1;
+    const rows = stk ? [...g].reverse() : g;
     tip.replaceChildren(
       h("b", a(m, "data-x")),
-      ...g.map((k) => {
+      ...rows.map((k) => {
         const row = h("div", "", k === m ? { "data-on": "" } : {});
         const s = a(k, "data-series");
         if (s) {
@@ -284,7 +310,19 @@ export function tooltip(
         if (tn) row.append(h("span", tn));
         return row;
       }),
+      ...(stk && sp ? [h("div", "", { "data-t": "" })] : []),
     );
+    if (stk && sp) {
+      const row = tip.lastElementChild!;
+      const f = formatter(
+        resolve(sp, (host as { view?: View }).view),
+        typeof y === "string" ? y : (sp.y as string),
+      );
+      row.append(
+        h("span", str(sp, "total")),
+        h("span", f(g.reduce((t, k) => t + +a(k, "data-y"), 0)), { "data-v": "" }),
+      );
+    }
     cross(m);
     shade(m);
     // The probe's containing block is the host's padding box (:host is position:relative).

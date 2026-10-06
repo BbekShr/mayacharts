@@ -163,13 +163,19 @@ export const mount = (host: Host): Handlers => {
                   ) === (want as { value: string }).value,
               );
       want = undefined;
-      if (m) {
-        if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
-        (m as unknown as HTMLElement).focus?.({ preventScroll: true });
-      }
-      // Keyboard must keep working after a pointer drill: fall back to the chart itself.
-      if (!host.root.activeElement || !host.root.contains(host.root.activeElement))
-        host.root.querySelector<HTMLElement>(".maya-svg")?.focus({ preventScroll: true });
+      const focus = () => {
+        if (m) {
+          if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
+          (m as unknown as HTMLElement).focus?.({ preventScroll: true });
+        }
+        // Keyboard must keep working after a pointer drill: fall back to the chart itself.
+        if (!host.root.activeElement || !host.root.contains(host.root.activeElement))
+          host.root.querySelector<HTMLElement>(".maya-svg")?.focus({ preventScroll: true });
+      };
+      // A mark focused mid-zoom draws its outline scaled over the plot: wait for the landing.
+      const zoom = host.root.querySelector("[data-maya=marks]")?.getAnimations?.() ?? [];
+      if (m && zoom.length) Promise.allSettled(zoom.map((a) => a.finished)).then(focus);
+      else focus();
     },
     off: listen(host.root, ["click", click]),
   };
