@@ -31,6 +31,8 @@ await build({
   jsx: "automatic",
   // maya refs import "mayacharts/element" like a user would; it resolves to src/, no dist build needed.
   alias: { mayacharts: "./src" },
+  // rival libraries live in compare/ (npm ci --prefix compare), not the root install
+  nodePaths: ["compare/node_modules"],
   define: { "process.env.NODE_ENV": '"production"' },
   logLevel: "warning",
 });

@@ -12,6 +12,7 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import { score, summarize } from "./score.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -39,7 +40,9 @@ const prompts = readFileSync(resolve(file), "utf-8")
 const distIndex = resolve(root, "dist/index.js");
 if (!existsSync(distIndex)) throw new Error("dist/index.js missing: run `npm run build` first");
 const { validateSpec, render } = await import(pathToFileURL(distIndex).href);
-const echarts = await import("echarts");
+// echarts and the SDK live in compare/ (npm ci --prefix compare)
+const need = createRequire(resolve(root, "compare/package.json"));
+const echarts = await import(pathToFileURL(need.resolve("echarts")).href);
 const libs = { validateSpec, render, echarts };
 
 const MAYA_SYSTEM = [
@@ -59,7 +62,9 @@ const userMessage = (p) =>
 let ask;
 if (!dry) {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set");
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const { default: Anthropic } = await import(
+    pathToFileURL(need.resolve("@anthropic-ai/sdk")).href
+  );
   const client = new Anthropic();
   const llms = readFileSync(resolve(root, "llms.txt"), "utf-8");
   ask = async (library, p) => {
