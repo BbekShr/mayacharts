@@ -47,7 +47,8 @@ function dodge(xs: number[], rad: number, limit: number): number[] {
   for (const i of order) {
     const x = xs[i]!;
     while (from < placed.length && x - xs[placed[from]!]! >= 2 * rad) from++;
-    const near = placed.slice(from);
+    // ponytail: only the 50 most recent neighbours are checked (ties would be quadratic); the swarm clamps past ~25 anyway.
+    const near = placed.slice(Math.max(from, placed.length - 50));
     const cand = [0];
     for (const j of near) {
       const h = Math.sqrt(Math.max(0, d2 - (x - xs[j]!) ** 2));

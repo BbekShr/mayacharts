@@ -11,17 +11,13 @@ const clip = (s: string, max: number) => {
   const c = [...s];
   return c.length > max ? c.slice(0, Math.max(1, max - 1)).join("") + "…" : s;
 };
-// Colour rule shared by both charts: the outer column is neutral slate (darker when larger,
-// `data-neu` 0..3), the next column takes palette slots, and a link takes its level-1 node's colour.
+// Colour rule shared by both charts: the outer column is one neutral (`data-neu`, the muted
+// foreground), the next column takes palette slots, and a link takes its level-1 node's colour.
 interface C {
   s: number; // palette slot, -1 for neutral
-  u: number; // neutral step
 }
-const paint = (n: C) => (n.s < 0 ? { "data-neu": n.u } : { "data-s": n.s });
-const neutral = (col: (C & { v: number })[]) =>
-  [...col]
-    .sort((a, b) => b.v - a.v)
-    .forEach((n, j) => ((n.s = -1), (n.u = Math.min(3, Math.floor((j * 4) / col.length)))));
+const paint = (n: C) => (n.s < 0 ? { "data-neu": true } : { "data-s": n.s });
+const neutral = (col: C[]) => col.forEach((n) => (n.s = -1));
 // Every node index upstream or downstream of a node along any path; hovering lights them.
 const reach = (ls: L[]) => {
   const walk = (i: number, up: boolean, seen = new Set<number>()) => {
@@ -56,12 +52,12 @@ const lines = (
   room: (top: number, bottom: number) => boolean,
 ) => {
   const at = { x: r(x), "text-anchor": anchor, "dominant-baseline": "middle" };
-  if (room(cy - 14, cy + 14))
+  if (room(cy - 16, cy + 16))
     return (
       el("text", { ...at, y: r(cy - 7), "data-nm": true }, esc(clip(name, cap))) +
       el("text", { ...at, y: r(cy + 8), "data-v": true }, esc(val))
     );
-  if (!room(cy - 7, cy + 7)) return "";
+  if (!room(cy - 8, cy + 8)) return "";
   const both = cap - val.length - 1 >= [...name].length; // name and value must both fit
   return el(
     "text",
@@ -79,7 +75,6 @@ interface N {
   v: number;
   y: number;
   s: number;
-  u: number;
   a: number;
 }
 interface L {
@@ -129,7 +124,7 @@ const graph = (ctx: MarkCtx, what: string) => {
   const node = (lv: number, name: string): N => {
     let n = byLv[lv]!.get(name);
     if (!n) {
-      n = { lv, name, i: nodes.length, in: 0, out: 0, v: 0, y: 0, s: 0, u: 0, a: 0 };
+      n = { lv, name, i: nodes.length, in: 0, out: 0, v: 0, y: 0, s: 0, a: 0 };
       byLv[lv]!.set(name, n);
       nodes.push(n);
     }
@@ -197,7 +192,7 @@ export const sankey: Mark = {
         const from = new Set(ls.filter((l) => l.t === n).map((l) => l.s.s));
         const [one] = from;
         if (lv === 1) n.s = slot++ % 8;
-        else ((n.s = from.size === 1 ? one! : -1), (n.u = 2));
+        else n.s = from.size === 1 ? one! : -1;
       }
     // A link takes its target's colour out of column 0, else its source's.
     const tint = (l: L) => (l.s.lv === 0 ? l.t : l.s);
@@ -280,6 +275,8 @@ export const sankey: Mark = {
     // Labels, biggest node first so a crowded column keeps the important ones.
     // ponytail: a label that collides with a bigger one is dropped (the tooltip still names it).
     const taken = order.map(() => slots(plot.y, plot.y + plot.h));
+    // Narrow: the last two columns share one gap (labels right of one, left of the next).
+    if (!wide) taken[cols - 1] = taken[cols - 2]!;
     const lab: string[] = []; // by node index
     for (const n of [...nodes].sort((a, b) => b.v - a.v || a.i - b.i)) {
       const [first, last] = [n.lv === 0, n.lv === cols - 1];
@@ -287,15 +284,20 @@ export const sankey: Mark = {
       const w = wide && first ? padL : wide && last ? padR : gap;
       const cap = Math.max(3, Math.floor((w - (wide && (first || last) ? 12 : W + 14)) / CH));
       const cy = n.y + (n.v * k) / 2;
-      lab[n.i] = lines(
-        left ? x(n) - 6 : x(n) + W + 6,
-        cy,
-        left ? "end" : "start",
-        n.name,
-        val(n),
-        cap,
-        taken[n.lv]!,
-      );
+      const slack = Math.max(0, (n.v * k) / 2 - 16); // a tall node slides its label up or down to find room
+      for (const d of [0, -1, 1])
+        if (
+          (lab[n.i] = lines(
+            left ? x(n) - 6 : x(n) + W + 6,
+            cy + d * slack,
+            left ? "end" : "start",
+            n.name,
+            val(n),
+            cap,
+            taken[n.lv]!,
+          ))
+        )
+          break;
     }
     return { marks, hits: "", labels: lab.join("") };
   },

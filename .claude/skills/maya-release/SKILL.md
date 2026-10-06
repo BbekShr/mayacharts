@@ -16,7 +16,7 @@ A pushed `v*` tag runs `.github/workflows/release.yml`: typecheck, test, build, 
 
 ## Steps
 
-1. Gate on this machine, each redirected to a file with its exit code: `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run size`, `npm run e2e`. Any failure stops the release.
+1. Gate on this machine, each redirected to a file with its exit code: `npm run typecheck`, `npm test`, `npx prettier --check .`, `npm run build`, `npm run size`, and `npx playwright test --project=chromium --project=firefox --project=webkit --project=mobile-webkit` (not bare `npm run e2e`: that also runs the `compare` benchmark, 30+ minutes and not a gate). Any failure stops the release. A darwin-only screenshot diff whose Linux baseline passed in CI's `E2E (all browsers)` on the same commit is a stale local baseline: note it in the report and continue.
 2. On a branch `release/v<version>`: set `version` in `package.json` (`npm version <version> --no-git-tag-version`, which also updates the lockfile), and change the top CHANGELOG heading from "Unreleased" to `## <version> - YYYY-MM-DD` (today, from `date +%F`). Check `STABILITY.md` if a public API changed.
 3. Commit (`Release <version>: <one-line summary>`), push, open a PR, wait for CI, merge it (the human asked for the release, which covers this merge).
 4. Tag the merge commit on `main`: `git tag v<version> && git push origin v<version>`.

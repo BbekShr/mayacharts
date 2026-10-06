@@ -9,6 +9,13 @@
       content="Every mayaCharts chart type with the exact spec that draws it."
     />
     <link rel="stylesheet" href="./site.css" />
+    <!-- Apply the saved theme before first paint; theme.ts keeps the button in step. -->
+    <script>
+      try {
+        const m = localStorage.getItem("maya-theme");
+        if (m === "light" || m === "dark") document.documentElement.style.colorScheme = m;
+      } catch {}
+    </script>
   </head>
   <body class="wide">
     <header class="site">
@@ -16,6 +23,7 @@
       <p class="tagline">Every chart type, each drawn from the spec shown beneath it.</p>
       <nav>
         <a href="./index.html">Home</a>
+        <a href="./builder.html">Builder</a>
         <a href="./gallery.html" aria-current="page">Gallery</a>
         <a href="./compare.html">Compare</a>
         <a href="./errors.html">Errors</a>
@@ -288,7 +296,7 @@
               <button type="button" data-reroll="calendar">Re-roll</button>
             </div>
             <p>A year of daily orders. Weekends run quieter.</p>
-            <maya-chart id="calendar" style="height: 320px"></maya-chart>
+            <maya-chart id="calendar" style="height: 210px"></maya-chart>
             <details>
               <summary>Spec</summary>
               <pre><code id="calendar-code"></code></pre>
@@ -368,6 +376,18 @@
             <details>
               <summary>Spec</summary>
               <pre><code id="sankey-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Drill into a family</h2>
+              <button type="button" data-reroll="sankey-drill">Re-roll</button>
+            </div>
+            <p>Click a family to follow its items to the regions. Click empty space to go back.</p>
+            <maya-chart id="sankey-drill" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="sankey-drill-code"></code></pre>
             </details>
           </section>
           <section>

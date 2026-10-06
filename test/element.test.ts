@@ -3,6 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { patch } from "../src/element/animate.ts";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import { renderParts } from "../src/core/render.ts";
+import "../src/flow.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 vi.mock("../src/core/render.ts", async (orig) => {
@@ -127,6 +128,31 @@ describe("<maya-chart>", () => {
     expect(tip.textContent).toContain(evil);
     expect(tip.querySelector("img")).toBeNull();
     expect(m.hasAttribute("data-active")).toBe(true);
+  });
+
+  it("a multi-measure line without a series names the active measure in the tooltip", async () => {
+    const data = [
+      { m: "Jan", a: 1, b: 7 },
+      { m: "Feb", a: 2, b: 8 },
+    ];
+    const el = await mount(
+      (e) =>
+        (e.spec = { type: "line", x: "m", y: ["a", "b"], titles: { b: "Bee" }, data } as ChartSpec),
+    );
+    const tip = el.shadowRoot!.querySelector(".maya-tip")!;
+    const hover = () => {
+      const m = marks(el)[0]!;
+      m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+      m.dispatchEvent(
+        Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+      );
+    };
+    hover();
+    expect(tip.querySelector("div")!.textContent).toMatch(/^a/);
+    el.view = { measure: 1 };
+    await frame();
+    hover();
+    expect(tip.querySelector("div")!.textContent).toMatch(/^Bee/);
   });
 
   it("routes markup through the Trusted Types policy", async () => {
@@ -403,5 +429,89 @@ describe("scatter without hit circles", () => {
     at(el, m, 5, "pointermove");
     at(el, m, 5, "click");
     expect(got).toEqual([[{ name: "p1" }]]);
+  });
+});
+
+describe("review fixes", () => {
+  const live = (el: Element) => el.shadowRoot!;
+  it("a dumbbell connector is neither selectable nor a tooltip target", async () => {
+    const data = ["A", "B"].flatMap((c) => [
+      { c, p: "2020", v: 10 },
+      { c, p: "2024", v: 30 },
+    ]);
+    const el = await mount(
+      (e) => (e.spec = { type: "dumbbell", x: "c", y: "v", series: "p", data, select: true }),
+    );
+    const got: unknown[] = [];
+    el.addEventListener("maya-select", (e) => got.push(e));
+    const link = live(el).querySelector("[data-maya=link]")!;
+    expect(link).toBeTruthy();
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    link.dispatchEvent(
+      Object.assign(new Event("pointerover", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    await frame();
+    expect(got).toEqual([]);
+    expect(live(el).querySelector(".maya-tip")!.textContent).toBe("");
+  });
+
+  it("a sankey link still shows its row on hover", async () => {
+    const data = [
+      { a: "X", b: "M", c: "P", v: 6 },
+      { a: "Y", b: "M", c: "P", v: 4 },
+    ];
+    const el = await mount(
+      (e) => (e.spec = { type: "sankey", path: ["a", "b", "c"], y: "v", data }),
+    );
+    const link = live(el).querySelector("[data-maya=link][data-f]")!;
+    link.dispatchEvent(
+      Object.assign(new Event("pointerover", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    expect(live(el).querySelector(".maya-tip")!.textContent).not.toBe("");
+  });
+
+  it("a spec set beside a pending resize frame renders now and animates", async () => {
+    let ro!: () => void;
+    globalThis.ResizeObserver = class {
+      constructor(f: () => void) {
+        ro = f;
+      }
+      observe() {}
+      disconnect() {}
+    } as never;
+    const el = await mount((e) => (e.spec = spec()));
+    Object.defineProperty(live(el).querySelector(".maya-box")!, "clientWidth", { value: 500 });
+    ro();
+    const spy = vi.spyOn(Element.prototype, "animate");
+    let renders = 0;
+    el.addEventListener("maya-render", () => renders++);
+    el.spec = spec(rows.map((r) => ({ ...r, v: r.v * 3 })));
+    await Promise.resolve();
+    expect(renders).toBe(1);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("tooltip:false keeps the keyboard: Arrow then Enter selects", async () => {
+    const el = await mount((e) => (e.spec = spec(rows, { tooltip: false, select: true })));
+    const got: unknown[] = [];
+    el.addEventListener("maya-select", (e) => got.push((e as CustomEvent).detail.selected));
+    const svg = live(el).querySelector(".maya-svg")!;
+    for (const key of ["ArrowRight", "Enter"])
+      svg.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, composed: true, cancelable: true }),
+      );
+    await frame();
+    expect(got).toHaveLength(1);
+  });
+
+  it("a spec error removes the stale data table", async () => {
+    const el = await mount((e) => (e.spec = spec()));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(live(el).querySelector("table.maya-sr")).toBeTruthy();
+    el.spec = { type: "bar" } as never;
+    await new Promise((r) => setTimeout(r, 50));
+    expect(live(el).querySelector(".maya-err")).toBeTruthy();
+    expect(live(el).querySelector("table.maya-sr")).toBeNull();
   });
 });

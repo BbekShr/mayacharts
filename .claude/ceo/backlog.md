@@ -4,16 +4,17 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Needs a decision from the human
 
-- **Version of the next release.** The CHANGELOG top section is "0.3.1 - Unreleased" but holds a redesign of seven chart types, new defaults and a new spec field; 0.4.0 fits semver better. Owner: human, then `/maya-release`.
-- **Size budgets.** Raised on 2026-10-04 to fit the redesign (global 46, element 37.5, theme 4, hierarchy 3.75, flow 3.5 KB gzip). If the human wants them back down, the cheapest cuts are the sankey one-line label fallback (about 0.1 KB) and the scatter axis value pills. Owner: human.
+- **Apply the approved size budgets** (approved 2026-10-05, second round): index 31488, element 44544, hierarchy 4096, global 53760 bytes (30.75, 43.5, 4.0, 52.5 KB). The guard hook blocks agents from editing `mayaSize`. Owner: human.
+- **Unnamed scatter keys are row indexes**, so prepending data moves a selection to another dot. Changing it is a key contract change. Owner: human, then core engineer.
 
 ## Open
 
-- **Chord drill is inert.** A chord has two levels, so one drill leaves nothing to draw; clicks are ignored. Either draw the drilled branch as a one-level radial breakdown or reject `drill` for chord in `validate.ts` with a hint. Owner: core engineer (validation) or chart designer (drawing).
-- **Radial tip totals do not show in the gallery tile.** The stacked tile is too small for them, so the feature is invisible on the demo site. Consider a taller tile or a single-series example. Owner: chart designer.
-- **Drill motion for points.** Dumbbell dots and line points use the default pop or fade in a drill, not the rect zoom. Owner: element engineer.
-- **Drilled treemap is one flat hue.** Children keep the branch colour (correct) but have no tint variation, so tiles separate only by gaps and labels. Owner: chart designer.
-- **Dark text on saturated fills.** Labels on the sunburst inner ring and the radial's in-bar names use the foreground colour; white on dark fills would read better. Owner: chart designer.
-- **Dense scatter at 360px.** The radius stays at 5, so 50 points overlap heavily. A density-based radius would help. Owner: chart designer.
-- **Gallery has no drillable bar or sankey example.** Drill on those types is only reachable by editing a spec. Owner: chart designer.
-- **Release workflow actions are not pinned to commit SHAs** (`# TODO pin to commit SHA` in `.github/workflows/release.yml`). Supply-chain hygiene for a provenance-signed package. Owner: core engineer.
+- **First full compare run after the dependency move** (`compare/package.json`): only `compare:bundle` and `compare:size` were run. Watch the next `compare.yml` run. Owner: core engineer.
+- **Waterfall Total label** overlaps the last step bar at 400 px wide (dark mode screenshot, 2026-10-05). Owner: chart designer.
+- **Demo bar at 360 px**: with value labels on, neighbouring labels wider than their bars overlap ("18.9K 19.8K"). Owner: chart designer.
+- **Sankey drill tile at 360 px**: item names overlap their flows. Owner: chart designer.
+- **Parallel identity**: end labels drop on collision, so on the gallery data only one of four lines is named. Nudge apart with leader lines, or a legend. Owner: chart designer.
+- **Roll-up bar clip mark**: the Other bar runs to the plot edge with no visual sign it is clipped. Owner: chart designer.
+- **Radial first bar** reads "Jan 21.6M" while the others show only the value. Owner: chart designer.
+- **Hexmap hover ink**: the hovered hex's own label can fall to about 3.5 to 1. Needs a hover rule that tells the active cell from the dimmed ones. Owner: chart designer.
+- **Sunburst centre hold** assumes the centre text is the last two labels; a sunburst without a centre label keeps two ring names for half a second during a drill. Owner: element engineer.

@@ -53,6 +53,17 @@
       </section>
 
       <section>
+        <h2>Where the element reads the spec</h2>
+        <p>
+          The <code>&lt;maya-chart&gt;</code> element takes its spec from the first of these that is
+          set: the <code>spec</code> property (assigning <code>data</code> sets it too), then the
+          JSON script child, then the <code>spec</code> attribute. A property you have set wins over
+          any later change to the attribute, so use one source. Assign <code>undefined</code> to the
+          property to fall back to the script child or the attribute.
+        </p>
+      </section>
+
+      <section>
         <h2>Data fields</h2>
         <table>
           <thead>

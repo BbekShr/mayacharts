@@ -15,6 +15,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - axe passes non-text contrast it cannot compute (SVG fills, ramps). Compute 1.4.11 contrast from rendered fills for any new ramp or density view.
 - Feed every new numeric input the extremes (0, 8.64e15, 1e300, NaN-producing dates) before shipping; a loop guarded by `t > max` never ends on NaN.
 
+- Run the e2e baseline in apply runs and open every failing diff: a Firefox-only duplicate title from the late data table hid behind CI retries (2026-10-05).
 - Screenshot every visual change at 2x in light, dark, hovered, 360px and one hostile case, and open the files. Agent-reported screenshots have been mislabelled; look at the chart yourself before shipping.
 - Motion is verified by frames (0, 120, 270 ms, landed) in chromium AND webkit, never by unit tests alone.
 - Playwright per-pixel tolerance let a full sunburst recolour pass against the old baseline. Regenerate changed baselines on purpose, darwin locally and linux in the CI image, then `npm ci`.
@@ -39,6 +40,9 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Size budgets are the human's call: report an overage with the cut that would fix it. Ponytail trims of repeated code save almost nothing in gzip; quote the feature's real cost instead.
 - Haiku docs drafts invent plausible facts (0.4: claimed a bare year "2024" is a date, labelled `data-t` as tone, added a second CHANGELOG section). Diff every Haiku doc against the source before committing.
 - Give an agent that needs its own build `isolation: "worktree"`; everyone else shares the tree and never builds.
+- `isolation: "worktree"` branches from `main`, not the run branch: tell a worktree editor to `git reset --hard <run branch>` as its first step when the run branch has commits.
+- Before any e2e run, free port 4173 (`lsof -i :4173`): Playwright reuses a running preview server, so a stale one silently tests an old build.
+- Two editors that each need `theme.ts` in separate worktrees still collide on its rules: read both theme diffs together when folding (2026-10-05: one set light-mode ink dark, the other light, for the same hexmap steps).
 
 **Process**
 

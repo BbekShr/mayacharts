@@ -1,9 +1,29 @@
 import { bandScale } from "../scale.ts";
 import { colorVals } from "../shape.ts";
-import { el, hit, key, OTHER, r } from "../svg.ts";
+import { el, esc, hit, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
 
 const MAX_BAR = 72;
+
+/** A value label over a mark's own fill (no halo); `a` carries the ink (theme.ts). Also used by heatmap. */
+export const inText = (
+  x: number,
+  y: number,
+  text: string,
+  a: Record<string, string | boolean | null>,
+) =>
+  el(
+    "text",
+    {
+      x: r(x),
+      y: r(y),
+      "text-anchor": "middle",
+      "dominant-baseline": "middle",
+      "data-in": true,
+      ...a,
+    },
+    esc(text),
+  );
 
 interface Item {
   ci: number;
@@ -45,12 +65,13 @@ const items = (spec: ResolvedSpec, shaped: Shaped): Item[] =>
 export const bar: Mark = {
   noun: "Bar",
   axes(spec, shaped) {
-    let lo = shaped.extent[0];
-    let hi = shaped.extent[1];
-    if (spec.type === "waterfall") {
+    let [lo, hi] = shaped.extent;
+    // The limit roll-up is drawn clipped at the plot edge: it never sets the value domain.
+    const all = items(spec, shaped);
+    const rows = all.filter((i) => shaped.categories[i.ci] !== OTHER);
+    if (spec.type === "waterfall" || (rows.length && rows.length < all.length)) {
       lo = hi = 0;
-      for (const i of steps(shaped))
-        ((lo = Math.min(lo, i.y0, i.y1)), (hi = Math.max(hi, i.y0, i.y1)));
+      for (const i of rows) ((lo = Math.min(lo, i.y0, i.y1)), (hi = Math.max(hi, i.y0, i.y1)));
     }
     const cat: Axis = shaped.time
       ? { kind: "time", field: spec.x, domain: shaped.categories, t: shaped.time }
@@ -75,8 +96,15 @@ export const bar: Mark = {
     const keys = shaped.visible.map((j) => shaped.series[j]!);
     const inner = bandScale(keys, [0, cat.bandwidth], 0.1, 0);
     const cvOf = colorVals(spec);
+    // A bar past the plot edge (the Other roll-up, a yDomain) is cut there; its label keeps the real value.
+    const [e0, e1] = hz
+      ? [ctx.plot.x, ctx.plot.x + ctx.plot.w]
+      : [ctx.plot.y, ctx.plot.y + ctx.plot.h];
+    const clip = (v: number) => Math.min(Math.max(v, e0), e1);
     let marks = "";
     let hits = "";
+    let labels = "";
+    const tags: [Item, number, number, number, number, Record<string, any>][] = [];
     for (const c of items(spec, shaped)) {
       const k = shaped.visible.indexOf(c.si);
       const full = spec.stack || spec.type === "waterfall" ? cat.bandwidth : inner.bandwidth;
@@ -86,7 +114,7 @@ export const bar: Mark = {
         cat.at(c.ci) +
         (spec.stack || spec.type === "waterfall" ? 0 : inner.at(k)) +
         (full - th) / 2;
-      const [a, b] = [val.of(c.y0), val.of(c.y1)];
+      const [a, b] = [clip(val.of(c.y0)), clip(val.of(c.y1))];
       const lo = Math.min(a, b);
       const len = Math.abs(a - b);
       const [x, y, w, h] = hz ? [lo, pos, len, th] : [pos, lo, th, len];
@@ -117,20 +145,36 @@ export const bar: Mark = {
         height: r(h),
       });
       hits += hit(d, x, y, w, h);
-      if (spec.labels) {
+      tags.push([c, x, y, w, h, d]);
+    }
+    if (spec.labels && tags.length) {
+      // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
+      // step label must fit inside its own column or it is dropped.
+      // ponytail: no thinning to a subset of steps: a label wider than its column is dropped.
+      const wf = spec.type === "waterfall";
+      const [first, last] = [tags[0]!, tags.at(-1)!];
+      for (const t of wf ? new Set([first, last, ...tags]) : tags) {
+        const [c, x, y, w, h, d] = t;
         // Inside when it fits, else outside the bar end (collisions are dropped by ctx.label).
         const text = ctx.fmt(spec.y, c.v);
         const est = text.length * 7.2 + 4;
+        if (wf && est > cat.step && t !== first && t !== last) continue;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;
-        if (hz)
-          est <= w && h >= 14
-            ? ctx.label(cx, cy, text, "center")
-            : ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start");
-        else
-          est <= w && h >= 16
-            ? ctx.label(cx, cy, text, "center")
-            : ctx.label(cx, neg ? y + h : y, text, neg ? "below" : "above");
+        if (est <= w && h >= (hz ? 14 : 16))
+          // Over the bar's own fill: ink picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps).
+          labels += inText(cx, cy, text, {
+            "data-ink":
+              d["data-q"] === null
+                ? d["data-other"] || d["data-total"] || d["data-tone"]
+                  ? "b"
+                  : ""
+                : d["data-q"] >= 6
+                  ? ""
+                  : null,
+          });
+        else if (hz) ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start");
+        else ctx.label(cx, neg ? y + h : y, text, neg ? "below" : "above");
       }
     }
     if (ctx.y2 && spec.y2 !== null && shaped.y2.length) {
@@ -175,6 +219,6 @@ export const bar: Mark = {
           d: d || null,
         }) + dots;
     }
-    return { marks, hits };
+    return { marks, hits, labels };
   },
 };

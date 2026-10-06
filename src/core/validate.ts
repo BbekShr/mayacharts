@@ -84,9 +84,11 @@ export const ALL_Y = ["parallel", "table"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
+// Chord has two levels, so a drill would never go anywhere: drill needs treemap, sunburst or sankey.
+const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${PTH} drillOut:${CPA},dumbbell,${PTH} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -116,31 +118,28 @@ const USE: Record<string, string> = {
   format: "formatting that field",
   titles: "naming that field",
 };
-const HORIZ = "Use horizontal: true to put categories on the left axis.";
-const SIZED = "Size comes from the element's CSS box, or render(spec, { width, height }).";
-const PIE = 'Pie and donut charts are not supported: use "bar" or "treemap" to compare parts.';
+const HORIZ = "Use horizontal: true.";
+const SIZED = "Size comes from CSS, or render(spec, { width, height }).";
+const PIE = 'Pie and donut charts are not supported: use "bar" or "treemap".';
 const GEO = 'Use type: "hexmap" (import "mayacharts/geo").';
 const EX =
   'Example: { type: "bar", data: [{ month: "Jan", revenue: 10 }], x: "month", y: "revenue" }';
 /** Replacement text for foreign or retired option names, checked before "did you mean". */
 const HINTS: Record<string, string> = {
-  label: 'Use titles: { <field>: "Name" } for display names, or labels: true for values on marks.',
-  xLabel:
-    'Use titles: { <x field>: "Name" }. titles is keyed by field and also names tooltips and table headers.',
-  yLabel:
-    'Use titles: { <y field>: "Name" }. titles is keyed by field and also names tooltips, legend and table headers.',
-  yFormat: 'Use format: "compact" (applies to every y), or format: { <field>: "currency" }.',
-  dataKey: 'Use y: "<field>" for values and x: "<field>" for categories.',
+  label: 'Use titles: { <field>: "Name" }, or labels: true for values on marks.',
+  xLabel: 'Use titles: { <x field>: "Name" }.',
+  yLabel: 'Use titles: { <y field>: "Name" }.',
+  yFormat: 'Use format: "compact", or format: { <field>: "currency" }.',
+  dataKey: 'Use y: "<field>" and x: "<field>".',
   indexAxis: HORIZ,
   orientation: HORIZ,
   width: SIZED,
   height: SIZED,
-  color: 'Use colors: [...] for the palette, or colorBy: "sign" | { target: n } | "<field>".',
+  color: 'Use colors: [...], or colorBy: "sign" | { target: n } | "<field>".',
   groupBy: 'Use series: "<field>".',
-  formatter: "Functions are not supported (the spec is JSON). Use format presets or Intl options.",
-  "size:number":
-    "spec.size names a field for bubble area. For chart size use CSS, or render(spec, { width, height }).",
-  "select:boolean": 'Use select: true or "multi"; omit it to disable selection.',
+  formatter: "Functions are not supported (the spec is JSON). Use presets or Intl options.",
+  "size:number": "spec.size names a field for bubble area. " + SIZED,
+  "select:boolean": 'Use select: true or "multi".',
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -222,7 +221,7 @@ const format = (path: string, v: unknown, locale: string) => {
         bFmt(
           path,
           `spec.${path} = ${show(v)} is not a format template.`,
-          'A template holds one {value} or {value:<preset>} plus text, at most 80 characters, e.g. "{value:percent} of plan".',
+          'A template holds one {value} or {value:<preset>} plus text, e.g. "{value:percent} of plan".',
           m?.[2] === undefined ? "" : `Presets: ${PRESETS.join(", ")}. ${dym(m[2], PRESETS)}`,
         );
       return;
@@ -339,19 +338,11 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   const isPath = PATH.includes(t);
   const need = isPath ? "path" : "x";
   const pth = (spec as Record<string, unknown>)["path"];
-  if (t === "sankey" && Array.isArray(pth) && pth.length < 2)
+  if (Array.isArray(pth) && (t === "sankey" ? pth.length < 2 : t === "chord" && pth.length !== 2))
     fail(
       "invalid-option",
       "path",
-      "spec.path needs at least two levels for a sankey.",
-      'Example: path: ["region", "family"]',
-    );
-  if (t === "chord" && Array.isArray(pth) && pth.length !== 2)
-    fail(
-      "invalid-option",
-      "path",
-      "spec.path needs exactly two levels for a chord: from and to.",
-      'Example: path: ["region", "family"]',
+      `spec.path needs ${t === "sankey" ? "at least" : "exactly"} two levels for a ${t}.`,
     );
   const missing = (f: string) =>
     fail(
@@ -388,12 +379,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if ((t === "dumbbell" || t === "ridgeline" || t === "marimekko") && s.series === undefined)
     missing("series");
   if (t === "parallel" && !(Array.isArray(s.y) && s.y.length >= 2))
-    fail(
-      "invalid-option",
-      "y",
-      'spec.y on "parallel" needs an array of at least 2 measures, one axis each.',
-      'Example: y: ["sales", "units", "price"]',
-    );
+    fail("invalid-option", "y", 'spec.y on "parallel" needs an array of at least 2 measures.');
 
   for (const k in S) if (s[k] !== undefined && typeof s[k] !== S[k]) bad(k, s[k], `a ${S[k]}`);
   for (const [k, want, ok] of CHECKS) if (s[k] !== undefined && !ok(s[k])) bad(k, s[k], want);
@@ -407,7 +393,6 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
           `text.${k}`,
           `spec.text.${k} is not a text key.`,
           dym(k, Object.keys(TEXT)),
-          `Text keys: ${Object.keys(TEXT).join(", ")}.`,
         );
       if (typeof v !== "string") bad(`text.${k}`, v, "a string");
     }
@@ -441,22 +426,14 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       ok = Intl.NumberFormat.supportedLocalesOf(s.locale).length > 0;
     } catch {}
     if (!ok)
-      bFmt(
-        "locale",
-        `spec.locale = ${show(s.locale)} is not a locale this runtime supports.`,
-        'Use a BCP 47 tag such as "de-DE". Node built with small ICU supports English only.',
-      );
+      bFmt("locale", `spec.locale = ${show(s.locale)} is not a locale this runtime supports.`);
     locale = s.locale;
   }
   if (typeof s.currency === "string")
     try {
       new Intl.NumberFormat(locale, { style: "currency", currency: s.currency });
     } catch {
-      bFmt(
-        "currency",
-        `spec.currency = ${show(s.currency)} is not an ISO 4217 currency code.`,
-        'Use a three-letter code such as "USD" or "EUR".',
-      );
+      bFmt("currency", `spec.currency = ${show(s.currency)} is not an ISO 4217 currency code.`);
     }
   if (typeof s.format === "string") format("format", s.format, locale);
   else if (s.format !== undefined) {
@@ -477,7 +454,6 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         "invalid-option",
         "colors",
         `spec.colors has ${entries!.length} colours; the palette has 8 slots.`,
-        "Pass at most 8. Series 9 and later reuse slots in order.",
       );
     for (const [p, c] of entries!) css(`colors${p}`, c as string, false);
   }
@@ -513,64 +489,55 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         `spec.${k} works with: ${ONLY[k]!.join(", ")}.`,
       );
   const cart = PATHX.includes(t);
-  const pairs: [boolean, string, string, string][] = [
+  const pairs: [boolean, string, string, string?][] = [
     [
       colorBy !== undefined && s.series !== undefined && t !== "dumbbell",
       "colorBy",
       "spec.colorBy cannot be combined with spec.series.",
-      "Series already set the colours; remove one of them.",
     ],
     [
       s.yDomain !== undefined && Array.isArray(y),
       "yDomain",
       "spec.yDomain cannot be combined with a y array.",
-      "Each measure needs its own domain; use a single y or remove yDomain.",
     ],
     [
       s.drill === true && select !== undefined,
       "select",
       "spec.select cannot be combined with spec.drill.",
-      "A click either drills or selects; choose one.",
     ],
     [
       cart && path !== undefined && s.x !== undefined,
       "x",
       "spec.x cannot be combined with spec.path.",
-      "With path, the current drill level is the category; remove x.",
     ],
     [
       s.y2 !== undefined && s.horizontal === true,
       "y2",
       "spec.y2 cannot be combined with spec.horizontal.",
-      "The y2 line needs a right value axis; draw vertical bars.",
     ],
     [
       s.xType === "time" && (s.sort !== undefined || s.limit !== undefined),
       "xType",
       'spec.xType = "time" cannot be combined with spec.sort or spec.limit.',
-      'A time axis is ordered by time; remove sort and limit, or use xType: "category".',
     ],
     [
       s.xType === "time" && s.horizontal === true,
       "xType",
       'spec.xType = "time" cannot be combined with spec.horizontal.',
-      'Time runs along the bottom axis; remove horizontal, or use xType: "category".',
     ],
     [
       t === "kpi" && colorBy !== undefined && !isObj(colorBy),
       "colorBy",
       'spec.colorBy on "kpi" must be { target: number }.',
-      "A kpi compares its headline with one target, drawn as a bullet bar.",
     ],
     [
       cart && s.drill === true && path === undefined,
       "drill",
       `spec.drill on "${t}" needs spec.path.`,
-      'Replace x with path: ["region", "state"] (outer to inner).',
     ],
   ];
   for (const [hit, k, headline, detail] of pairs)
-    if (hit) fail("option-unsupported", k, headline, detail);
+    if (hit) fail("option-unsupported", k, headline, detail ?? "");
 
   if (rows.length) {
     // The key list is only built on the error path; the check itself stops at the first row.
@@ -623,7 +590,6 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         "invalid-option",
         "colorBy",
         'spec.colorBy = "sign" colours by the sign of y, but spec.data also has a field named "sign".',
-        "Rename that field (e.g. data.map(({ sign, ...r }) => ({ ...r, signValue: sign }))) to colour by it.",
       );
 
     // Callbacks build the data[i].field path themselves, only when a row fails.
@@ -652,7 +618,6 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
           "invalid-option",
           "series",
           `spec.series on "dumbbell" needs exactly 2 values, found ${n}.`,
-          "The first value seen is the start of each bar, the second the end, e.g. last year and this year.",
         );
     }
     if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
@@ -664,7 +629,6 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
           "invalid-date",
           p,
           `spec.${p} is ${show(v)}, but spec.xType = "time" needs ISO 8601 dates or epoch ms.`,
-          'Use "2024-03-05", "2024-03" or "2024-03-05T14:30:00Z"; times without an offset are UTC.',
         );
       });
     if (typeof colorBy === "string" && colorBy !== "sign")

@@ -70,8 +70,10 @@ describe("drill reducer", () => {
     ]);
     const s1 = st(["West"]);
     expect(reduce(s1, { type: "drill", value: "CA", spec: three })).toBe(s1);
-    const s0 = st();
-    expect(reduce(s0, { type: "drill", value: "West", spec: spec({ type: "chord" }) })).toBe(s0);
+    // chord is no longer special-cased: validate rejects `drill` on it, the reducer never sees one.
+    expect(
+      reduce(st(), { type: "drill", value: "West", spec: spec({ type: "chord" }) }).view.drill,
+    ).toEqual(["West"]);
   });
   it("resets when drill is turned off", () => {
     expect(reduce(st(["West"]), ev(spec(), spec({ drill: false }))).view.drill).toEqual([]);

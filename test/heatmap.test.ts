@@ -30,6 +30,19 @@ describe("heatmap", () => {
       /data-maya="labels"><\/g>/,
     );
   });
+  it("a value too wide for its cell falls back to 2 significant digits", () => {
+    const wide: ChartSpec = {
+      ...spec,
+      format: "compact",
+      data: data.map((d) => ({ ...d, v: d.v * 1e6 + 234567 })),
+    };
+    const labels = (w: number) =>
+      render(wide, { width: w, height: 200 }).match(/<text[^>]*data-in[^>]*>([^<]*)</g) ?? [];
+    expect(labels(520).some((t) => /\d\.\d+M</.test(t))).toBe(true);
+    const tight = labels(200);
+    expect(tight.length).toBeGreaterThan(0);
+    expect(tight.every((t) => !/\d\.\d+M</.test(t))).toBe(true);
+  });
   it("renders a ramp legend with formatted extent", () => {
     const html = renderParts(spec).legend;
     expect(html).toContain("data-maya");
@@ -68,5 +81,16 @@ describe("heatmap", () => {
     const t = svg.match(/<text [^>]*data-in[^>]*>/g) ?? [];
     expect(t.length).toBe(11);
     expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(5); // q >= 6 of 11 cells
+  });
+  it("small cells are squares, large ones fill the band; the legend names the field", () => {
+    const wh = (svg: string) => {
+      const t = marks(svg)[0]!;
+      return [/ width="([\d.]+)"/, / height="([\d.]+)"/].map((re) => Number(re.exec(t)![1]));
+    };
+    const [w, h] = wh(render(spec, { width: 400, height: 400 }));
+    expect(w).not.toBe(h);
+    const small = wh(render(spec, { width: 160, height: 400 }));
+    expect(small[0]).toBe(small[1]);
+    expect(renderParts(spec).legend).toContain("<b>v</b>");
   });
 });

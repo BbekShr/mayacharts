@@ -108,4 +108,17 @@ describe("beeswarm", () => {
     expect(() => render({ type: "beeswarm", x: "region", data } as unknown as ChartSpec)).toThrow();
     expect(() => render({ ...spec, horizontal: true })).toThrow();
   });
+  it("5000 tied values stay fast (dodge checks the 50 most recent neighbours)", () => {
+    const ties = Array.from({ length: 5000 }, (_, i) => ({ item: `i${i}`, sales: 0 }));
+    const run = () => render({ type: "beeswarm", y: "sales", name: "item", data: ties });
+    run();
+    const ms = Math.min(
+      ...Array.from({ length: 4 }, () => {
+        const t = performance.now();
+        run();
+        return performance.now() - t;
+      }),
+    );
+    expect(ms).toBeLessThan(200);
+  });
 });

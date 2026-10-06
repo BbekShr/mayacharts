@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mayaCharts builder</title>
+    <meta
+      name="description"
+      content="Build a mayaCharts chart by pointing and clicking, then copy the code for HTML, ThoughtSpot, React, Vue, Svelte, Angular or Node."
+    />
+    <link rel="stylesheet" href="./site.css" />
+    <!-- Apply the saved theme before first paint; theme.ts keeps the button in step. -->
+    <script>
+      try {
+        const m = localStorage.getItem("maya-theme");
+        if (m === "light" || m === "dark") document.documentElement.style.colorScheme = m;
+      } catch {}
+    </script>
+  </head>
+  <body class="wide">
+    <header class="site">
+      <h1>Builder</h1>
+      <p class="tagline">
+        Pick a chart, bring your data, map the fields. Copy the code for your platform.
+      </p>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="./builder.html" aria-current="page">Builder</a>
+        <a href="./gallery.html">Gallery</a>
+        <a href="./compare.html">Compare</a>
+        <a href="./errors.html">Errors</a>
+        <a href="https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md">Non-features</a>
+        <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
+        <button id="theme" type="button">Theme: auto</button>
+      </nav>
+    </header>
+    <main class="bld">
+      <form class="bld-form" id="form" novalidate>
+        <fieldset class="step">
+          <legend>1. Chart</legend>
+          <div id="types" class="types"></div>
+          <p id="type-help" class="type-help" aria-live="polite"></p>
+        </fieldset>
+
+        <fieldset class="step">
+          <legend>2. Data</legend>
+          <div class="seg">
+            <label><input type="radio" name="source" value="sample" checked /> Sample data</label>
+            <label><input type="radio" name="source" value="mine" /> My data</label>
+          </div>
+          <div id="paste-box" hidden>
+            <label for="paste">Paste CSV, TSV from a spreadsheet, or a JSON array of objects</label>
+            <textarea
+              id="paste"
+              rows="7"
+              spellcheck="false"
+              aria-describedby="meter paste-err"
+              placeholder="Month,Sales&#10;Jan,1200&#10;Feb,1350"
+            ></textarea>
+            <p id="meter" class="hint" aria-live="polite"></p>
+            <p id="paste-err" class="err" role="alert" hidden></p>
+            <p class="hint">
+              Up to 1 MB, 5,000 rows and 50 columns. Your data stays in this browser tab.
+            </p>
+          </div>
+          <ul id="cols" class="chips" aria-label="Columns"></ul>
+        </fieldset>
+
+        <fieldset class="step">
+          <legend>3. Fields</legend>
+          <div id="fields" class="fields"></div>
+          <div id="formats" class="fields formats" hidden></div>
+        </fieldset>
+
+        <fieldset class="step">
+          <legend>4. Options</legend>
+          <div id="options" class="options"></div>
+          <div class="field accent">
+            <label for="accent">Accent colour</label>
+            <input type="color" id="accent" value="#3b82f6" />
+            <button type="button" id="accent-reset">Default</button>
+          </div>
+        </fieldset>
+
+        <button type="button" id="reset" class="reset">Start over</button>
+      </form>
+
+      <div class="bld-out">
+        <section class="bld-preview" aria-label="Preview">
+          <div class="preview-bar">
+            <button type="button" id="reroll">Re-roll data</button>
+          </div>
+          <maya-chart id="chart"></maya-chart>
+          <div id="chart-err" class="problem" role="alert" hidden></div>
+        </section>
+
+        <section class="bld-code" aria-label="Code">
+          <h2>Code</h2>
+          <div id="tabs" class="tabs" role="tablist" aria-label="Platform"></div>
+          <p id="cut-note" class="hint" hidden></p>
+          <p id="code-warn" class="err" hidden>
+            This code shows the same problem as the preview. Fix it above, then copy.
+          </p>
+          <div id="panel" role="tabpanel"></div>
+          <p id="live" class="sr-only" aria-live="polite"></p>
+        </section>
+      </div>
+    </main>
+    <div id="tip" class="tip" aria-hidden="true" hidden></div>
+    <script type="module" src="./builder.ts"></script>
+  </body>
+</html>

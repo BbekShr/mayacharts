@@ -200,6 +200,19 @@ describe("scatter", () => {
     });
   });
 
+  it("a plot without a size field leaves the colour and series legends to render", () => {
+    const rows = [
+      { a: 1, b: 2, m: 3, s: "p" },
+      { a: 2, b: 3, m: 9, s: "q" },
+    ];
+    const ramp = renderParts({ ...base, colorBy: "m", data: rows } as ChartSpec).legend;
+    expect(ramp).toContain('data-maya="ramp"');
+    expect(ramp).not.toContain("<circle");
+    expect(renderParts({ ...base, series: "s", data: rows } as ChartSpec).legend).toContain(
+      'data-maya="legend"',
+    );
+  });
+
   it("names axes by field, keys bubble size, thins out dense plots", () => {
     const b = renderParts(bubbles);
     expect(b.svg).toContain(">a<");

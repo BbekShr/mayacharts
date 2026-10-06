@@ -1,6 +1,6 @@
 // treemap + sunburst. Importing this file registers both types.
 import { register } from "./core/registry.ts";
-import { cbField, el, esc, hit, key, r } from "./core/svg.ts";
+import { OTHER, cbField, el, esc, hit, key, r } from "./core/svg.ts";
 import type { Aggregate, Mark, MarkCtx, MarkOut, Row } from "./core/types.ts";
 
 interface Node {
@@ -115,14 +115,15 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
   let c = 0;
   // Colour slots follow size (the drawn order), so neighbours differ until the palette wraps.
   const tops = [...root.children].sort(big);
-  const attrs = (n: Node) => {
+  const attrs = (n: Node, other = false) => {
     const parts = [...spec.drilled, ...n.parts];
     const s = hue ?? tops.findIndex((t) => t.name === n.parts[0]);
     return {
       "data-maya": "mark",
-      "data-key": key("h", ...parts),
+      // The "Other (n)" lump is keyed by the sentinel, not its count, so a new count still sweeps.
+      "data-key": key("h", ...(other ? [...parts.slice(0, -1), OTHER] : parts)),
       "data-c": c++,
-      "data-s": s % 8,
+      "data-s": s < 0 ? null : s % 8, // the depth-1 lump matches no top node: neutral
       "data-x": parts.join(" › "),
       "data-series": "",
       "data-y": n.value,
@@ -151,7 +152,16 @@ const treemap: Mark = {
       if (!n.children.length) {
         if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
         const a = attrs(n);
-        marks += el("rect", { ...a, x: r(bx), y: r(by), width: r(bw), height: r(bh) });
+        // A drilled branch is one hue: its tiles step through three tints in size order.
+        const tint = spec.drilled.length ? 1 + (a["data-c"] % 3) : null;
+        marks += el("rect", {
+          ...a,
+          "data-tint": tint,
+          x: r(bx),
+          y: r(by),
+          width: r(bw),
+          height: r(bh),
+        });
         // No data-depth on the hit: [data-depth] strokes would outline every grown target.
         hits += hit({ ...a, "data-depth": null }, bx, by, bw, bh);
         // Name over value when both fit, else "name · value" on one line, else the value.
@@ -212,6 +222,7 @@ const sunburst: Mark = {
       });
     const names = spec.labels !== false; // on unless turned off: a sunburst without names is unreadable
     let marks = "";
+    let labels = "";
     const walk = (n: Node, a0: number, a1: number, parent: Node, other = false): void => {
       const span = a1 - a0;
       if (n.depth) {
@@ -219,7 +230,7 @@ const sunburst: Mark = {
         if ((span / DEG) * (rm + w / 2) < 2) return; // ponytail: arcs under 2 px are not drawn (nor their children)
         const full = span > 359.99;
         const pad = full ? 0 : Math.min(span / 2, DEG / rm); // 1 px between siblings
-        const a = { ...attrs(n), "data-other": other || null };
+        const a = { ...attrs(n, other), "data-other": other || null };
         const share = pct(n.value / parent.value);
         a["data-f"] += ` · ${n.depth > 1 ? ctx.t("shareOf", share, parent.name) : share}`;
         marks += circle(
@@ -228,27 +239,49 @@ const sunburst: Mark = {
           a0 + pad / 2,
           span - pad,
         );
-        // Label across the ring when its box fits the slice (radially, and across at the box's
-        // inner edge), else along the radius, else none.
+        // Label along the arc (upright, cut to what fits: the whole name or 4 characters at least),
+        // else along the radius, else none. Depth 1 sits on a full-strength fill: dark ink.
         const sw = span - pad;
         const mid = a0 + span / 2;
         const [lx, ly] = at(rm, mid) as [number, number];
-        const tw = text(n.name) / 2;
-        const [sn, cs] = [Math.abs(lx - cx) / rm, Math.abs(ly - cy) / rm];
-        const out = sn * tw + cs * 7;
-        if (names && out < w / 2 - 2 && cs * tw + sn * 7 < (sw / 2 / DEG) * (rm - out))
-          ctx.label(lx, ly, n.name, "center");
-        else if (names && tw < w / 2 - 2 && (sw / DEG) * (rm - tw) > 14)
-          ctx.label(lx, ly, n.name, "center", mid < 180 ? mid - 90 : mid + 90);
+        const nm = n.name;
+        const tw = text(nm) / 2;
+        // ponytail: a straight name must stay inside the ring (its chord sags (w - 12) / 2 at most), so long names are cut, never curved.
+        const cap = Math.floor((Math.min((sw / DEG) * rm, Math.sqrt(4 * rm * (w - 12))) - 6) / 7.2);
+        const [rot, shown] =
+          cap >= Math.min(nm.length, 4)
+            ? [
+                mid + (mid > 90 && mid < 270 ? 180 : 0),
+                nm.length > cap ? `${nm.slice(0, cap - 1)}…` : nm,
+              ]
+            : tw < w / 2 - 2 && (sw / DEG) * (rm - tw) >= 14
+              ? [mid + (mid < 180 ? -90 : 90), nm]
+              : [null, nm];
+        if (names && rot !== null)
+          labels += el(
+            "text",
+            {
+              x: r(lx),
+              y: r(ly),
+              transform: rot ? `rotate(${r(rot)} ${r(lx)} ${r(ly)})` : null,
+              "text-anchor": "middle",
+              "dominant-baseline": "middle",
+              "data-in": true,
+              "data-ink": n.depth === 1 ? "" : null,
+            },
+            esc(shown),
+          );
       }
       const kids = [...n.children].sort(big);
       let a = a0;
       for (const [i, c] of kids.entries()) {
-        const s = (span * c.value) / n.value;
+        let s = (span * c.value) / n.value;
         // Slivers under 4 px across read as hatching: the rest (all smaller) become one "Other (n)".
-        if (kids[i + 1] && (s / DEG) * (c.depth + 0.5) * w < 4) {
+        // The largest child is never lumped: it keeps a 3 px tick, so a ring of slivers still names its head.
+        if (!i) s = Math.max(s, (3 * DEG) / ((c.depth + 1) * w));
+        else if (kids[i + 1] && (s / DEG) * (c.depth + 0.5) * w < 4) {
           const name = `${ctx.t("other")} (${kids.length - i})`;
-          const value = (n.value * (a1 - a)) / span;
+          const value = kids.slice(i).reduce((q, k) => q + k.value, 0); // by value: the tick moved the angle
           walk({ ...c, name, value, children: [], parts: [...n.parts, name] }, a, a1, n, true);
           break;
         }
@@ -274,7 +307,7 @@ const sunburst: Mark = {
     );
     if (names && text(name) <= 2 * w - 8 && text(f) <= 2 * w - 8)
       ctx.label(cx, cy - 8, name, "center") && ctx.label(cx, cy + 8, f, "center");
-    return { marks, hits: "" };
+    return { marks, hits: "", labels };
   },
 };
 

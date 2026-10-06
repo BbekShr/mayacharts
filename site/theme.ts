@@ -1,4 +1,6 @@
-// Theme toggle shared by the demo pages: auto -> light -> dark, remembered across pages.
+// Theme toggle shared by the demo pages: auto -> light -> dark, remembered across pages. Each
+// page also applies the saved mode in an inline <head> script, so it never paints in the OS
+// scheme first and flips (same "maya-theme" key).
 // Charts follow it because site.css sets `maya-chart { color-scheme: inherit }`; the element's
 // own `:host` default is `light dark`, which tracks the OS and would ignore this page setting.
 // A function, not a bare import: package.json "sideEffects" tree-shakes side-effect-only imports.

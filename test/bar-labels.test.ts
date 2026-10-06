@@ -1,0 +1,44 @@
+import { describe, expect, it } from "vitest";
+import { render } from "../src/index.ts";
+import type { ChartSpec } from "../src/core/types.ts";
+
+const labels = (s: ChartSpec) =>
+  render(s, { width: 600, height: 300 }).match(/<text[^>]*data-in[^>]*>/g) ?? [];
+
+describe("bar value labels over the bar", () => {
+  const base: ChartSpec = {
+    type: "bar",
+    x: "k",
+    y: "v",
+    labels: true,
+    horizontal: true,
+    data: [
+      { k: "a", v: 100 },
+      { k: "b", v: 80 },
+    ],
+  };
+  it("carry the dark ink on a full-strength bar", () => {
+    const l = labels(base);
+    expect(l).toHaveLength(2);
+    expect(l.every((t) => t.includes('data-ink=""'))).toBe(true);
+  });
+  it("use the page background ink on the grey roll-up bar and on tone fills", () => {
+    const other = labels({ ...base, limit: 1, sort: "desc" });
+    expect(other.some((t) => t.includes('data-ink="b"'))).toBe(true);
+    expect(labels({ ...base, colorBy: "sign" }).every((t) => t.includes('data-ink="b"'))).toBe(
+      true,
+    );
+  });
+  it("follow the ramp's dark-step rule when coloured by a field", () => {
+    const l = labels({
+      ...base,
+      colorBy: "v",
+      data: [
+        { k: "a", v: 100 },
+        { k: "b", v: 60 },
+      ],
+    });
+    expect(l.some((t) => t.includes('data-ink=""'))).toBe(true);
+    expect(l.some((t) => !t.includes("data-ink"))).toBe(true);
+  });
+});

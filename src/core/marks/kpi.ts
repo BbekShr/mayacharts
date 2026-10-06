@@ -67,7 +67,7 @@ function draw(ctx: MarkCtx) {
     );
     top += 16;
   }
-  if (period) labels += text({ "data-kpi": "period", y: r(top), "font-size": 11 }, period);
+  const rowTop = top; // where the period caption sits when there is no sparkline to anchor it to
   top += 18;
 
   let grid = "";
@@ -158,7 +158,22 @@ function draw(ctx: MarkCtx) {
       }) +
       marks;
     hits = plotHit({ x: 0, y: 0, w: W, h: H });
-  }
+    // The headline's period names the sparkline's last point: right-aligned above it.
+    if (period)
+      labels += el(
+        "text",
+        {
+          "data-kpi": "period",
+          x: px(last!.ci),
+          y: Math.max(top, +py(last!.value!) - 24),
+          "font-size": 11,
+          "text-anchor": "end",
+          "dominant-baseline": "hanging",
+        },
+        esc(period),
+      );
+  } else if (period)
+    labels += text({ "data-kpi": "period", y: r(rowTop), "font-size": 11 }, period);
   return { marks, hits, labels, grid };
 }
 

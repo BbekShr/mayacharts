@@ -7,7 +7,7 @@ coverage/
 .DS_Store
 *.log
 site/ssr.html
-# Local-only Claude files. The ThoughtSpot skills are employer-related and must never be committed.
+# Local-only Claude files. Employer-related skills must never be committed.
 .claude/skills/ts-object-*/
 .claude/worktrees/
 .claude/scheduled_tasks.lock

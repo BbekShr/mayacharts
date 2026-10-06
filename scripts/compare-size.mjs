@@ -26,6 +26,7 @@ const opts = {
   minify: true,
   jsx: "automatic",
   alias: { mayacharts: "./src" },
+  nodePaths: ["compare/node_modules"],
   define: { "process.env.NODE_ENV": '"production"' },
   logLevel: "warning",
 };
@@ -38,7 +39,7 @@ const ver = (lib) => {
   const paths =
     lib === "maya"
       ? ["package.json"]
-      : (PKG[lib] ?? []).map((p) => `node_modules/${p}/package.json`);
+      : (PKG[lib] ?? []).map((p) => `compare/node_modules/${p}/package.json`);
   const p = paths.find(existsSync);
   return p ? JSON.parse(readFileSync(p, "utf8")).version : null;
 };

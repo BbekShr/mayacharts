@@ -10,6 +10,8 @@ Existing chart libraries were designed 2011-2016 and hand-roll animation, toolti
 
 ## Quick start
 
+No code yet? The [chart builder](https://bbekshr.github.io/mayacharts/builder.html) lets you pick a chart, paste your data, map the fields and copy ready code for HTML, ThoughtSpot, React, Vue, Svelte, Angular or Node.
+
 HTML:
 
 ```html
@@ -37,6 +39,8 @@ const chart = document.querySelector("maya-chart");
 chart.spec = { type: "bar", data, x: "month", y: "revenue", series: "region", stack: true };
 chart.data = newRows; // animates the update
 ```
+
+Where the element reads its spec from, in order of precedence: the `spec` property (and `data`, which sets it), then the JSON `<script>` child, then the `spec` attribute. A `spec` property you have set wins over any later change to the attribute, so set one source and leave the others alone. Assign `chart.spec = undefined` to fall back to the script child or the attribute.
 
 Server-side rendering:
 
@@ -493,7 +497,7 @@ Four events, all `bubbles: true, composed: true`:
 - `maya-select {selected: Sel[], target: (Sel & {value}) | null}` - mark selected
 - `maya-view {measure, drill, window, hidden}` - measure toggled, drilled, zoomed, or a legend series hidden (user actions only; `window` is the zoom slice)
 - `maya-error {code, path, message}` - spec error (cancelable; preventDefault() hides error box)
-- `maya-render {}` - render complete (ThoughtSpot: call `viz.events.emitRenderCompletedEvent()`)
+- `maya-render {}` - render complete (use it to tell a host the chart has painted)
 
 Properties: `el.view` and `el.selected` (getters and setters; no events on set).
 
@@ -619,19 +623,6 @@ const spec = { type: "bar", x: "month", y: "revenue", data };
 chart.spec = spec;
 ```
 
-**ThoughtSpot**: Call `viz.getDataFromSearchQuery().getData()` to get the columnar table, then `viz.events.emitRenderCompletedEvent()` on `maya-render`:
-
-```js
-const table = viz.getDataFromSearchQuery().getData();
-const rows = table.columns.map((col) =>
-  Object.fromEntries(col.values.map((v, i) => [col.name, v])),
-);
-chart.data = rows;
-chart.addEventListener("maya-render", () => {
-  viz.events.emitRenderCompletedEvent();
-});
-```
-
 ## Theming
 
 Every colour and font is a CSS custom property. Set them on the element or host:
@@ -711,7 +702,7 @@ Fully conformant with WCAG 2.2 AA, verified by axe-core on every gallery tile in
 
 Implemented: semantic role and title, accessible description, data table for screen readers, keyboard navigation (Tab, arrows, Enter, Space, Escape), live region updates, focus management, forced-colors support, reduced motion support, ≥3:1 contrast in both light and dark modes, non-colour cues (text tone), 12 px touch target enlargement.
 
-Known ceilings: label truncation at 40% width; UTC dates unless Intl options say otherwise; scatter keyboard order follows draw order (not spatial); stacked bar labels show segments, not totals.
+Known ceilings: left labels are cut at 40% width and bottom category labels at their slot width; UTC dates unless Intl options say otherwise; scatter keyboard order follows draw order (not spatial); stacked bar labels show segments, not totals.
 
 See [STABILITY.md](STABILITY.md) for the full accessibility and performance envelope.
 
@@ -749,15 +740,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 5,018 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 6,229 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 628,215,278 total, 1,296,675 output
-- claude-sonnet-5-5: 189,175,194 total, 41,383 output
+- claude-opus-5-5: 726,300,563 total, 1,605,370 output
+- claude-sonnet-5-5: 255,101,702 total, 49,022 output
 - claude-fable-5-1: 74,794,840 total, 178,397 output
-- claude-haiku-4-5-20251001: 18,481,843 total, 761 output
+- claude-haiku-4-5-20251001: 19,393,818 total, 833 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 918,465,014 total, 1,560,529 output
+- all: 1,083,388,782 total, 1,876,935 output
 
 <!-- tokens:end -->
 

@@ -1,5 +1,5 @@
 import { t as str } from "../core/strings.ts";
-import type { ChartSpec } from "../core/types.ts";
+import type { ChartSpec, View } from "../core/types.ts";
 import { listen } from "./listen.ts";
 
 const a = (e: Element, k: string) => e.getAttribute(k) ?? "";
@@ -10,7 +10,7 @@ const h = (t: string, txt = "", at: Record<string, string> = {}) => {
   return e;
 };
 // Links (sankey flows, chord ribbons) carry the same payload as marks.
-const SEL = "[data-maya=hit],[data-maya=mark],[data-maya=link][data-key]";
+const SEL = "[data-maya=hit],[data-maya=mark],[data-maya=link][data-f]";
 const FADE = 120;
 const NEAR = 12;
 const FIXED = ["position", "position-area", "left", "top", "margin"];
@@ -254,9 +254,16 @@ export function tooltip(
     m.setAttribute("data-active", "");
     light(m);
     const g = group(m);
+    const speak = () =>
+      announce(
+        `${a(m, "data-x")}: ${g.map((k) => [a(k, "data-series"), a(k, "data-f"), tone(k)].filter(Boolean).join(" ")).join(", ")}`,
+      );
+    // tooltip:false: keys and the live region still work, the popover and guides do not.
+    if (!on()) return say && speak();
     // Rows without a series name the measure ("Sales  1.2M"); scatter values carry their own.
     const sp = spec(),
-      y = sp?.y,
+      ys = sp?.y,
+      y = Array.isArray(ys) ? ys[(host as { view?: View }).view?.measure ?? 0] : ys,
       label =
         typeof y === "string" && sp?.type !== "scatter"
           ? sp?.titles && Object.hasOwn(sp.titles, y)
@@ -344,10 +351,7 @@ export function tooltip(
           GLIDE,
         );
     }
-    if (say)
-      announce(
-        `${a(m, "data-x")}: ${g.map((k) => [a(k, "data-series"), a(k, "data-f"), tone(k)].filter(Boolean).join(" ")).join(", ")}`,
-      );
+    if (say) speak();
   };
 
   const move = (e: Event) => {
@@ -378,7 +382,6 @@ export function tooltip(
   const leave = (e: Event) => (e as PointerEvent).pointerType === "mouse" && hide();
   const key = (e: Event) => {
     const k = (e as KeyboardEvent).key;
-    if (!on()) return;
     kb = true;
     index();
     if (k === "Escape") {
@@ -387,7 +390,7 @@ export function tooltip(
       return hide();
     }
     let next: Element | undefined;
-    if (k === " ") {
+    if (k === " " && on()) {
       next = cur ?? list[0];
       if (!next) return;
       pin = !pin;
@@ -436,8 +439,15 @@ export function tooltip(
       if (!cur) return hide(); // rebuilt on the first pointer or key
       index();
       const m = k ? byKey.get(k) : undefined;
-      if (m && on()) show(m);
-      else hide();
+      if (!m) return hide();
+      show(m);
+      // Mid-move the mark is still at its old place: land the tooltip where it settles.
+      const an = m.getAnimations?.() ?? [];
+      if (an.length)
+        Promise.all(an.map((x) => x.finished)).then(
+          () => cur === m && show(m),
+          () => {},
+        );
     },
   };
 }

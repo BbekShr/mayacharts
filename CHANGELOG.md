@@ -4,6 +4,69 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Added
+
+- A chart builder on the demo site (`builder.html`). Pick one of the 20 chart types, start from sample data or paste CSV, TSV or JSON, map fields, set options, re-roll the sample numbers to watch the chart animate, and copy code for plain HTML, a ThoughtSpot custom chart (Muze Studio), React, Vue, Svelte, Angular, a JSON spec or Node server rendering. Each field gets its own format (a style for numbers and dates, words before and after a text category), and an i button by every field and option says what it does. Options a chart cannot use are hidden, options that clash with the current settings are disabled with the reason, and a spec the library rejects is explained in the builder's words with an undo. Chart types and options are read from `schema.json` and `validate.ts`, and the copied code pins the current `package.json` version, so the builder follows each release. Pasted data stays in the browser and is capped at 1 MB, 5,000 rows and 50 columns.
+
+### Changed
+
+- Size budgets (gzip): global 52.5 KB (was 51), element 44 KB (was 42.5), hierarchy 4.1 KB (was 3.85). The correctness, accessibility and motion fixes in this release account for the growth; core stays at 29.75 KB after trimming validation prose.
+- Install: the compare harness's rival libraries and the Anthropic SDK moved out of the root `devDependencies` into `compare/package.json` with its own lockfile. A root `npm ci` now installs only the library toolchain; the `compare*` scripts run `npm install --prefix compare` themselves, and `test/eval-score.test.ts` skips its ECharts cases when `compare/node_modules` is absent.
+
+### Fixed
+
+- A scatter with a `size` field now shows its colour key and the size key together. The size key used to replace the colour legend.
+- A category axis with 8 or fewer categories no longer drops labels at narrow widths. Each label is clipped to its slot with an ellipsis and keeps its full text in a title.
+- A time axis on a narrow plot always shows at least its first and last point, instead of a single tick.
+- The README and spec reference now state which source wins when a `<maya-chart>` has a `spec` property, a JSON script child and a `spec` attribute.
+- Downsampling a long time axis no longer drops a series' first point, last point, minimum or maximum when many series or sparse runs overshoot the budget. A one-point spike in a gappy line, or a kpi sparkline's extremes, now survive.
+- The exported `version` and `<maya-chart>.version` now read 0.5.0 instead of 0.3.0, so the double-registration warning can fire between versions. A test compares it with package.json so the next release cannot drift.
+- Scatter and beeswarm marks with names like "3", "3" and "3#2" no longer share a `data-key`.
+- Format options keep only primitive values before they are cached or passed to Intl, so a BigInt or object option no longer throws a raw TypeError, and the formatter cache is cleared past 200 entries.
+- `renderShell` and `shellInner` put `theme` and `colors` overrides in a rule inside the nonce'd style element instead of a style attribute, so they apply under a strict CSP without `style-src-attr`.
+- `drill` and `drillOut` on a chord chart are now rejected with `option-unsupported`. A chord has two levels, so a drill never went anywhere.
+- The release workflow is split into a `gate` job that runs the repository scripts with no credentials and a `publish` job that alone holds the npm token and `id-token: write`, installs nothing and publishes the built artifact. The gate fails when the tag and package.json version differ. Every action in every workflow is pinned to a commit SHA.
+- A click on a dumbbell connector no longer fires `maya-select` or shows an empty tooltip.
+- A numeric selection such as `x: 2024` now toggles off and no longer duplicates, because selections compare as strings.
+- A spec, view or selected change made while a resize frame is pending renders in the same microtask and animates.
+- With the pointer resting on a mark, the tooltip and crosshair follow the mark to its new place after a data update.
+- With `tooltip: false`, arrow keys, keyboard select and keyboard drill work, and the live region still announces the active mark.
+- After a spec error the old data table is removed, so screen readers no longer read data the chart is not showing.
+- Translucent sankey and chord links no longer flash to full opacity in Safari during updates and drills; fades end on the CSS opacity.
+- Interrupting a drill or update no longer makes label groups flash.
+- On a line or area first draw, value labels appear after the line has finished drawing.
+- Drilling a line, area or dumbbell chart moves points and connectors with the zoom instead of popping them, and line and area paths crossfade rather than morph between different categories.
+- The old sunburst centre stays until the clicked slice reaches it.
+- The hidden data table caption no longer shows over the chart title in Firefox.
+- Series legends are compacted instead of hidden in containers under 320 px.
+- Value labels on bars, heatmap cells, marimekko, treemap tiles and the first sunburst ring pass 4.5 to 1 contrast in light and dark mode.
+- Dimmed heatmap cells keep a readable label on hover.
+- A scatter without a size field shows its colour ramp and series legend again.
+- Heatmap labels that do not fit fall back to two significant digits before being dropped.
+- Beeswarm dodging no longer slows down on thousands of tied values (5000 ties took 3.7 s).
+- Sunburst names run along the arc, stay upright and are cut with an ellipsis, so every region and large family is labelled at gallery size.
+- A drilled treemap steps its tiles through three tints of the branch colour.
+- The sunburst "Other (n)" slice no longer gets a series slot, and its key leaves out the count so a changed count sweeps instead of re-entering.
+- Narrow sankey labels no longer overprint: the last two columns share label slots.
+- Sankey and chord outer columns use one neutral, the muted foreground, instead of a grey ramp that fell to 1.58 to 1.
+- Hexmap labels on ramp steps 7 and 8 use the theme foreground in both modes.
+- The gallery radial tile is single series so its tip totals show, the horizontal bar tile drills, and tiles show display titles instead of raw field names.
+- Sunburst drills keep the centre label readable: the old centre text crossfades into the new one instead of leaving a blank disc.
+- The tooltip of a line chart with several measures and no series field names the active measure instead of showing an empty cell.
+- At narrow widths a tall sankey node slides its label to find room, so the biggest leaves keep their names, and two-line labels keep clear of neighbours and the plot edge.
+- Hexmap value labels are solid ink and every label measures at least 4.5 to 1 against its fill in light and dark mode.
+- A sunburst ring of slivers keeps its largest child as a thin slice ahead of "Other".
+- A `limit` roll-up bar no longer sets the value scale; it runs to the plot edge with its full value in the label and tooltip.
+- Waterfall charts always label the first bar and the Total; a step label that does not fit its column is dropped instead of overlapping.
+- Line value labels sit above peaks, below troughs and to the free side on slopes, instead of on the line.
+- Parallel charts label each line's category at the last axis when it fits, and their tick labels are muted.
+- The kpi period caption sits above the sparkline's last point.
+- Radial bars state a year shared by every date label once, in the centre, instead of on every category.
+- Heatmap cells too small for a label are squares centred in their band, and the heatmap ramp legend shows the measure name.
+- Gallery: calendar weeks run Monday to Sunday, margin varies per item, a drillable sankey tile was added, and the demo's first chart has a title and value labels.
+
 ## 0.5.0 - 2026-10-05
 
 A measured scoreboard against seven other chart libraries, and speed: large data renders several times faster than before.

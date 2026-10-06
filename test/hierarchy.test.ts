@@ -161,8 +161,17 @@ describe("sunburst", () => {
     const other = s.filter((c) => / data-other="/.test(c));
     expect(other).toHaveLength(1);
     expect(at(other[0]!, "data-x")).toBe("A › Other (30)");
-    expect(at(other[0]!, "data-key")).toBe("h~A~Other%20(30)");
-    expect(s.map((c) => at(c, "data-key"))).toEqual(["h~A", "h~A~big", "h~A~Other%20(30)", "h"]);
+    // Keyed by the sentinel, not the count, so a new count still sweeps; neutral, no slot.
+    expect(at(other[0]!, "data-key")).toBe("h~A~%00other");
+    expect(s.map((c) => at(c, "data-key"))).toEqual(["h~A", "h~A~big", "h~A~%00other", "h"]);
+  });
+  it("a ring of only slivers keeps its largest child as a tick and lumps the rest", () => {
+    const rows = Array.from({ length: 1000 }, (_, i) => ({ g: "A", n: `s${i}`, v: 5 }));
+    const s = tags(renderParts({ ...sb, data: rows }).svg, "circle");
+    expect(s.filter((c) => at(c, "data-depth") === "2").map((c) => at(c, "data-x"))).toEqual([
+      "A › s0",
+      "A › Other (999)",
+    ]);
   });
   it("colour slots follow size, so the drawn order cycles the palette", () => {
     const rows = [
@@ -181,14 +190,21 @@ describe("sunburst", () => {
     );
     expect(d.every((c) => at(c, "data-s") === "1")).toBe(true);
   });
-  it("a name crosses the ring only when its box fits inside the slice", () => {
-    // Twelve 30 degree slices: at 12 o'clock a long name is wider than the slice, so it turns
-    // along the radius; near 3 o'clock the ring runs across the box, so it stays level.
+  it("a name runs along the arc, upright, cut to what fits", () => {
+    // Twelve 30 degree slices in a 400 px box: the arc holds about 8 characters.
     const rows = Array.from({ length: 12 }, (_, i) => ({ g: `Categories ${i}`, n: "x", v: 1 }));
     const svg = renderParts({ ...sb, data: rows, path: ["g"] }, { width: 400, height: 400 }).svg;
-    const label = (i: number) => new RegExp(`<text[^>]*>Categories ${i}<`).exec(svg)![0];
-    expect(label(0)).toContain("rotate(");
-    expect(label(2)).not.toContain("rotate(");
+    const texts = [...svg.matchAll(/<text[^>]*rotate\((-?[\d.]+)[^>]*>([^<]*)</g)];
+    expect(texts).toHaveLength(12);
+    for (const [, deg, t] of texts) {
+      const a = ((+deg! % 360) + 360) % 360;
+      expect(a <= 90 || a >= 270).toBe(true); // never upside down
+      expect(t!.endsWith("…")).toBe(true);
+    }
+  });
+  it("depth 1 names carry dark ink", () => {
+    const svg = renderParts({ ...sb }).svg;
+    expect(/<text[^>]*data-ink[^>]*>[^<]+</.test(svg)).toBe(true);
   });
   it("a drilled branch keeps its colour", () => {
     const d = tags(renderParts({ ...sb, drill: true }, { view: { drill: ["C"] } }).svg, "circle");

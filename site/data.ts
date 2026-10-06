@@ -206,6 +206,7 @@ export function makeData(seed: number): Dataset {
   );
   const familyMargin = new Map(FAMILIES.map((f) => [f, MARGINS[f] + between(-0.08, 0.08)]));
   const stateMargin = mul(STATES, -0.06, 0.06);
+  const itemMargin = mul(Object.values(ITEMS).flat(), -0.09, 0.09);
 
   const FACTS: Fact[] = [];
   for (let m = 0; m < 12; m++) {
@@ -215,11 +216,9 @@ export function makeData(seed: number): Dataset {
       const stateName = STATE_NAME[state]!;
       const region = REGION_OF[state] as Region;
       for (const family of FAMILIES) {
-        const margin = Math.max(
-          -0.1,
-          Math.min(0.5, familyMargin.get(family)! + stateMargin.get(state)! + (rng() - 0.5) * 0.04),
-        );
+        const base = familyMargin.get(family)! + stateMargin.get(state)! + (rng() - 0.5) * 0.04;
         for (const item of ITEMS[family]) {
+          const margin = Math.max(-0.1, Math.min(0.5, base + itemMargin.get(item)!));
           const price = PRICES[item]!;
           const units = Math.max(
             1,
@@ -262,7 +261,7 @@ export function makeData(seed: number): Dataset {
       day: date.toISOString().slice(0, 10),
       dayMs: date.getTime(),
       weekday: weekdays[dow]!,
-      week: Math.floor(d / 7) + 1,
+      week: Math.floor((d + ((new Date(Date.UTC(2025, 0, 1)).getUTCDay() + 6) % 7)) / 7) + 1,
       orders: Math.round(
         400 * monthMul[m]! * (dow === 0 || dow === 6 ? weekend : 1) * between(0.75, 1.25),
       ),

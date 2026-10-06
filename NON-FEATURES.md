@@ -16,6 +16,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 ## Known ceilings
 
+- **Builder paste size**: the demo site's chart builder previews at most 1 MB, 5,000 rows (the `too-many-marks` cap) and 50 columns of pasted data, and its copied code inlines at most 60 rows (the first 20 when there are more). The library itself has no such limit; load the full data in your own code.
 - **Render batching**: property sets in one task coalesce into one render (microtask), but sets in separate tasks each render, so a host that updates faster than 60 Hz is not capped at one render per frame. Resizes still wait for a frame.
 - **Scatter pointer pick**: scatter has no hit circles; the tooltip and click pick the nearest point centre within 12 px by a linear scan, so a pick costs O(points) per pointer move.
 - **Thinned sparkline and ridgeline**: kpi (one hover point per 4 px) and ridgeline (one per 6 px of plot width) keep the same largest-triangle-three-buckets pick as a downsampled time axis (each series' minimum and maximum and every gap edge included), so a click or hover lands on a kept category only, not every row. When the kept set is still over the target it is thinned evenly, which can drop a gap edge or a peak in the densest cases.
@@ -23,7 +24,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Late data table**: the hidden data table is inserted when the browser is next idle after a render (2 s at most), and only the latest one, so a screen reader sees it a moment after the marks. A server-rendered table stays in place until then.
 - **Y-domain origin**: value axes (lines included) are 0-anchored. Negative values are supported; set `yDomain` to override the origin.
 - **Ramp depth**: 10-step sequential ramp for colorBy numeric fields (not user-tunable).
-- **Label truncation**: long x labels are thinned by code point; text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
+- **Label truncation**: a category axis with 8 or fewer labels is never thinned, each label is clipped to its slot with an ellipsis (full text in a title); longer axes are thinned. Text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
 - **Time axis scope**: line, area and vertical bar only, on the bottom axis. UTC only (no time zones or DST), no fiscal or ISO-week calendars, no sub-second ticks; a bare year like "2024" is a category. Numbers become epoch ms only with `xType: "time"`.
 - **Time line gaps**: a line breaks where the gap between readings exceeds 5 times the series' median step (fixed factor); use null rows for gaps it should not guess.
 - **Time bar width**: bars on a time axis take 0.8 of the smallest gap between dates, so one close pair makes every bar thin.
@@ -58,7 +59,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **kpi delta is against the previous period only**: compare with a year earlier by passing two rows (for example "2025 YTD" and "2026 YTD") as the x periods.
 - **One y2 line**: `y2` takes one field, aggregated per category across every series, on a 0-anchored right axis.
 - **Dumbbell sort**: `sort` orders categories by the total of both values, not by the gap between them.
-- **Ridgeline scale**: rows share one value scale with no per-row axis; peaks overlap the row above by at most 40%.
+- **Ridgeline scale**: rows share one value scale from zero with no per-row axis; peaks overlap the row above by at most 40%. A scale from the data minimum does not help when rows differ in magnitude, and per-row scaling would exaggerate small movements.
 - **Beeswarm height**: a swarm taller than its row is clamped to the row, so overflow points overlap.
 - **Parallel axes**: every axis runs from 0 (or the minimum) to a nice maximum; no per-axis domain, and nulls break a line.
 - **Table height**: rows that do not fit the chart's height are not drawn (no scroll or paging); `limit` cuts to the top N with no Other row.
@@ -66,6 +67,26 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Marimekko values**: null and negative values count as 0; there is no percentage axis.
 - **Waffle resolution**: 100 cells, so a share under 0.5% gets no cell (it still shows in the legend).
 - **Radial labels**: no value labels on bars; category labels are cut at 11 characters and thinned when they collide.
+- **Parallel and limit**: the Other row that `limit` rolls up has no single line in a parallel chart, so it is not drawn.
+- **Treemap slivers**: leaves under about 2 px a side are not drawn; their rows stay in the data table.
+- **Flow label length**: sankey labels are cut at 20 characters, and one that would overlap its neighbour on the same side is dropped after a one-line try.
+- **Link keyboard reach**: arrow keys walk sankey and chord nodes, not links; the hidden data table carries the same rows for screen readers.
+- **Formatting speed path**: only en-US numbers with `maximumFractionDigits` and the built-in date presets skip `Intl`; any other locale or option set builds an `Intl` formatter once per page.
+- **Formatter cache**: formatters are cached per locale and options for the page, and the cache is emptied when it passes 200 entries, not trimmed by use.
+- **Label overlap scan**: in-chart value labels are checked against each other pairwise, which the 5000-mark cap bounds.
+- **Legend for many series**: a multi-series legend needs the data, so the first paint of such a chart draws twice.
+- **Version constant**: `version` is written by hand in `registry.ts` and a test fails when it differs from `package.json`.
+- **Beeswarm dodge**: each point checks only the 50 most recently placed neighbours, so a very dense tie cluster can overlap a little; the swarm is clamped to its row past about 25 points anyway.
+- **Sunburst names**: a name runs straight along its arc, upright, cut so its chord stays inside the ring; it is never curved, and a slice too short for 4 characters has no name (the tooltip names it).
+- **Treemap ramp ink**: treemap tiles coloured by a `colorBy` ramp use dark ink on every step, so the darkest steps can fall under 4.5 to 1.
+- **Sunburst of slivers**: a ring of hundreds of equal slices shows its largest as a thin slice and the rest as "Other (n)"; drill or filter to see them.
+- **Sankey narrow labels**: a label slides only within its own node's height; small nodes crowded beside a bigger one lose their label (the tooltip still names them).
+- **Hexmap hover ink**: while a hex is hovered, every label takes the text colour, so the hovered hex's own label can fall under 4.5 to 1.
+- **Waterfall labels**: a step label wider than its column is dropped, with no thinning; the first bar and the Total are always labelled.
+- **Roll-up bar**: the Other bar from `limit` never sets the value scale and is clipped at the plot edge, with no clip mark; its value is in the label and tooltip.
+- **Parallel end labels**: colliding end labels are dropped, not nudged apart, so lines that end close together share one label.
+- **Radial year**: a shared trailing four-digit year moves to the centre caption, which hides below about 170 px.
+- **Small heatmap cells**: cells under 26 px become squares with a 2 px gap, so a 52-week calendar at 360 px draws 3 px dots.
 
 ## What you can do instead
 

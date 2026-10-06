@@ -122,4 +122,11 @@ describe("radial", () => {
   it("rejects a missing y", () => {
     expect(() => svg({ ...spec, y: undefined } as never)).toThrow();
   });
+  it("a year shared by every date is stated once, in the centre", () => {
+    const dated = M.map((m, i) => ({ m: `2025-${String(i + 1).padStart(2, "0")}-01`, v: 5 + i }));
+    const out = svg({ ...plain(dated), format: { m: "month" } });
+    expect(out).not.toMatch(/>Jan 2025</);
+    expect(out).toMatch(/>Jan</);
+    expect(out).toMatch(/2025</);
+  });
 });

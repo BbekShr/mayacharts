@@ -46,19 +46,17 @@ const RADIAL =
 
 // marimekko
 const MEKKO =
-  "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500;opacity:.78}" +
+  "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}[data-maya=labels] [data-ink=b]{fill:var(--maya-bg)}" +
   "[data-maya=labels] [data-ax]{fill:var(--maya-fg-muted);stroke:none;font-size:11px}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
   "[data-maya=marks]:has([data-active]) [data-mm]:not([data-active],[data-lit]){opacity:.62}";
 
 // flow
-// Sankey and chord: the outer column is neutral slate (`data-neu` 0..3, no `data-s`), links take a
+// Sankey and chord: the outer column is one neutral (`data-neu`, no `data-s`), links take a
 // palette colour. Hovering a node (`data-n`) lights every link and node on a path through it
 // (the tooltip sets data-lit where `data-a` lists the node) and dims the rest; hovering a link
 // lifts it and keeps every node bright.
 const FLOW =
-  [55, 42, 30, 20]
-    .map((p, i) => `[data-neu="${i}"]{--c:color-mix(in oklab,var(--maya-fg) ${p}%,var(--maya-bg))}`)
-    .join("") +
+  "[data-neu]{--c:var(--maya-fg-muted)}" +
   (
     "[data-maya=link]{opacity:.45;fill:var(--c)}" +
     "M:has([data-active]) [data-maya=link]{opacity:.08}" +
@@ -74,8 +72,8 @@ const HEX = 'path[data-key^="g~"]';
 const HEXMAP =
   `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--c);stroke-width:1.5;stroke-linejoin:round}` +
   `${HEX}:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2.5}` +
-  // Dimmed cells lose their fill, so their dark-step labels revert to the normal text colour.
-  `svg:has(${HEX}[data-active]) [data-dark]{fill:var(--maya-fg)}` +
+  // Dimmed cells (hex or heatmap) lose their fill, so their dark-step labels revert to the normal text colour.
+  `svg:has([data-maya=mark][data-active]) [data-dark]{fill:var(--maya-fg)}` +
   "[data-maya=grid] [data-none]{stroke-opacity:.7;shape-rendering:auto}" +
   "[data-hex] i{width:120px;height:10px;border-radius:3px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}";
 
@@ -167,7 +165,7 @@ export const css =
   // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
   // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.
   "circle[data-depth][data-maya]{fill:none;stroke:color-mix(in oklab,var(--c) var(--t,100%),var(--maya-bg));transition:stroke .5s}" +
-  'circle[data-tint="2"]{--t:70%}circle[data-tint="3"]{--t:48%}' +
+  '[data-tint="2"]{--t:70%}[data-tint="3"]{--t:48%}' +
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
   "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text){opacity:.4}" +
@@ -178,11 +176,11 @@ export const css =
   H +
   "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}[data-maya=cross],[data-maya=band]{opacity:0;transition:opacity .2s}" +
   "[data-on]:is([data-maya=cross],[data-maya=band]){opacity:1;transition:opacity .2s,transform .25s var(--maya-ease)}[data-maya=band]{fill:var(--maya-fg);fill-opacity:.05;rx:6px}" +
-  "[data-maya=labels] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}[data-maya=labels] [data-dark]{fill:var(--maya-bg)}" +
+  "[data-maya=labels] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}[data-maya=labels] [data-dark]{fill:light-dark(#12161c,var(--maya-bg))}" +
   "[data-maya=cross] line{stroke:var(--maya-fg-muted);stroke-opacity:.55}" +
   "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke;pointer-events:none}" +
   ".maya-svg:focus{outline:none}.maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +
-  ".maya-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}" +
+  ".maya-sr caption{position:absolute;clip-path:inset(50%)}.maya-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}" +
   ".maya-probe{position:absolute;width:0;height:0;pointer-events:none;anchor-name:--maya-probe}" +
   ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
   "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}.maya-tip[data-side]{position-area:inline-end span-block-end;position-try-fallbacks:flip-inline;margin:0 12px}}" +
@@ -191,10 +189,16 @@ export const css =
   ".maya-tip div{display:flex;align-items:center;gap:8px;color:color-mix(in oklab,var(--maya-tooltip-fg) 72%,transparent)}.maya-tip i{width:8px;height:8px;border-radius:50%}" +
   ".maya-tip [data-v]{margin-inline-start:auto;padding-inline-start:12px;font-weight:600;color:var(--maya-tooltip-fg)}.maya-tip [data-on]{color:var(--maya-tooltip-fg)}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
-  "@container (max-width:320px){.maya-legend:has(button){display:none}.maya-title{font-size:12px}}" +
+  "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend i{width:8px;height:8px}.maya-title{font-size:12px}}" +
   RADIAL +
   MEKKO +
   FLOW +
+  // Treemap names: dark ink on full-strength slots; drilled tiles tint toward white so it holds.
+  "svg:has(rect[data-depth]) [data-maya=labels] [data-in]{fill:#12161c}" +
+  "rect[data-tint]{fill:color-mix(in oklab,var(--c) var(--t,100%),#fff)}" +
+  // Hexmap label ink by ramp step (4.5:1 each): black on steps 8 and 9, white on dark steps 6 and 7.
+  "svg:not(:has([data-active])) [data-maya=labels] text[data-q][data-dark]{fill:#000}" +
+  '[data-maya=labels] :is([data-q="6"],[data-q="7"]){fill:light-dark(var(--maya-fg),#fff)}' +
   HEXMAP +
   SCATTER +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +

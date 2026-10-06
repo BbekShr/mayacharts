@@ -56,6 +56,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("pace-lines", {
     type: "line",
     title: "Cumulative sales by region",
+    titles: { sales: "Sales ($)" },
     x: "monthMs",
     y: "sales",
     series: "region",
@@ -72,6 +73,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("stacked-area", {
     type: "area",
     title: "Sales by product family",
+    titles: { sales: "Sales ($)" },
     x: "monthMs",
     y: "sales",
     series: "family",
@@ -88,6 +90,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("waterfall", {
     type: "waterfall",
     title: "Monthly sales through the year",
+    titles: { delta: "Change ($)" },
     x: "step",
     y: "delta",
     totals: ["Total"],
@@ -112,6 +115,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("diverging", {
     type: "bar",
     title: "Margin against the average",
+    titles: { vsAvg: "Margin vs average" },
     horizontal: true,
     x: "state",
     y: "vsAvg",
@@ -126,6 +130,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("league", {
     type: "bar",
     title: "Top ten states by sales",
+    titles: { sales: "Sales ($)" },
     horizontal: true,
     x: "state",
     y: "sales",
@@ -140,6 +145,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("bubble", {
     type: "scatter",
     title: "Price against margin",
+    titles: { price: "Price", margin: "Margin", units: "Units", item: "Item" },
     x: "price",
     y: "margin",
     size: "units",
@@ -157,6 +163,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("scatter", {
     type: "scatter",
     title: "Sales against units",
+    titles: { units: "Units", sales: "Sales ($)", margin: "Margin", state: "State" },
     x: "units",
     y: "sales",
     name: "state",
@@ -194,7 +201,13 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     series: "weekday",
     aggregate: "sum",
     labels: false,
-    data: DAILY.map(({ week, weekday, orders }) => ({ week, weekday, orders })),
+    titles: { orders: "Orders" },
+    // Rows follow first appearance, so start on the first Monday: weeks run Mon to Sun.
+    data: DAILY.filter((d) => d.week > 1).map(({ week, weekday, orders }) => ({
+      week: week - 1,
+      weekday,
+      orders,
+    })),
   });
 
   // 11 and 12. Hierarchy.
@@ -202,6 +215,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("treemap", {
     type: "treemap",
     title: "Sales by region, family and item",
+    titles: { sales: "Sales ($)" },
     path: ["region", "family", "item"],
     y: "sales",
     drill: true,
@@ -211,6 +225,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("sunburst", {
     type: "sunburst",
     title: "Sales by region, family and item",
+    titles: { sales: "Sales ($)" },
     path: ["region", "family", "item"],
     y: "sales",
     drill: true,
@@ -228,16 +243,31 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("sankey", {
     type: "sankey",
     title: "Region to family to item",
+    titles: { sales: "Sales ($)" },
     path: ["region", "family", "item"],
     y: "sales",
     format: "compact",
     data: tree.filter((r) => top.has(String(r.item))),
   });
 
+  // 13b. Sankey you can drill: a family opens into its items and the regions that buy them.
+  tile("sankey-drill", {
+    type: "sankey",
+    title: "Family to item to region",
+    path: ["family", "item", "region"],
+    y: "sales",
+    drill: true,
+    format: "compact",
+    data: (rollup(FACTS, ["family", "item", "region"], { sales: sum("sales") }) as Row[]).filter(
+      (r) => top.has(String(r.item)),
+    ),
+  });
+
   // 14. Hexmap.
   tile("hexmap", {
     type: "hexmap",
     title: "Sales by state",
+    titles: { sales: "Sales ($)" },
     x: "state",
     y: "sales",
     format: "compact",
@@ -265,6 +295,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("dumbbell", {
     type: "dumbbell",
     title: "Sales by state, first half to second half",
+    titles: { sales: "Sales ($)" },
     x: "state",
     y: "sales",
     series: "half",
@@ -289,6 +320,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("beeswarm", {
     type: "beeswarm",
     title: "Item margin by product family",
+    titles: { margin: "Margin", item: "Item" },
     x: "family",
     y: "margin",
     name: "item",
@@ -300,6 +332,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("parallel", {
     type: "parallel",
     title: "Regions across sales, units and margin",
+    titles: { sales: "Sales ($)", units: "Units", margin: "Margin" },
     x: "region",
     y: ["sales", "units", "margin"],
     format: { sales: "compact", units: "compact", margin: "percent" },
@@ -329,6 +362,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("chord", {
     type: "chord",
     title: "Region to product family",
+    titles: { sales: "Sales ($)" },
     path: ["region", "family"],
     y: "sales",
     format: "compact",
@@ -339,6 +373,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("marimekko", {
     type: "marimekko",
     title: "Region size and family mix",
+    titles: { sales: "Sales ($)" },
     x: "region",
     y: "sales",
     series: "family",
@@ -350,21 +385,22 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("waffle", {
     type: "waffle",
     title: "Share of sales by family",
+    titles: { sales: "Sales ($)" },
     x: "family",
     y: "sales",
     format: "compact",
     data: rollup(FACTS, ["family"], { sales: sum("sales") }) as Row[],
   });
 
-  // 24. Radial bars: sales by month, stacked by region.
+  // 24. Radial bars: monthly sales (one series, so the tip totals show).
   tile("radial", {
     type: "radial",
-    title: "Sales by month and region",
+    title: "Sales by month",
+    titles: { sales: "Sales ($)" },
     x: "monthMs",
     y: "sales",
-    series: "region",
     format: { monthMs: "month", sales: "compact" },
-    data: byRegionMonth as Row[],
+    data: monthTotals as Row[],
   });
 
   // 25. Bar with a second axis: sales as bars, units as the right axis.
@@ -379,23 +415,26 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     data: rollup(FACTS, ["family"], { sales: sum("sales"), units: sum("units") }) as Row[],
   });
 
-  // 26. Horizontal bars with value labels.
+  // 26. Horizontal bars with value labels; click a family to drill into its items.
   tile("hbar", {
     type: "bar",
-    title: "Sales by product family",
+    title: "Sales by product family and item",
+    titles: { sales: "Sales ($)" },
     horizontal: true,
-    x: "family",
+    path: ["family", "item"],
+    drill: true,
     y: "sales",
     sort: "desc",
     labels: true,
     format: "compact",
-    data: rollup(FACTS, ["family"], { sales: sum("sales") }) as Row[],
+    data: rollup(FACTS, ["family", "item"], { sales: sum("sales") }) as Row[],
   });
 
   // 27. Single-series area, which gets the gradient fill.
   tile("area", {
     type: "area",
     title: "Monthly sales",
+    titles: { sales: "Sales ($)" },
     x: "monthMs",
     y: "sales",
     format: { monthMs: "month", sales: "compact" },
@@ -406,6 +445,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("line-labels", {
     type: "line",
     title: "Monthly units",
+    titles: { units: "Units" },
     x: "monthMs",
     y: "units",
     labels: true,

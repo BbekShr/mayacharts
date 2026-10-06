@@ -82,3 +82,11 @@ describe("parallel", () => {
     expect(() => render({ ...spec, y: "sales" })).toThrow();
   });
 });
+
+describe("parallel end labels", () => {
+  it("name a line at the last axis", () => {
+    const svg = renderParts(spec).svg;
+    const g = svg.slice(svg.indexOf('data-maya="labels"'));
+    expect(g).toMatch(/text-anchor="start"[^>]*>(North|South|East|West)</);
+  });
+});

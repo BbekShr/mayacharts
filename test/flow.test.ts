@@ -87,9 +87,9 @@ describe("sankey", () => {
         "<path data-maya="link" data-key="k~1~B~C" data-c="1" data-s="0" data-a="1 0 2" data-x="B → C" data-series="" data-y="2" data-f="2" d="M107 8C146.5 8 146.5 8 186 8L186 57.33C146.5 57.33 146.5 57.33 107 57.33Z"/>",
         "<path data-maya="link" data-key="k~0~A~D" data-c="2" data-s="1" data-a="0 3 2" data-x="A → D" data-series="" data-y="1" data-f="1" d="M14 57.33C53.5 57.33 53.5 67.33 93 67.33L93 92C53.5 92 53.5 82 14 82Z"/>",
         "<path data-maya="link" data-key="k~1~D~C" data-c="3" data-s="1" data-a="3 0 2" data-x="D → C" data-series="" data-y="1" data-f="1" d="M107 67.33C146.5 67.33 146.5 57.33 186 57.33L186 82C146.5 82 146.5 92 107 92Z"/>",
-        "<rect data-maya="mark" data-key="n~0~A" data-c="4" data-neu="0" data-n="0" data-a="0 1 2 3" data-x="A" data-series="" data-y="3" data-f="3" data-depth="0" x="0" y="8" width="14" height="74"/>",
+        "<rect data-maya="mark" data-key="n~0~A" data-c="4" data-neu="" data-n="0" data-a="0 1 2 3" data-x="A" data-series="" data-y="3" data-f="3" data-depth="0" x="0" y="8" width="14" height="74"/>",
         "<rect data-maya="mark" data-key="n~1~B" data-c="5" data-s="0" data-n="1" data-a="1 0 2" data-x="B" data-series="" data-y="2" data-f="2" data-depth="1" x="93" y="8" width="14" height="49.33"/>",
-        "<rect data-maya="mark" data-key="n~2~C" data-c="6" data-neu="2" data-n="2" data-a="2 1 0 3" data-x="C" data-series="" data-y="3" data-f="3" data-depth="2" x="186" y="8" width="14" height="74"/>",
+        "<rect data-maya="mark" data-key="n~2~C" data-c="6" data-neu="" data-n="2" data-a="2 1 0 3" data-x="C" data-series="" data-y="3" data-f="3" data-depth="2" x="186" y="8" width="14" height="74"/>",
         "<rect data-maya="mark" data-key="n~1~D" data-c="7" data-s="1" data-n="3" data-a="3 0 2" data-x="D" data-series="" data-y="1" data-f="1" data-depth="1" x="93" y="67.33" width="14" height="24.67"/>",
       ]
     `);
@@ -121,14 +121,12 @@ describe("sankey", () => {
     const node = (name: string) => nodes.find((t) => at(t, "data-x") === name)!;
     for (const n of ["X", "Y"]) {
       expect(at(node(n), "data-s")).toBeUndefined();
-      expect(at(node(n), "data-neu")).toMatch(/^[0-3]$/);
+      expect(at(node(n), "data-neu")).toBe(""); // one neutral, whatever the size
     }
-    expect(at(node("X"), "data-neu")).toBe("0"); // the larger one is darker
-    expect(at(node("Y"), "data-neu")).not.toBe("0");
     expect(at(node("M"), "data-s")).toBe("0");
     expect(at(node("N"), "data-s")).toBe("1");
     expect(at(node("P"), "data-s")).toBe("0"); // single level-1 ancestor
-    expect(at(node("Q"), "data-neu")).toBe("2"); // M and N both feed it
+    expect(at(node("Q"), "data-neu")).toBe(""); // M and N both feed it
     const link = (x: string) => links.find((l) => at(l, "data-x") === x)!;
     expect(at(link("X → M"), "data-s")).toBe("0"); // 0 to 1: the target's colour
     expect(at(link("Y → N"), "data-s")).toBe("1");

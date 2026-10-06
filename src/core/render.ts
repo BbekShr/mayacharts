@@ -76,7 +76,7 @@
  * Shadow content (identical from renderShell and the element, built by `shellInner`).
  * Slot order is fixed:
  *   <style>CSS</style>
- *   <div class="maya" style="OVERRIDES">
+ *   <div class="maya">
  *     TITLE  CONTROLS  LEGEND  CRUMBS
  *     <div class="maya-box">SVG</div>
  *     TABLE
@@ -171,8 +171,8 @@
  * Colors: never inline. CSS rules `[data-s="0"]..[data-s="7"]` map to --maya-series-1..8;
  *   --maya-series-1 defaults to var(--maya-accent) so single-series charts use the
  *   accent. spec.colors / spec.theme become custom properties in `Parts.vars` (applied
- *   with style.setProperty by the element) and `Parts.style` (style attribute in render()
- *   and renderShell() output only). Every value passes the CSS allowlist in validate.ts.
+ *   with style.setProperty by the element) and `Parts.style` (the standalone svg's style attribute in
+ *   render(); a `.maya{...}` rule in the shell's <style> in renderShell(), never an attribute). Every value passes the CSS allowlist in validate.ts.
  *
  * Animation contract (element/animate.ts): marks get
  *   `transform-box: fill-box; transform-origin: 0 0` from CSS. The element commits new
@@ -218,8 +218,7 @@
  *
  * Layout (layout.ts frame()): no text measurement exists in Node, so axis label widths are
  *   estimated as 0.6 em per code point (1 em for East-Asian-wide) * 12 + 8, value labels
- *   (ctx.label) as chars * 7.2 + 4. Only a mark that fits its own label may rotate it (sunburst,
- *   along the radius); axis labels are never rotated. Band axes draw every nth label
+ *   (ctx.label) as chars * 7.2 + 4. Axis labels are never rotated. Band axes draw every nth label
  *   (bottom: by width, left: 14 px per step); left band labels are cut at 40% of the width.
  *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
  *
@@ -350,23 +349,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
   const boxes: number[][] = [];
   let labels = "";
-  const label = (x: number, y: number, text: string, place: LabelPlace, rotate?: number) => {
-    // Rotated labels skip the overlap scan: the mark has already fitted them inside itself.
-    if (rotate !== undefined) {
-      labels += el(
-        "text",
-        {
-          x: r(x),
-          y: r(y),
-          transform: `rotate(${r(rotate)} ${r(x)} ${r(y)})`,
-          "text-anchor": "middle",
-          "dominant-baseline": "middle",
-          "data-in": true,
-        },
-        esc(text),
-      );
-      return true;
-    }
+  const label = (x: number, y: number, text: string, place: LabelPlace) => {
     const w = text.length * 7.2 + 4;
     const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
     const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
@@ -511,8 +494,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       // A line path: its point circles are hidden until active (one search, not a CSS :has).
       "data-pt": body.includes('data-maya="line"') || null,
       // A click can drill further (pointer cursor on marks).
-      "data-drill":
-        (s.drill && s.path.length > (s.type === "sankey" || s.type === "chord" ? 2 : 1)) || null,
+      "data-drill": (s.drill && s.path.length > (s.type === "sankey" ? 2 : 1)) || null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
       el("title", { id: sheet === null ? "maya-t" : null }, esc(titleText(s))) +
@@ -528,8 +510,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let legend = "";
   let tbl: string | undefined;
-  if (markLegend !== null && spec.legend !== false) legend = markLegend;
-  else if ((s.series !== null || s.y2 !== null) && s.legend)
+  if ((s.series !== null || s.y2 !== null) && s.legend)
     legend =
       `<div class="maya-legend" data-maya="legend">` +
       (s.series === null && s.y2 !== null
@@ -565,6 +546,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         : hi > lo
           ? `<div class="maya-legend" data-maya="ramp"><b>${esc(s.titles.get(cb) ?? cb)}</b><span>${esc(fmt(cb, lo))}</span><i></i><span>${esc(fmt(cb, hi))}</span></div>`
           : "";
+  // A mark legend replaces the normal one, except scatter's size key, which stacks below it.
+  if (markLegend !== null && spec.legend !== false)
+    legend = s.type === "scatter" ? legend + markLegend : markLegend;
   return {
     svg,
     legend,
@@ -620,10 +604,12 @@ export function render<R extends object = Row>(
 
 /** Inner shadow-root markup, shared by renderShell and the element. Fixed slot order. */
 export function shellInner(parts: Parts, css: string, nonce?: string): string {
-  const st = parts.style ? ` style="${esc(parts.style)}"` : "";
   const n = nonce ? ` nonce="${esc(nonce)}"` : "";
+  // Overrides ride in the nonce'd <style>, not a style attribute (blocked without style-src-attr).
+  // Raw text, so esc would corrupt quoted fonts; the allowlist already bars `<`, escaped anyway.
+  const sheet = css + (parts.style ? `.maya{${parts.style.replace(/</g, "\\3c ")}}` : "");
   return (
-    `${css ? `<style${n}>${css}</style>` : ""}<div class="maya"${st}>${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
+    `${sheet ? `<style${n}>${sheet}</style>` : ""}<div class="maya">${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
     `<div class="maya-box">${parts.svg}</div>${parts.table}` +
     `<div class="maya-sr" data-maya="live" aria-live="polite"></div>` +
     `<div class="maya-probe" data-maya="probe"></div><div class="maya-tip" popover="manual" role="tooltip"></div></div>`

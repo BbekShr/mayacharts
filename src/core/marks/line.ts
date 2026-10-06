@@ -36,7 +36,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     let prev = -Infinity;
     // Area runs: stacked areas treat null as 0 (shape did), so they never break.
     const runs: Cell[][] = [[]];
-    for (const c of cells) {
+    for (const [i, c] of cells.entries()) {
       if (T && c.value !== null) {
         if (T[c.ci]! - prev > hole) {
           gap = true;
@@ -75,7 +75,17 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         cx: px(c.ci),
         cy: r(val.of(c.y1)),
       });
-      if (spec.labels) ctx.label(px(c.ci), val.of(c.y1), ctx.fmt(spec.y, c.value), "above");
+      if (spec.labels) {
+        // Off the stroke: above a peak, below a trough, and on a slope into the free corner (up-left
+        // when rising, up-right when falling).
+        const at = (j: number) => (cells[j]?.value == null ? c.y1 : cells[j]!.y1);
+        const [p, q] = [at(i - 1), at(i + 1)];
+        const [lx, ly, text] = [+px(c.ci), val.of(c.y1), ctx.fmt(spec.y, c.value)];
+        if (p <= c.y1 && q <= c.y1) ctx.label(lx, ly, text, "above");
+        else if (p >= c.y1 && q >= c.y1) ctx.label(lx, ly, text, "below");
+        else if (p < c.y1) ctx.label(lx - 5, ly - 9, text, "end");
+        else ctx.label(lx + 5, ly - 9, text, "start");
+      }
     }
     if (fill) {
       const sh = runs

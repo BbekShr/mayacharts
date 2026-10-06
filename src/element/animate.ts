@@ -32,13 +32,28 @@ const map = (r: Box, a: Box, b: Box): Box => [
   (r[2] * b[2]) / a[2],
   (r[3] * b[3]) / a[3],
 ];
-/** Where a rect enters from (or exits to) during a drill zoom; undefined when not zooming. */
-const zoomed = (e: Element, g: Box, leaving: boolean): Box | undefined =>
-  !zm || e.localName !== "rect"
-    ? undefined
-    : zm.out === leaving
-      ? map(g, zm.F, zm.P)
-      : map(g, zm.P, zm.F);
+/** Transform that carries a mark to where it enters from (or exits to) during a drill zoom:
+ * rects scale with the view, circles keep their size and move their centre, lines (dumbbell
+ * connectors) map their ends. Undefined when not zooming. */
+const zoomed = (e: Element, g: Box | undefined, leaving: boolean): string | undefined => {
+  if (!zm) return;
+  const [a, b] = zm.out === leaving ? [zm.F, zm.P] : [zm.P, zm.F];
+  if (e.localName === "line") {
+    // Axis-aligned: scale along the line only, so the stroke keeps its width.
+    const ax = (p: number, q: number, i: 0 | 1): [number, number] => {
+      const k = p === q ? 1 : b[2 + i]! / a[2 + i]!;
+      return [k, b[i]! + ((p - a[i]!) * b[2 + i]!) / a[2 + i]! - p * k];
+    };
+    const [kx, tx] = ax(n(e, "x1"), n(e, "x2"), 0);
+    const [ky, ty] = ax(n(e, "y1"), n(e, "y2"), 1);
+    return `matrix(${kx},0,0,${ky},${tx},${ty})`;
+  }
+  if (!g) return;
+  const m = map(g, a, b);
+  return e.localName === "circle"
+    ? `translate(${m[0] + (m[2] - g[2]) / 2 - g[0]}px,${m[1] + (m[3] - g[3]) / 2 - g[1]}px)`
+    : tf(g, m);
+};
 
 const EASE = "cubic-bezier(.22,1,.36,1)"; // ease-out-quint: fast start, long soft landing
 const POP = "cubic-bezier(.34,1.5,.64,1)"; // slight overshoot for points
@@ -47,6 +62,7 @@ const DATA: KeyframeAnimationOptions = { duration: 520, easing: EASE };
 const INTRO: KeyframeAnimationOptions = { duration: 760, easing: EASE };
 const UI: KeyframeAnimationOptions = { duration: 220, easing: EASE };
 const ZOOM: KeyframeAnimationOptions = { duration: 640, easing: SWEEP };
+const WIPE = 1100; // ms, line and area first draw
 const MAX = 1500; // ponytail: no animation above this many marks
 const STAGGER = 320; // total stagger spread across categories, ms
 const Z = 1e-6;
@@ -137,8 +153,13 @@ function seed(e: Element, g: Box, origin?: Box): Box {
 }
 
 function fade(e: Element, out: boolean, then?: () => void, o = DATA): void {
-  const k = [{ opacity: 0 }, { opacity: 1 }];
-  run(e, out ? k.reverse() : k, out ? { ...o, fill: "forwards" } : o, then);
+  // The open end is implicit: it is the CSS opacity (translucent links rest at .45, not 1).
+  run(
+    e,
+    out ? [{}, { opacity: 0 }] : [{ opacity: 0 }, {}],
+    out ? { ...o, fill: "forwards" } : o,
+    then,
+  );
 }
 
 /** Paths (arcs, hexes, ribbons): grow from their own centre while fading in. */
@@ -155,17 +176,9 @@ function enter(e: Element, origin?: Box, o = DATA): void {
   const g = geo(e);
   const at = { ...o, delay: delay(e) };
   const f = ring(e) && folded(e);
-  const z = g && zoomed(e, g, false);
+  const z = zoomed(e, g, false);
   if (f) run(e, [f, arc(e)], ZOOM);
-  else if (g && z)
-    run(
-      e,
-      [
-        { transform: tf(g, z), opacity: 0 },
-        { transform: "none", opacity: 1 },
-      ],
-      ZOOM,
-    );
+  else if (z) run(e, [{ transform: z, opacity: 0 }, { transform: "none" }], ZOOM);
   else if (g) {
     const c = e.localName === "circle";
     run(
@@ -196,18 +209,9 @@ function exit(e: Element, origin?: Box): void {
   const done = () => e.remove();
   const o = { ...DATA, fill: "forwards" as const };
   const f = ring(e) && folded(e);
-  const z = g && zoomed(e, g, true);
+  const z = zoomed(e, g, true);
   if (f) run(e, [arc(e, true), f], { ...ZOOM, fill: "forwards" }, done);
-  else if (g && z)
-    run(
-      e,
-      [
-        { transform: "none", opacity: 1 },
-        { transform: tf(g, z), opacity: 0 },
-      ],
-      { ...ZOOM, fill: "forwards" },
-      done,
-    );
+  else if (z) run(e, [{}, { transform: z, opacity: 0 }], { ...ZOOM, fill: "forwards" }, done);
   else if (g)
     run(
       e,
@@ -220,7 +224,8 @@ function exit(e: Element, origin?: Box): void {
     );
   else if (e.localName === "path" && !e.matches("[data-maya=line],[data-maya=area]"))
     run(e, pop(true), o, done);
-  else fade(e, true, done);
+  // The old sunburst hub stays until the clicked slice has nearly reached the centre.
+  else fade(e, true, done, ring(e) && zoom ? { ...UI, delay: Number(ZOOM.duration) / 2 } : DATA);
 }
 
 /** Current on-screen box of an animating mark (its animations keep running). */
@@ -343,7 +348,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
     const d0 = m.getAttribute("d") ?? "",
       d1 = e.getAttribute("d") ?? "";
     const shaped = !g0 && d0 !== d1;
-    const morphed = shaped && morphable(d0, d1);
+    const morphed = shaped && !zm && morphable(d0, d1); // a drill swaps the category set: crossfade
     const from = morphed ? outline(m, d0) : "";
     const was = m.textContent ?? "";
     if (instant || (shaped && !morphed)) for (const a of m.getAnimations?.() ?? []) a.cancel();
@@ -381,8 +386,11 @@ function marks(o: Element, w: Element, origin?: Box): void {
 /** Crossfade the non-mark children (axes, grid, labels): changed groups fade 220 ms. */
 function ui(o: Element, w: Element, om: Element, wm: Element): void {
   const id = (c: Element) => c.getAttribute("data-maya") ?? c.localName;
-  const pool = new Map([...o.children].filter((c) => c !== om).map((c) => [id(c), c]));
-  const out: Element[] = [];
+  // Groups already fading out keep fading; they are neither pooled nor ghosted again.
+  const out = [...o.children].filter((c) => c.hasAttribute("data-ghost"));
+  const pool = new Map(
+    [...o.children].filter((c) => c !== om && !out.includes(c)).map((c) => [id(c), c]),
+  );
   const fadeIn: Element[] = [];
   const ghosts: Element[] = [];
   const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
@@ -412,9 +420,20 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
 
 /** An outgoing group: unaddressable while it fades, then removed. */
 function ghost(g: Element): void {
+  const op = getComputedStyle(g).opacity; // mid-fade-in (or still waiting): leave from there
+  // Sunburst drill: ring names go at once, the centre text stays until the new labels arrive.
+  const hold = zoom && g.getAttribute("data-maya") === "labels";
+  if (hold)
+    for (const t of g.querySelectorAll(":nth-last-child(n+3)"))
+      run(t, [{ opacity: 1 }, { opacity: 0 }], { ...UI, fill: "forwards" });
   g.removeAttribute("data-maya");
   for (const d of g.querySelectorAll("[data-maya]")) d.removeAttribute("data-maya");
-  fade(g, true, () => g.remove(), UI);
+  g.setAttribute("data-ghost", "");
+  for (const a of g.getAnimations?.() ?? []) a.cancel();
+  const d = hold ? Number(ZOOM.duration) * 0.75 : 0;
+  run(g, [{ opacity: op }, { opacity: 0 }], { ...UI, delay: d, fill: "forwards" }, () =>
+    g.remove(),
+  );
 }
 
 /** The first draw: scaffolding fades in, marks enter by `kind`, labels and numbers follow. */
@@ -426,13 +445,18 @@ function intro(svg: Element, kind: Intro): void {
   }
   const m = part("marks");
   if (!m) return;
-  const late = { ...UI, duration: 360, delay: Number(INTRO.duration) * 0.6 + STAGGER / 2 };
+  // A wipe reveals left to right: labels wait for it to land rather than run ahead of the line.
+  const late = {
+    ...UI,
+    duration: 360,
+    delay: kind === "wipe" ? WIPE : Number(INTRO.duration) * 0.6 + STAGGER / 2,
+  };
   const l = part("labels");
   if (l) fade(l, false, undefined, late);
   if (kind === "wipe") {
     // Clip, not geometry: lines, areas and points are revealed together, left to right.
     const c = (r: string) => ({ clipPath: `inset(-20% ${r} -20% -1%)` });
-    run(m, [c("101%"), c("-1%")], { duration: 1100, easing: SWEEP });
+    run(m, [c("101%"), c("-1%")], { duration: WIPE, easing: SWEEP });
   } else if (kind === "bloom") {
     const p = (svg.getAttribute("data-plot") ?? "0 0 0 0").split(" ").map(Number);
     (m as SVGElement).style.transformOrigin = `${p[0]! + p[2]! / 2}px ${p[1]! + p[3]! / 2}px`;

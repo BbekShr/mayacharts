@@ -34,12 +34,15 @@ export function el(
 export const cbField = ({ colorBy: c }: { colorBy: unknown }) =>
   typeof c === "string" && c !== "sign" ? c : null;
 
-/** Unique mark id for a named point: the name, then name#2, name#3 for repeats; the row index when unnamed. */
+/** Unique mark id for a named point: the name, then name#2, name#3 for repeats; an id already emitted (a real name "3#2") is skipped. The row index when unnamed. */
 export function nameId(seen: Map<string, number>, name: string | null, i: number) {
   if (name === null) return i;
-  const n = (seen.get(name) ?? 0) + 1;
-  seen.set(name, n);
-  return n > 1 ? `${name}#${n}` : name;
+  let n = seen.get(name) ?? 0;
+  let id = name;
+  if (n) while (seen.has((id = `${name}#${++n}`)));
+  seen.set(name, n || 1);
+  if (id !== name) seen.set(id, 1);
+  return id;
 }
 
 /** Sentinel category for `limit`'s rolled-up rest. Cannot collide with real data text. */
