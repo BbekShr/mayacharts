@@ -275,11 +275,13 @@ const sunburst: Mark = {
       const kids = [...n.children].sort(big);
       let a = a0;
       for (const [i, c] of kids.entries()) {
-        const s = (span * c.value) / n.value;
+        let s = (span * c.value) / n.value;
         // Slivers under 4 px across read as hatching: the rest (all smaller) become one "Other (n)".
-        if (kids[i + 1] && (s / DEG) * (c.depth + 0.5) * w < 4) {
+        // The largest child is never lumped: it keeps a 3 px tick, so a ring of slivers still names its head.
+        if (!i) s = Math.max(s, (3 * DEG) / ((c.depth + 1) * w));
+        else if (kids[i + 1] && (s / DEG) * (c.depth + 0.5) * w < 4) {
           const name = `${ctx.t("other")} (${kids.length - i})`;
-          const value = (n.value * (a1 - a)) / span;
+          const value = kids.slice(i).reduce((q, k) => q + k.value, 0); // by value: the tick moved the angle
           walk({ ...c, name, value, children: [], parts: [...n.parts, name] }, a, a1, n, true);
           break;
         }
