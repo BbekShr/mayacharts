@@ -9,6 +9,7 @@ import { show } from "./show.ts";
 import { signature } from "./signature.ts";
 import { theme } from "./theme.ts";
 import json from "./compare.json";
+import type { ChartSpec } from "../src/index.ts";
 
 // Everything shown here comes from compare.json, compare-size.json and compare-ease.json. No number
 // or verdict is written in this file. The size and ease files come from other scripts and may be
@@ -118,6 +119,74 @@ interface Dim {
   def: string;
   tables: { caption?: string; rows: Row[] }[];
   extra?: HTMLElement;
+  /** Drawn above the tables, from the same loaded values; the tables stay as the evidence. */
+  charts?: Plot[];
+}
+interface Plot {
+  spec: ChartSpec;
+  /** One plain sentence: what the chart shows and in what unit. */
+  note: string;
+  cls?: string;
+}
+
+const MAYA = "mayaCharts";
+const grey = "light-dark(#b4bbc4, #98a0ab)";
+/** A horizontal bar per library, best first, ours in the accent and the rest grey. */
+function bars(
+  title: string,
+  unit: string,
+  suffix: string,
+  entries: [string, number | null | undefined][],
+  low: boolean,
+  digits = 1,
+): ChartSpec {
+  const data = entries.flatMap(([l, v]) =>
+    v == null ? [] : [{ lib: name(l), who: l === WE ? MAYA : "Others", value: v }],
+  );
+  return {
+    type: "bar",
+    horizontal: true,
+    stack: true, // one row per library, so each bar is one series and fills its band
+    x: "lib",
+    y: "value",
+    series: "who",
+    sort: low ? "asc" : "desc",
+    labels: true,
+    legend: false,
+    title,
+    titles: { value: unit },
+    format: { value: { maximumFractionDigits: digits, suffix } },
+    colors: { [MAYA]: "var(--maya-accent)", Others: grey },
+    data,
+  };
+}
+
+/** A library by chart grid from a dimension's table rows. A library with no value is an empty cell. */
+function heat(
+  rows: Row[],
+  unit: string,
+  title: string,
+  labels: boolean,
+  map = (v: number) => v,
+): ChartSpec {
+  const cells = rows
+    .filter((r) => !r.skip)
+    .flatMap((r, i) =>
+      libs.flatMap((l) =>
+        r.v[l] == null ? [] : [{ lib: name(l), chart: data.charts[i] ?? r.label, v: map(r.v[l]) }],
+      ),
+    );
+  return {
+    type: "heatmap",
+    x: "lib",
+    y: "v",
+    series: "chart",
+    labels,
+    title,
+    titles: { v: unit },
+    format: { v: { maximumFractionDigits: 0 } },
+    data: cells,
+  };
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -415,6 +484,131 @@ if (looks) {
   });
 }
 
+// Charts, built from the same rows and files as the tables below them.
+const dim = (id: string) => dims.find((d) => d.id === id);
+const give = (id: string, ...c: Plot[]) => {
+  const d = dim(id);
+  if (d) d.charts = c;
+};
+const tableRows = (id: string) => dim(id)?.tables[0]?.rows ?? [];
+const gridNote = (what: string) =>
+  `${what} Each square is one library on one chart. An empty square means the library has no value there, which includes charts it does not support, so empty is not the same as failed.`;
+
+const speedCols = ["normal", "throttled"].filter((c) =>
+  libs.some((l) =>
+    Object.values(data.speed[l] ?? {}).some((k) => Object.values(k).some((n) => n[c])),
+  ),
+);
+give(
+  "speed",
+  ...kinds.flatMap((k) =>
+    speedCols.map((col): Plot => {
+      const cpu = col === "normal" ? "normal CPU" : "CPU throttled";
+      const rows = libs.flatMap((l) =>
+        ns.flatMap((n) => {
+          const ms = data.speed[l]?.[k]?.[n]?.[col]?.firstPaintMs;
+          return typeof ms === "number" ? [{ rows: num(+n), lib: name(l), ms }] : [];
+        }),
+      );
+      return {
+        spec: {
+          type: "line",
+          x: "rows",
+          xType: "category",
+          y: "ms",
+          series: "lib",
+          endLabels: true,
+          title: `${k[0]!.toUpperCase()}${k.slice(1)}, first paint, ${cpu}`,
+          titles: { rows: "Rows", ms: "Milliseconds" },
+          format: { ms: { maximumFractionDigits: 0 } },
+          data: rows,
+        },
+        note: `Milliseconds until the first mark is painted for a ${k} chart, by number of rows, under ${cpu}. Lower is faster. A library that failed at a size has no point there.`,
+      };
+    }),
+  ),
+);
+if (size)
+  give("size", {
+    spec: bars(
+      "One bar chart, gzipped",
+      "Kilobytes",
+      " KB",
+      libs.map((l) => [l, size.libs[l] && size.libs[l].bar.gzip / 1024]),
+      true,
+    ),
+    note: "Kilobytes gzipped for a page that draws one bar chart, bundled and minified the same way for every library. Smaller is better.",
+  });
+if (ease) {
+  const per = (l: string) => {
+    const t = ease.libs[l]?.["total"];
+    return t ? t.tokens / (t.charts ?? 1) : null;
+  };
+  give("ease", {
+    spec: bars(
+      "Tokens to write one chart",
+      "Tokens",
+      "",
+      libs.map((l) => [l, per(l)]),
+      true,
+      0,
+    ),
+    note: "Mean tokens in the reference module per chart, over the charts each library can draw. Fewer tokens means less to write and to read.",
+  });
+}
+if (looks)
+  give("looks", {
+    spec: bars(
+      "Judged looks",
+      `Score out of ${looks.max}`,
+      "",
+      libs.map((l) => [l, looks.libs[l]?.mean]),
+      false,
+      1,
+    ),
+    note: `Mean judged score out of ${looks.max} over the charts each library supports. This is judgment against a written rubric, not a measurement.`,
+  });
+const heats: [string, string, string][] = [
+  ["support", "Supported", "Whether each library can draw each chart. Filled means yes."],
+  [
+    "csp",
+    "Rendered",
+    "Whether the chart painted under the strict CSP with Trusted Types. Dark means it did, pale means it did not.",
+  ],
+  [
+    "a11y",
+    "No serious violation",
+    "Whether axe found no serious or critical violation. Dark means none, pale means at least one.",
+  ],
+  [
+    "keyboard",
+    "Keyboard states",
+    "How many distinct states ArrowRight reached. A darker square is more.",
+  ],
+  [
+    "rtl",
+    "Mirrored",
+    "Whether the y axis moved to the right under right-to-left. Dark means it did, pale means it did not.",
+  ],
+  [
+    "ssr",
+    "Rendered to SVG",
+    "Whether the library produced an SVG string in plain Node. Dark means it did, pale means it did not.",
+  ],
+];
+for (const [id, unit, note] of heats)
+  give(id, {
+    spec: heat(
+      tableRows(id),
+      unit,
+      `${dim(id)?.title ?? id}, by library and chart`,
+      id === "keyboard",
+      id === "a11y" ? (v) => +(v === 0) : undefined,
+    ),
+    note: gridNote(note),
+    cls: "cmp-tall",
+  });
+
 function box(parent: HTMLElement, label: string): HTMLTableElement {
   const wrap = el("div", "", parent);
   wrap.className = "scroll";
@@ -422,6 +616,19 @@ function box(parent: HTMLElement, label: string): HTMLTableElement {
   wrap.setAttribute("role", "region");
   wrap.setAttribute("aria-label", label);
   return el("table", "", wrap);
+}
+
+/** Each plot is a `<maya-chart>` with a sentence under it saying what it shows. */
+function plots(parent: HTMLElement, list: Plot[]): void {
+  const g = el("div", "", parent);
+  g.className = "cmp-grid";
+  for (const p of list) {
+    const f = el("figure", "", g);
+    const c = el("maya-chart", "", f);
+    c.className = `cmp ${p.cls ?? ""}`;
+    c.spec = p.spec;
+    el("figcaption", p.note, f);
+  }
 }
 
 function tag(c: HTMLElement, text: string): void {
@@ -434,9 +641,12 @@ function render(d: Dim): HTMLElement {
   s.id = d.id;
   el("h2", d.title, s);
   el("p", d.def, s);
+  if (d.charts) plots(s, d.charts);
+  const into = d.charts ? el("details", "", s) : s;
+  if (d.charts) el("summary", `Table behind the chart${d.charts.length > 1 ? "s" : ""}`, into);
   for (const t of d.tables) {
-    if (t.caption) el("h3", t.caption, s);
-    const table = box(s, `${d.title}${t.caption ? `, ${t.caption}` : ""}`);
+    if (t.caption) el("h3", t.caption, into);
+    const table = box(into, `${d.title}${t.caption ? `, ${t.caption}` : ""}`);
     const head = el("tr", "", el("thead", "", table));
     el("th", "Row", head).scope = "col";
     for (const l of libs) el("th", name(l), head).scope = "col";
@@ -471,6 +681,41 @@ function summary(): HTMLElement {
     `Rank by rows won. A row is won by the library with the best value, and ties share the win. ${name(WE)} is ranked among the libraries that have a value in that dimension.`,
     s,
   );
+  const own = dims.flatMap((d) => {
+    const rows = d.tables.flatMap((t) => t.rows).filter((r) => !r.skip);
+    const w = wins(d);
+    const rivals = libs.filter((l) => l !== WE && rows.some((r) => r.v[l] != null));
+    return rows.some((r) => r.v[WE] != null) && rivals.length
+      ? [
+          { dim: d.title, who: MAYA, share: w[WE]! / rows.length },
+          {
+            dim: d.title,
+            who: "Best rival",
+            share: Math.max(...rivals.map((l) => w[l]!)) / rows.length,
+          },
+        ]
+      : [];
+  });
+  plots(s, [
+    {
+      spec: {
+        type: "bar",
+        horizontal: true,
+        x: "dim",
+        y: "share",
+        series: "who",
+        labels: true,
+        title: "Share of rows won, per dimension",
+        titles: { share: "Rows won" },
+        format: { share: { style: "percent", maximumFractionDigits: 0 } },
+        yDomain: [0, 1],
+        colors: { [MAYA]: "var(--maya-accent)", "Best rival": grey },
+        data: own,
+      },
+      note: `Share of the rows in each dimension won by ${MAYA} and by the single best other library, where ties share the win. A shorter accent bar than the grey one is a loss.`,
+      cls: "cmp-tall",
+    },
+  ]);
   const table = box(s, "Summary");
   const head = el("tr", "", el("thead", "", table));
   for (const h of ["Dimension", `${name(WE)} rank`, "Rows won by us", "Leader"])
