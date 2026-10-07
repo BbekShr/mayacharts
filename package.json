@@ -58,6 +58,22 @@
       "types": "./dist/radial.d.ts",
       "default": "./dist/radial.js"
     },
+    "./weave": {
+      "types": "./dist/weave.d.ts",
+      "default": "./dist/weave.js"
+    },
+    "./units": {
+      "types": "./dist/units.d.ts",
+      "default": "./dist/units.js"
+    },
+    "./orbit": {
+      "types": "./dist/orbit.d.ts",
+      "default": "./dist/orbit.js"
+    },
+    "./constellation": {
+      "types": "./dist/constellation.d.ts",
+      "default": "./dist/constellation.js"
+    },
     "./global": "./dist/maya.global.js",
     "./theme.css": "./dist/theme.css",
     "./schema.json": "./schema.json",
@@ -71,11 +87,19 @@
     "./dist/flow.js",
     "./dist/geo.js",
     "./dist/radial.js",
+    "./dist/weave.js",
+    "./dist/units.js",
+    "./dist/orbit.js",
+    "./dist/constellation.js",
     "./dist/maya.global.js",
     "./src/element.ts",
     "./src/hierarchy.ts",
     "./src/flow.ts",
     "./src/radial.ts",
+    "./src/weave.ts",
+    "./src/units.ts",
+    "./src/orbit.ts",
+    "./src/constellation.ts",
     "./src/geo.ts",
     "./src/global.ts"
   ],
@@ -92,7 +116,7 @@
   },
   "scripts": {
     "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
-    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode global && tsc -p tsconfig.build.json",
+    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode weave && vite build --mode units && vite build --mode orbit && vite build --mode constellation && vite build --mode global && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

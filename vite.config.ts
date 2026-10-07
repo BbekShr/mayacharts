@@ -12,6 +12,10 @@ const modeToEntry = {
   flow: "src/flow.ts",
   geo: "src/geo.ts",
   radial: "src/radial.ts",
+  weave: "src/weave.ts",
+  units: "src/units.ts",
+  orbit: "src/orbit.ts",
+  constellation: "src/constellation.ts",
   global: "src/global.ts",
 };
 
@@ -31,15 +35,7 @@ export default defineConfig(({ mode }) => {
         formats: (isGlobal ? ["iife"] : ["es"]) as LibraryFormats[],
         fileName: () => {
           if (isGlobal) return "maya.global.js";
-          const names: Record<string, string> = {
-            index: "index.js",
-            element: "element.js",
-            hierarchy: "hierarchy.js",
-            flow: "flow.js",
-            geo: "geo.js",
-            radial: "radial.js",
-          };
-          return names[mode] || "index.js";
+          return mode in modeToEntry ? `${mode}.js` : "index.js";
         },
         ...(isGlobal ? { name: "maya" } : {}),
       },
@@ -55,15 +51,9 @@ export default defineConfig(({ mode }) => {
         writeBundle(options) {
           const banner = `/*! mayacharts v${pkg.version} | MIT | https://github.com/BbekShr/mayacharts */\n`;
           const outDir = options.dir || "dist";
-          const jsFiles = [
-            "index.js",
-            "element.js",
-            "hierarchy.js",
-            "flow.js",
-            "geo.js",
-            "radial.js",
-            "maya.global.js",
-          ];
+          const jsFiles = Object.keys(modeToEntry).map((m) =>
+            m === "global" ? "maya.global.js" : `${m}.js`,
+          );
 
           for (const file of jsFiles) {
             const filePath = join(outDir, file);

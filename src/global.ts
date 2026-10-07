@@ -4,6 +4,10 @@ import "./hierarchy.ts";
 import "./flow.ts";
 import "./geo.ts";
 import "./radial.ts";
+import "./weave.ts";
+import "./units.ts";
+import "./orbit.ts";
+import "./constellation.ts";
 
 (globalThis as { maya?: typeof maya }).maya = maya;
 

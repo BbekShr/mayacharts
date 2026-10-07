@@ -399,9 +399,11 @@ function reduceTime(
   return [...pin, ...picked].sort((a, b) => a - b);
 }
 
-/** colorBy field aggregated per (category, series) like the marks; null without a field colorBy. */
-export function colorVals(s: ResolvedSpec): (c: string, ser: string) => number | null {
-  const cb = cbField(s);
+/** A field (default: the colorBy field; also spec.was) aggregated per (category, series) like the marks; null without one. */
+export function colorVals(
+  s: ResolvedSpec,
+  cb: string | null = cbField(s),
+): (c: string, ser: string) => number | null {
   const m = new Map<string, ReturnType<typeof agg>>();
   if (cb)
     for (const row of s.data) {

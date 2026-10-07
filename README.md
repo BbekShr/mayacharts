@@ -23,7 +23,7 @@ That is a complete, animated, keyboard-navigable chart with a tooltip, a screen-
 
 ## Why mayaCharts
 
-- **Small.** Twelve chart types with tooltips, drill, zoom, selection and animation in about 45 KB gzip, with no runtime dependencies. Eight more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, hexmap) are optional modules of 3 to 4 KB each.
+- **Small.** Twelve chart types with tooltips, drill, zoom, selection and animation in about 45 KB gzip, with no runtime dependencies. Twelve more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, hexmap, weave, units, orbit, constellation) are optional modules of 2 to 4 KB each.
 - **Passes the enterprise checklist.** Works under a strict CSP with Trusted Types, meets WCAG 2.2 AA (axe-clean in light and dark), supports RTL, and every user-visible string is localisable.
 - **Renders on the server.** `render(spec)` is a pure function that returns an SVG string in Node or any runtime without a DOM. `renderShell` returns a full chart that works before any JavaScript loads.
 - **One JSON spec.** No callbacks in the config, so a spec can be stored in a database, sent over the wire, or written by an LLM. A [JSON Schema](schema.json) and [llms.txt](llms.txt) ship with the package.
@@ -95,31 +95,33 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Data
 
-| Field       | Type                           | Applies to            | Default    | Meaning                                                                                                                                               |
-| ----------- | ------------------------------ | --------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `$schema`   | string                         | all                   | -          | Ignored; for editors and LLMs                                                                                                                         |
-| `type`      | enum                           | all                   | required   | `bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial hexmap` |
-| `data`      | Row[]                          | all                   | required   | Row objects                                                                                                                                           |
-| `aggregate` | sum / mean / count / min / max | all                   | sum        | How rows sharing a (category, series) combine; `count` counts non-null y                                                                              |
-| `sort`      | asc / desc                     | bar line area heatmap | data order | Categories by total across all series                                                                                                                 |
-| `limit`     | positive integer               | bar line area heatmap | -          | Keep top N categories; rest roll up into "Other"                                                                                                      |
+| Field       | Type                           | Applies to                  | Default    | Meaning                                                                                                                                                                               |
+| ----------- | ------------------------------ | --------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$schema`   | string                         | all                         | -          | Ignored; for editors and LLMs                                                                                                                                                         |
+| `type`      | enum                           | all                         | required   | `bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial hexmap weave units orbit constellation` |
+| `data`      | Row[]                          | all                         | required   | Row objects                                                                                                                                                                           |
+| `aggregate` | sum / mean / count / min / max | all                         | sum        | How rows sharing a (category, series) combine; `count` counts non-null y                                                                                                              |
+| `sort`      | asc / desc                     | bar line area heatmap orbit | data order | Categories by total across all series                                                                                                                                                 |
+| `limit`     | positive integer               | bar line area heatmap orbit | -          | Keep top N categories; rest roll up into "Other"                                                                                                                                      |
 
 ### Encoding
 
-| Field        | Type                   | Applies to                                                                          | Meaning                                                                                                                                                                                       |
-| ------------ | ---------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `x`          | field                  | all but path types                                                                  | Category; scatter numeric x; hexmap state; beeswarm optional row                                                                                                                              |
-| `xType`      | auto / category / time | bar line area                                                                       | How x is spaced: auto detects ISO 8601 dates for a time axis; else categories. "time" accepts epoch ms. Default auto.                                                                         |
-| `y`          | field or field[]       | all                                                                                 | Value; array adds measure toggle (all-y types: axes/columns)                                                                                                                                  |
-| `series`     | field                  | bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial | Split into series; heatmap row category; dumbbell exactly two (from, to)                                                                                                                      |
-| `path`       | field[]                | treemap sunburst sankey chord; bar/line/area/dumbbell with drill                    | Hierarchy outer to inner; replaces `x`                                                                                                                                                        |
-| `size`       | field                  | scatter                                                                             | Bubble area (sqrt scale)                                                                                                                                                                      |
-| `name`       | field                  | scatter beeswarm                                                                    | Point identity and tooltip title                                                                                                                                                              |
-| `totals`     | string[]               | waterfall                                                                           | x values drawn as running-total bars                                                                                                                                                          |
-| `stack`      | boolean / "percent"    | bar area                                                                            | Stack series instead of grouping; "percent" shows shares of each category's visible total (axis 0 to 100%, y formatted as percent unless `format` sets it)                                    |
-| `horizontal` | boolean                | bar dumbbell                                                                        | Categories on the left axis                                                                                                                                                                   |
-| `y2`         | field                  | bar                                                                                 | Second value field as a line on right axis (vertical bars only)                                                                                                                               |
-| `frame`      | field                  | bar line area scatter dumbbell                                                      | Playback: one frame per distinct value, the last shown by default (`view.frame` picks another); the title names the frame and the value axes span every frame. The element adds a Play button |
+| Field        | Type                            | Applies to                                                                                | Meaning                                                                                                                                                                                       |
+| ------------ | ------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `x`          | field                           | all but path types                                                                        | Category; scatter numeric x; hexmap state; beeswarm optional row                                                                                                                              |
+| `xType`      | auto / category / time          | bar line area                                                                             | How x is spaced: auto detects ISO 8601 dates for a time axis; else categories. "time" accepts epoch ms. Default auto.                                                                         |
+| `y`          | field or field[]                | all                                                                                       | Value; array adds measure toggle (all-y types: axes/columns)                                                                                                                                  |
+| `series`     | field                           | bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial weave | Split into series; heatmap row category; dumbbell exactly two (from, to); weave one thread each (required)                                                                                    |
+| `path`       | field[]                         | treemap sunburst sankey chord; bar/line/area/dumbbell with drill                          | Hierarchy outer to inner; replaces `x`                                                                                                                                                        |
+| `size`       | field                           | scatter constellation                                                                     | Bubble or star area (sqrt scale)                                                                                                                                                              |
+| `name`       | field                           | scatter beeswarm units                                                                    | Point identity and tooltip title; units one dot per row                                                                                                                                       |
+| `totals`     | string[]                        | waterfall                                                                                 | x values drawn as running-total bars                                                                                                                                                          |
+| `stack`      | boolean / "percent"             | bar area                                                                                  | Stack series instead of grouping; "percent" shows shares of each category's visible total (axis 0 to 100%, y formatted as percent unless `format` sets it)                                    |
+| `horizontal` | boolean                         | bar dumbbell                                                                              | Categories on the left axis                                                                                                                                                                   |
+| `y2`         | field                           | bar orbit                                                                                 | Second value field as a line on right axis (vertical bars only); orbit: growth, which sets planet speed and direction                                                                         |
+| `was`        | field                           | bar                                                                                       | Previous value: a ghost bar behind each bar, "was" in the tooltip, a table column and a description sentence naming the 2 largest moves. Not with `stack` or a `y` array                      |
+| `forms`      | ("waffle" / "bars" / "swarm")[] | units                                                                                     | Forms a units chart switches between, first shown (`view.form` picks another); a form control appears with 2 or more. Default all three                                                       |
+| `frame`      | field                           | bar line area scatter dumbbell                                                            | Playback: one frame per distinct value, the last shown by default (`view.frame` picks another); the title names the frame and the value axes span every frame. The element adds a Play button |
 
 ### Formatting
 
@@ -474,12 +476,16 @@ Line and area charts on a time axis automatically reduce long time series to abo
 
 Each module extends the core with chart types and shares the same spec, theme, tooltip, a11y, and animation.
 
-| Module                 | Types                                | Size budget (gzip) |
-| ---------------------- | ------------------------------------ | ------------------ |
-| `mayacharts/hierarchy` | treemap, sunburst, marimekko, waffle | 3.5 KB             |
-| `mayacharts/flow`      | sankey, chord                        | 3 KB               |
-| `mayacharts/radial`    | radial                               | 2 KB               |
-| `mayacharts/geo`       | hexmap (50 US states + DC + PR)      | 3.5 KB             |
+| Module                     | Types                                                     | Size budget (gzip) |
+| -------------------------- | --------------------------------------------------------- | ------------------ |
+| `mayacharts/hierarchy`     | treemap, sunburst, marimekko, waffle                      | 3.5 KB             |
+| `mayacharts/flow`          | sankey, chord                                             | 3 KB               |
+| `mayacharts/radial`        | radial                                                    | 2 KB               |
+| `mayacharts/geo`           | hexmap (50 US states + DC + PR)                           | 3.5 KB             |
+| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.5 KB             |
+| `mayacharts/units`         | units (one dot per row: waffle, bars, swarm)              | 2.5 KB             |
+| `mayacharts/orbit`         | orbit (planets sized by value, speed by growth)           | 2.5 KB             |
+| `mayacharts/constellation` | constellation (rows placed by similarity across measures) | 2.5 KB             |
 
 ## Global build
 
@@ -782,15 +788,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 8,096 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 8,759 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 885,903,116 total, 1,890,366 output
-- claude-sonnet-5-5: 312,930,335 total, 58,272 output
-- claude-fable-5-1: 74,794,840 total, 178,397 output
-- claude-haiku-4-5-20251001: 23,593,580 total, 943 output
+- claude-opus-5-5: 967,077,990 total, 2,115,015 output
+- claude-sonnet-5-5: 327,151,812 total, 59,756 output
+- claude-fable-5-1: 81,671,592 total, 204,417 output
+- claude-haiku-4-5-20251001: 24,576,982 total, 987 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,305,019,730 total, 2,171,291 output
+- all: 1,408,276,235 total, 2,423,488 output
 
 <!-- tokens:end -->
 

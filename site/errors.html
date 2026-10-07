@@ -210,6 +210,15 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
 { "type": "line", "x": "date", "y": "revenue", "xType": "category",
   "data": [{ "date": "Jan 2024", "revenue": 5000 }] }</code></pre>
       </section>
+      <section id="too-few-measures">
+        <h2><code>too-few-measures</code></h2>
+        <p>
+          A constellation places each row by how alike its measures are, so it needs y as an array
+          of at least 2 numeric fields. Each measure is one dimension of the map.
+        </p>
+        <pre><code>{ "type": "constellation", "x": "team", "y": ["revenue", "margin", "growth"],
+  "data": [{ "team": "A", "revenue": 120, "margin": 0.3, "growth": 0.1 }] }</code></pre>
+      </section>
     </main>
   </body>
 </html>

@@ -4,6 +4,17 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased (0.9.0)
+
+### Added
+
+- `was: "<field>"` on bar gives the chart a memory from a data column. Each bar with a previous value gets a ghost bar at that value behind it (`<rect data-past>`, keyed `%00was~` plus the bar's key, styled by the theme), the bar's tooltip payload carries "was" and the formatted value (`data-was`, new `text.was`), the data table adds a column after each value column, and the description names the 2 largest relative moves (new `text.since`: "Since Last week: North +12%, West -10%."). Not with `stack` or a `y` array. Specs without `was` render exactly as before.
+- Four new chart types, each in its own module: `weave` (`mayacharts/weave`, ranks per period drawn as threads that cross over and under; needs `series`), `units` (`mayacharts/units`, one dot per row in a waffle, bar or swarm form), `orbit` (`mayacharts/orbit`, categories as planets sized by `y`, with `y2` as growth setting speed and direction) and `constellation` (`mayacharts/constellation`, rows placed by similarity across 2 or more measures in `y`, optional `size`). The global build includes all four. In this release candidate they register and validate but draw no marks yet.
+- `forms` (units only) lists the forms a units chart switches between, default `["waffle", "bars", "swarm"]`; `view.form` picks one (an index, larger values clamp). With 2 or more forms the controls slot holds a `.maya-ctl` radiogroup with `data-maya="form"`, labelled by new `text.forms`, `text.waffle`, `text.bars` and `text.swarm`.
+- New error code `too-few-measures`: a constellation whose `y` is not an array of at least 2 measures.
+- New `text` keys for the new marks' descriptions and tooltips: `perDot`, `rank`, `speedBy`, `alike` and `nearest`. `type: "bump"` suggests `weave`, and the unknown option `previous` points to `was`.
+- `y2` is accepted on `orbit` (growth); there it adds no legend entry. `sort`, `limit`, `select` and `colorBy` are accepted on the new types where they apply (see the README tables), and the data table lists the raw rows for units, orbit and constellation (constellation: every measure; orbit: the growth column).
+
 ## 0.8.0 - 2026-10-06
 
 ### Added

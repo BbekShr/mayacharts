@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { register } from "../src/core/registry.ts";
 import {
   fail,
@@ -153,7 +153,7 @@ describe("one snapshot per error code", () => {
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.stacked is not a known option.
         Did you mean "stack"?
-        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, colors, colorBy, theme, $schema, x, y2, series, size, name, title, description, locale, currency, frame, horizontal, labels, legend, endLabels, tooltip, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate.
+        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, colors, colorBy, theme, $schema, x, y2, was, series, size, name, title, description, locale, currency, frame, horizontal, labels, legend, endLabels, tooltip, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate.
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-option"
     `);
   });
@@ -637,5 +637,71 @@ describe("resolve", () => {
     const s = resolve({ type: "bar", data: rows, x: "state", y: "sales" });
     expect(s.titles.get("constructor")).toBeUndefined();
     expect(s.format.get("toString")).toBeUndefined();
+  });
+});
+
+describe("0.9 contracts: weave, units, orbit, constellation, was", () => {
+  beforeAll(async () => {
+    for (const m of ["weave", "units", "orbit", "constellation"]) await import(`../src/${m}.ts`);
+  });
+  const rows = [
+    { g: "A", s: "N", v: 1, w: 2, last: 1, id: "a" },
+    { g: "B", s: "S", v: 3, w: -1, last: 2, id: "b" },
+  ];
+  const at = (type: string, more: object = {}) => ({ type, data: rows, x: "g", y: "v", ...more });
+
+  it("too-few-measures", () => {
+    const e = err(at("constellation"));
+    expect([e.code, e.path]).toEqual(["too-few-measures", "y"]);
+    expect(e.message).toMatchInlineSnapshot(`
+      "mayacharts: spec.y on "constellation" needs an array of at least 2 measures.
+        -> https://bbekshr.github.io/mayacharts/errors.html#too-few-measures"
+    `);
+    expect(code(at("constellation", { y: ["v"] }))).toEqual(["too-few-measures", "y"]);
+    ok(at("constellation", { y: ["v", "w"], size: "w" }));
+  });
+
+  it("weave needs series; orbit takes y2 as growth without a legend", () => {
+    expect(code(at("weave"))).toEqual(["missing-field", "series"]);
+    ok(at("weave", { series: "s" }));
+    ok(at("orbit", { y2: "w", limit: 1, sort: "desc" }));
+    expect(resolve(at("orbit", { y2: "w" }) as ChartSpec).legend).toBe(false);
+    expect(resolve({ ...base, y2: "units" } as ChartSpec).legend).toBe(true);
+    expect(code(at("weave", { series: "s", y2: "w" }))).toEqual(["option-unsupported", "y2"]);
+  });
+
+  it("forms: units only, known and distinct", () => {
+    ok(at("units", { name: "id", forms: ["swarm", "waffle"] }));
+    expect(code(at("bar", { forms: ["bars"] }))).toEqual(["option-unsupported", "forms"]);
+    expect(code(at("units", { forms: [] }))).toEqual(["invalid-option", "forms"]);
+    expect(code(at("units", { forms: ["pie"] }))).toEqual(["invalid-option", "forms"]);
+    expect(code(at("units", { forms: ["bars", "bars"] }))).toEqual(["invalid-option", "forms"]);
+    const r = (forms?: string[], form?: number) =>
+      resolve(at("units", forms ? { forms } : {}) as ChartSpec, form === undefined ? {} : { form });
+    expect(r().forms).toEqual(["waffle", "bars", "swarm"]);
+    expect(r(undefined, 9).form).toBe(2);
+    expect(r(["swarm"], 1).form).toBe(0);
+    expect(resolve(base as ChartSpec).forms).toEqual([]);
+    expect(code({ form: -1 }, true)).toEqual(["unknown-option", "options.form"]);
+    expect(code({ view: { form: 1.5 } }, true)).toEqual(["invalid-option", "options.view.form"]);
+    expect(() => validateOptions({ view: { form: 2 } })).not.toThrow();
+  });
+
+  it("was: bar only, numeric, a real field, not with stack or a y array", () => {
+    ok(at("bar", { was: "last" }));
+    expect(code(at("line", { was: "last" }))).toEqual(["option-unsupported", "was"]);
+    expect(code(at("bar", { was: "nope" }))).toEqual(["unknown-field", "was"]);
+    expect(code(at("bar", { was: "id" }))).toEqual(["non-numeric-field", "data[0].id"]);
+    expect(code(at("bar", { was: "last", series: "s", stack: true }))).toEqual([
+      "option-unsupported",
+      "was",
+    ]);
+    expect(code(at("bar", { was: "last", y: ["v", "w"] }))).toEqual(["option-unsupported", "was"]);
+    expect(resolve(at("bar", { was: "last" }) as ChartSpec).was).toBe("last");
+  });
+
+  it("hints and aliases", () => {
+    expect(err({ ...base, previous: "x" }).message).toContain('Use was: "<field>"');
+    expect(err({ ...base, type: "bump" }).message).toContain('Use type: "weave"');
   });
 });

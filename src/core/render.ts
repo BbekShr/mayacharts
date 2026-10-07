@@ -11,7 +11,8 @@
  *           touches window/document (a test deletes globalThis.window and imports it).
  *
  * State: interaction state is not in the spec. RenderOptions.view = { measure, drill, window,
- *   hidden, sortBy, frame } and RenderOptions.selected = Sel[] (raw values). resolve() applies
+ *   hidden, sortBy, frame, form } and RenderOptions.selected = Sel[] (raw values). view.form
+ *   indexes the units spec.forms (ResolvedSpec.forms/form, clamped). resolve() applies
  *   measure (active y, measures[] kept for the control), frame (keep the rows of one distinct
  *   spec.frame value, data order; view.frame indexes them, default and clamp: the last) and
  *   drill (filter rows, advance x/path). shape() applies, in order: aggregate -> time order ->
@@ -69,7 +70,8 @@
  *   5000-mark error; a reduction would be a different chart (bin with scatter, or limit).
  *
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
- *   (hierarchy, flow, geo) call registry.register() on import. A Mark is
+ *   (hierarchy, flow, geo, radial, weave, units, orbit, constellation) call registry.register()
+ *   on import; each module file's header comment is its mark's contract. A Mark is
  *   { noun, axes?(spec, shaped): [bottom, left], check?(spec, fail), draw(ctx) }.
  *   draw() may return `note`, one sentence appended to the auto description.
  *   MarkCtx closures: fmt(field, v, step?), label(x, y, text, place, rotate?), tone(v), agg(kind),
@@ -77,13 +79,24 @@
  *   height, plot, x (bottom-axis scale), y (left-axis scale). Modules import only
  *   registry.ts, svg.ts, scale.ts, ticks.ts and types.
  *
+ * Memory (spec.was, bar): the was field aggregated per (category, series) like colorBy. Each bar
+ *   with a was value gets a ghost `<rect data-past>` in the marks group before every bar (so
+ *   behind), keyed "%00was~" + the bar's key (key("\u0000was", series, category)), carrying
+ *   data-c, data-s, data-neg and fill="none" (the theme's [data-past] rule
+ *   paints it) but no data-maya: not a mark, never hit-tested or counted. The bar
+ *   and its hit carry data-was = text.was with the formatted previous value (the tooltip line).
+ *   The data table adds a column after each value column; the note is text.since with the was
+ *   title and the 2 largest relative moves (y - was) / |was| (zero or null was skipped, ties in
+ *   data order), e.g. "Since Last week: North +12%, West -10%.". The element may treat a ghost's
+ *   geometry as its bar's previous state on first paint.
+ *
  * Outputs
  *   render(spec, opts)      standalone `<svg class="maya-root">` with an embedded <style>.
  *                           Works as a file, in <img>, or rasterized by the hosted API.
  *   renderShell(spec, opts) `<maya-chart>` with Declarative Shadow DOM + JSON spec child.
  *                           The JSON child is the spec with rows projected to referenced
- *                           fields only (x y series size name path colorBy, format and
- *                           titles keys). `opts.nonce` lands on the shell's <style>.
+ *                           fields only (x y series y2 was frame size name path colorBy,
+ *                           format and titles keys). `opts.nonce` lands on the shell's <style>.
  *   renderParts(spec, opts) the pieces (svg without <style>, legend, controls, crumbs, table,
  *                           title, override style + vars, warnings). `table` is a getter that
  *                           builds the data table on first read (the element reads it idle).
@@ -95,7 +108,9 @@
  *   <style>CSS</style>
  *   <div class="maya">
  *     TITLE  CONTROLS  LEGEND  CRUMBS
- *     CONTROLS = the measure radiogroup (.maya-ctl), then with spec.frame and 2+ frames
+ *     CONTROLS = the measure radiogroup (.maya-ctl), then for units with 2+ forms the form
+ *       radiogroup (.maya-ctl data-maya="form", aria-label text.forms, options text.waffle /
+ *       bars / swarm, data-i = view.form; measure handlers must skip it), then with spec.frame and 2+ frames
  *       <button type="button" class="maya-play" data-maya="play">text.play</button>
  *       (the same for every frame, so the element can relabel it text.pause while playing).
  *       Parts.frame = [index shown, frame count] with spec.frame, absent otherwise.
@@ -189,7 +204,8 @@
  *
  * Key grammar (svg.ts key(...parts)): each part encodeURIComponent'ed with `~` -> %7E,
  *   joined by `~`. Band `S~C`; line/area `l~S`/`a~S`; scatter `S~name(#n)` or index;
- *   bar y2 line `l~\u0000y2`, its points `\u0000y2~C` (NUL cannot be a series key prefix);
+ *   bar y2 line `l~\u0000y2`, its points `\u0000y2~C` (NUL cannot be a series key prefix); bar
+ *   was ghost `\u0000was~S~C`; weave segment `w~S~i`; units dot `u~NAME`; constellation star `c~NAME`;
  *   hierarchy `h~p0~p1…`; sankey node `n~depth~name`, link `k~depth~src~dst` (depth in the whole path, so a drill keeps them); hexmap
  *   `g~CODE`; limit roll-up category is the sentinel OTHER ("\u0000other").
  *   The element diffs marks by data-key (and tagName), never by index.
@@ -197,7 +213,7 @@
  * CSS hooks theme.ts styles (interaction modules never touch theme.ts):
  *   .maya-ctl [role=radio][aria-checked]  .maya-play  .maya-crumbs  .maya-reset  .maya-err
  *   [data-maya=brush]  [data-maya=cross] (scatter: guide lines + text pills, --x/--y)
- *   [data-maya=link]  [data-depth]  [data-selected]
+ *   [data-maya=link]  [data-depth]  [data-selected]  [data-past] (was ghosts)
  *   [data-maya=rules] line|text  svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
  *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
@@ -355,6 +371,17 @@ function average(s: ResolvedSpec, shaped: Shaped): number {
     });
   return [...by.values()].reduce((a, b) => a + b, 0) / by.size;
 }
+
+/** A `.maya-ctl` radiogroup (the measure toggle, the units form control). */
+const radios = (tag: string, label: string, names: string[], i: number) =>
+  `<div class="maya-ctl" role="radiogroup"${tag} aria-label="${esc(label)}" data-n="${names.length}" data-i="${i}">` +
+  names
+    .map(
+      (m, j) =>
+        `<button type="button" role="radio" aria-checked="${j === i}" data-i="${j}" tabindex="${j === i ? 0 : -1}">${esc(m)}</button>`,
+    )
+    .join("") +
+  `</div>`;
 
 const kebab = (s: string) => s.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase());
 
@@ -715,14 +742,20 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     legend,
     controls:
       (s.measures.length > 1 && !ALL_Y.includes(s.type)
-        ? `<div class="maya-ctl" role="radiogroup" aria-label="${esc(t(s, "measures"))}" data-n="${s.measures.length}" data-i="${s.measure}">` +
-          s.measures
-            .map(
-              (m, i) =>
-                `<button type="button" role="radio" aria-checked="${i === s.measure}" data-i="${i}" tabindex="${i === s.measure ? 0 : -1}">${esc(s.titles.get(m) ?? m)}</button>`,
-            )
-            .join("") +
-          `</div>`
+        ? radios(
+            "",
+            t(s, "measures"),
+            s.measures.map((m) => s.titles.get(m) ?? m),
+            s.measure,
+          )
+        : "") +
+      (s.forms.length > 1
+        ? radios(
+            ' data-maya="form"',
+            t(s, "forms"),
+            s.forms.map((f) => t(s, f)),
+            s.form,
+          )
         : "") +
       (fr && fr[1].length > 1
         ? `<button type="button" class="maya-play" data-maya="play">${esc(t(s, "play"))}</button>`
@@ -789,6 +822,7 @@ function project(spec: ChartSpec): ChartSpec {
     ...(typeof spec.y === "string" ? [spec.y] : spec.y),
     spec.series,
     spec.y2,
+    spec.was,
     spec.frame,
     spec.size,
     spec.name,

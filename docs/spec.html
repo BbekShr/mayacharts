@@ -88,11 +88,13 @@
               <td>
                 <code
                   >bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel
-                  table treemap sunburst sankey chord marimekko waffle radial hexmap</code
+                  table treemap sunburst sankey chord marimekko waffle radial hexmap weave units
+                  orbit constellation</code
                 >
                 Core: ridgeline, beeswarm, parallel, table; Modules:
                 treemap/sunburst/marimekko/waffle (hierarchy), sankey/chord (flow), radial (radial),
-                hexmap (geo)
+                hexmap (geo), weave (weave), units (units), orbit (orbit), constellation
+                (constellation)
               </td>
             </tr>
             <tr>
@@ -167,8 +169,32 @@
             <tr>
               <td><a class="spec-anchor" id="y2"></a><code>y2</code></td>
               <td>field</td>
+              <td>bar orbit</td>
+              <td>
+                Second value field, drawn as a line on a right axis. Vertical bars only. Orbit:
+                growth, which sets each planet's speed and direction
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="was"></a><code>was</code></td>
+              <td>field</td>
               <td>bar</td>
-              <td>Second value field, drawn as a line on a right axis. Vertical bars only</td>
+              <td>
+                Previous value field. Each bar gets a ghost bar at its old value behind it, the
+                tooltip says "was" and the value, the data table gains a column, and the description
+                names the 2 largest relative moves (text.since, "Since Last week: North +12%, West
+                -10%."). Not with stack or a y array
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="forms"></a><code>forms</code></td>
+              <td>("waffle" / "bars" / "swarm")[]</td>
+              <td>units</td>
+              <td>
+                Forms a units chart switches between, first one shown (view.form picks another).
+                With 2 or more the chart shows a form control (text.forms, text.waffle, text.bars,
+                text.swarm). Default all three
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="frame"></a><code>frame</code></td>
@@ -186,8 +212,14 @@
             <tr>
               <td><a class="spec-anchor" id="series"></a><code>series</code></td>
               <td>field</td>
-              <td>bar line area scatter heatmap dumbbell</td>
-              <td>Split into series; heatmap row category; dumbbell exactly two (from, to)</td>
+              <td>
+                bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial
+                weave
+              </td>
+              <td>
+                Split into series; heatmap row category; dumbbell exactly two (from, to); weave one
+                thread each (required)
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="path"></a><code>path</code></td>
@@ -198,14 +230,16 @@
             <tr>
               <td><a class="spec-anchor" id="size"></a><code>size</code></td>
               <td>field</td>
-              <td>scatter</td>
-              <td>Bubble area (sqrt scale)</td>
+              <td>scatter constellation</td>
+              <td>Bubble or star area (sqrt scale)</td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="name"></a><code>name</code></td>
               <td>field</td>
-              <td>scatter</td>
-              <td>Point identity and tooltip title; duplicates become #2, #3...</td>
+              <td>scatter beeswarm units</td>
+              <td>
+                Point identity and tooltip title; duplicates become #2, #3...; units one dot per row
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="totals"></a><code>totals</code></td>
@@ -281,7 +315,7 @@
                 drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
                 crumbs positive negative above below vs ofTarget total shareOf sortedBy ascending
                 descending fromTo reduced points point range density perCell mean rule play pause
-                frameOf frame
+                frameOf frame was since forms waffle bars swarm perDot rank speedBy alike nearest
               </td>
             </tr>
             <tr>

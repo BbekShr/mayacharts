@@ -32,9 +32,13 @@
         "marimekko",
         "waffle",
         "radial",
-        "hexmap"
+        "hexmap",
+        "weave",
+        "units",
+        "orbit",
+        "constellation"
       ],
-      "description": "Chart type. ridgeline, beeswarm, parallel, table are core. treemap, sunburst, marimekko, waffle need `mayacharts/hierarchy`; sankey, chord need `mayacharts/flow`; radial needs `mayacharts/radial`; hexmap needs `mayacharts/geo`."
+      "description": "Chart type. ridgeline, beeswarm, parallel, table are core. treemap, sunburst, marimekko, waffle need `mayacharts/hierarchy`; sankey, chord need `mayacharts/flow`; radial needs `mayacharts/radial`; hexmap needs `mayacharts/geo`; weave, units, orbit and constellation each need the module of the same name (`mayacharts/weave` and so on)."
     },
     "data": {
       "type": "array",
@@ -87,7 +91,20 @@
     },
     "y2": {
       "type": "string",
-      "description": "Second value field, drawn as a line on a right axis over the bars. Vertical bar only."
+      "description": "Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction. bar orbit."
+    },
+    "was": {
+      "type": "string",
+      "description": "Previous value field: a ghost bar at the old value behind each bar, \"was\" in the tooltip, a data table column and a description sentence naming the 2 largest relative moves. bar; not with stack or a y array."
+    },
+    "forms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["waffle", "bars", "swarm"]
+      },
+      "description": "Forms a units chart switches between, first one shown (view.form picks another); the element adds a form control when there are 2 or more. Default all three. units only."
     },
     "frame": {
       "type": "string",
@@ -95,7 +112,7 @@
     },
     "series": {
       "type": "string",
-      "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to). bar line area scatter heatmap dumbbell."
+      "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial weave."
     },
     "path": {
       "type": "array",
@@ -107,11 +124,11 @@
     },
     "size": {
       "type": "string",
-      "description": "Bubble area field (sqrt scale). scatter only."
+      "description": "Bubble area field (sqrt scale). scatter constellation."
     },
     "name": {
       "type": "string",
-      "description": "Point identity and tooltip title. scatter only."
+      "description": "Point identity and tooltip title (units: one dot per row). scatter beeswarm units."
     },
     "totals": {
       "type": "array",
@@ -261,7 +278,18 @@
           "play",
           "pause",
           "frameOf",
-          "frame"
+          "frame",
+          "was",
+          "since",
+          "forms",
+          "waffle",
+          "bars",
+          "swarm",
+          "perDot",
+          "rank",
+          "speedBy",
+          "alike",
+          "nearest"
         ]
       }
     },

@@ -25,6 +25,7 @@
  *   unknown-state       hexmap x names no US state (geo's Mark.check)
  *   too-many-marks      more than MAX_MARKS marks or MAX_FRAMES frames (thrown by render)
  *   invalid-date        xType "time" with an x that is neither ISO 8601 nor epoch ms
+ *   too-few-measures    constellation with a y that is not an array of 2 or more measures
  * "Did you mean": smallest score (|len diff| + chars not shared; ties to longest prefix), only if <= 3.
  * Lookups keyed by user input go through Object.hasOwn or Array#includes.
  */
@@ -64,7 +65,7 @@ export const MAX_POINTS = 1000;
 
 const w = (s: string) => s.split(" ");
 const S: Record<string, "string" | "boolean"> = Object.fromEntries([
-  ...w("$schema x y2 series size name title description locale currency frame").map((k) => [
+  ...w("$schema x y2 was series size name title description locale currency frame").map((k) => [
     k,
     "string",
   ]),
@@ -75,7 +76,7 @@ const S: Record<string, "string" | "boolean"> = Object.fromEntries([
 /** Every spec key (schema.json is tested against this). */
 export const KEYS = [
   ...w(
-    "type data y path totals aggregate sort limit format titles text yDomain xDomain rules select xType stack",
+    "type data y path totals aggregate sort limit format titles text yDomain xDomain rules select xType stack forms",
   ),
   ...w("colors colorBy theme"),
   ...Object.keys(S),
@@ -85,7 +86,7 @@ const CART = ["bar", "line", "area"];
 const PATHX = [...CART, "dumbbell"];
 const PATH = ["treemap", "sunburst", "sankey", "chord"];
 /** y arrays on these types are shown together (axes, columns), never a measure toggle. */
-export const ALL_Y = ["parallel", "table"];
+export const ALL_Y = ["parallel", "table", "constellation"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
@@ -93,12 +94,13 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
+    `horizontal:bar,dumbbell y2:bar,orbit was:bar forms:units size:scatter,constellation name:scatter,beeswarm,units path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,weave xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap,units,orbit,constellation xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
 );
 const AGGS = w("sum mean count min max");
+const FORMS = w("waffle bars swarm");
 const PRESETS = w("auto integer decimal compact percent currency date month year time datetime");
 /** A format template: text, one `{value}` or `{value:preset}`, text. Braces elsewhere are not allowed. */
 export const TEMPLATE = /^([^{}]*)\{value(?::(\w+))?\}([^{}]*)$/;
@@ -114,7 +116,8 @@ const TOKENS = [
 const USE: Record<string, string> = {
   x: "the category axis",
   y: "the plotted numbers",
-  y2: "the right-axis line",
+  y2: "the right-axis line (orbit: growth)",
+  was: "the previous values",
   series: "splitting rows into series",
   size: "bubble area",
   name: "point identity",
@@ -147,6 +150,7 @@ const HINTS: Record<string, string> = {
   "size:number": "spec.size names a field for bubble area. " + SIZED,
   "select:boolean": 'Use select: true or "multi".',
   timeline: 'Use frame: "<field>".',
+  previous: 'Use was: "<field>" (bar).',
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -157,6 +161,7 @@ const ALIAS: Record<string, string> = {
   map: GEO,
   pie: PIE,
   donut: PIE,
+  bump: 'Use type: "weave" (import "mayacharts/weave").',
 };
 const FN = w("rgb rgba hsl hsla oklch oklab lab lch color color-mix light-dark var calc");
 const FAM = String.raw`\s*(?:"[\w\s.\-]*"|'[\w\s.\-]*'|[\w\-]+(?:\s+[\w\-]+)*)\s*`;
@@ -282,6 +287,11 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ["select", 'true or "multi"', (v) => v === true || v === "multi"],
   ["stack", 'a boolean or "percent"', (v) => v === !!v || v === "percent"],
   [
+    "forms",
+    `a non-empty array of distinct forms: ${FORMS.join(", ")}`,
+    (v) => strs(v, 1) && v.every((f) => FORMS.includes(f)) && new Set(v).size === v.length,
+  ],
+  [
     "colorBy",
     '"sign", { target: number } or a numeric field name',
     (v) =>
@@ -384,10 +394,15 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   )
     missing(need);
   if (s.y === undefined) missing("y");
-  if ((t === "dumbbell" || t === "ridgeline" || t === "marimekko") && s.series === undefined)
+  if (["dumbbell", "ridgeline", "marimekko", "weave"].includes(t) && s.series === undefined)
     missing("series");
-  if (t === "parallel" && !(Array.isArray(s.y) && s.y.length >= 2))
-    fail("invalid-option", "y", 'spec.y on "parallel" needs an array of at least 2 measures.');
+  // parallel keeps its 0.x code; constellation has its own.
+  if ((t === "parallel" || t === "constellation") && !(Array.isArray(s.y) && s.y.length >= 2))
+    fail(
+      t === "parallel" ? "invalid-option" : "too-few-measures",
+      "y",
+      `spec.y on "${t}" needs an array of at least 2 measures.`,
+    );
 
   for (const k in S) if (s[k] !== undefined && typeof s[k] !== S[k]) bad(k, s[k], `a ${S[k]}`);
   for (const [k, want, ok] of CHECKS) if (s[k] !== undefined && !ok(s[k])) bad(k, s[k], want);
@@ -531,6 +546,12 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       "x",
       "spec.x cannot be combined with spec.path.",
     ],
+    // ponytail: was ghosts are grouped bars only, not stacks or a measure toggle (NON-FEATURES).
+    [
+      s.was !== undefined && (!!s.stack || Array.isArray(y)),
+      "was",
+      "spec.was cannot be combined with spec.stack or a y array.",
+    ],
     [
       s.y2 !== undefined && s.horizontal === true,
       "y2",
@@ -581,6 +602,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       ...(typeof y === "string" ? [["y", y] as [string, string]] : arr("y", ys)),
       ["series", s.series],
       ["y2", s.y2],
+      ["was", s.was],
       ["size", s.size],
       ["name", s.name],
       ...arr("path", (path as string[] | undefined) ?? []),
@@ -632,7 +654,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       });
     for (const f of ys) numeric(f, "non-numeric-y", "y");
     if (typeof s.size === "string") numeric(s.size, "non-numeric-field", "size");
-    if (typeof s.y2 === "string") numeric(s.y2, "non-numeric-field", "y2");
+    for (const k of ["y2", "was"])
+      if (typeof s[k] === "string") numeric(s[k] as string, "non-numeric-field", k);
     if (t === "dumbbell" && typeof s.series === "string") {
       const n = new Set(rows.map((r) => String(r[s.series as string]))).size;
       if (n !== 2)
@@ -702,7 +725,7 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   const { view: v, selected: sel, nonce } = o;
   if (v !== undefined) {
     if (!isObj(v)) inv("view", v, "an object");
-    const vk = w("measure drill window hidden sortBy frame");
+    const vk = w("measure drill window hidden sortBy frame form");
     for (const k of Object.keys(v as object)) if (!vk.includes(k)) unknown("options.view", k, vk);
     const { drill, window: win, hidden, sortBy } = v as Record<string, unknown>;
     if (
@@ -715,7 +738,7 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
       )
     )
       inv("view.sortBy", sortBy, '[field, "asc" | "desc"]');
-    for (const k of ["measure", "frame"]) {
+    for (const k of ["measure", "frame", "form"]) {
       const n = (v as Record<string, unknown>)[k];
       if (n !== undefined && !(Number.isInteger(n) && (n as number) >= 0))
         inv("view." + k, n, "an index (integer >= 0)");
@@ -770,6 +793,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const fv = F ? [...new Set(spec.data.flatMap((r) => (r[F] == null ? [] : [String(r[F])])))] : [];
   const fi = Math.min(view.frame ?? fv.length, fv.length - 1);
   const rows = F ? spec.data.filter((r) => String(r[F]) === fv[fi]) : spec.data;
+  const forms = spec.forms ?? (spec.type === "units" ? (FORMS as ResolvedSpec["forms"]) : []);
   const entries = <T>(o: Readonly<Partial<Record<string, T>>> | undefined) =>
     Object.entries(o ?? {}).filter((e): e is [string, T] => e[1] !== undefined);
   return {
@@ -785,6 +809,9 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     measure,
     series: spec.series ?? null,
     y2: spec.y2 ?? null,
+    was: spec.was ?? null,
+    forms,
+    form: Math.max(0, Math.min(view.form ?? 0, forms.length - 1)),
     path,
     drilled,
     hue: drilled.length ? rank(spec.data, full[0]!, measures[measure]!).indexOf(drilled[0]!) : null,
@@ -817,7 +844,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     legend:
       spec.legend ??
       (spec.series !== undefined ||
-        spec.y2 !== undefined ||
+        (spec.y2 !== undefined && spec.type === "bar") ||
         spec.type === "waffle" ||
         spec.type === "hexmap"),
     tooltip: spec.tooltip ?? true,

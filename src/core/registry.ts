@@ -1,5 +1,6 @@
 /*
- * Mark registry for optional modules (hierarchy, flow, geo). Imports nothing at runtime,
+ * Mark registry for optional modules (hierarchy, flow, geo, radial, weave, units, orbit,
+ * constellation). Imports nothing at runtime,
  * so every bundle that includes it (index, element, each module, the IIFE) shares one
  * table through a version-keyed global symbol. First definer wins; the property is
  * non-writable and non-configurable so a later bundle cannot swap the table.
@@ -45,6 +46,10 @@ export const MODULE_OF: Readonly<Record<string, string>> = {
   chord: "flow",
   radial: "radial",
   hexmap: "geo",
+  weave: "weave",
+  units: "units",
+  orbit: "orbit",
+  constellation: "constellation",
 };
 
 /** Not exported from the public entry: modules call it on import. First wins. */
