@@ -74,7 +74,8 @@ export function tooltip(
       byKey.set(a(m, "data-key"), m);
       if (!m.hasAttribute("data-c")) continue;
       const c = a(m, "data-c");
-      byC.set(c, [...(byC.get(c) ?? []), m]);
+      // Push, not spread: a group of 1500 dots would copy the array per dot.
+      (byC.get(c) ?? byC.set(c, []).get(c)!).push(m);
     }
   };
   const group = (m: Element) =>
