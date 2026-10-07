@@ -499,31 +499,30 @@ const speedCols = ["normal", "throttled"].filter((c) =>
     Object.values(data.speed[l] ?? {}).some((k) => Object.values(k).some((n) => n[c])),
   ),
 );
+// Libraries fail or time out at big sizes, so compare at the largest row count where most of them finished.
+const done = (l: string, k: string, n: string, col: string) =>
+  typeof data.speed[l]?.[k]?.[n]?.[col]?.firstPaintMs === "number";
 give(
   "speed",
   ...kinds.flatMap((k) =>
     speedCols.map((col): Plot => {
       const cpu = col === "normal" ? "normal CPU" : "CPU throttled";
-      const rows = libs.flatMap((l) =>
-        ns.flatMap((n) => {
-          const ms = data.speed[l]?.[k]?.[n]?.[col]?.firstPaintMs;
-          return typeof ms === "number" ? [{ rows: num(+n), lib: name(l), ms }] : [];
-        }),
-      );
+      const n =
+        [...ns]
+          .reverse()
+          .find((m) => libs.filter((l) => done(l, k, m, col)).length * 4 >= libs.length * 3) ??
+        ns[0]!;
+      const missing = libs.filter((l) => !done(l, k, n, col)).map(name);
       return {
-        spec: {
-          type: "line",
-          x: "rows",
-          xType: "category",
-          y: "ms",
-          series: "lib",
-          endLabels: true,
-          title: `${k[0]!.toUpperCase()}${k.slice(1)}, first paint, ${cpu}`,
-          titles: { rows: "Rows", ms: "Milliseconds" },
-          format: { ms: { maximumFractionDigits: 0 } },
-          data: rows,
-        },
-        note: `Milliseconds until the first mark is painted for a ${k} chart, by number of rows, under ${cpu}. Lower is faster. A library that failed at a size has no point there.`,
+        spec: bars(
+          `${k[0]!.toUpperCase()}${k.slice(1)}, ${num(+n)} rows, ${cpu}`,
+          "Milliseconds to first paint",
+          " ms",
+          libs.map((l) => [l, data.speed[l]?.[k]?.[n]?.[col]?.firstPaintMs]),
+          true,
+          0,
+        ),
+        note: `Milliseconds until the first mark is painted for a ${k} chart of ${num(+n)} rows under ${cpu}, the largest size where most libraries finished. Lower is faster.${missing.length ? ` No bar for ${missing.join(" and ")}, which failed or timed out here.` : ""} The table has every size.`,
       };
     }),
   ),
@@ -681,38 +680,31 @@ function summary(): HTMLElement {
     `Rank by rows won. A row is won by the library with the best value, and ties share the win. ${name(WE)} is ranked among the libraries that have a value in that dimension.`,
     s,
   );
-  const own = dims.flatMap((d) => {
-    const rows = d.tables.flatMap((t) => t.rows).filter((r) => !r.skip);
+  // Per dimension, the share of rows each library won. A library with no value in the dimension has no cell.
+  const rowsOf = (d: Dim) => d.tables.flatMap((t) => t.rows).filter((r) => !r.skip);
+  const shares = dims.flatMap((d) => {
+    const rows = rowsOf(d);
     const w = wins(d);
-    const rivals = libs.filter((l) => l !== WE && rows.some((r) => r.v[l] != null));
-    return rows.some((r) => r.v[WE] != null) && rivals.length
-      ? [
-          { dim: d.title, who: MAYA, share: w[WE]! / rows.length },
-          {
-            dim: d.title,
-            who: "Best rival",
-            share: Math.max(...rivals.map((l) => w[l]!)) / rows.length,
-          },
-        ]
+    return rows.some((r) => r.v[WE] != null)
+      ? libs
+          .filter((l) => rows.some((r) => r.v[l] != null))
+          .map((l) => ({ dim: d.title, lib: name(l), share: w[l]! / rows.length }))
       : [];
   });
   plots(s, [
     {
       spec: {
-        type: "bar",
-        horizontal: true,
-        x: "dim",
+        type: "heatmap",
+        x: "lib",
         y: "share",
-        series: "who",
+        series: "dim",
         labels: true,
-        title: "Share of rows won, per dimension",
+        title: "Share of rows won, per dimension and library",
         titles: { share: "Rows won" },
         format: { share: { style: "percent", maximumFractionDigits: 0 } },
-        yDomain: [0, 1],
-        colors: { [MAYA]: "var(--maya-accent)", "Best rival": grey },
-        data: own,
+        data: shares,
       },
-      note: `Share of the rows in each dimension won by ${MAYA} and by the single best other library, where ties share the win. A shorter accent bar than the grey one is a loss.`,
+      note: `Each square is the share of rows in a dimension that a library won, where ties share the win. A solid ${name(WE)} column means it leads everywhere, and every low square is a rival that won little or nothing. An empty square means the library has no value in that dimension.`,
       cls: "cmp-tall",
     },
   ]);

@@ -20,6 +20,7 @@ import {
   makeRanks,
   makeReadings,
   makeUnits,
+  seedOf,
   mean,
   rollup,
   sum,
@@ -641,8 +642,6 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   return out;
 }
 
-/** A seed derived from the dataset so a re-roll redraws the synthetic points too. */
-const seedOf = (f: Dataset["FACTS"]) => Math.round(f.reduce((a, r) => a + r.sales, 0)) >>> 0;
 const seed = () => (Math.random() * 2 ** 32) >>> 0;
 for (const [id, spec] of Object.entries(specs(makeData(7)))) show(id, spec);
 
