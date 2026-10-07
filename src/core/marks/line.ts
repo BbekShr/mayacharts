@@ -52,7 +52,8 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     const gaps = ts
       .flatMap((v, i) => (i && v > ts[i - 1]! ? [v - ts[i - 1]!] : []))
       .sort((a, b) => a - b);
-    const hole = (gaps[gaps.length >> 1] ?? Infinity) * 5;
+    // ponytail: a thinned series skips the rule (its kept points are far apart by design; nulls still break).
+    const hole = shaped.reduced ? Infinity : (gaps[gaps.length >> 1] ?? Infinity) * 5;
     let prev = -Infinity;
     const path = cells.flatMap((c) =>
       c.value === null ? [] : [[px(c.ci), val.of(c.y1)] as const],

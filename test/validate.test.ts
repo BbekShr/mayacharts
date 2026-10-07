@@ -253,7 +253,7 @@ describe("one snapshot per error code", () => {
       fail(
         "too-many-marks",
         "data",
-        "spec.data would draw 6000 marks; the limit is 5000.",
+        "spec.data would draw 11000 marks; the limit is 10000.",
         "Use limit or aggregate.",
       );
     } catch (x) {
@@ -261,7 +261,7 @@ describe("one snapshot per error code", () => {
     }
     expect((e as MayaSpecError).code).toBe("too-many-marks");
     expect((e as MayaSpecError).message).toMatchInlineSnapshot(`
-      "mayacharts: spec.data would draw 6000 marks; the limit is 5000.
+      "mayacharts: spec.data would draw 11000 marks; the limit is 10000.
         Use limit or aggregate.
         -> https://bbekshr.github.io/mayacharts/errors.html#too-many-marks"
     `);

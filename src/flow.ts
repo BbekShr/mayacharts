@@ -1,7 +1,7 @@
 // mayacharts/flow: sankey and chord. Imports only registry, svg and types (never validate/render/shape).
 import { register } from "./core/registry.ts";
 import { TAU } from "./core/scale.ts";
-import { clip, el, esc, key, r } from "./core/svg.ts";
+import { clip, el, esc, key, memo, r } from "./core/svg.ts";
 import type { Mark, MarkCtx } from "./core/types.ts";
 
 const W = 14;
@@ -17,11 +17,16 @@ const paint = (n: C) => (n.s < 0 ? { "data-neu": true } : { "data-s": n.s });
 const neutral = (col: C[]) => col.forEach((n) => (n.s = -1));
 // Every node index upstream or downstream of a node along any path; hovering lights them.
 const reach = (ls: L[]) => {
+  // Neighbours per node and direction, so a walk reads its own links, not every link per step.
+  const nb = new Map<number, number[]>();
+  for (const l of ls)
+    for (const [k, b] of [
+      [l.s.i * 2, l.t.i],
+      [l.t.i * 2 + 1, l.s.i],
+    ] as const)
+      (nb.get(k) ?? nb.set(k, []).get(k)!).push(b);
   const walk = (i: number, up: boolean, seen = new Set<number>()) => {
-    for (const l of ls) {
-      const [a, b] = up ? [l.t, l.s] : [l.s, l.t];
-      if (a.i === i && !seen.has(b.i)) (seen.add(b.i), walk(b.i, up, seen));
-    }
+    for (const b of nb.get(i * 2 + +up) ?? []) if (!seen.has(b)) (seen.add(b), walk(b, up, seen));
     return seen;
   };
   const ids = (n: N, up: boolean) => [n.i, ...walk(n.i, up)];
@@ -114,40 +119,46 @@ const graph = (ctx: MarkCtx, what: string) => {
   const { spec } = ctx;
   const P = spec.path;
   const cols = P.length;
-  // Maps, not objects: node names such as "__proto__" are plain data.
-  const nodes: N[] = [];
-  const byLv: Map<string, N>[] = P.map(() => new Map());
-  const links = new Map<string, L>();
-  const node = (lv: number, name: string): N => {
-    let n = byLv[lv]!.get(name);
-    if (!n) {
-      n = { lv, name, i: nodes.length, in: 0, out: 0, v: 0, y: 0, s: 0, a: 0 };
-      byLv[lv]!.set(name, n);
-      nodes.push(n);
+  // The row pass (nodes and each link's values) is kept per data array; layout mutates nodes and
+  // links, so every render works on copies of it.
+  const raw = memo(spec.data, `graph|${P}|${spec.y}`, () => {
+    // Maps, not objects: node names such as "__proto__" are plain data.
+    const nodes: N[] = [];
+    const byLv: Map<string, N>[] = P.map(() => new Map());
+    const links = new Map<number, L>();
+    const node = (lv: number, name: string): N => {
+      let n = byLv[lv]!.get(name);
+      if (!n) {
+        n = { lv, name, i: nodes.length, in: 0, out: 0, v: 0, y: 0, s: 0, a: 0 };
+        byLv[lv]!.set(name, n);
+        nodes.push(n);
+      }
+      return n;
+    };
+    for (const row of spec.data) {
+      const v = row[spec.y];
+      if (typeof v !== "number") continue;
+      if (!(v > 0))
+        ctx.fail(
+          "non-positive-value",
+          spec.y,
+          `spec.${spec.y} is ${v}, but ${what} sizes must be positive.`,
+        );
+      let prev = node(0, String(row[P[0]!]));
+      for (let lv = 1; lv < cols; lv++) {
+        const next = node(lv, String(row[P[lv]!]));
+        const k = prev.i * 2 ** 26 + next.i; // ponytail: numeric key, ceiling 67M nodes
+        let l = links.get(k);
+        if (!l) links.set(k, (l = { s: prev, t: next, vals: [], v: 0, sy: 0, ty: 0 }));
+        l.vals.push(v);
+        prev = next;
+      }
     }
-    return n;
-  };
-  for (const row of spec.data) {
-    const v = row[spec.y];
-    if (typeof v !== "number") continue;
-    if (!(v > 0))
-      ctx.fail(
-        "non-positive-value",
-        spec.y,
-        `spec.${spec.y} is ${v}, but ${what} sizes must be positive.`,
-      );
-    let prev = node(0, String(row[P[0]!]));
-    for (let lv = 1; lv < cols; lv++) {
-      const next = node(lv, String(row[P[lv]!]));
-      const k = prev.i + "\0" + next.i;
-      let l = links.get(k);
-      if (!l) links.set(k, (l = { s: prev, t: next, vals: [], v: 0, sy: 0, ty: 0 }));
-      l.vals.push(v);
-      prev = next;
-    }
-  }
+    return { nodes, links: [...links.values()] };
+  });
+  const nodes = raw.nodes.map((n) => ({ ...n }));
+  const ls = raw.links.map((l) => ({ ...l, s: nodes[l.s.i]!, t: nodes[l.t.i]! }));
   const red = ctx.agg(spec.aggregate);
-  const ls = [...links.values()];
   for (const l of ls) {
     l.v = red(l.vals) ?? 0;
     if (!(l.v > 0))

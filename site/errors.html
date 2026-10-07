@@ -187,10 +187,12 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
       <section id="too-many-marks">
         <h2><code>too-many-marks</code></h2>
         <p>
-          The chart would render more than 5000 marks, which exceeds the performance limit. Reduce
-          the number of categories with the limit option, or aggregate rows with aggregate (e.g.,
-          "mean" instead of "sum"). More than 200 distinct frame values also raise it: aggregate or
-          bin the frame field.
+          The chart would render more than 10000 marks, which exceeds the performance limit. The
+          message gives the mark count, the cap and the row count. Bars, categorical lines, kpi,
+          scatter and tables reduce on their own; a waterfall, dumbbell, parallel chart or module
+          chart cannot, so reduce the number of categories with the limit option, or aggregate rows
+          with aggregate (e.g., "mean" instead of "sum"). More than 200 distinct frame values also
+          raise it: aggregate or bin the frame field.
         </p>
         <pre><code>// Limit to top 20 categories
 { "type": "bar", "x": "product", "y": "sales", "limit": 20, ... }

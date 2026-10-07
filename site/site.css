@@ -781,3 +781,44 @@ details > summary {
   cursor: pointer;
   margin: 8px 0;
 }
+
+/* Scale */
+#rows {
+  display: flex;
+  gap: 8px;
+}
+#rows button[aria-pressed="true"] {
+  border-color: var(--accent);
+  font-weight: 600;
+}
+#status {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px 16px;
+  margin: 12px 0 0;
+}
+.stats div {
+  min-width: 0;
+}
+.stats dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.stats dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.9rem;
+}
+#tiles section:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+#notes {
+  max-width: 72ch;
+}

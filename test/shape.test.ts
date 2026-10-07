@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { agg, shape, thin } from "../src/core/shape.ts";
+import { render } from "../src/core/render.ts";
 import { OTHER } from "../src/core/svg.ts";
 import { resolve } from "../src/core/validate.ts";
 import type { ChartSpec, Row } from "../src/core/types.ts";
@@ -206,5 +207,118 @@ describe("thin", () => {
     expect(k.length).toBeLessThanOrEqual(50);
     expect(k).toEqual([...k].sort((a, b) => a - b));
     for (const i of [0, 999, 500, 300]) expect(k).toContain(i);
+  });
+});
+
+describe("row pass cache", () => {
+  // Rows that count their reads of one field: a cached pass does not touch them again.
+  const counted = (n: number) => {
+    const reads = { v: 0 };
+    const data = Array.from({ length: n }, (_, i) => ({
+      m: "c" + (i % 40),
+      get v() {
+        reads.v++;
+        return i;
+      },
+    }));
+    return { reads, data: data as unknown as Row[] };
+  };
+  const cfg = (data: Row[], o: Partial<ChartSpec> = {}) =>
+    ({ type: "bar", x: "m", y: "v", data, ...o }) as ChartSpec;
+
+  it("a second shape of the same array skips the row pass; hidden, window and width still apply", () => {
+    const { reads, data } = counted(5000);
+    const s = resolve(cfg(data));
+    const first = shape(s, { plotWidth: 600 });
+    expect(reads.v).toBe(5000);
+    const second = shape(s, { plotWidth: 300, hidden: ["x"], window: [2, 5] });
+    expect(reads.v).toBe(5000);
+    expect(second.categories).toEqual(first.categories.slice(2, 6));
+    expect(shape(s).cells).toEqual(first.cells);
+  });
+  it("a changed field, aggregate or array length runs the pass again", () => {
+    const { reads, data } = counted(2000);
+    const base = shape(resolve(cfg(data)));
+    const n = reads.v;
+    shape(resolve(cfg(data, { aggregate: "max" })));
+    expect(reads.v).toBe(2 * n);
+    shape(resolve(cfg(data, { aggregate: "max" })));
+    expect(reads.v).toBe(2 * n);
+    data.push({ m: "new", v: 1 } as Row);
+    expect(shape(resolve(cfg(data))).categories).toContain("new");
+    expect(base.categories).not.toContain("new");
+  });
+  it("a new array with the same rows is a new pass (identity is the key)", () => {
+    const { reads, data } = counted(1000);
+    shape(resolve(cfg(data)));
+    shape(resolve(cfg([...data])));
+    expect(reads.v).toBe(2000);
+  });
+  it("validation skips the row scan on the same array", () => {
+    const { reads, data } = counted(3000);
+    render(cfg(data));
+    const n = reads.v;
+    render(cfg(data));
+    expect(reads.v - n).toBeLessThan(5); // the empty-data probe reads a row or two
+  });
+  it("the Other bucket and sort come out the same cached or not", () => {
+    const data = Array.from({ length: 300 }, (_, i) => ({
+      m: "c" + i,
+      v: (i * 37) % 101,
+    })) as Row[];
+    const spec = cfg(data, { limit: 5, sort: "desc" });
+    const a = shape(resolve(spec));
+    const b = shape(resolve(spec));
+    expect(b).toEqual(a);
+    expect(a.categories.at(-1)).toBe(OTHER);
+    expect(a.categories).toHaveLength(6);
+  });
+});
+
+describe("Other bucket merges the rolled-up aggregates", () => {
+  const data = Array.from({ length: 40 }, (_, i) => ({
+    m: "c" + (i % 10),
+    s: i % 2 ? "A" : "B",
+    v: (i * 7) % 13,
+    w: i,
+  })) as Row[];
+  for (const aggregate of ["sum", "mean", "min", "max", "count"] as const) {
+    it(aggregate, () => {
+      const base = { type: "bar", x: "m", y: "v", y2: "w", series: "s", aggregate, data } as const;
+      const lim = shape(resolve({ ...base, limit: 3 } as ChartSpec));
+      const keep = lim.categories.slice(0, 3);
+      // The same rows with the kept categories removed, all folded into one category.
+      const rest = data.filter((r) => !keep.includes(r.m as string)).map((r) => ({ ...r, m: "x" }));
+      const want = shape(resolve({ ...base, data: rest } as ChartSpec));
+      const o = lim.categories.length - 1;
+      expect(lim.categories[o]).toBe(OTHER);
+      // Series come in first-appearance order, which the filtered rows may change: compare by name.
+      const by = (sh: typeof lim, ci: number) =>
+        Object.fromEntries(
+          sh.cells.filter((c) => c.ci === ci).map((c) => [sh.series[c.si], c.value]),
+        );
+      expect(by(lim, o)).toEqual(by(want, 0));
+      expect(lim.y2[o]).toBeCloseTo(want.y2[0]!);
+    });
+  }
+});
+
+describe("cache keys coexist", () => {
+  it("more than eight different specs over one array all stay cached", () => {
+    const reads = { n: 0 };
+    const data = Array.from({ length: 500 }, (_, i) => ({
+      m: "c" + i,
+      get v() {
+        reads.n++;
+        return i;
+      },
+    })) as unknown as Row[];
+    const specs = ["sum", "mean", "min", "max", "count"].flatMap((aggregate) =>
+      [undefined, "desc"].map((sort) => ({ type: "bar", x: "m", y: "v", aggregate, sort, data })),
+    ) as ChartSpec[];
+    specs.forEach((x) => shape(resolve(x)));
+    const n = reads.n;
+    specs.forEach((x) => shape(resolve(x)));
+    expect(reads.n).toBe(n);
   });
 });

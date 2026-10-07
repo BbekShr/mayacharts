@@ -99,6 +99,9 @@ export function tooltip(
     const k = m ? a(m, "data-key") : "";
     if (k.startsWith("h~"))
       for (const [p, e] of byKey) if (k.startsWith(p + "~") && p !== "h") peers.push(e);
+    // Box plot: whiskers, median and outliers share the box's key tail (b~SERIES~CATEGORY, ws~..., d~...~ROW), so they light with it and the tooltip clears them.
+    if (m && spec()?.type === "boxplot")
+      peers.push(...box.querySelectorAll(`[data-key*="${k.slice(1)}"]`));
     // Flows: a node lights every link and node on a path through it (their data-a lists it).
     if (m?.hasAttribute("data-n"))
       peers.push(...box.querySelectorAll(`[data-a~="${a(m, "data-n")}"]`));
@@ -197,6 +200,7 @@ export function tooltip(
 
   const hide = () => {
     cur?.removeAttribute("data-active");
+    cur?.closest("[data-maya=marks]")?.removeAttribute("data-hot");
     light(undefined);
     dim();
     cur = undefined;
@@ -280,6 +284,12 @@ export function tooltip(
     cur = m;
     m.setAttribute("data-active", "");
     light(m);
+    // One flag on the marks group stands for "something is active": the dim rules key on it,
+    // not on :has([data-active]), which restyles every mark each time the active one moves.
+    m.closest("[data-maya=marks]")?.setAttribute(
+      "data-hot",
+      a(m, "data-depth") === "0" ? "r" : m.localName === "path" || lit.length ? "p" : "",
+    );
     dim(m);
     const g = group(m);
     const speak = () =>
@@ -300,7 +310,9 @@ export function tooltip(
           : "";
     // Stacked: rows top-down like the stack, then the total.
     const stk = sp?.stack && /^(bar|area)$/.test(sp.type) && g.length > 1;
-    const rows = stk ? [...g].reverse() : g;
+    const all = stk ? [...g].reverse() : g;
+    // ponytail: 12 rows at most (a tooltip must fit the viewport), from 6 before the hovered row; "+N" counts the rest.
+    const rows = all.slice(Math.max(0, all.indexOf(m) - 6)).slice(0, 12);
     tip.replaceChildren(
       h("b", a(m, "data-x")),
       ...rows.flatMap((k) => {
@@ -326,6 +338,7 @@ export function tooltip(
           : [];
         return row.childElementCount ? [row, ...more] : more;
       }),
+      ...(all.length > rows.length ? [h("div", `+${all.length - rows.length}`)] : []),
       ...(stk && sp ? [h("div", "", { "data-t": "" })] : []),
     );
     if (stk && sp)
@@ -365,7 +378,7 @@ export function tooltip(
       r = { left, top, width: 0, height: h, right: left, bottom: top + h };
     }
     // Orbit (the name) and constellation (the web): anchor to the mark and what it lights, so the tooltip clears them.
-    if (/^(orbit|constellation)$/.test(sp?.type ?? ""))
+    if (/^(orbit|constellation|boxplot)$/.test(sp?.type ?? ""))
       for (const e of peers) {
         const b = e.getBoundingClientRect();
         const [left, top] = [Math.min(r.left, b.left), Math.min(r.top, b.top)];

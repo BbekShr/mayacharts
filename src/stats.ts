@@ -1,43 +1,44 @@
 // mayacharts/stats: box plot and funnel. Imports only registry, svg, scale, ticks and types.
 import { register } from "./core/registry.ts";
 import { bandScale } from "./core/scale.ts";
-import { el, esc, hit, key, nameId, r, tw } from "./core/svg.ts";
+import { el, esc, hit, key, memo, nameId, r, tw } from "./core/svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "./core/types.ts";
 
-interface Pt {
-  v: number;
-  name: string | null;
-  i: number;
-}
 interface Box {
   ci: number;
   si: number;
-  pts: Pt[];
+  /** Row indices: a million rows must not become a million objects. */
+  pts: number[];
 }
 
 /** Raw rows by (category, series): the shaped cells are sums, a box plot needs the rows. */
-function boxes(spec: ResolvedSpec, shaped: Shaped): Box[] {
+function boxes(spec: ResolvedSpec, shaped: Shaped) {
+  // Kept per data array: a re-render of the same rows (resize, hover, hide) skips the row pass and the sorts.
+  const k = `box|${spec.x}|${spec.y}|${spec.series}|${shaped.visible}|${shaped.categories.length}`;
+  return memo(spec.data, k, () => rowPass(spec, shaped));
+}
+
+function rowPass(spec: ResolvedSpec, shaped: Shaped) {
   const cats = new Map(shaped.categories.map((c, ci) => [c, ci]));
-  const by = new Map<number, Box>();
+  const by: Box[] = []; // sparse, indexed by cell id: filter() walks it in order
+  const sj = new Map(shaped.visible.map((j) => [shaped.series[j], j]));
   spec.data.forEach((row, i) => {
     const v = row[spec.y];
     if (typeof v !== "number" || !Number.isFinite(v)) return;
     const ci = cats.get(String(row[spec.x]));
-    const si = shaped.series.indexOf(spec.series === null ? "" : String(row[spec.series]));
-    if (ci === undefined || !shaped.visible.includes(si)) return;
+    const si = sj.get(spec.series === null ? "" : String(row[spec.series]));
+    if (ci === undefined || si === undefined) return;
     const id = ci * shaped.series.length + si;
-    const nv = spec.name === null ? null : row[spec.name];
-    (by.get(id) ?? by.set(id, { ci, si, pts: [] }).get(id)!).pts.push({
-      v,
-      name: nv == null ? null : String(nv),
-      i,
-    });
+    (by[id] ??= { ci, si, pts: [] }).pts.push(i);
   });
-  return [...by].sort((a, b) => a[0] - b[0]).map((e) => e[1]);
+  const all = by.filter(Boolean);
+  // Sorted once per box (typed sort is numeric, no comparator); the extent, label width and loop share it.
+  const vals = all.map((b) => Float64Array.from(b.pts, (i) => spec.data[i]![spec.y] as number));
+  return { all, vals, sorted: vals.map((v) => v.slice().sort()) };
 }
 
 /** Quantile of a sorted list by linear interpolation (R-7, Excel QUARTILE.INC). */
-const q = (s: number[], p: number) => {
+const q = (s: ArrayLike<number>, p: number) => {
   const h = (s.length - 1) * p;
   const k = Math.floor(h);
   return s[k]! + (h - k) * ((s[k + 1] ?? s[k]!) - s[k]!);
@@ -53,8 +54,8 @@ export const boxplot: Mark = {
   axes(spec, shaped) {
     let lo = Infinity;
     let hi = -Infinity;
-    for (const b of boxes(spec, shaped))
-      for (const p of b.pts) ((lo = Math.min(lo, p.v)), (hi = Math.max(hi, p.v)));
+    for (const b of boxes(spec, shaped).sorted)
+      ((lo = Math.min(lo, b[0]!)), (hi = Math.max(hi, b.at(-1)!)));
     if (lo > hi) lo = hi = 0;
     // One value (or all equal): keep zero in view so the box has a scale to sit on.
     if (lo === hi) [lo, hi] = [Math.min(0, lo), Math.max(0, hi)];
@@ -80,23 +81,12 @@ export const boxplot: Mark = {
     let top = "";
     let hits = "";
     const rows: string[][] = [];
-    const all = boxes(spec, shaped);
+    const { all, vals, sorted } = boxes(spec, shaped);
     let w = Math.min(inner.bandwidth * 0.7, MAX_BOX);
     // A lone series with labels: slim the boxes (to 24 px at least, else leave them) so the longest median label fits beside each,
     // the last one included.
     if (shaped.visible.length === 1 && spec.labels !== false) {
-      const lab = Math.max(
-        ...all.map((b) =>
-          tw(
-            f(
-              q(
-                b.pts.map((p) => p.v).sort((a, b) => a - b),
-                0.5,
-              ),
-            ),
-          ),
-        ),
-      );
+      const lab = Math.max(...sorted.map((s) => tw(f(q(s, 0.5)))));
       const fit = Math.min(
         cat.step - lab - 8,
         cat.step - 2 * (lab + 4 - (ctx.width - ctx.plot.x - ctx.plot.w)),
@@ -105,13 +95,13 @@ export const boxplot: Mark = {
     }
     // Median labels, decided once per chart below: [box left, box right, median y, q3 y, text, box name].
     const meds: [number, number, number, number, string, string, number][] = [];
-    for (const { ci, si, pts } of all) {
+    all.forEach(({ ci, si, pts }, bi) => {
       const ser = shaped.series[si]!;
       const cname = shaped.categories[ci]!;
-      const s = pts.map((p) => p.v).sort((a, b) => a - b);
+      const s = sorted[bi]!;
       const [q1, med, q3] = [q(s, 0.25), q(s, 0.5), q(s, 0.75)];
       const [fl, fh] = [q1 - 1.5 * (q3 - q1), q3 + 1.5 * (q3 - q1)];
-      const inside = s.filter((v) => v >= fl && v <= fh);
+      const inside = s.filter((v) => v >= fl && v <= fh); // the whiskers: nearest rows inside the fences
       const [wl, wh] = [inside[0]!, inside.at(-1)!];
 
       const cx = cat.at(ci) + inner.at(shaped.visible.indexOf(si)) + inner.bandwidth / 2;
@@ -172,16 +162,31 @@ export const boxplot: Mark = {
         ln("wt", cx, yl, cx, y1) +
         ln("wh", cx - cp, yh, cx + cp, yh) +
         ln("wl", cx - cp, yl, cx + cp, yl);
-      hits += hit(d, x0, py(wh), w, py(wl) - py(wh));
+      // Always drawn (hit() skips a big target): the whole whisker span is the box, over its dots and lines.
+      hits += el("rect", {
+        ...d,
+        "data-maya": "hit",
+        x: r(x0),
+        y: r(yh),
+        width: r(w),
+        height: r(yl - yh),
+        fill: "transparent",
+      });
       meds.push([x0, x1, ym, y3, f(med), ser ? `${cname} (${ser})` : cname, y1]);
 
       // Every row is a faint dot when the box holds few rows; outliers are always marks. One key
       // prefix for both, so a row crossing the fence moves instead of re-entering.
       // ponytail: dots only at 30 rows or fewer; a denser box would be a smear (use beeswarm).
       const seen = new Map<string, number>();
-      pts.forEach((p, k) => {
-        const out = p.v < fl || p.v > fh;
-        const id = nameId(seen, p.name, p.i);
+      for (let k = 0; k < pts.length; k++) {
+        const i = pts[k]!;
+        const pv = vals[bi]![k]!; // contiguous: a million rows scan in a few ms
+        const out = pv < fl || pv > fh;
+        // Unnamed rows of a big box are only drawn when they are outliers: skip the rest cheaply.
+        if (!out && pts.length > 30 && spec.name === null) continue;
+        const nv = spec.name === null ? null : spec.data[i]![spec.name];
+        const pn = nv == null ? null : String(nv);
+        const id = nameId(seen, pn, i);
         const dx = cx + (((k * 0.618) % 1) - 0.5) * w * 0.6;
         if (!out) {
           if (pts.length <= 30)
@@ -191,31 +196,32 @@ export const boxplot: Mark = {
               "data-bx": true,
               "data-total": true, // neutral ink (--c muted), no series colour
               cx: r(dx),
-              cy: r(py(p.v)),
+              cy: r(py(pv)),
               r: DOT,
             });
-          return;
+          continue;
         }
+        const who = ctx.fmt(spec.x, cname);
         const od = {
           "data-key": key("d", ser, cname, id),
-          "data-c": ci,
+          // no data-c: the tooltip rows are this row's alone (a category group would list the box too)
           "data-last": true, // keeps the circle visible under svg[data-pt] (the whisker is a line path)
           "data-s": si % 8,
-          "data-x": p.name ?? ctx.fmt(spec.x, cname),
+          "data-x": who,
           "data-series": ser,
-          "data-f": `${p.name ?? ctx.fmt(spec.x, cname)}\t${f(p.v)}`,
-          "data-y": p.v,
-          "data-neg": p.v < 0,
+          "data-f": `${pn ?? spec.titles.get(spec.y) ?? spec.y}\t${f(pv)}`,
+          "data-y": pv,
+          "data-neg": pv < 0,
         };
         top += el("circle", {
           "data-maya": "mark",
           ...od,
           cx: r(cx),
-          cy: r(py(p.v)),
+          cy: r(py(pv)),
           r: OUT,
         });
-        hits += hit(od, cx - OUT, py(p.v) - OUT, OUT * 2, OUT * 2);
-      });
+        hits += hit(od, cx - OUT, py(pv) - OUT, OUT * 2, OUT * 2);
+      }
       marks += ln("m", x0, ym, x1, ym, { "data-kpi": "target" });
       rows.push([
         ctx.fmt(spec.x, cname),
@@ -223,7 +229,7 @@ export const boxplot: Mark = {
         ...[s.at(-1)!, q3, med, q1, s[0]!].map(f),
         ctx.fmt("", s.length),
       ]);
-    }
+    });
     // One placement for every box, never mixed and never above the cap (that reads as the max), always
     // on the box's own median line: right of the box when every label fits before the next box (the
     // last one may use the svg's right margin), else on the box above the median, else below it, when
@@ -410,7 +416,8 @@ export const funnel: Mark = {
         head: [
           spec.x ? ti(spec.x) : "",
           spec.x ? ti(spec.y) : ctx.t("total"),
-          ...[ctx.t("ofPrevious"), ctx.t("ofFirst")],
+          ctx.t("ofPrevious"),
+          ctx.t("ofFirst"),
         ],
         rows,
       },

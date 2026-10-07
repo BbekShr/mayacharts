@@ -9,7 +9,7 @@ Beautiful, accessible charts in five lines. Zero dependencies. The browser is th
   <img alt="Six mayaCharts: a multi-series line, a ranked bar with an Other bucket, a heatmap, a sunburst, a sankey and a US state hexmap" src="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/hero-light.png">
 </picture>
 
-**[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Chart builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[Compare with other libraries](https://bbekshr.github.io/mayacharts/compare.html)** · **[Spec reference](#the-spec)**
+**[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Chart builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[Scale: a million rows](https://bbekshr.github.io/mayacharts/scale.html)** · **[Compare with other libraries](https://bbekshr.github.io/mayacharts/compare.html)** · **[Spec reference](#the-spec)**
 
 ```html
 <script type="module" src="https://cdn.jsdelivr.net/npm/mayacharts/dist/element.js"></script>
@@ -223,7 +223,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `data`      | Row[]                          | all                         | required   | Row objects                                                                                                                                                                                          |
 | `aggregate` | sum / mean / count / min / max | all but boxplot             | sum        | How rows sharing a (category, series) combine; `count` counts non-null y                                                                                                                             |
 | `sort`      | asc / desc                     | bar line area heatmap orbit | data order | Categories by total across all series                                                                                                                                                                |
-| `limit`     | positive integer               | bar line area heatmap orbit | -          | Keep top N categories; rest roll up into "Other"                                                                                                                                                     |
+| `limit`     | positive integer               | bar line area heatmap orbit | -          | Keep top N categories; rest roll up into "Other". A bar past 10000 marks does this on its own when unset (see Large data)                                                                            |
 
 ### Encoding
 
@@ -291,7 +291,11 @@ Dates in x values are automatically detected and placed on a proportional time a
 
 ### Large data
 
-Line and area charts on a time axis automatically reduce long time series to about one point per 2 px of plot width (at most 1000 categories, and 4000 shared between series) using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. The data table and screen reader description indicate how many points are displayed. Scatter charts above 5000 visible points are drawn as density cells to reduce rendering cost; bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest using `limit` or `aggregate` when exceeded.
+The [Scale page](https://bbekshr.github.io/mayacharts/scale.html) draws eleven charts from up to a million rows generated in your browser and shows the rows in, the marks drawn and the draw times measured on your machine.
+
+A chart handles up to a million rows wherever the chart makes sense, by reducing what it draws, never by dropping the data table or hiding the reduction. Line and area charts reduce long series to about one point per 2 px of plot width (at most 1000 categories, and 4000 shared between series) using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. A time axis reduces whenever it has more points than that budget; a category axis reduces past 1000 categories, over the category index. A kpi thins its sparkline the same way. The data table and screen reader description indicate how many points are displayed. A bar with more categories than fit (past 10000 marks) and no `limit` keeps the top N by total, N being 10 per 40 px of plot width, and rolls the rest into "Other". Scatter charts above 10000 visible points are drawn as density cells. A table draws the rows that fit its height, and its hidden data table lists the first 1000. The bar roll-up also puts a sentence in `renderParts(...).warnings`. Charts that cannot reduce without changing meaning (waterfall, dumbbell, parallel and the module charts) fail with `too-many-marks`, naming the mark count, the 10000 cap and the row count, and suggest `limit` or `aggregate`.
+
+The row pass (grouping, aggregation, time parsing, validation) is cached per `data` array: a resize, legend toggle, zoom or view change re-renders without walking the rows again, so at a million rows a re-render of a line, bar, scatter or kpi costs tens of milliseconds. The cache is keyed by the array's identity and length, so after changing rows in place, assign a new array (`chart.data = [...rows]`).
 
 ## Canonical examples
 
@@ -972,11 +976,12 @@ Upper bounds asserted by `test/perf.test.ts` for `render()` in Node (test thresh
 | Scenario                 | Marks | Render time threshold | Output threshold |
 | ------------------------ | ----- | --------------------- | ---------------- |
 | 5k-category bar          | 5000  | < 400 ms              | < 2.2 MB         |
+| 10k-category bar         | 10000 | < 1500 ms             | < 4.4 MB         |
 | 5k-point scatter         | 5000  | < 200 ms              | -                |
 | Heatmap 50x52            | 2600  | < 100 ms              | -                |
 | 20k-row bar, `limit: 20` | 21    | < 400 ms              | < 200 KB         |
 
-Animation skips above 1500 marks. 5000-mark hard cap suggests `limit` or `aggregate`. Table capped at 1000 rows.
+Animation skips above 1500 marks. The 10000-mark hard cap names the count and the row count and suggests `limit` or `aggregate`; bars, lines, kpi, scatter and tables reduce instead. The data table is capped at 1000 rows. One million rows (bar of 1M categories, line over 1M categories, 1M-row table, kpi) render in under 10 s on CI hardware and under 2 s when the same array is drawn again; the test is in `test/perf.test.ts`.
 
 ## Errors
 
@@ -999,15 +1004,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 10,936 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 11,972 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,042,196,089 total, 2,173,022 output
-- claude-sonnet-5-5: 455,746,041 total, 72,442 output
+- claude-opus-5-5: 1,080,215,143 total, 2,287,473 output
+- claude-sonnet-5-5: 558,969,125 total, 79,607 output
 - claude-fable-5-1: 186,794,492 total, 369,749 output
 - claude-haiku-4-5-20251001: 26,122,384 total, 1,063 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,718,656,865 total, 2,659,589 output
+- all: 1,859,899,003 total, 2,781,205 output
 
 <!-- tokens:end -->
 

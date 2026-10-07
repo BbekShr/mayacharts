@@ -1,4 +1,5 @@
-import { clip, el, esc, hit, key, r } from "../svg.ts";
+import { agg } from "../shape.ts";
+import { clip, el, esc, hit, key, memo, r } from "../svg.ts";
 import type { Mark } from "../types.ts";
 
 const HEAD = 30;
@@ -16,54 +17,61 @@ export const table: Mark = {
     const { spec, width: W, height: H } = ctx;
     const ms = spec.measures;
     const title = (f: string) => spec.titles.get(f) ?? f;
-    const agg = ctx.agg(spec.aggregate);
-
-    const groups = new Map<string, (number | null)[][]>();
-    for (const row of spec.data) {
-      const k = String(row[spec.x]);
-      const g =
-        groups.get(k) ??
-        groups
-          .set(
-            k,
-            ms.map(() => []),
-          )
-          .get(k)!;
-      ms.forEach((m, i) => g[i]!.push(num(row[m])));
-    }
-    let rows = [...groups].map(([name, g]) => ({ name, vals: g.map((v) => agg(v)) }));
+    // One reducer per (category, measure), once per data array: a resize or re-sort reuses it.
+    const all = memo(spec.data, `t${JSON.stringify([spec.x, ms, spec.aggregate])}`, () => {
+      const groups = new Map<string, ReturnType<typeof agg>[]>();
+      for (const row of spec.data) {
+        const k = String(row[spec.x]);
+        let g = groups.get(k);
+        if (!g) groups.set(k, (g = ms.map(() => agg(spec.aggregate))));
+        ms.forEach((m, i) => {
+          const v = row[m];
+          if (typeof v === "number") g![i]!.add(v);
+        });
+      }
+      return [...groups].map(([name, g]) => ({ name, vals: g.map((a) => a.value()) }));
+    });
+    type Row = (typeof all)[0];
 
     const nulls = (v: number | null, d: number) => (v === null ? Infinity : v * d);
-    const byValue = (i: number, d: number) => (a: (typeof rows)[0], b: (typeof rows)[0]) =>
+    const byValue = (i: number, d: number) => (a: Row, b: Row) =>
       nulls(a.vals[i]!, d) - nulls(b.vals[i]!, d) || 0;
-    // ponytail: limit is a plain cut to the top N of the first measure (no Other roll-up).
-    if (spec.limit !== null && rows.length > spec.limit)
-      rows = rows.sort(byValue(0, -1)).slice(0, spec.limit);
     const by =
       spec.sortBy && (spec.sortBy[0] === spec.x || ms.includes(spec.sortBy[0]))
         ? spec.sortBy
         : null;
-    if (by) {
-      const d = by[1] === "asc" ? 1 : -1;
-      const i = ms.indexOf(by[0]);
-      if (i < 0) {
-        const c = new Intl.Collator(spec.locale, { numeric: true });
-        rows.sort((a, b) => d * c.compare(a.name, b.name));
-      } else
-        rows.sort((a, b) => {
-          const [x, y] = [a.vals[i]!, b.vals[i]!];
-          return x === null || y === null
-            ? (x === null ? 1 : 0) - (y === null ? 1 : 0)
-            : d * (x - y);
-        });
-    } else if (spec.sort) {
-      rows.sort(byValue(0, spec.sort === "asc" ? 1 : -1));
+    // ponytail: a sorted table sorts every category on each render (a million take about a second).
+    let rows = all.slice();
+    {
+      // limit is a plain cut to the top N of the first measure (no Other roll-up).
+      if (spec.limit !== null && rows.length > spec.limit)
+        rows = rows.sort(byValue(0, -1)).slice(0, spec.limit);
+      if (by) {
+        const d = by[1] === "asc" ? 1 : -1;
+        const i = ms.indexOf(by[0]);
+        if (i < 0) {
+          const c = new Intl.Collator(spec.locale, { numeric: true });
+          rows.sort((a, b) => d * c.compare(a.name, b.name));
+        } else
+          rows.sort((a, b) => {
+            const [x, y] = [a.vals[i]!, b.vals[i]!];
+            return x === null || y === null
+              ? (x === null ? 1 : 0) - (y === null ? 1 : 0)
+              : d * (x - y);
+          });
+      } else if (spec.sort) {
+        rows.sort(byValue(0, spec.sort === "asc" ? 1 : -1));
+      }
     }
 
     const lw = Math.max(80, Math.min(W * 0.34, 180));
     const cw = (W - lw) / ms.length;
     const colX = (i: number) => lw + i * cw; // left edge of measure column i
-    const max = ms.map((_, i) => Math.max(0, ...rows.map((rw) => Math.abs(rw.vals[i] ?? 0))));
+    const max = ms.map((_, i) => {
+      let m = 0; // a loop: Math.max(...rows) overflows the stack on a long table
+      for (const rw of rows) m = Math.max(m, Math.abs(rw.vals[i] ?? 0));
+      return m;
+    });
     const cut = (s: string, w: number) => clip(s, Math.max(1, Math.floor((w - PAD) / 7)));
 
     let labels = "";

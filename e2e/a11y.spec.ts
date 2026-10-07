@@ -6,6 +6,7 @@ const PAGES = [
   "index.html",
   "builder.html",
   ...(existsSync("site/gallery.html") ? ["gallery.html"] : []),
+  "scale.html?rows=10000",
 ];
 // `page#chart-id` -> axe rule id: a real library violation, tracked as fixme.
 const FIXME: Record<string, string> = {};
@@ -31,6 +32,12 @@ async function open(page: Page, path: string): Promise<number> {
       { timeout: 5000 },
     )
     .toBe(0);
+  // The scale page draws each chart as it scrolls into view.
+  if (path.startsWith("scale"))
+    for (const c of await page.locator("maya-chart").all()) {
+      await c.scrollIntoViewIfNeeded();
+      await expect(c.locator("[data-maya=mark]").first()).toBeAttached({ timeout: 30_000 });
+    }
   return page.evaluate(() => {
     const cs = [...document.querySelectorAll("maya-chart")];
     cs.forEach((c, i) => c.setAttribute("data-axe", String(i)));
@@ -46,7 +53,15 @@ for (const path of PAGES) {
       const n = await open(page, path);
       expect(n).toBeGreaterThan(0);
       const bad: string[] = [];
-      for (let i = 0; i < n; i++) {
+      // Scale page: one pass over the page. Each axe run there costs about 13 s in Firefox
+      // whatever it includes, so eleven per-chart runs overrun the timeout.
+      const one = path.startsWith("scale");
+      if (one) {
+        const r = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+        for (const v of r.violations)
+          bad.push(`${v.id} (${v.impact}) ${v.nodes.map((x) => x.target.join(" ")).join(" | ")}`);
+      }
+      for (let i = 0; i < (one ? 0 : n); i++) {
         const c = page.locator(`maya-chart[data-axe="${i}"]`);
         await c.scrollIntoViewIfNeeded();
         const id = (await c.getAttribute("id")) ?? `#${i}`;

@@ -62,6 +62,7 @@ export default defineConfig({
         errors: `${here}errors.html`,
         ssr: `${here}ssr.html`,
         gallery: `${here}gallery.html`,
+        scale: `${here}scale.html`,
         builder: `${here}builder.html`,
         compare: `${here}compare.html`,
       },

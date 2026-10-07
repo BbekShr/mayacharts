@@ -80,7 +80,7 @@ describe("theme css", () => {
       expect(css).toContain(`--maya-${t}:`);
     for (let n = 1; n <= 8; n++) expect(css).toContain(`--maya-series-${n}:`);
     for (let n = 0; n < 8; n++)
-      expect(css).toContain(`[data-s="${n}"]{--c:var(--maya-series-${n + 1})}`);
+      expect(css).toContain(`[data-s="${n}"]{--c:var(--maya-series-${n + 1});--h:var(--h${n})}`);
   });
   it("meets WCAG contrast in both modes", () => {
     const bg = pair("bg");
@@ -137,7 +137,7 @@ describe("theme css", () => {
       "[data-depth]",
       "[data-selected]",
       "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}",
-      "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text,:is(rect,path)[data-q],[data-kpi=fill])",
+      "[data-maya=marks][data-hot] [data-maya=mark]:not([data-active],[data-lit],text,:is(rect,path)[data-q],[data-kpi=fill],",
       "@media (forced-colors:active)",
       "@media (prefers-contrast:more)",
       "@media (prefers-reduced-motion:reduce){*{transition:none!important}}",
@@ -183,6 +183,8 @@ describe("orbit and ghost rules", () => {
     );
   });
   it("orbit names light with their planet through data-lit", () => {
-    expect(css).toContain("g[data-s]:not([data-lit],:has([data-active])) g[data-up]");
+    expect(css).toContain(
+      "g[data-s]:not([data-lit],:has([data-active])) :is(g[data-up],[data-trail])",
+    );
   });
 });

@@ -150,7 +150,7 @@ describe("scatter", () => {
       const svg = renderParts(mk(20000)).svg;
       expect(circles(svg)).toHaveLength(0);
       expect(rects(svg).length).toBeGreaterThan(0);
-      expect(rects(svg).length).toBeLessThanOrEqual(5000);
+      expect(rects(svg).length).toBeLessThanOrEqual(10000);
       expect(sum(svg)).toBe(20000);
       const c = rects(svg)[0]!;
       expect(attr(c, "data-f")).toMatch(/ points?$/);
@@ -169,12 +169,12 @@ describe("scatter", () => {
 
     it("keeps cells under MAX_MARKS on an extreme aspect ratio", () => {
       const svg = renderParts(mk(20000), { width: 400000, height: 60 }).svg;
-      expect(rects(svg).length).toBeLessThanOrEqual(5000);
+      expect(rects(svg).length).toBeLessThanOrEqual(10000);
     });
 
     it("is deterministic and keys are unique", () => {
-      const a = renderParts(mk(6000)).svg;
-      expect(renderParts(mk(6000)).svg).toBe(a);
+      const a = renderParts(mk(12000)).svg;
+      expect(renderParts(mk(12000)).svg).toBe(a);
       const keys = rects(a).map((c) => attr(c, "data-key"));
       expect(new Set(keys).size).toBe(keys.length);
     });
@@ -190,8 +190,8 @@ describe("scatter", () => {
     });
 
     it("hidden series are excluded", () => {
-      const svg = renderParts(mk(20000), { view: { hidden: ["p"] } }).svg;
-      expect(sum(svg)).toBe(10000);
+      const svg = renderParts(mk(30000), { view: { hidden: ["p"] } }).svg;
+      expect(sum(svg)).toBe(15000);
     });
 
     it("has the ramp legend, not the series legend", () => {

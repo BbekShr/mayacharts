@@ -25,8 +25,8 @@ const guard = (ctx: { skip: () => never }, fn: () => unknown) => {
 };
 
 describe("performance envelope", () => {
-  const big = () =>
-    Array.from({ length: MAX_MARKS }, (_, i) => ({ c: "cat" + i, v: (i * 37) % 1000 }));
+  const big = (n = 5000) =>
+    Array.from({ length: n }, (_, i) => ({ c: "cat" + i, v: (i * 37) % 1000 }));
   it("5k-category bar: < 150 ms", (ctx) => {
     const data = big();
     const { ms } = guard(ctx, () => render({ type: "bar", x: "c", y: "v", data } as never));
@@ -38,6 +38,15 @@ describe("performance envelope", () => {
     const data = big();
     const { out } = guard(ctx, () => render({ type: "bar", x: "c", y: "v", data } as never));
     expect((out as string).length).toBeLessThan(2.2e6); // ponytail: ~370 B per bar incl. its hit rect
+  });
+
+  it("10k-category bar with labels (the cap): < 1500 ms, under 4.4 MB", (ctx) => {
+    const data = big(MAX_MARKS);
+    const { ms, out } = guard(ctx, () =>
+      render({ type: "bar", x: "c", y: "v", labels: true, data } as never),
+    );
+    expect(ms).toBeLessThan(1500 * CI);
+    expect((out as string).length).toBeLessThan(4.4e6);
   });
 
   it("5k-row scatter: < 200 ms", (ctx) => {
@@ -76,11 +85,11 @@ describe("performance envelope", () => {
     expect(p.svg).toContain("<svg");
   });
 
-  it("too-many-marks throws for 6k categories", () => {
-    const data = Array.from({ length: 6000 }, (_, i) => ({ c: "c" + i, v: 1 }));
+  it("too-many-marks throws for 11k categories on a chart that cannot roll up", () => {
+    const data = Array.from({ length: 11000 }, (_, i) => ({ c: "c" + i, v: 1 }));
     let err: unknown;
     try {
-      renderParts({ type: "bar", x: "c", y: "v", data } as never);
+      renderParts({ type: "waterfall", x: "c", y: "v", data } as never);
     } catch (e) {
       err = e;
     }
@@ -128,8 +137,8 @@ describe("performance envelope", () => {
     expect(svg).not.toContain('data-maya="hit"');
   });
 
-  it("6k scatter rows bin into at most MAX_MARKS density rects", () => {
-    const data = Array.from({ length: 6000 }, (_, i) => ({ x: i % 3, y: i }));
+  it("11k scatter rows bin into at most MAX_MARKS density rects", () => {
+    const data = Array.from({ length: 11000 }, (_, i) => ({ x: i % 3, y: i }));
     const svg = renderParts({ type: "scatter", x: "x", y: "y", data } as never).svg;
     const n = svg.split(' data-maya="mark"').length - 1;
     expect(n).toBeGreaterThan(0);
@@ -174,7 +183,7 @@ describe("performance envelope", () => {
 
   for (const k of ["kpi", "ridgeline"] as const) {
     it(`${k} 10k rows: draws a thinned chart instead of throwing`, () => {
-      const p = best(() => renderParts({ ...kinds[k], data: rows(10_000) } as never));
+      const p = best(() => renderParts({ ...kinds[k], data: rows(12_000) } as never));
       expect(p.ms).toBeLessThan(250 * CI);
       const svg = (p.out as { svg: string }).svg;
       expect(svg.length).toBeLessThan(120e3);
@@ -187,15 +196,88 @@ describe("performance envelope", () => {
     const svg = renderParts({ ...kinds.kpi, data } as never).svg;
     expect(svg).toContain('data-last="');
     expect(svg).toContain('data-y="1000000"');
-    expect(svg).toContain('data-c="9999"');
   });
 
-  for (const k of ["beeswarm", "parallel"] as const) {
+  for (const k of ["parallel"] as const) {
     // ponytail: one mark per row; a reduction would draw a different chart (use scatter to bin).
     it(`${k} still throws too-many-marks past the limit`, () => {
-      expect(() => renderParts({ ...kinds[k], data: rows(10_000) } as never)).toThrow(
+      expect(() => renderParts({ ...kinds[k], data: rows(12_000) } as never)).toThrow(
         /marks exceed/,
       );
     });
+  }
+});
+
+// One million rows through every type that reduces instead of failing. The envelopes are generous
+// (the numbers are a quarter of them on a laptop); the point is "seconds, not minutes, and the
+// second render of the same array is a re-draw, not another row pass".
+describe("1M rows", () => {
+  const once = (fn: () => unknown) => {
+    const t = performance.now();
+    const out = fn();
+    return { ms: performance.now() - t, out };
+  };
+  const rows = (f: (i: number) => Record<string, unknown>) =>
+    Array.from({ length: 1_000_000 }, (_, i) => f(i));
+  const cases: [string, () => Record<string, unknown>, RegExp | null][] = [
+    [
+      "bar of 1M distinct categories rolls up into Other",
+      () => ({
+        type: "bar",
+        x: "c",
+        y: "v",
+        data: rows((i) => ({ c: "c" + i, v: (i * 7919) % 1000 })),
+      }),
+      /^bar: 1000000 categories: the top/,
+    ],
+    [
+      "line over 1M categories thins",
+      () => ({
+        type: "line",
+        x: "c",
+        y: "v",
+        data: rows((i) => ({ c: "c" + i, v: (i * 7919) % 1000 })),
+      }),
+      null,
+    ],
+    [
+      "table of 1M categories draws the rows that fit",
+      () => ({
+        type: "table",
+        x: "c",
+        y: ["a", "b"],
+        data: rows((i) => ({ c: "c" + i, a: i % 97, b: i % 13 })),
+      }),
+      null,
+    ],
+    [
+      "kpi over 1M categories thins its sparkline",
+      () => ({
+        type: "kpi",
+        x: "t",
+        y: "v",
+        data: rows((i) => ({ t: "d" + i, v: (i * 7919) % 1000 })),
+      }),
+      null,
+    ],
+  ];
+  for (const [name, make, warn] of cases) {
+    it(
+      name,
+      () => {
+        const spec = make();
+        const first = once(() => renderParts(spec as never, { width: 960, height: 480 }));
+        expect(first.ms).toBeLessThan(10_000 * CI);
+        const p = first.out as ReturnType<typeof renderParts>;
+        expect(p.svg).toContain("<svg");
+        expect(p.svg.length).toBeLessThan(1.5e6);
+        if (warn) expect(p.warnings[0]).toMatch(warn);
+        // A resize and a legend toggle reuse the row pass.
+        const again = once(() => renderParts(spec as never, { width: 640, height: 480 }));
+        expect(again.ms).toBeLessThan(2000 * CI);
+        expect(again.ms).toBeLessThan(first.ms);
+      },
+      60_000,
+    );
   }
 });

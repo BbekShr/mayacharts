@@ -16,7 +16,7 @@ x: field = "". Category field (scatter: numeric x; hexmap: state; boxplot: one b
 xType: auto|category|time = auto. How x is spaced. "auto": time axis when every x is ISO 8601 date on line, area or vertical bar without sort/limit; else categories. "time" accepts epoch ms. Example: xType: "category"
 aggregate: sum|mean|count|min|max = sum. How rows sharing (category, series) combine. Not boxplot (it summarises raw rows).
 sort: asc|desc = data order. Order categories by total across all series. bar line area heatmap orbit.
-limit: positive integer = -. Keep top N categories; rest roll up into "Other". bar line area heatmap orbit.
+limit: positive integer = -. Keep top N categories; rest roll up into "Other". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in warnings. bar line area heatmap orbit.
 series: field = null. Split into series (heatmap: row category; boxplot: boxes side by side; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave.
 path: field[] = []. Hierarchy outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with drill.
 size: field = null. Bubble or star area (sqrt scale). scatter constellation.
@@ -106,7 +106,7 @@ invalid-theme: theme token not recognized
 unsafe-css-value: colors/theme CSS value blocked by allowlist (no url(), other functions, ; { } < > \)
 invalid-size: RenderOptions width/height not a finite number > 0
 unknown-state: hexmap x value is not a US state (two-letter code or full name; 50 states, DC, PR)
-too-many-marks: more than 5000 marks (suggest limit or aggregate)
+too-many-marks: more than 10000 marks (the message gives the count, the cap and the row count; suggest limit or aggregate). Bars roll up, categorical lines and kpi thin, scatter bins and tables draw the rows that fit instead of failing.
 invalid-date: xType "time" with an x value that is neither an ISO 8601 date nor epoch ms
 too-few-measures: constellation y is not an array of at least 2 measures
 

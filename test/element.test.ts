@@ -109,6 +109,43 @@ describe("<maya-chart>", () => {
     expect(btn()[0]!.getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("legend hover dims through custom properties on .maya, not :has(:hover)", async () => {
+    const el = await mount((e) => (e.spec = spec()));
+    const maya = el.shadowRoot!.querySelector<HTMLElement>(".maya")!;
+    const b = el.shadowRoot!.querySelectorAll<HTMLElement>("[data-maya=legend] button")[1]!;
+    b.dispatchEvent(new Event("pointerover", { bubbles: true, composed: true }));
+    expect([maya.style.getPropertyValue("--d"), maya.style.getPropertyValue("--h1")]).toEqual([
+      ".25",
+      "1",
+    ]);
+    b.dispatchEvent(new Event("pointerout", { bubbles: true, composed: true }));
+    expect([maya.style.getPropertyValue("--d"), maya.style.getPropertyValue("--h1")]).toEqual([
+      "",
+      "",
+    ]);
+  });
+
+  it("the first draw places the legend from one row per series, so the box is measured once", async () => {
+    const draw = vi.mocked(renderParts);
+    draw.mockClear();
+    await mount((e) => (e.spec = spec()));
+    expect(draw.mock.calls[0]![0].data).toHaveLength(2); // N and S, not the three rows
+  });
+
+  it("re-renders hand the core the same data array (its shape cache keys on identity)", async () => {
+    const draw = vi.mocked(renderParts);
+    const el = await mount((e) => (e.spec = spec()));
+    const data = rows.slice();
+    el.data = data;
+    await frame();
+    draw.mockClear();
+    el.view = { hidden: ["S"] };
+    await frame();
+    el.dispatchEvent(new Event("pointerover"));
+    expect(draw.mock.calls.length).toBeGreaterThan(0);
+    expect(draw.mock.calls.every(([s]) => s.data === data)).toBe(true);
+  });
+
   it("invalid spec shows .maya-err", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     const el = await mount((e) => (e.spec = { type: "bar" } as never));
@@ -128,6 +165,9 @@ describe("<maya-chart>", () => {
     expect(tip.textContent).toContain(evil);
     expect(tip.querySelector("img")).toBeNull();
     expect(m.hasAttribute("data-active")).toBe(true);
+    // The dim rules key on data-hot, set on the marks group while a mark is active.
+    expect(m.closest("[data-maya=marks]")!.hasAttribute("data-hot")).toBe(true);
+    el.shadowRoot!.querySelector(".maya-box")!.dispatchEvent(new Event("pointerleave"));
   });
 
   it("a multi-measure line without a series names the active measure in the tooltip", async () => {

@@ -22,7 +22,11 @@ describe("bar", () => {
       data,
     }).svg;
     // The shown max is 10, so no tick reaches the roll-up's 150.
-    expect(svg).not.toMatch(/>(100|150|200)</);
+    // (The clipped bar prints its own total at the break, as a keyed label.)
+    expect(svg).toContain('data-key="~%00other">150</text>');
+    expect(svg.replace(/<text[^>]*data-key="~%00other">150<\/text>/, "")).not.toMatch(
+      />(100|150|200)</,
+    );
     const other = svg.match(/<rect[^>]*data-other=""[^>]*>/)![0];
     const top = svg.match(/<rect[^>]*data-key="[^"]*c0"[^>]*>/)![0];
     expect(num(other, /width="([\d.]+)"/)).toBeGreaterThanOrEqual(num(top, /width="([\d.]+)"/));

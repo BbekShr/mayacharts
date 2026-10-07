@@ -63,7 +63,7 @@
     "limit": {
       "type": "integer",
       "minimum": 1,
-      "description": "Keep the top N categories by total; the rest roll up into a final \"Other\"."
+      "description": "Keep the top N categories by total; the rest roll up into a final \"Other\". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`."
     },
     "x": {
       "type": "string",

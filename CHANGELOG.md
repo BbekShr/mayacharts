@@ -6,8 +6,26 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
+### Added
+
+- Density cells (scatter and beeswarm) colour on a log scale from a page tint through the accent to ink, so sparse and packed cells read apart; the legend uses the same stops.
+- Sunburst, treemap, sankey, chord, boxplot and beeswarm keep their row pass per data array, so a re-render of the same 1M rows drops from hundreds of ms to under 25 ms.
+- Charts handle up to 1M rows. A bar with more categories than fit keeps the top N and rolls the rest into Other, a line or area on a category axis thins past 1000 categories, a kpi thins its sparkline before drawing, a table draws the rows that fit, and beeswarm past 10000 points draws a violin of density cells per band on the scatter ramp (bin range and count on hover).
+- Re-renders of the same `data` array (resize, legend toggle, zoom) skip the row pass: shape, validation, scatter columns and table groups are cached per array. Assign a new array after editing rows in place.
+- `renderParts().warnings` reports roll-ups and thinning, and the `too-many-marks` message gives the mark count, the cap and the row count.
+- Scale page (`site/scale.html`): eleven charts drawn from up to a million generated rows, with rows in, marks drawn and draw times measured in your browser.
+
 ### Fixed
 
+- Units: a dot's tooltip shows its own row, not every dot of its region. Boxplot: the whole box and whisker span is hoverable, an outlier's tooltip no longer lists the box, and the box tooltip clears the whiskers and outliers. Weave: the tooltip no longer flickers between dots. Tooltips show at most 12 rows, then a `+N` row.
+- Phone widths no longer scroll sideways: the hidden data table kept its natural width.
+- Safari: hovering a multi-series line or area no longer repaints every hidden point (about 210 ms a move with 1840 points, now 17 ms).
+- Hover on 5000-mark scatter, treemap and dumbbell charts in Safari took 280 to 560 ms a frame and now holds 60 fps; hovering anywhere over a chart with a legend no longer re-checks every mark (10000 marks: 60 fps in Chromium and Safari).
+- First draw of a multi-series chart (line, area, stacked bar, heatmap, scatter with series) renders once instead of twice, and no longer builds a map of every row to place its legend.
+- Bar value labels: 10000 labelled bars render in about 0.3 s instead of 0.6 s.
+- Box plot renders 1M rows in about 0.6 s instead of 1.1 s; sunburst and sankey are faster on very large inputs; constellation renders 1000 rows in 40 ms instead of 0.5 s.
+- Hover on dense charts: sweeping the pointer across 5000 bars ran at about 8 fps (1000 bars at 30 fps) and now holds 60 fps in Chromium, Firefox and WebKit. The hover dim is keyed by one attribute on the marks group instead of `:has`, the tooltip reads geometry before it restyles marks, and above 500 marks the hover dim and the crosshair and band glide are instant. Charts under 500 marks look and move exactly as before.
+- Sankey and chord: highlight paths are walked over each node's own links, so a 1000-row sankey renders in 14 ms instead of 257 ms.
 - Weave: a series with no values no longer shifts the end labels onto other threads, and leaves the axis. Equal values share a rank ("Rank =1", "A = B" in the description). A thread that starts late or after a gap is named at its first point. With no end gutter the last value sits beside or above its own dot, never beside another rank. Crossing halos are thinner and dropped when periods are close; long names clip, and names that clip alike keep their endings. Updates no longer stagger the threads, so joints stay joined and end labels stay with their dots; in Safari the dots crossfade with their threads.
 - Selection: a click on empty chart space, or anywhere outside the chart, clears it (as Escape does), on every chart with `select`.
 - Boxplot: the median label sits on its own median line, one placement for the whole chart (beside, on or below the median), never above the cap. Whiskers and the median are lines that glide with their box in every browser; whiskers are as light as the box outline and outliers are hollow rings. The description gives the lowest and highest box medians.
@@ -18,7 +36,8 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Changed
 
-- Size budgets: stats 3.75 KB, constellation 2.9 KB, orbit 2.6 KB, theme 4.56 KB, index 35.5 KB, element 52 KB, global 69.5 KB (gzip).
+- `too-many-marks` now fails above 10000 marks (was 5000); hover stays at 60 fps there. Scatter switches to density cells past 10000 visible points. Constellation accepts up to 2000 rows (was 500).
+- Size budgets: constellation 2.9 KB, orbit 2.6 KB, theme 4.56 KB, index 37.4 KB, element 54.2 KB, global 72 KB, hierarchy 4.35 KB, flow 3.75 KB, stats 3.95 KB (gzip). The 1M-row support (row-pass caches in core and modules, roll-up, thinning, beeswarm density, scatter columns) and the dense-hover fixes account for the growth.
 
 ## 0.9.1 - 2026-10-07
 
