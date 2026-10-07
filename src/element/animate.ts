@@ -393,6 +393,57 @@ function marks(o: Element, w: Element, origin?: Box): void {
   }
 }
 
+const mold = (t: string) => t.replace(/\d/g, "0"); // same label and digit count: safe to count from the old number
+const at = (e: Element) => [n(e, "x") || n(e, "x1"), n(e, "y") || n(e, "y1")] as const;
+/** Labels and axes of a data update: kept nodes (matched by data-key, else by index among unkeyed ones;
+ * same tag, no rotation) slide with the marks and, for value labels, count to the new number or, when the
+ * digits change shape, swap as the marks land; extras fade in late; leftovers fade out. Never a dropout. */
+function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boolean): void {
+  const old = [...p.children].filter((e) => !e.hasAttribute("data-ghost"));
+  const key = (e: Element) => e.getAttribute("data-key");
+  const byKey = new Map(old.flatMap((e) => (key(e) ? [[key(e), e] as const] : [])));
+  const plain = old.filter((e) => !key(e));
+  const used = new Set<Element>();
+  sync(p, c);
+  for (const e of [...c.children]) {
+    const k = key(e);
+    const m = k ? byKey.get(k) : plain.shift();
+    if (
+      !m ||
+      m.localName !== e.localName ||
+      m.hasAttribute("transform") ||
+      e.hasAttribute("transform")
+    ) {
+      p.append(e);
+      fade(e, false, undefined, late);
+      continue; // the unmatched old node leaves below
+    }
+    used.add(m);
+    const [x, y] = at(m);
+    const kids = [...m.childNodes];
+    const was = (m.querySelector("[data-v]") ?? m).textContent!;
+    sync(m, e);
+    m.replaceChildren(...e.childNodes);
+    const t = m.querySelector("[data-v]") ?? m;
+    const [dx, dy] = [x - at(m)[0], y - at(m)[1]];
+    if (dx || dy)
+      run(m, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
+    if (!num) continue;
+    if (mold(was) === mold(t.textContent!)) count(t, was, DATA);
+    else if (k && !instant) {
+      // Another digit count would contradict the sort mid-flight: keep the old text until the move ends.
+      const to = [...m.childNodes];
+      m.replaceChildren(...kids);
+      setTimeout(() => m.firstChild === kids[0] && m.replaceChildren(...to), Number(DATA.duration));
+    }
+  }
+  for (const m of old) {
+    if (used.has(m)) continue;
+    retire(m);
+    fade(m, true, () => m.remove(), UI);
+  }
+}
+
 /** Crossfade the non-mark children (axes, grid, labels): changed groups fade 220 ms. */
 function ui(o: Element, w: Element, om: Element, wm: Element): void {
   const id = (c: Element) => c.getAttribute("data-maya") ?? c.localName;
@@ -402,6 +453,8 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     [...o.children].filter((c) => c !== om && !out.includes(c)).map((c) => [id(c), c]),
   );
   const fadeIn: Element[] = [];
+  const z = !!(zoom || zm || moved);
+  const late = { ...UI, delay: Number((zoom || zm ? ZOOM : DATA).duration) * 0.75 };
   const ghosts: Element[] = [];
   const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
   for (const c of [...w.children]) {
@@ -412,7 +465,10 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     const p = pool.get(id(c));
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
-    else {
+    else if (p && !zoom && !zm && /^(labels|axis-[xy])$/.test(id(c))) {
+      follow(p, c, { ...UI, delay: 160 }, id(c) === "labels");
+      out.push(p);
+    } else {
       if (p && fadeable(p)) (ghosts.push(p), out.push(p));
       out.push(c);
       if (p && fadeable(c)) fadeIn.push(c);
@@ -424,8 +480,6 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   // WebKit and Firefox, and a ghost removed synchronously would be re-inserted by the swap.
   for (const g of ghosts) ghost(g);
   // Value labels wait for the marks to land; axes swap at once (on a drill, after the marks are under way).
-  const z = !!(zoom || zm || moved);
-  const late = { ...UI, delay: Number((zoom || zm ? ZOOM : DATA).duration) * 0.75 };
   for (const c of fadeIn)
     fade(c, false, undefined, z ? (id(c) === "labels" ? late : { ...UI, delay: 160 }) : UI);
 }

@@ -11,10 +11,27 @@
  *           touches window/document (a test deletes globalThis.window and imports it).
  *
  * State: interaction state is not in the spec. RenderOptions.view = { measure, drill, window,
- *   hidden } and RenderOptions.selected = Sel[] (raw values). resolve() applies measure
- *   (active y, measures[] kept for the control) and drill (filter rows, advance x/path).
- *   shape() applies, in order: aggregate -> time order -> sort -> limit -> window -> reduce ->
- *   hidden. SSR can therefore render any state.
+ *   hidden, sortBy, frame } and RenderOptions.selected = Sel[] (raw values). resolve() applies
+ *   measure (active y, measures[] kept for the control), frame (keep the rows of one distinct
+ *   spec.frame value, data order; view.frame indexes them, default and clamp: the last) and
+ *   drill (filter rows, advance x/path). shape() applies, in order: aggregate -> time order ->
+ *   sort -> limit -> window -> reduce -> hidden. SSR can therefore render any state.
+ *
+ * Frames (spec.frame): the title becomes text.frameOf(title or auto title, fmt(frame field,
+ *   value)), so the svg <title> and the visible title name the frame; the auto description
+ *   adds text.frame(n, count). Every linear axis spans all frames (each frame is resolved and
+ *   shaped, mark.axes() unioned) so axes hold still; a yDomain/xDomain still wins. A scatter
+ *   size scale uses the largest |size| over every frame (ctx.sizeMax), so one size is one radius
+ *   in all frames and the size key holds still. Keys do not
+ *   include the frame, so a frame change is an ordinary keyed update (bars race, points move).
+ *   The element owns playback: it steps view.frame on a timer.
+ *
+ * Percent stacks (stack: "percent"): shape() divides each cell's value and its running
+ *   y0/y1 by the category's visible sum of magnitudes, so values are shares (axis 0..1, an
+ *   all-positive stack tops out at exactly 1) and everything downstream (labels, data-f,
+ *   data-y, table, rules) is in share units. resolve() formats each measure "percent" unless
+ *   spec.format sets it. "mean" rules average the segment shares. The svg carries
+ *   data-stack="percent".
  *
  * Time axis: line, area and vertical bar (not waterfall) whose categories are all ISO 8601
  *   dates, unsorted and unlimited (spec.xType "auto"), or any x under xType "time" (epoch ms
@@ -84,6 +101,10 @@
  *   <style>CSS</style>
  *   <div class="maya">
  *     TITLE  CONTROLS  LEGEND  CRUMBS
+ *     CONTROLS = the measure radiogroup (.maya-ctl), then with spec.frame and 2+ frames
+ *       <button type="button" class="maya-play" data-maya="play">text.play</button>
+ *       (the same for every frame, so the element can relabel it text.pause while playing).
+ *       Parts.frame = [index shown, frame count] with spec.frame, absent otherwise.
  *     <div class="maya-box">SVG</div>
  *     TABLE
  *     <div class="maya-sr" data-maya="live" aria-live="polite"></div>  static, never replaced
@@ -101,9 +122,25 @@
  *     <title id="maya-t">  <desc id="maya-d">
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
- *     <g data-maya="axis-x">   category labels (thinned to fit), axis title
+ *     <g data-maya="axis-x">   category labels (thinned to fit), axis title. Band-axis tick <text>
+ *                              (either axis) carries data-key = key(category), the category part of
+ *                              the mark keys, so a rank swap moves names with bars. Value ticks: none.
  *     <g data-maya="marks">    only [data-key] children, one tag per key
- *     <g data-maya="labels">   value labels (text), from ctx.label
+ *     <g data-maya="rules">    only with spec.rules, after marks: per drawn rule a <line>
+ *                              across the value axis, then its <text text-anchor=end> (label and value, or the
+ *                              value alone) above the line at the plot end (vertical line: beside it at the top). Labels dodge nothing, not
+ *                              value labels either. "mean" averages the visible plotted values
+ *                              (stacked: the category totals; Other left out). Numeric rules widen
+ *                              the value domain; a yDomain wins and hides rules outside it. No
+ *                              data-key: animate.ts diffs only marks, so the group crossfades with
+ *                              the other non-mark groups.
+ *     <g data-maya="labels">   value labels (text), from ctx.label and the marks' own m.labels. A label
+ *                              carries data-key = the data-key of the mark it labels (bar and
+ *                              waterfall incl. y2 dots, heatmap, dumbbell, scatter, beeswarm, ridgeline
+ *                              peak, line/area point labels); a line/area/parallel end label carries
+ *                              its path's key (l~SERIES, l~ROW). Unkeyed (the element falls back to
+ *                              index): kpi, table, parallel axis ticks and titles, rule labels, the
+ *                              hierarchy, flow, radial and geo modules, density-bin plots, leaders.
  *     <g data-maya="cross">    crosshair (line/area), moved via CSSOM transform
  *     <g data-maya="hits">     invisible enlarged targets (see below)
  *   Empty: no row holds a number in any measure or y2. Grid/axes/groups
@@ -117,6 +154,7 @@
  *                       category), data-y (raw value), data-series (series key, "" when
  *                       none), data-f (formatted value). data-neg when value < 0.
  *                       Optional: data-tone="good|bad", data-q (ramp step), data-other
+ *   [data-maya=labels] text and band tick text in axis-x/axis-y: data-key only (see the groups above)
  *                       (limit roll-up), data-depth, data-selected.
  *                       bar + y2: one `path[data-maya=line]` plus a point circle mark per
  *                       non-null category, data-s = series count % 8, data-series = the
@@ -147,6 +185,7 @@
  *                       Beeswarm writes no data-series when there is no series.
  *   [data-maya="probe"] / .maya-tip  tooltip anchor probe + popover (shell only).
  *   [data-maya="live"]  the static polite live region; written via textContent only.
+ *   [data-maya="play"]  the frame Play button in the controls slot (see Shadow content).
  *   [data-maya="legend"] buttons: <button type="button" data-si="i" data-s="i%8"
  *                       data-key="KEY" aria-pressed="true|false"><i></i>KEY</button>
  *                       With y2 the legend also holds non-button <span data-s data-line>
@@ -162,10 +201,10 @@
  *   The element diffs marks by data-key (and tagName), never by index.
  *
  * CSS hooks theme.ts styles (interaction modules never touch theme.ts):
- *   .maya-ctl [role=radio][aria-checked]  .maya-crumbs  .maya-reset  .maya-err
+ *   .maya-ctl [role=radio][aria-checked]  .maya-play  .maya-crumbs  .maya-reset  .maya-err
  *   [data-maya=brush]  [data-maya=cross] (scatter: guide lines + text pills, --x/--y)
  *   [data-maya=link]  [data-depth]  [data-selected]
- *   svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
+ *   [data-maya=rules] line|text  svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
  *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
  *   key on `svg[data-xd]` (both axes linear). Rules whose subject is a mark avoid a `:has()` on
@@ -250,16 +289,25 @@ import { kpi } from "./marks/kpi.ts";
 import { parallel } from "./marks/parallel.ts";
 import { ridgeline } from "./marks/ridgeline.ts";
 import { area, line } from "./marks/line.ts";
-import { scatter } from "./marks/scatter.ts";
+import { points, scatter } from "./marks/scatter.ts";
 import { table } from "./marks/table.ts";
 import { MODULES } from "./registry.ts";
 import { agg, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
 import { el, esc, OTHER, r } from "./svg.ts";
-import { ALL_Y, fail, MAX_MARKS, resolve, validateOptions, validateSpec } from "./validate.ts";
+import {
+  ALL_Y,
+  fail,
+  MAX_FRAMES,
+  MAX_MARKS,
+  resolve,
+  validateOptions,
+  validateSpec,
+} from "./validate.ts";
 import type {
   Aggregate,
+  Axis,
   ChartSpec,
   LabelPlace,
   Mark,
@@ -267,7 +315,9 @@ import type {
   MarkOut,
   Parts,
   RenderOptions,
+  ResolvedSpec,
   Row,
+  Shaped,
 } from "./types.ts";
 
 const CORE: Readonly<Record<string, Mark>> = {
@@ -284,6 +334,34 @@ const CORE: Readonly<Record<string, Mark>> = {
   parallel,
   table,
 };
+
+/** Numeric rules widen the value axis (a target above the data stays visible); a yDomain still wins. */
+function withRules(s: ResolvedSpec, axes: [Axis, Axis, Axis?]): [Axis, Axis, Axis?] {
+  const n = s.rules.flatMap((u) => (u.y === "mean" ? [] : [u.y]));
+  if (!n.length) return axes;
+  return axes.map((a) =>
+    a?.kind === "linear" && a.field === s.y
+      ? { ...a, domain: [Math.min(a.domain[0], ...n), Math.max(a.domain[1], ...n)] }
+      : a,
+  ) as [Axis, Axis, Axis?];
+}
+
+/**
+ * "mean" for rules: the average of the plotted values of the active measure (visible series,
+ * window and measure applied, the limit's Other left out); stacked: of the category totals.
+ * Scatter averages y over the points it draws. NaN when nothing is plotted.
+ */
+function average(s: ResolvedSpec, shaped: Shaped): number {
+  const by = new Map<number, number>();
+  const add = (k: number, v: number) => by.set(k, (by.get(k) ?? 0) + v);
+  if (s.type === "scatter") points(s, shaped).forEach((p, i) => add(i, p.y));
+  else
+    shaped.cells.forEach((c, i) => {
+      if (c.value !== null && shaped.categories[c.ci] !== OTHER)
+        add(s.stack === true ? c.ci : i, c.value);
+    });
+  return [...by.values()].reduce((a, b) => a + b, 0) / by.size;
+}
 
 const kebab = (s: string) => s.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase());
 
@@ -331,6 +409,18 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     if (!f) fmts.set(k, (f = formatter(s, field, step)));
     return f(v);
   };
+  // frame: the title (and so the accessible name) names the frame shown.
+  const fr = s.frame;
+  // ponytail: frames x rows is the cost of shared axes, so cap frames; bin the field past it.
+  if (fr && fr[1].length > MAX_FRAMES)
+    fail(
+      "too-many-marks",
+      "frame",
+      `${fr[1].length} frames exceed the limit of ${MAX_FRAMES}.`,
+      "Aggregate or bin the frame field (year instead of day) so it has fewer distinct values.",
+    );
+  const fv = fr?.[1].length ? fmt(fr[0], fr[1][fr[2]]) : null;
+  if (fv !== null) s = { ...s, title: t(s, "frameOf", titleText(s), fv) };
 
   // colorBy: sign/target give tone; a numeric field gives a 0..9 bucket over its extent.
   const cb = s.colorBy;
@@ -364,7 +454,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
   const boxes: number[][] = [];
   let labels = "";
-  const label = (x: number, y: number, text: string, place: LabelPlace) => {
+  const label = (x: number, y: number, text: string, place: LabelPlace, k?: string) => {
     const w = text.length * 7.2 + 4;
     const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
     const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
@@ -386,6 +476,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         "text-anchor": place === "start" || place === "end" ? place : "middle",
         "dominant-baseline": place === "above" || place === "below" ? null : "middle",
         "data-in": place === "center", // sits on a mark: no halo
+        "data-key": k,
       },
       esc(text),
     );
@@ -396,10 +487,20 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const ends = spec.endLabels === false ? null : mark.ends?.(s, shaped, fmt);
   const gutter = ends?.length ? endGutter(ends, W) : 0;
   const empty = !s.data.some((r) => [...s.measures, s.y2].some((m) => typeof r[m!] === "number"));
-  const f =
-    mark.axes && !empty
-      ? frame(s0, mark.axes(s, shaped), { width: W, height: H, gutter }, fmt)
-      : null;
+  const ax = mark.axes && !empty ? mark.axes(s, shaped) : null;
+  // frame: each value axis spans every frame, so it holds still during playback.
+  // ponytail: shapes every frame on every render (frames x rows); cache per spec if it shows.
+  if (ax)
+    fr?.[1].forEach((_, k) => {
+      const sk = resolve(spec, { ...opts?.view, frame: k });
+      // Same mark, so the same axis kinds; axes() builds fresh objects, safe to widen in place.
+      mark.axes!(sk, shape(sk, opts?.view)).forEach((a, i) => {
+        const b = ax[i] as Extract<Axis, { kind: "linear" }>;
+        if (a?.kind === "linear")
+          b.domain = [Math.min(a.domain[0], b.domain[0]), Math.max(a.domain[1], b.domain[1])];
+      });
+    });
+  const f = ax ? frame(s0, withRules(s, ax), { width: W, height: H, gutter }, fmt) : null;
   const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
   const ctx: MarkCtx = {
     spec: s,
@@ -408,6 +509,16 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     height: H,
     plot,
     gutter,
+    // ponytail: raw rows of every frame (ignores hidden series and windows), so the size scale holds still.
+    sizeMax:
+      fr && s.size
+        ? spec.data.reduce((m, r) => {
+            const v = r[s.size!];
+            return fr[0] in r && r[fr[0]] != null && typeof v === "number"
+              ? Math.max(m, Math.abs(v))
+              : m;
+          }, 0)
+        : null,
     ends: gutter ? ends! : [],
     x: f?.x ?? null,
     y: f?.y ?? null,
@@ -430,6 +541,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   let markLegend: string | null = null;
   let markTable: MarkOut["table"];
   let note = "";
+  // rule sentences for the auto description, after the frame's
+  let said = fv === null ? "" : ` ${t(s, "frame", fr![2] + 1, fr![1].length)}.`;
   let body = "";
   if (empty) {
     body = el(
@@ -445,6 +558,39 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     );
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
+    // Reference lines, drawn over the marks.
+    // ponytail: value axis only, at most 4, no bands or x rules; labels dodge nothing (NON-FEATURES).
+    let rules = "";
+    const v = s.horizontal ? f?.x : f?.y;
+    if (v && !("bandwidth" in v))
+      s.rules.forEach((u) => {
+        const at = u.y === "mean" ? average(s, shaped) : u.y;
+        // outside a yDomain, or NaN (no data)
+        if (!((at - v.domain[0]) * (at - v.domain[1]) <= 0)) return;
+        const p = r(v.of(at));
+        const name = u.label ?? (u.y === "mean" ? t(s, "mean") : null);
+        const val = fmt(s.y, at);
+        const text = name ? `${name} ${val}` : val;
+        said += ` ${name ?? t(s, "rule")}: ${val}.`;
+        const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
+        rules +=
+          el(
+            "line",
+            s.horizontal
+              ? { x1: p, x2: p, y1: y0, y2: r(plot.y + plot.h) }
+              : { x1: r(plot.x), x2: x0, y1: p, y2: p },
+          ) +
+          // above the line at its end; beside the line at the top for a vertical one
+          el(
+            "text",
+            {
+              x: s.horizontal ? p - 4 : x0,
+              y: s.horizontal ? y0 + 10 : p - 4,
+              "text-anchor": "end",
+            },
+            esc(text),
+          );
+      });
     const m = mark.draw(ctx);
     // Scatter and modules draw per row/node. Counted in place: a split would copy every mark.
     let nm = 0;
@@ -476,6 +622,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       g("axis-y", f?.ay ?? "") +
       g("axis-x", f?.ax ?? "") +
       g("marks", m.marks) +
+      (rules && g("rules", rules)) +
       g("labels", (m.labels ?? "") + labels) +
       g("cross", m.cross ?? "") +
       g("hits", m.hits);
@@ -524,7 +671,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         "desc",
         { id: sheet === null ? "maya-d" : null },
         esc(
-          describe(s, shaped, fmt, mark.noun) + (note && s.description === null ? " " + note : ""),
+          describe(s, shaped, fmt, mark.noun) +
+            (s.description === null ? (note && " " + note) + said : ""),
         ),
       ) +
       body,
@@ -575,7 +723,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     svg,
     legend,
     controls:
-      s.measures.length > 1 && !ALL_Y.includes(s.type)
+      (s.measures.length > 1 && !ALL_Y.includes(s.type)
         ? `<div class="maya-ctl" role="radiogroup" aria-label="${esc(t(s, "measures"))}" data-n="${s.measures.length}" data-i="${s.measure}">` +
           s.measures
             .map(
@@ -584,7 +732,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
             )
             .join("") +
           `</div>`
-        : "",
+        : "") +
+      (fr && fr[1].length > 1
+        ? `<button type="button" class="maya-play" data-maya="play">${esc(t(s, "play"))}</button>`
+        : ""),
     crumbs:
       s.drilled.length > 0
         ? `<nav class="maya-crumbs" aria-label="${esc(t(s, "crumbs"))}"><button type="button" data-depth="0">${esc(t(s, "back"))}</button>` +
@@ -606,6 +757,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     style,
     vars,
     warnings: [],
+    ...(fr && { frame: [fr[2], fr[1].length] as const }),
   };
 }
 
@@ -646,6 +798,7 @@ function project(spec: ChartSpec): ChartSpec {
     ...(typeof spec.y === "string" ? [spec.y] : spec.y),
     spec.series,
     spec.y2,
+    spec.frame,
     spec.size,
     spec.name,
     ...(spec.path ?? []),

@@ -371,3 +371,20 @@ export function makeFunnel(seed: number) {
     ["Paid", 0.6 + rng() * 0.25],
   ].map(([stage, keep]) => ({ stage, users: (n = Math.round(n * (keep as number))) }));
 }
+
+/** Three sensors read every 10 s: n readings each, time-major, so a window is a slice of rows. */
+export function makeLive(seed: number, n = 300) {
+  const rng = mulberry32(seed);
+  const level = [40, 55, 70];
+  const t0 = Date.UTC(2025, 5, 1, 9);
+  return Array.from({ length: n }, (_, t) =>
+    ["North", "Central", "South"].map((sensor, k) => {
+      level[k]! += gauss(rng) * 1.2 + (50 + 15 * k - level[k]!) * 0.05;
+      return {
+        time: new Date(t0 + t * 1e4).toISOString().slice(0, 19) + "Z",
+        sensor,
+        load: R2(level[k]!),
+      };
+    }),
+  ).flat();
+}

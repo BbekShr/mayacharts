@@ -82,7 +82,7 @@ export const parallel: Mark = {
     let dots = "";
     let paths = "";
     let hits = "";
-    const ends: { y: number; ey: number; x: string; si: number }[] = [];
+    const ends: { y: number; ey: number; x: string; si: number; k: string }[] = [];
     for (const { cat, ci, vals, si } of lines) {
       const x = ctx.fmt(spec.x, cat);
       let d = "";
@@ -114,7 +114,7 @@ export const parallel: Mark = {
       });
       if (!d) continue;
       // End labels are repelled below, never dropped; a line that stops early has none.
-      if (vals.at(-1) !== null) ends.push({ y: end[1]!, ey: end[1]!, x, si });
+      if (vals.at(-1) !== null) ends.push({ y: end[1]!, ey: end[1]!, x, si, k: key("l", cat) });
       paths += el("path", {
         "data-maya": "line",
         "data-key": key("l", cat),
@@ -140,14 +140,20 @@ export const parallel: Mark = {
     ).forEach((y, i) => (ends[i]!.y = y));
     const ex = at(ms.length - 1);
     // ponytail: more lines than fit a 13 px column keep the old rule, a colliding name is dropped.
-    if (ends.length * GAP > H) for (const e of ends) ctx.label(ex + 7, e.ey, e.x, "start");
+    if (ends.length * GAP > H) for (const e of ends) ctx.label(ex + 7, e.ey, e.x, "start", e.k);
     else
       for (const e of ends) {
         if (Math.abs(e.y - e.ey) > 2)
           grid += el("line", { "data-s": e.si % 8, x1: ex + 2, x2: ex + 7, y1: e.ey, y2: r(e.y) });
         labels += el(
           "text",
-          { x: ex + 8, y: r(e.y), "text-anchor": "start", "dominant-baseline": "middle" },
+          {
+            x: ex + 8,
+            y: r(e.y),
+            "text-anchor": "start",
+            "dominant-baseline": "middle",
+            "data-key": e.k,
+          },
           esc(e.x),
         );
       }

@@ -1,7 +1,7 @@
 {
   "generated": "2026-10-06",
   "versions": {
-    "commit": "d88a328",
+    "commit": "bb582a6",
     "maya": null,
     "chartjs": "4.5.1",
     "echarts": "6.1.0",
@@ -63,7 +63,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 21226
+          "bytes": 21035
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -83,7 +83,7 @@
             "right": 0.38328993055555555
           }
         },
-        "ttfpMs": 11.5
+        "ttfpMs": 18.5
       },
       "grouped": {
         "supported": true,
@@ -93,7 +93,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 32882
+          "bytes": 32691
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -113,7 +113,7 @@
             "right": 0.2684461805555556
           }
         },
-        "ttfpMs": 14.2
+        "ttfpMs": 21.5
       },
       "stacked": {
         "supported": true,
@@ -123,7 +123,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 25931
+          "bytes": 25740
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -143,7 +143,7 @@
             "right": 0.34453125
           }
         },
-        "ttfpMs": 13.3
+        "ttfpMs": 21.6
       },
       "horizontal": {
         "supported": true,
@@ -153,7 +153,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 24025
+          "bytes": 23954
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -173,7 +173,7 @@
             "right": 0.11341145833333334
           }
         },
-        "ttfpMs": 14.7
+        "ttfpMs": 18.3
       },
       "line": {
         "supported": true,
@@ -183,7 +183,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 26085
+          "bytes": 25774
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -203,7 +203,7 @@
             "right": 0.018598090277777778
           }
         },
-        "ttfpMs": 15.8
+        "ttfpMs": 21.6
       },
       "multiline": {
         "supported": true,
@@ -213,7 +213,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 33959
+          "bytes": 33686
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -233,7 +233,7 @@
             "right": 0.02651909722222222
           }
         },
-        "ttfpMs": 15.7
+        "ttfpMs": 23.9
       },
       "area": {
         "supported": true,
@@ -243,7 +243,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 36015
+          "bytes": 35760
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -263,7 +263,7 @@
             "right": 0.32026909722222224
           }
         },
-        "ttfpMs": 15.3
+        "ttfpMs": 22
       },
       "scatter": {
         "supported": true,
@@ -273,7 +273,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 84938
+          "bytes": 84627
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -293,7 +293,7 @@
             "right": 0.08033854166666667
           }
         },
-        "ttfpMs": 16.6
+        "ttfpMs": 25.1
       },
       "bubble": {
         "supported": true,
@@ -303,7 +303,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 26001
+          "bytes": 25690
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -323,7 +323,7 @@
             "right": 0.04418402777777778
           }
         },
-        "ttfpMs": 15.3
+        "ttfpMs": 21.4
       },
       "heatmap": {
         "supported": true,
@@ -333,7 +333,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 81015
+          "bytes": 81145
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -353,7 +353,7 @@
             "right": 0.2645182291666667
           }
         },
-        "ttfpMs": 18.5
+        "ttfpMs": 29.7
       },
       "treemap": {
         "supported": true,
@@ -363,7 +363,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 28547
+          "bytes": 28236
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -383,7 +383,7 @@
             "right": 0.9077473958333333
           }
         },
-        "ttfpMs": 14.6
+        "ttfpMs": 19.9
       },
       "sankey": {
         "supported": true,
@@ -393,7 +393,7 @@
         "ssr": {
           "noDom": true,
           "svg": true,
-          "bytes": 27071
+          "bytes": 26760
         },
         "axeSeriousCritical": 0,
         "axeRules": [],
@@ -413,7 +413,7 @@
             "right": 0.31592881944444445
           }
         },
-        "ttfpMs": 12.1
+        "ttfpMs": 21.3
       }
     },
     "chartjs": {
@@ -2501,72 +2501,72 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 25.6,
-            "loadPaintMs": 34.1,
-            "updateP50Ms": 16.2,
-            "updateP95Ms": 26.9,
-            "heapMB": 2.2,
+            "firstPaintMs": 35.9,
+            "loadPaintMs": 43.6,
+            "updateP50Ms": 16.1,
+            "updateP95Ms": 30.1,
+            "heapMB": 2.3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 94.6,
-            "loadPaintMs": 124.8,
-            "updateP50Ms": 45.1,
-            "updateP95Ms": 109.9,
-            "heapMB": 4.7,
+            "firstPaintMs": 146,
+            "loadPaintMs": 180.9,
+            "updateP50Ms": 66,
+            "updateP95Ms": 131.2,
+            "heapMB": 2.3,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 60.2,
-            "loadPaintMs": 68,
-            "updateP50Ms": 30.1,
-            "updateP95Ms": 51.3,
-            "heapMB": 2.7,
+            "firstPaintMs": 81.7,
+            "loadPaintMs": 91.6,
+            "updateP50Ms": 37.2,
+            "updateP95Ms": 59.9,
+            "heapMB": 2.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 240.2,
-            "loadPaintMs": 272,
-            "updateP50Ms": 129,
-            "updateP95Ms": 163.1,
-            "heapMB": 2.7,
+            "firstPaintMs": 305.6,
+            "loadPaintMs": 340.8,
+            "updateP50Ms": 151.8,
+            "updateP95Ms": 230.3,
+            "heapMB": 2.8,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 85.8,
-            "loadPaintMs": 93.3,
-            "updateP50Ms": 40.9,
-            "updateP95Ms": 74.4,
+            "firstPaintMs": 103.3,
+            "loadPaintMs": 110.9,
+            "updateP50Ms": 44.8,
+            "updateP95Ms": 66.9,
             "heapMB": 7.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 336.2,
-            "loadPaintMs": 366.4,
-            "updateP50Ms": 164.7,
-            "updateP95Ms": 203.3,
+            "firstPaintMs": 400.8,
+            "loadPaintMs": 436.8,
+            "updateP50Ms": 181.9,
+            "updateP95Ms": 232.1,
             "heapMB": 74.8,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 289.3,
-            "loadPaintMs": 296,
-            "updateP50Ms": 136.4,
-            "updateP95Ms": 159.5,
-            "heapMB": 119.9,
+            "firstPaintMs": 329.5,
+            "loadPaintMs": 338.4,
+            "updateP50Ms": 146.3,
+            "updateP95Ms": 178.4,
+            "heapMB": 50.3,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 1187.2,
-            "loadPaintMs": 1215.2,
-            "updateP50Ms": 560.7,
-            "updateP95Ms": 781.1,
+            "firstPaintMs": 1339,
+            "loadPaintMs": 1372.5,
+            "updateP50Ms": 614.1,
+            "updateP95Ms": 848,
             "heapMB": 119.9,
             "runs": 2
           }
@@ -2575,73 +2575,73 @@
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 22.2,
-            "loadPaintMs": 29.8,
+            "firstPaintMs": 32.3,
+            "loadPaintMs": 41.5,
             "updateP50Ms": 16.1,
-            "updateP95Ms": 16.5,
-            "heapMB": 2.4,
+            "updateP95Ms": 16.9,
+            "heapMB": 2.5,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 81.6,
-            "loadPaintMs": 113.3,
-            "updateP50Ms": 27.1,
-            "updateP95Ms": 44.5,
-            "heapMB": 2.4,
+            "firstPaintMs": 132,
+            "loadPaintMs": 169.5,
+            "updateP50Ms": 35.2,
+            "updateP95Ms": 66.2,
+            "heapMB": 4.1,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 26.1,
-            "loadPaintMs": 33.9,
-            "updateP50Ms": 12.7,
-            "updateP95Ms": 17.4,
+            "firstPaintMs": 40.5,
+            "loadPaintMs": 50.6,
+            "updateP50Ms": 12.6,
+            "updateP95Ms": 21.1,
             "heapMB": 3.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 100,
-            "loadPaintMs": 130.4,
-            "updateP50Ms": 38.4,
-            "updateP95Ms": 77.8,
+            "firstPaintMs": 141.7,
+            "loadPaintMs": 179.4,
+            "updateP50Ms": 44.1,
+            "updateP95Ms": 86.3,
             "heapMB": 3.1,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 52.1,
-            "loadPaintMs": 59.6,
-            "updateP50Ms": 23.1,
-            "updateP95Ms": 38.2,
+            "firstPaintMs": 67.8,
+            "loadPaintMs": 77,
+            "updateP50Ms": 25.5,
+            "updateP95Ms": 40.1,
             "heapMB": 75.9,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 153.1,
-            "loadPaintMs": 185.6,
-            "updateP50Ms": 91.7,
-            "updateP95Ms": 134,
-            "heapMB": 60.8,
+            "firstPaintMs": 201,
+            "loadPaintMs": 238.9,
+            "updateP50Ms": 104.3,
+            "updateP95Ms": 153.6,
+            "heapMB": 53.6,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 195.5,
-            "loadPaintMs": 202.5,
-            "updateP50Ms": 173.6,
-            "updateP95Ms": 210.2,
-            "heapMB": 219.2,
-            "runs": 5
+            "firstPaintMs": 221.4,
+            "loadPaintMs": 229.6,
+            "updateP50Ms": 186.1,
+            "updateP95Ms": 349.3,
+            "heapMB": 74.5,
+            "runs": 4
           },
           "throttled": {
-            "firstPaintMs": 632.4,
-            "loadPaintMs": 665.1,
-            "updateP50Ms": 581.4,
-            "updateP95Ms": 778.1,
-            "heapMB": 74.5,
+            "firstPaintMs": 754.8,
+            "loadPaintMs": 792.5,
+            "updateP50Ms": 676.7,
+            "updateP95Ms": 846,
+            "heapMB": 74.6,
             "runs": 2
           }
         }

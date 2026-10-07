@@ -91,6 +91,10 @@
       "type": "string",
       "description": "Second value field, drawn as a line on a right axis over the bars. Vertical bar only."
     },
+    "frame": {
+      "type": "string",
+      "description": "Playback: one frame per distinct value of this field (data order). Shows one frame, the last by default, names it in the title, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and \"1\" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell."
+    },
     "series": {
       "type": "string",
       "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot."
@@ -119,8 +123,16 @@
       "description": "x values drawn as running-total bars. waterfall only."
     },
     "stack": {
-      "type": "boolean",
-      "description": "Stack series instead of grouping them. bar and area only."
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": ["percent"]
+        }
+      ],
+      "description": "Stack series instead of grouping them; \"percent\" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0). bar and area only."
     },
     "horizontal": {
       "type": "boolean",
@@ -246,6 +258,12 @@
           "range",
           "density",
           "perCell",
+          "mean",
+          "rule",
+          "play",
+          "pause",
+          "frameOf",
+          "frame",
           "max",
           "q3",
           "median",
@@ -292,6 +310,42 @@
       "minItems": 2,
       "maxItems": 2,
       "description": "Fixed x domain. scatter only."
+    },
+    "rules": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "const": "mean"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "y": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "const": "mean"
+                  }
+                ]
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 40
+              }
+            },
+            "required": ["y"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Reference lines across the value axis (at most 4): a number, or \"mean\" of the visible values (stacked: of the category totals), optionally labelled. bar line area scatter."
     },
     "tooltip": {
       "type": "boolean",

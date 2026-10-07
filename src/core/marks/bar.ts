@@ -181,19 +181,21 @@ export const bar: Mark = {
             : d["data-q"] >= 6
               ? ""
               : null;
-        if (est <= w && h >= (hz ? 14 : 16)) labels += inText(cx, cy, text, { "data-ink": ink });
+        if (est <= w && h >= (hz ? 14 : 16))
+          labels += inText(cx, cy, text, { "data-ink": ink, "data-key": d["data-key"] });
         else if (hz) {
           // Outside the bar end when it fits (a negative one keeps clear of the axis labels), else inside the end.
           if (
             !(
               (!neg || x - 4 - est >= ctx.plot.x) &&
-              ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start")
+              ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start", d["data-key"])
             ) &&
             est + 8 <= w &&
             h >= 10
           )
             labels += inText(neg ? x + 4 : x + w - 4, cy, text, {
               "data-ink": ink,
+              "data-key": d["data-key"],
               "text-anchor": neg ? "start" : "end",
             });
         } else {
@@ -214,8 +216,8 @@ export const bar: Mark = {
               if (neg ? by + bh > e && by < e + 16 : by < e && by + bh > e - 16)
                 e = neg ? by + bh : by;
             }
-          if (edge) ctx.label(ax, neg ? e + 9 : e - 9, text, end ? "end" : "start");
-          else if (!over) ctx.label(cx, ey, text, neg ? "below" : "above");
+          if (edge) ctx.label(ax, neg ? e + 9 : e - 9, text, end ? "end" : "start", d["data-key"]);
+          else if (!over) ctx.label(cx, ey, text, neg ? "below" : "above", d["data-key"]);
         }
       }
     }
@@ -250,7 +252,7 @@ export const bar: Mark = {
         };
         dots += el("circle", { "data-maya": "mark", ...p, r: 3, cx: px, cy: py });
         hits += hit(p, +px - 3, +py - 3, 6, 6);
-        if (spec.labels) ctx.label(+px, +py, ctx.fmt(f2, v), "above");
+        if (spec.labels) ctx.label(+px, +py, ctx.fmt(f2, v), "above", p["data-key"]);
       });
       marks +=
         el("path", {

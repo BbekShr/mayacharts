@@ -1,6 +1,6 @@
 {
   "name": "mayacharts",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.",
   "keywords": [
     "chart",
@@ -116,15 +116,15 @@
     "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
   },
   "mayaSize": {
-    "dist/index.js": 32512,
-    "dist/element.js": 46336,
+    "dist/index.js": 33920,
+    "dist/element.js": 48384,
     "dist/theme.css": 4128,
     "dist/hierarchy.js": 4198,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
     "dist/stats.js": 3456,
-    "dist/maya.global.js": 57664
+    "dist/maya.global.js": 59712
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

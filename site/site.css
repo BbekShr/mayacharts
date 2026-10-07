@@ -185,9 +185,16 @@ body.wide header.site {
 .tile-head h2 {
   font-size: 1.05rem;
 }
+.tile-head div {
+  display: flex;
+  gap: 8px;
+}
 .tile-head button {
   flex: none;
   font-size: 0.85rem;
+}
+.tile-head button[aria-pressed="true"] {
+  border-color: var(--accent);
 }
 .tiles section > p {
   font-size: 0.92rem;

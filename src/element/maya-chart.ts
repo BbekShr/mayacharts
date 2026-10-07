@@ -19,6 +19,7 @@ import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import { listen } from "./listen.ts";
 import * as measure from "./measure.ts";
+import * as play from "./play.ts";
 import * as select from "./select.ts";
 import * as sort from "./sort.ts";
 import { type Tooltip, tooltip } from "./tooltip.ts";
@@ -34,7 +35,7 @@ export class MayaChart extends HTMLElement {
   #attr: ChartSpec | undefined;
   #state: State = { view: {}, selected: [] };
   #seen: ChartSpec | undefined;
-  #ix: Record<"measure" | "drill" | "select" | "zoom" | "sort", Handlers> | undefined;
+  #ix: Record<"measure" | "drill" | "select" | "zoom" | "sort" | "play", Handlers> | undefined;
   #say: ReturnType<typeof setTimeout> | undefined;
   #last: Record<string, string> = {};
   #size = [0, 0];
@@ -145,6 +146,7 @@ export class MayaChart extends HTMLElement {
       select: select.mount(host),
       zoom: zoom.mount(host),
       sort: sort.mount(host),
+      play: play.mount(host),
     };
     const box = root.querySelector(".maya-box")!;
     this.#tip = tooltip(
@@ -311,7 +313,10 @@ export class MayaChart extends HTMLElement {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
       this.#state = select.reduce(
-        zoom.reduce(sort.reduce(drill.reduce(measure.reduce(this.#state, ev), ev), ev), ev),
+        zoom.reduce(
+          sort.reduce(play.reduce(drill.reduce(measure.reduce(this.#state, ev), ev), ev), ev),
+          ev,
+        ),
         ev,
       );
       this.#seen = spec;
@@ -442,7 +447,7 @@ export class MayaChart extends HTMLElement {
 
 const SLOTS: [keyof Parts, string][] = [
   ["title", ".maya-title"],
-  ["controls", ".maya-ctl"],
+  ["controls", ".maya-ctl,.maya-play"],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],
 ];
@@ -464,4 +469,5 @@ const FOCUS: [string, string][] = [
   ["measure", ".maya-ctl [role=radio]"],
   ["crumb", ".maya-crumbs :is(button,a)"],
   ["reset", ".maya-reset"],
+  ["play", ".maya-play"],
 ];

@@ -189,7 +189,8 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <p>
           The chart would render more than 5000 marks, which exceeds the performance limit. Reduce
           the number of categories with the limit option, or aggregate rows with aggregate (e.g.,
-          "mean" instead of "sum").
+          "mean" instead of "sum"). More than 200 distinct frame values also raise it: aggregate or
+          bin the frame field.
         </p>
         <pre><code>// Limit to top 20 categories
 { "type": "bar", "x": "product", "y": "sales", "limit": 20, ... }
