@@ -6,7 +6,7 @@
 
 Twenty-six chart types from one JSON spec. About 53 KB, zero dependencies,<br>accessible and server-rendered by default.
 
-[![npm](https://img.shields.io/npm/v/mayacharts?color=1d4ed8&label=npm)](https://www.npmjs.com/package/mayacharts) [![gzip](https://img.shields.io/bundlejs/size/mayacharts?color=1d4ed8)](https://bundlejs.com/?q=mayacharts) [![dependencies](https://img.shields.io/badge/dependencies-0-1d4ed8)](package.json) [![license](https://img.shields.io/npm/l/mayacharts?color=1d4ed8)](LICENSE) [![support](https://img.shields.io/badge/%E2%99%A5-support-e5484d)](https://bbekshr.github.io/mayacharts/support/)
+[![npm](https://img.shields.io/npm/v/mayacharts?color=1d4ed8&label=npm)](https://www.npmjs.com/package/mayacharts) [![gzip](https://img.shields.io/bundlejs/size/mayacharts?color=1d4ed8)](https://bundlejs.com/?q=mayacharts) [![dependencies](https://img.shields.io/badge/dependencies-0-1d4ed8)](package.json) [![license](https://img.shields.io/npm/l/mayacharts?color=1d4ed8)](LICENSE) [![support](https://img.shields.io/badge/support-mayaCharts-635bff?logo=githubsponsors&logoColor=ff6b81)](https://bbekshr.github.io/mayacharts/support/)
 
 **[Website](https://bbekshr.github.io/mayacharts/)** · **[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[A million rows](https://bbekshr.github.io/mayacharts/scale.html)** · **[Compare](https://bbekshr.github.io/mayacharts/compare.html)** · **[Docs](https://bbekshr.github.io/mayacharts/docs.html)** · **[♥ Support](https://bbekshr.github.io/mayacharts/support/)**
 
@@ -1041,15 +1041,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 12,130 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 12,136 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,116,563,199 total, 2,370,587 output
+- claude-opus-5-5: 1,118,427,201 total, 2,372,690 output
 - claude-sonnet-5-5: 558,969,125 total, 79,607 output
 - claude-fable-5-1: 186,794,492 total, 369,749 output
 - claude-haiku-4-5-20251001: 26,122,384 total, 1,063 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,896,247,059 total, 2,864,319 output
+- all: 1,898,111,061 total, 2,866,422 output
 
 <!-- tokens:end -->
 
