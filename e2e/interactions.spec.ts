@@ -171,6 +171,22 @@ test.describe("drill", () => {
     await page.keyboard.press("Enter");
     await expect.poll(async () => (await view(page, "treemap")).drill?.length).toBe(2);
   });
+
+  test("a quick drill out then in keeps keyboard focus in the chart", async ({ page }) => {
+    await open(page);
+    await page.locator("#treemap svg").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await view(page, "treemap")).drill?.length).toBe(1);
+    await page.waitForTimeout(900);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(100);
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await view(page, "treemap")).drill?.length).toBe(1);
+    await page.waitForTimeout(900);
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe("treemap");
+  });
 });
 
 test.describe("select", () => {

@@ -9,6 +9,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 ### Changed
 
 - Element fixes: a `view` set before the first `spec` survives it (measure, sort, frame); Enter acts on a mark only from the chart, not from a legend button, radio, crumb or Reset; Enter after an arrow key during a drill zoom drills the arrowed mark; a removed chart no longer renders; sunburst updates read ring styles before the first write; an area change in WebKit no longer dips (the old outline fades out alone).
+- Update motion: axis text with no key matches by content, so the axis title no longer swaps with a tick when the tick count changes; dumbbell connectors glide with their dots instead of snapping; a quick drill out then in keeps keyboard focus on a live mark.
 - A single-series line or area shows its last value at the right end like a multi-series one (the name too when the series has one). Heatmap labels switch ink at ramp step 7 (dark ink above, a light-in-dark-mode ink below), measured at 4.5:1 for the tinted ramp.
 - An all-zero waffle or marimekko shows the empty-chart text instead of a blank plot. A boxplot median label that collides beside its box falls back to above it instead of vanishing. Hexmap values print only at 10 px and up.
 - The auto number format writes values below 1e-6 and from 1e21 up in scientific notation (`1e-300` is `1E-300`, not a 300-digit string). A `format` object is untouched.

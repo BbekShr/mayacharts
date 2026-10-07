@@ -177,6 +177,32 @@ describe("motion", () => {
     for (const t of lines) expect(t).toContain("matrix(1,0,0,"); // stroke width keeps its scale
   });
 
+  it("a kept line glides from its old box; unkeyed axis text matches by content, not position", () => {
+    const box = document.createElement("div");
+    const svg = (inner: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="10 10 80 80">${inner}</svg>`;
+    const ln = (x: number) =>
+      `<line data-maya="link" data-key="k~A" x1="${x}" y1="20" x2="${x}" y2="40"/>`;
+    const ax = (...t: string[]) =>
+      `<g data-maya="axis">${t.map((x) => `<text x="5" y="${x.length}">${x}</text>`).join("")}</g>`;
+    patch(box, svg(`<g data-maya="marks">${ln(20)}</g>` + ax("Sales", "0", "50", "100")), false);
+    const title = box.querySelector("text")!;
+    const tick50 = [...box.querySelectorAll("text")].find((t) => t.textContent === "50")!;
+    const s = spy();
+    patch(
+      box,
+      svg(`<g data-maya="marks">${ln(60)}</g>` + ax("Sales", "0", "30", "60", "90")),
+      true,
+    );
+    s.done();
+    const l = s.calls.find((c) => c.e.matches("line"))!;
+    expect(l.k[0]!.transform).toContain("translate(-40px");
+    expect(box.querySelector("text")).toBe(title);
+    expect(title.textContent).toBe("Sales");
+    expect(tick50.isConnected).toBe(false); // no longer present: faded out, never rewritten
+    expect(tick50.textContent).toBe("50");
+  });
+
   it("a group already fading out is not ghosted again by the next patch", async () => {
     const el = document.createElement("maya-chart") as MayaChart;
     const at = (k: number) =>

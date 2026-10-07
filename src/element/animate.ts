@@ -110,6 +110,15 @@ const folded = (e: Element): Keyframe | undefined => {
 /** Geometry of a rect or circle (circle = its bounding square); undefined for paths etc. */
 const geo = (e: Element): Box | undefined => {
   if (ring(e)) return;
+  if (e.localName === "line") {
+    const [x, y] = [n(e, "x1"), n(e, "y1")];
+    return [
+      Math.min(x, n(e, "x2")),
+      Math.min(y, n(e, "y2")),
+      Math.abs(x - n(e, "x2")),
+      Math.abs(y - n(e, "y2")),
+    ];
+  }
   if (e.localName === "rect") return [n(e, "x"), n(e, "y"), n(e, "width"), n(e, "height")];
   if (e.localName === "circle") {
     const r = n(e, "r");
@@ -126,7 +135,10 @@ const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () =
   // A delayed animation holds its first frame while it waits (else the mark flashes in place).
   if (o.delay) o = { ...o, fill: o.fill === "forwards" ? "both" : (o.fill ?? "backwards") };
   // Scatter circles rest on a centre origin (hover scale): the box maths here starts at 0 0.
-  if (e.localName === "circle") k = k.map((f) => ({ ...f, transformOrigin: "0 0" }));
+  // Connectors scale about their own box too (the drill zoom's matrix is in view-box units, so not that one).
+  const ln = e.localName === "line" && k.some((f) => `${f.transform}`.startsWith("t"));
+  if (e.localName === "circle" || ln)
+    k = k.map((f) => ({ ...f, transformOrigin: "0 0", ...(ln && { transformBox: "fill-box" }) }));
   const a = instant ? undefined : e.animate?.(k, o);
   if (!then) return;
   if (!a) return then();
@@ -430,7 +442,8 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
   sync(p, c);
   for (const e of [...c.children]) {
     const k = key(e);
-    const m = k ? byKey.get(k) : plain.shift();
+    const i = plain.findIndex((x) => x.textContent === e.textContent); // equal ticks glide, the rest fade
+    const m = k ? byKey.get(k) : plain.splice(i, i < 0 ? 0 : 1)[0];
     if (
       !m ||
       m.localName !== e.localName ||
