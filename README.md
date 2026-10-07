@@ -97,7 +97,7 @@ Twenty-six types from one spec format. Pick a picture to open that chart live in
   <tr>
     <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#hbar"><img src="https://bbekshr.github.io/mayacharts/readme/bar.png" alt="A bar chart" width="240"><br>bar</a></td>
     <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#monthly-line"><img src="https://bbekshr.github.io/mayacharts/readme/line.png" alt="A line chart" width="240"><br>line</a></td>
-    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#stacked-area"><img src="https://bbekshr.github.io/mayacharts/readme/area.png" alt="A area chart" width="240"><br>area</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#stacked-area"><img src="https://bbekshr.github.io/mayacharts/readme/area.png" alt="An area chart" width="240"><br>area</a></td>
     <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#scatter"><img src="https://bbekshr.github.io/mayacharts/readme/scatter.png" alt="A scatter chart" width="240"><br>scatter</a></td>
   </tr>
   <tr>
@@ -131,7 +131,7 @@ Twenty-six types from one spec format. Pick a picture to open that chart live in
     <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#units"><img src="https://bbekshr.github.io/mayacharts/readme/units.png" alt="A units chart" width="240"><br>units</a></td>
   </tr>
   <tr>
-    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#orbit"><img src="https://bbekshr.github.io/mayacharts/readme/orbit.png" alt="A orbit chart" width="240"><br>orbit</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#orbit"><img src="https://bbekshr.github.io/mayacharts/readme/orbit.png" alt="An orbit chart" width="240"><br>orbit</a></td>
     <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#constellation"><img src="https://bbekshr.github.io/mayacharts/readme/constellation.png" alt="A constellation chart" width="240"><br>constellation</a></td>
   </tr>
 </table>
