@@ -8,7 +8,7 @@ Owner: Bibek Shrestha (GitHub BbekShr). MIT, forever. See STABILITY.md for what 
 
 - The core library stays MIT. Never relicense it, add a source-available or copyleft tier, or move existing features behind a paywall.
 - Any revenue comes from things that are not part of the MIT core: support and SLA contracts, hosted services, and separately licensed add-ons. State this plan publicly before acting on it.
-- Voluntary donations through GitHub Sponsors are allowed. They buy no features, support or priority.
+- Voluntary donations (GitHub Sponsors, the Stripe support link) are allowed. They buy no features, support or priority.
 - Keep all work on personal equipment, accounts and time. Never use employer code, data, designs or confidential knowledge.
 - Do not sell or announce paid offerings until a signed written release from the employer covers open-source and commercial use. A sale to the employer needs disclosure, independent approval and market pricing.
 - Accept outside contributions only under a contributor agreement, so ownership stays clear for enterprise buyers.

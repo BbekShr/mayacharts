@@ -1024,4 +1024,4 @@ mayaCharts follows semantic versioning. Public API: spec keys and semantics, sch
 
 MIT, and the core library will stay MIT. Any paid offerings will be things outside the core, such as support contracts, hosted services and separate add-ons. Nothing in the library will move behind a paywall. See [LICENSE](LICENSE).
 
-If mayaCharts saves you time, you can [support it on GitHub Sponsors](https://github.com/sponsors/BbekShr). Sponsorship buys no features or priority.
+If mayaCharts saves you time, you can [support it](https://buy.stripe.com/00wdRbame9g2bmu5zuaIM01). Support buys no features or priority.
