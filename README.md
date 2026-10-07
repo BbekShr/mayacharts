@@ -160,16 +160,16 @@ The twelve core types ship with `mayacharts` and `mayacharts/element`. Each othe
 | `chord`         | Flow between every pair in a group.                                                                     | `import "mayacharts/flow"`          | 3.46 KB |
 | `radial`        | Bars around a circle, for cyclical categories such as months.                                           | `import "mayacharts/radial"`        | 2.81 KB |
 | `hexmap`        | US states as equal hexagons, so small states stay visible.                                              | `import "mayacharts/geo"`           | 2.47 KB |
-| `boxplot`       | Median, quartiles and outliers per group.                                                               | `import "mayacharts/stats"`         | 3.37 KB |
-| `funnel`        | Drop-off through ordered stages.                                                                        | `import "mayacharts/stats"`         | 3.37 KB |
-| `weave`         | A ranking over time, with threads that pass over and under at crossings.                                | `import "mayacharts/weave"`         | 2.05 KB |
+| `boxplot`       | Median, quartiles and outliers per group.                                                               | `import "mayacharts/stats"`         | 3.63 KB |
+| `funnel`        | Drop-off through ordered stages.                                                                        | `import "mayacharts/stats"`         | 3.63 KB |
+| `weave`         | A ranking over time, with threads that pass over and under at crossings.                                | `import "mayacharts/weave"`         | 2.30 KB |
 | `units`         | One dot per row that changes form between waffle, bars and swarm.                                       | `import "mayacharts/units"`         | 2.47 KB |
-| `orbit`         | Categories as planets around their total, with motion from growth.                                      | `import "mayacharts/orbit"`         | 2.04 KB |
-| `constellation` | Accounts placed by how alike their measures are, not by one axis.                                       | `import "mayacharts/constellation"` | 2.50 KB |
+| `orbit`         | Categories as planets around their total, with motion from growth.                                      | `import "mayacharts/orbit"`         | 2.50 KB |
+| `constellation` | Accounts placed by how alike their measures are, not by one axis.                                       | `import "mayacharts/constellation"` | 2.80 KB |
 
 ## Signature charts
 
-Five of the types above that no other chart library draws. Each is a spec like any other and costs 2.5 KB gzip or less (`was` is part of the core bar).
+Five of the types above that no other chart library draws. Each is a spec like any other and costs under 3 KB gzip (`was` is part of the core bar).
 
 **Shapeshifter (`units`).** One dot per row, and the dots change form: a waffle, bars, or a swarm along the value axis. Every dot keeps the same key in every form, so switching form flies each dot to its new place instead of redrawing. Maya means illusion, and this is the one that earns the name. Other libraries make you pick a chart; here the control is part of the chart.
 
@@ -194,7 +194,7 @@ chart.spec = { type: "bar", x: "family", y: "sales", was: "before", data: rows }
 // not with stack or a y array; a row whose was is not a number shows no ghost
 ```
 
-**Orrery (`orbit`).** Categories as planets around their total. Orbit radius is rank (largest innermost), planet size is value, and orbital speed and direction follow growth, so a shrinking category circles the other way. A static trail arc shows the growth too, so the chart still reads with motion off: under reduced motion, with `animate: false`, in server rendering and in an exported image.
+**Orrery (`orbit`).** Categories as planets around their total. Orbit radius is rank (largest innermost), planet size is value, and orbital speed and direction follow growth, so a shrinking category circles the other way. The planets sweep in and come to rest with their names beside them; pointing at the chart sets them turning, and they glide home when the pointer leaves. A static trail arc shows the growth too, so the chart still reads with motion off: under reduced motion, with `animate: false`, in server rendering and in an exported image.
 
 ```js
 import "mayacharts/orbit";
@@ -692,11 +692,11 @@ Each module extends the core with chart types and shares the same spec, theme, t
 | `mayacharts/flow`          | sankey, chord                                             | 3.5 KB      |
 | `mayacharts/radial`        | radial                                                    | 2.8 KB      |
 | `mayacharts/geo`           | hexmap (50 US states + DC + PR)                           | 2.5 KB      |
-| `mayacharts/stats`         | boxplot, funnel                                           | 3.4 KB      |
-| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.0 KB      |
+| `mayacharts/stats`         | boxplot, funnel                                           | 3.6 KB      |
+| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.3 KB      |
 | `mayacharts/units`         | units (one dot per row: waffle, bars, swarm)              | 2.5 KB      |
-| `mayacharts/orbit`         | orbit (planets sized by value, speed by growth)           | 2.0 KB      |
-| `mayacharts/constellation` | constellation (rows placed by similarity across measures) | 2.5 KB      |
+| `mayacharts/orbit`         | orbit (planets sized by value, speed by growth)           | 2.5 KB      |
+| `mayacharts/constellation` | constellation (rows placed by similarity across measures) | 2.8 KB      |
 
 ## Global build
 
@@ -999,15 +999,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 10,307 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 10,936 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,008,624,057 total, 2,126,860 output
-- claude-sonnet-5-5: 404,144,364 total, 68,966 output
-- claude-fable-5-1: 181,113,445 total, 366,328 output
+- claude-opus-5-5: 1,042,196,089 total, 2,173,022 output
+- claude-sonnet-5-5: 455,746,041 total, 72,442 output
+- claude-fable-5-1: 186,794,492 total, 369,749 output
 - claude-haiku-4-5-20251001: 26,122,384 total, 1,063 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,627,802,109 total, 2,606,530 output
+- all: 1,718,656,865 total, 2,659,589 output
 
 <!-- tokens:end -->
 

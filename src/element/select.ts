@@ -6,6 +6,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, Sel, SpecEvent, State } from "../core/types.ts";
+import { BUSY } from "./drill.ts";
 import { listen } from "./listen.ts";
 
 export type SelectEvent =
@@ -90,14 +91,16 @@ export function mount(host: Host): Handlers {
     const m = host.mark(e);
     const sel = m && selOf(m, type());
     if (m && sel) pick(sel, m);
+    else if (!m && !el.closest(BUSY)) clear(); // empty chart space deselects
+  };
+  const clear = () => {
+    if (!host.state().selected.length) return false;
+    host.commit(reduce(host.state(), { type: "clear" }));
+    host.announce(t(host.spec() ?? {}, "selectionCleared"));
+    return true;
   };
   return {
-    escape() {
-      if (!host.state().selected.length) return false;
-      host.commit(reduce(host.state(), { type: "clear" }));
-      host.announce(t(host.spec() ?? {}, "selectionCleared"));
-      return true;
-    },
+    escape: clear,
     enter(mark) {
       const sel = selOf(mark, type());
       if (!host.spec()?.select || !sel) return false;
@@ -113,6 +116,11 @@ export function mount(host: Host): Handlers {
         if (sel.some((q) => matches(q, m, type()))) m.setAttribute("data-selected", "");
         else m.removeAttribute("data-selected");
     },
-    off: listen(root, ["click", onClick]),
+    off: (() => {
+      const a = listen(root, ["click", onClick]);
+      // A click anywhere else on the page deselects too.
+      const b = listen(document, ["click", (e) => e.composedPath().includes(root.host) || clear()]);
+      return () => (a(), b());
+    })(),
   };
 }

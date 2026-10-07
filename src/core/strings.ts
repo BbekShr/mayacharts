@@ -85,6 +85,8 @@ export const TEXT = {
   rank: "Rank {0}",
   /** Orbit description: {0} = y2 title. */
   speedBy: "Orbit speed shows {0}",
+  /** Orbit sun title when a value is negative (the total is the sum of magnitudes): {0} = y title. */
+  gross: "Gross {0}",
   /** Constellation description: {0} = measure titles joined with ", ". */
   alike: "Closer points are more alike across {0}",
   /** Constellation tooltip: {0} = the nearest names joined with ", ". */

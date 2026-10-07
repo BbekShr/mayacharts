@@ -211,6 +211,59 @@ test.describe("select", () => {
     await expect(page.locator("#bubble [data-maya=mark][data-selected]")).toHaveCount(0);
     expect(await selected(page, "bubble")).toHaveLength(0);
   });
+
+  test("weave: same point, empty plot space and the page outside deselect", async ({ page }) => {
+    await open(page);
+    const marks = page.locator("#weave [data-maya=mark]");
+    const on = page.locator("#weave [data-maya=mark][data-selected]");
+    await clickMark(page, marks.nth(3));
+    await expect(on).toHaveCount(1);
+    await clickMark(page, marks.nth(3));
+    await expect(on).toHaveCount(0);
+    await clickMark(page, marks.nth(3));
+    await expect(on).toHaveCount(1);
+    const b = await page.locator("#weave .maya-svg").boundingBox();
+    // The top-left corner of the svg is margin: no mark, no control.
+    await page.mouse.click(b!.x + 3, b!.y + 3);
+    await expect(on).toHaveCount(0);
+    await clickMark(page, marks.nth(3));
+    await expect(on).toHaveCount(1);
+    await page.mouse.click(2, 2);
+    await expect(on).toHaveCount(0);
+    expect((await events(page, "weave", "maya-select")).length).toBe(6);
+  });
+});
+
+test.describe("keyboard order", () => {
+  test("orbit goes clockwise by angle; constellation Down steps through the web", async ({
+    page,
+  }) => {
+    await open(page);
+    const active = (id: string) =>
+      page.evaluate((i) => {
+        const m = document.getElementById(i)!.shadowRoot!.querySelector("[data-active]")!;
+        return [
+          m.getAttribute("data-key"),
+          Math.atan2(+m.getAttribute("cx")!, -m.getAttribute("cy")!),
+        ] as const;
+      }, id);
+    await page.locator("#orbit svg.maya-svg").focus();
+    const ang: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      await page.keyboard.press("ArrowRight");
+      ang.push((await active("orbit"))[1]);
+    }
+    expect(ang).toEqual([...ang].sort((p, q) => p - q));
+    await page.locator("#constellation svg.maya-svg").focus();
+    await page.keyboard.press("ArrowRight");
+    const k = [(await active("constellation"))[0]];
+    for (let i = 0; i < 4; i++) {
+      await page.keyboard.press("ArrowDown");
+      k.push((await active("constellation"))[0]);
+    }
+    expect(new Set(k).size).toBe(4); // the star and its three, then round again
+    expect(k[4]).toBe(k[0]);
+  });
 });
 
 test.describe("tooltip:false", () => {

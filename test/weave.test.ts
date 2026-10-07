@@ -11,6 +11,7 @@ const spec = (extra: object = {}, data: object[] = rows): ChartSpec =>
   ({ type: "weave", x: "p", y: "y", series: "s", data, ...extra }) as ChartSpec;
 const tags = (svg: string) => [...svg.matchAll(/<(?:path|circle) [^>]*>/g)].map((m) => m[0]);
 const at = (t: string, a: string) => new RegExp(` ${a}="([^"]*)"`).exec(t)?.[1];
+const tie3 = ["A", "B", "C"].map((s) => ({ p: "Q1", s, y: 5 }));
 const threads = (svg: string) => tags(svg).filter((t) => t.includes("data-w="));
 
 describe("weave", () => {
@@ -44,7 +45,75 @@ describe("weave", () => {
     );
     const dots = tags(tie).filter((t) => t.includes('data-maya="mark"'));
     expect(dots.map((t) => at(t, "data-series"))).toEqual(["A", "B"]);
-    expect(at(dots[1]!, "data-f")).toContain("Rank 2");
+    // Equal values share a rank (competition ranking) and read tied; the slots stay distinct.
+    expect(at(dots[0]!, "data-f")).toContain("Rank =1");
+    expect(at(dots[1]!, "data-f")).toContain("Rank =1");
+    expect(at(dots[0]!, "cy")).not.toBe(at(dots[1]!, "cy"));
+    expect(renderParts(spec({}, [...tie3])).svg).toContain("Q1: A = B = C");
+  });
+
+  it("a series with no values takes no slot, name or thread", () => {
+    const d = [
+      ...["Alpha:5,1", "Beta:3,4", "Gamma:1,9"].flatMap((r) => {
+        const [s, v] = r.split(":");
+        return v!.split(",").map((y, i) => ({ p: P[i]!, s: s!, y: +y }));
+      }),
+      { p: "Q1", s: "Zed", y: null },
+      { p: "Q2", s: "Zed", y: null },
+    ];
+    const out = render(spec({}, d), { width: 800 });
+    // Alpha ends at rank 3 with 1; its label must say so, not carry Beta's value.
+    expect(out).toMatch(/data-end[^>]*>\u200eAlpha[^<]*<tspan[^>]*>\u20661\u2069/);
+    expect(out).not.toMatch(/data-key="[^"]*Zed/);
+  });
+
+  it("names a thread that starts late at its first dot", () => {
+    const d = rows.filter((r) => !(r.s === "C" && r.p === "Q1"));
+    const out = render(spec({}, d), { width: 800, height: 400 });
+    expect(out).toMatch(/data-key="w~C~Q2~n"[^>]*>C</);
+  });
+
+  it("keeps the last value at narrow widths and tells colliding long names apart", () => {
+    const six = ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"];
+    const d = ["A", "B", "C"].flatMap((s, k) => six.map((p, i) => ({ p, s, y: 100 + k * 10 + i })));
+    const out = render(spec({}, d), { width: 360, height: 320 });
+    expect(out).toMatch(/>105<\/text>/);
+    expect(out).toMatch(/>115<\/text>/);
+    const long = ["Northwest Regional Alpha", "Northwest Regional Bravo"].flatMap((s, k) =>
+      ["Q1", "Q2"].map((p) => ({ p, s, y: 1 + k })),
+    );
+    const names = [...render(spec({}, long)).matchAll(/data-maya="axis-y"[^]*?<\/g>/g)][0]![0];
+    // Each axis label sits at its own series' row: Bravo (2, rank 1) above Alpha (1, rank 2).
+    expect(names).toMatch(/Northwest… Bravo<\/text><text[^>]*>Northwest… Alpha<\/text>/);
+    const svg = render(spec({}, long), { width: 800 });
+    expect(svg).toMatch(
+      /data-end[^>]*>\u200eNorthwest Regional Bravo[^<]*<tspan[^>]*>\u20662\u2069/,
+    );
+    expect(svg).toMatch(
+      /data-end[^>]*>\u200eNorthwest Regional Alpha[^<]*<tspan[^>]*>\u20661\u2069/,
+    );
+    expect(svg).toMatch(/data-key="Northwest%20Regional%20Alpha~Q2"[^>]*data-f="Rank 2 · 1"/);
+  });
+
+  it("drops the halo width on steep curves, keeping the key", () => {
+    const out = render(spec(), { width: 140 });
+    const h = threads(out).filter((t) => at(t, "data-w") === "h");
+    expect(h.length).toBeGreaterThan(0);
+    expect(new Set(h.map((t) => at(t, "stroke-width")))).toEqual(new Set(["0"]));
+    const wide = threads(render(spec(), { width: 900 })).filter((t) => at(t, "data-w") === "h");
+    expect(new Set(wide.map((t) => at(t, "stroke-width")))).toEqual(new Set(["12"]));
+  });
+
+  it("labels no end value where rows are too close to read", () => {
+    const many = Array.from({ length: 8 }, (_, k) =>
+      ["Q1", "Q2"].map((p, i) => ({ p, s: `s${k}`, y: 10 + k + i * (k % 3) })),
+    ).flat();
+    const num = /<text[^>]*>\d+(\.\d+)?<\/text>/;
+    expect(render(spec({}, many), { width: 360, height: 120 })).not.toMatch(num);
+    // With room the value stands right of its dot (start-anchored), not above the next rank.
+    expect(render(spec({}, many), { width: 360, height: 400 })).toMatch(
+      /text-anchor="start"[^>]*>\d+<\/text>/,
+    );
   });
 
   it("draws the climbing thread after the falling one, halos first", () => {
@@ -138,13 +207,12 @@ describe("weave", () => {
     const ok = many.slice(0, 8);
     expect(render(spec({}, ok))).toContain("<svg");
   });
-  it("under 32 px a step the middle dots are pinpricks and the last value labels the end", () => {
+  it("under 32 px a step the middle dots are pinpricks", () => {
     const wide = Array.from({ length: 12 }, (_, i) => `P${i}`);
     const data = ["A", "B"].flatMap((s, k) => wide.map((p, i) => ({ p, s, y: 10 + k * 5 + i })));
     const dots = (v: string) => [...v.matchAll(/<circle [^>]*r="([\d.]+)"/g)].map((m) => m[1]);
     const out = render(spec({}, data), { width: 200 });
     expect(new Set(dots(out))).toEqual(new Set(["2.5", "5.5"]));
-    expect(out).toMatch(/>26<\/text>/);
   });
 });
 

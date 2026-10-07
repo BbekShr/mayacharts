@@ -235,14 +235,86 @@ describe("funnel", () => {
     expect(render({ ...long, data: [{ stage: evil, n: 1 }] })).not.toContain("<script>");
     expect(render(long)).toBe(render(long));
   });
-  it("a median label that cannot sit above its whisker falls back to the box, at 1280 and 360", () => {
-    // Max 100 is the axis top, so there is no room above the upper cap for a label.
+  it("median labels use one placement for every box, on the median line and never above the cap", () => {
     const d = ["A", "B", "C", "D"].flatMap((g) =>
       [0, 20000, 47000, 80000, 100000].map((v, i) => ({ g, v, id: `${g}${i}` })),
     );
-    for (const width of [1280, 360])
-      expect(
-        renderParts({ ...box, data: d }, { width, height: 320 }).svg.match(/>47,000<\/text>/g),
-      ).toHaveLength(4);
+    const lab = (width: number, data = d) => {
+      const svg = renderParts({ ...box, data }, { width, height: 320 }).svg;
+      const my = [...svg.matchAll(/<line[^>]*data-kpi="target"[^>]*y1="([\d.]+)"/g)].map(
+        (m) => +m[1]!,
+      );
+      const t = [
+        ...svg.matchAll(/<text x="[\d.]+" y="([\d.]+)" text-anchor="(\w+)"[^>]*>47,000</g),
+      ];
+      return { my, t };
+    };
+    // 1280: beside each box at its median line
+    const a = lab(1280);
+    expect(a.t.map((m) => m[2])).toEqual(["start", "start", "start", "start"]);
+    expect(a.t.map((m) => +m[1]!)).toEqual(a.my);
+    // 360: no room beside; on the box, one text per box, all the same placement, above the median line
+    const b = lab(360);
+    expect(b.t).toHaveLength(4);
+    expect(new Set(b.t.map((m) => m[2]))).toEqual(new Set(["middle"]));
+    for (const [i, m] of b.t.entries()) expect(+m[1]!).toBeLessThan(b.my[i]!);
+  });
+  it("whiskers and median are keyed <line>s so they glide with their box", () => {
+    const svg = render(box);
+    const keys = [...svg.matchAll(/<line[^>]*data-maya="line"[^>]*data-key="([^"]*)"/g)].map(
+      (m) => m[1],
+    );
+    expect(keys.map((k) => k!.split("~")[0]).sort()).toEqual(["m", "wh", "wl", "ws", "wt"]);
+    expect(svg).not.toMatch(/<path[^>]*data-maya="line"/);
+  });
+  it("a box too short to hold its label drops every label instead of mixing placements", () => {
+    // Tight boxes (IQR ~ 0) next to each other at 360: no side room, no height inside.
+    const d = ["A", "B", "C", "D", "E", "F"].flatMap((g) =>
+      [0, 51224, 51234, 51244, 100000].map((v, i) => ({ g, v, id: `${g}${i}` })),
+    );
+    const svg = renderParts({ ...box, data: d }, { width: 360, height: 320 }).svg;
+    expect(svg.match(/>51,234<\/text>/g) ?? []).toHaveLength(0);
+  });
+  it("description gives the lowest and highest box medians, not one pooled median", () => {
+    const d = [
+      ...[10, 11, 12].map((v) => ({ g: "A", v, id: `a${v}` })),
+      ...[40, 41, 42].map((v) => ({ g: "B", v, id: `b${v}` })),
+    ];
+    const desc = /<desc[^>]*>([^<]*)</.exec(render({ ...box, data: d }))![1]!;
+    expect(desc).toContain("Median: A 11 to B 41.");
+    expect(desc).not.toContain("26");
+    const flat = [5, 5, 5].flatMap((v) => ["Flat", "Same"].map((g) => ({ g, v, id: `${g}${v}` })));
+    expect(/<desc[^>]*>([^<]*)</.exec(render({ ...box, data: flat }))![1]!).toContain("Median 5.");
+    const one = /<desc[^>]*>([^<]*)</.exec(render(box))![1]!;
+    expect(one).toContain("Median 5.5.");
+  });
+  it("the labelled gallery-shaped chart shows every median at 1280 and 576 (the last box uses the right margin)", () => {
+    const d = [
+      [35, 36, 34, 37, 33, 35.5, 38],
+      [44, 40, 47, 37, 46, 45, 42],
+      [44, 44, 43, 45, 44, 34, 33],
+      [20, 21, 26, 19, 20, 27, 22],
+    ].flatMap((v, i) => v.map((n, k) => ({ g: "ABCD"[i], v: n / 100, id: `${i}${k}` })));
+    for (const width of [1280, 576]) {
+      const svg = renderParts(
+        { ...box, labels: true, format: { v: "percent" }, data: d },
+        { width, height: 320 },
+      ).svg;
+      expect((svg.match(/%<\/text>/g) ?? []).length).toBeGreaterThanOrEqual(4 + 4); // 4 ticks + 4 medians
+    }
+  });
+});
+describe("description series", () => {
+  it("names only series that hold a value", () => {
+    const d = [
+      { g: "A", v: 1, s: "p", id: "1" },
+      { g: "A", v: 2, s: "p", id: "2" },
+    ];
+    const bar = { type: "bar", x: "g", y: "v", series: "s" } as const;
+    const desc = (data: object[]) =>
+      /<desc[^>]*>([^<]*)</.exec(render({ ...bar, data } as ChartSpec))![1]!;
+    expect(desc([...d, { g: "A", v: null, s: "ghost" }])).toContain("(p)");
+    expect(desc([...d, { g: "A", v: null, s: "ghost" }])).not.toContain("ghost");
+    expect(desc([...d, { g: "A", v: 3, s: "q" }])).toContain("(p, q)");
   });
 });

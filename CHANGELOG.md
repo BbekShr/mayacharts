@@ -4,6 +4,22 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- Weave: a series with no values no longer shifts the end labels onto other threads, and leaves the axis. Equal values share a rank ("Rank =1", "A = B" in the description). A thread that starts late or after a gap is named at its first point. With no end gutter the last value sits beside or above its own dot, never beside another rank. Crossing halos are thinner and dropped when periods are close; long names clip, and names that clip alike keep their endings. Updates no longer stagger the threads, so joints stay joined and end labels stay with their dots; in Safari the dots crossfade with their threads.
+- Selection: a click on empty chart space, or anywhere outside the chart, clears it (as Escape does), on every chart with `select`.
+- Boxplot: the median label sits on its own median line, one placement for the whole chart (beside, on or below the median), never above the cap. Whiskers and the median are lines that glide with their box in every browser; whiskers are as light as the box outline and outliers are hollow rings. The description gives the lowest and highest box medians.
+- Constellation: x and y share one scale, so nearer stars are more alike at any size. A name is placed only where it is nearer its own star than any other. Identical rows spread on a small ring and read "One +3". The description names every measure, and stars keep clear of the hint.
+- Orbit: the planets sweep in and settle with their names and values beside them, turn while the pointer is over the chart (pausing on a planet), and glide home when it leaves. Updates keep each planet's angle and glide around the sun, never through it. Growth text uses the locale's percent sign, trails pass 3:1 contrast, negative planets are pale with a ring, and the sun reads "Gross" when any value is negative. Arrow keys go round clockwise.
+- `colorBy: "sign"`: zero is neutral (muted, no tone word), and orbit and constellation legends name their measure. Legend titles and the ramp read correctly right to left.
+- Motion: an interrupted update no longer makes axis names and end labels jump. Tooltips on constellation, orbit and weave keep clear of the marks they light. The constellation web no longer blinks on update. Descriptions say "1 row" and skip series with no values.
+
+### Changed
+
+- Size budgets: stats 3.75 KB, constellation 2.9 KB, orbit 2.6 KB, theme 4.56 KB, index 35.5 KB, element 52 KB, global 69.5 KB (gzip).
+
 ## 0.9.1 - 2026-10-07
 
 ### Changed
