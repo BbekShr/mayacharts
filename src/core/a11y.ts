@@ -1,7 +1,7 @@
 import { colorVals } from "./shape.ts";
 import { t } from "./strings.ts";
 import { cbField, esc } from "./svg.ts";
-import type { ResolvedSpec, Shaped } from "./types.ts";
+import type { MarkOut, ResolvedSpec, Shaped } from "./types.ts";
 
 /** Density scatter stats [cells, fewest, most], left by the mark's draw for describe (same spec object). */
 
@@ -19,6 +19,7 @@ const ROWS = [
   "sunburst",
   "sankey",
   "hexmap",
+  "boxplot",
   "units",
   "orbit",
   "constellation",
@@ -67,14 +68,16 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
 
 /**
  * Visually hidden table. Cartesian/heatmap: category rows x series columns. Units: rows per
- * group. Scatter and path types: the raw rows, only the encoded fields. Capped at 1000 rows. `tone` returns the tone
- * word for a value (never colour alone) or null.
+ * group. Scatter and path types: the raw rows, only the encoded fields. A mark's own
+ * `MarkOut.table` wins over all of these. Capped at 1000 rows. `tone` returns the tone word for
+ * a value (never colour alone) or null.
  */
 export function dataTable(
   spec: ResolvedSpec,
   shaped: Shaped,
   fmt: Fmt,
   tone: (v: number) => string | null,
+  own?: MarkOut["table"],
 ): string {
   const ti = (f: string) => spec.titles.get(f) ?? f;
   const cell = (f: string, v: unknown) => {
@@ -86,7 +89,17 @@ export function dataTable(
   let h: string;
   let rows: string;
   let n: number;
-  if (spec.type === "units") {
+  if (own) {
+    n = own.rows.length;
+    h = own.head.map((c) => `<th>${esc(c)}</th>`).join("");
+    rows = own.rows
+      .slice(0, CAP)
+      .map(
+        ([c, ...cs]) =>
+          `<tr><th scope="row">${esc(c ?? "")}</th>${cs.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`,
+      )
+      .join("");
+  } else if (spec.type === "units") {
     // One row per group: how many rows (dots) it holds.
     const c = new Map<string, number>();
     for (const r of spec.data) c.set(String(r[spec.x]), (c.get(String(r[spec.x])) ?? 0) + 1);

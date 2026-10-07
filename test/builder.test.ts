@@ -8,6 +8,7 @@ import "../src/hierarchy.ts";
 import "../src/flow.ts";
 import "../src/geo.ts";
 import "../src/radial.ts";
+import "../src/stats.ts";
 import "../src/weave.ts";
 import "../src/units.ts";
 import "../src/orbit.ts";

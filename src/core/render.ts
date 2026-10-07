@@ -71,10 +71,16 @@
  *   5000-mark error; a reduction would be a different chart (bin with scatter, or limit).
  *
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
- *   (hierarchy, flow, geo, radial, weave, units, orbit, constellation) call registry.register()
- *   on import; each module file's header comment is its mark's contract. A Mark is
+ *   (hierarchy, flow, geo, radial, stats, weave, units, orbit, constellation) call
+ *   registry.register() on import; each module file's header comment is its mark's contract. A Mark is
  *   { noun, axes?(spec, shaped): [bottom, left], check?(spec, fail), draw(ctx) }.
- *   draw() may return `note`, one sentence appended to the auto description.
+ *   draw() may return `note`, one sentence appended to the auto description, and `table`,
+ *   { head, rows } of plain strings that replaces the hidden data table (boxplot five numbers,
+ *   funnel steps; first cell of a row is its header; a11y.ts escapes and caps it). Boxplot
+ *   reads raw rows from spec.data (shaped gives categories and series; its cells are sums the
+ *   mark ignores) and its description counts rows. Funnel with a `y` array and no `x` (wide
+ *   form): shape makes one category per measure (label = field name, value = the measure's
+ *   rows combined by aggregate, one series ""), and the y array is never a measure toggle.
  *   MarkCtx closures: fmt(field, v, step?), label(x, y, text, place, rotate?), tone(v), agg(kind),
  *   fail(code, path, headline, ...details), t(key, ...args); plus spec, shaped, width,
  *   height, plot, x (bottom-axis scale), y (left-axis scale). Modules import only
@@ -323,6 +329,7 @@ import type {
   LabelPlace,
   Mark,
   MarkCtx,
+  MarkOut,
   Parts,
   RenderOptions,
   ResolvedSpec,
@@ -560,6 +567,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   mark.check?.(spec, fail);
 
   let markLegend: string | null = null;
+  let markTable: MarkOut["table"];
   let note = "";
   // rule sentences for the auto description, after the frame's
   let said = fv === null ? "" : ` ${t(s, "frame", fr![2] + 1, fr![1].length)}.`;
@@ -617,6 +625,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     for (let i = 0; (i = m.marks.indexOf(' data-maya="mark"', i) + 1);) nm++;
     cap(nm);
     markLegend = m.legend ?? null;
+    markTable = m.table;
     note = m.note ?? "";
     // Area fills fade toward the baseline: one gradient per visible slot, kept in the grid group
     // (the marks group holds keyed marks only). ponytail: fixed ids, see NON-FEATURES.
@@ -776,7 +785,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           : "",
     // Built on first read: the element inserts the table when the browser is idle.
     get table() {
-      return (tbl ??= s.table ? dataTable(s, shaped, fmt, toneText) : "");
+      return (tbl ??= s.table ? dataTable(s, shaped, fmt, toneText, markTable) : "");
     },
     title: s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`,
     style,

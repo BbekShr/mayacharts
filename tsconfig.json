@@ -21,6 +21,7 @@
       "mayacharts/flow": ["./src/flow.ts"],
       "mayacharts/geo": ["./src/geo.ts"],
       "mayacharts/radial": ["./src/radial.ts"],
+      "mayacharts/stats": ["./src/stats.ts"],
       "mayacharts/global": ["./src/global.ts"],
       "mayacharts/jsx": ["./src/jsx.d.ts"]
     },

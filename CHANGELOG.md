@@ -21,6 +21,8 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - `units` makes its group (`x`) the series when `colorBy` is not set, so the legend shows by default and toggles groups, `view.hidden` hides a group and `colors` maps by group. An explicit `series` on units is still an error. Its data table lists how many rows each group holds; the new `text.count` names that column.
 - The no-window test also loads every module and renders weave, units, orbit and constellation with no `window` or `document`.
 - The element wires the units form control (click, arrows, Home and End write `view.form` and fire `maya-view`; the measure toggle ignores it), lets the pointer find units dots and constellation stars within a few pixels as it does for scatter, plays a `weave` entrance as a wipe, and on first paint grows each bar with a `was` ghost, and its label, from the ghost's box.
+- New optional module `mayacharts/stats` with two chart types. `boxplot` summarises raw rows per category (and per `series`, side by side) as quartiles, whiskers to 1.5 IQR and outliers; `aggregate` is rejected. `funnel` draws stage-to-stage conversion, either long (`x` the stage, one `y`) or wide (`y` lists the stage fields, no `x`); negative values raise `non-positive-value`.
+- Text keys `max`, `q3`, `median`, `q1`, `min`, `rows`, `ofPrevious` and `ofFirst` for their tooltips and data tables.
 
 ## 0.8.0 - 2026-10-06
 

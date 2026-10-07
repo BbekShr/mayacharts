@@ -354,6 +354,30 @@
           </section>
           <section>
             <div class="tile-head">
+              <h2>Margin spread by product family</h2>
+              <button type="button" data-reroll="boxplot">Re-roll</button>
+            </div>
+            <p>The box holds the middle half, the line is the median, dots are single rows.</p>
+            <maya-chart id="boxplot" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="boxplot-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Visits to paid orders</h2>
+              <button type="button" data-reroll="funnel">Re-roll</button>
+            </div>
+            <p>Each step shows the share kept from the stage above. The weakest step is flagged.</p>
+            <maya-chart id="funnel" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="funnel-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
               <h2>Item margin by product family</h2>
               <button type="button" data-reroll="beeswarm">Re-roll</button>
             </div>

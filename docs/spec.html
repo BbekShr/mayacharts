@@ -88,13 +88,13 @@
               <td>
                 <code
                   >bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel
-                  table treemap sunburst sankey chord marimekko waffle radial hexmap weave units
-                  orbit constellation</code
+                  table treemap sunburst sankey chord marimekko waffle radial hexmap boxplot funnel
+                  weave units orbit constellation</code
                 >
                 Core: ridgeline, beeswarm, parallel, table; Modules:
                 treemap/sunburst/marimekko/waffle (hierarchy), sankey/chord (flow), radial (radial),
-                hexmap (geo), weave (weave), units (units), orbit (orbit), constellation
-                (constellation)
+                hexmap (geo), boxplot/funnel (stats), weave (weave), units (units), orbit (orbit),
+                constellation (constellation)
               </td>
             </tr>
             <tr>
@@ -109,7 +109,7 @@
               <td>sum</td>
               <td>
                 How rows sharing a (category, series) combine. <code>count</code> = SQL COUNT(y) on
-                non-null rows
+                non-null rows. Not boxplot, which summarises raw rows
               </td>
             </tr>
             <tr>
@@ -147,7 +147,9 @@
               <td>field</td>
               <td>all but path types</td>
               <td>
-                Category; scatter numeric x; hexmap state (USPS code or full name, case-insensitive)
+                Category; scatter numeric x; hexmap state (USPS code or full name,
+                case-insensitive); boxplot one box each; funnel the stage, omitted when
+                <code>y</code> lists the stages
               </td>
             </tr>
             <tr>
@@ -164,7 +166,10 @@
               <td><a class="spec-anchor" id="y"></a><code>y</code></td>
               <td>field or field[]</td>
               <td>all</td>
-              <td>Value; array adds measure toggle, first active</td>
+              <td>
+                Value; array adds measure toggle, first active (parallel and table: all shown;
+                funnel without <code>x</code>: one stage per field)
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="y2"></a><code>y2</code></td>
@@ -214,11 +219,11 @@
               <td>field</td>
               <td>
                 bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial
-                weave
+                boxplot weave
               </td>
               <td>
-                Split into series; heatmap row category; dumbbell exactly two (from, to); weave one
-                thread each (required)
+                Split into series; heatmap row category; dumbbell exactly two (from, to); boxplot
+                boxes side by side; weave one thread each (required)
               </td>
             </tr>
             <tr>
@@ -236,7 +241,7 @@
             <tr>
               <td><a class="spec-anchor" id="name"></a><code>name</code></td>
               <td>field</td>
-              <td>scatter beeswarm units</td>
+              <td>scatter beeswarm boxplot units</td>
               <td>
                 Point identity and tooltip title; duplicates become #2, #3...; units one dot per row
               </td>
@@ -316,7 +321,7 @@
                 crumbs positive negative above below vs ofTarget total shareOf sortedBy ascending
                 descending fromTo reduced points point range density perCell mean rule play pause
                 frameOf frame was since forms waffle bars swarm perDot count rank speedBy alike
-                nearest
+                nearest max q3 median q1 min rows ofPrevious ofFirst
               </td>
             </tr>
             <tr>

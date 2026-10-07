@@ -83,6 +83,14 @@ export function shape(
     ({ cats, reduced } = fast);
     isTime = true;
     series.push("");
+  } else if (s.type === "funnel" && !s.x) {
+    // Wide funnel: each measure is a stage (category = field name), its rows combined by aggregate.
+    series.push("");
+    cats = s.measures.map((m) => {
+      const a = agg(s.aggregate);
+      for (const row of s.data) if (typeof row[m] === "number") a.add(row[m]);
+      return { label: m, rows: [], vals: [a.value()] };
+    });
   } else {
     const ci = new Map<string, Cat>();
     for (const row of s.data) {

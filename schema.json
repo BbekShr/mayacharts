@@ -33,12 +33,14 @@
         "waffle",
         "radial",
         "hexmap",
+        "boxplot",
+        "funnel",
         "weave",
         "units",
         "orbit",
         "constellation"
       ],
-      "description": "Chart type. ridgeline, beeswarm, parallel, table are core. treemap, sunburst, marimekko, waffle need `mayacharts/hierarchy`; sankey, chord need `mayacharts/flow`; radial needs `mayacharts/radial`; hexmap needs `mayacharts/geo`; weave, units, orbit and constellation each need the module of the same name (`mayacharts/weave` and so on)."
+      "description": "Chart type. ridgeline, beeswarm, parallel, table are core. treemap, sunburst, marimekko, waffle need `mayacharts/hierarchy`; sankey, chord need `mayacharts/flow`; radial needs `mayacharts/radial`; hexmap needs `mayacharts/geo`; boxplot, funnel need `mayacharts/stats`; weave, units, orbit and constellation each need the module of the same name (`mayacharts/weave` and so on)."
     },
     "data": {
       "type": "array",
@@ -65,7 +67,7 @@
     },
     "x": {
       "type": "string",
-      "description": "Category field (scatter: numeric x; hexmap: US state). Not used by path types."
+      "description": "Category field (scatter: numeric x; hexmap: US state; boxplot: one box each; funnel: the stage, omitted when `y` lists the stages). Not used by path types."
     },
     "xType": {
       "type": "string",
@@ -85,7 +87,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "An array adds a measure toggle, first one active."
+          "description": "An array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`)."
         }
       ]
     },
@@ -112,7 +114,7 @@
     },
     "series": {
       "type": "string",
-      "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial weave."
+      "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave."
     },
     "path": {
       "type": "array",
@@ -128,7 +130,7 @@
     },
     "name": {
       "type": "string",
-      "description": "Point identity and tooltip title (units: one dot per row). scatter beeswarm units."
+      "description": "Point identity and tooltip title (units: one dot per row). scatter, beeswarm, boxplot (outliers and dots) and units."
     },
     "totals": {
       "type": "array",
@@ -290,7 +292,15 @@
           "rank",
           "speedBy",
           "alike",
-          "nearest"
+          "nearest",
+          "max",
+          "q3",
+          "median",
+          "q1",
+          "min",
+          "rows",
+          "ofPrevious",
+          "ofFirst"
         ]
       }
     },

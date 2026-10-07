@@ -89,6 +89,16 @@ export const TEXT = {
   alike: "Closer points are more alike across {0}",
   /** Constellation tooltip: {0} = the nearest names joined with ", ". */
   nearest: "Closest: {0}",
+  /** Boxplot tooltip and table labels: the five numbers and the row count. */
+  max: "Max",
+  q3: "Upper quartile",
+  median: "Median",
+  q1: "Lower quartile",
+  min: "Min",
+  rows: "Rows",
+  /** Funnel tooltip and table labels: step conversion. */
+  ofPrevious: "% of previous",
+  ofFirst: "% of first",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

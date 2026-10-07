@@ -1,5 +1,5 @@
 /*
- * Mark registry for optional modules (hierarchy, flow, geo, radial, weave, units, orbit,
+ * Mark registry for optional modules (hierarchy, flow, geo, radial, stats, weave, units, orbit,
  * constellation). Imports nothing at runtime,
  * so every bundle that includes it (index, element, each module, the IIFE) shares one
  * table through a version-keyed global symbol. First definer wins; the property is
@@ -46,6 +46,8 @@ export const MODULE_OF: Readonly<Record<string, string>> = {
   chord: "flow",
   radial: "radial",
   hexmap: "geo",
+  boxplot: "stats",
+  funnel: "stats",
   weave: "weave",
   units: "units",
   orbit: "orbit",

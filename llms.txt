@@ -6,21 +6,21 @@ HTML: <maya-chart><script type="application/json">{spec}</script></maya-chart>
 JavaScript: chart.spec = {type: "bar", data, x: "month", y: "revenue"}; chart.data = newRows;
 SSR: import {render, renderShell} from "mayacharts"; render(spec, {width, height});
 Global: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script>
-Modules: import "mayacharts/hierarchy" (treemap, sunburst, marimekko, waffle); "mayacharts/flow" (sankey, chord); "mayacharts/radial" (radial); "mayacharts/geo" (hexmap); "mayacharts/weave" (weave); "mayacharts/units" (units); "mayacharts/orbit" (orbit); "mayacharts/constellation" (constellation).
+Modules: import "mayacharts/hierarchy" (treemap, sunburst, marimekko, waffle); "mayacharts/flow" (sankey, chord); "mayacharts/radial" (radial); "mayacharts/geo" (hexmap); "mayacharts/stats" (boxplot, funnel); "mayacharts/weave" (weave); "mayacharts/units" (units); "mayacharts/orbit" (orbit); "mayacharts/constellation" (constellation).
 
 SPEC FIELDS:
-type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial hexmap weave units orbit constellation
+type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial hexmap boxplot funnel weave units orbit constellation
 data: Row[] = required. Row objects with field values.
-y: field | field[] = required. Value field; array adds measure toggle.
-x: field = "". Category field (scatter: numeric x; hexmap: state).
+y: field | field[] = required. Value field; array adds measure toggle (funnel without x: one stage per field).
+x: field = "". Category field (scatter: numeric x; hexmap: state; boxplot: one box each; funnel: the stage, omitted when y lists the stages).
 xType: auto|category|time = auto. How x is spaced. "auto": time axis when every x is ISO 8601 date on line, area or vertical bar without sort/limit; else categories. "time" accepts epoch ms. Example: xType: "category"
-aggregate: sum|mean|count|min|max = sum. How rows sharing (category, series) combine.
+aggregate: sum|mean|count|min|max = sum. How rows sharing (category, series) combine. Not boxplot (it summarises raw rows).
 sort: asc|desc = data order. Order categories by total across all series. bar line area heatmap orbit.
 limit: positive integer = -. Keep top N categories; rest roll up into "Other". bar line area heatmap orbit.
-series: field = null. Split into series (heatmap: row category; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial weave.
+series: field = null. Split into series (heatmap: row category; boxplot: boxes side by side; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave.
 path: field[] = []. Hierarchy outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with drill.
 size: field = null. Bubble or star area (sqrt scale). scatter constellation.
-name: field = null. Point identity and tooltip title (units: one dot per row). scatter beeswarm units.
+name: field = null. Point identity and tooltip title (units: one dot per row). scatter beeswarm boxplot units.
 totals: string[] = []. x values drawn as running-total bars. waterfall only.
 stack: boolean|"percent" = false. Stack series instead of grouping. bar area only. "percent": each category's visible values as shares of its total (axis 0 to 100%, hidden series renormalise; negatives are shares of the summed magnitudes, below 0). Labels, tooltips and the table show the share, not the raw value. y is formatted "percent" unless format sets it. Numeric rules are shares (0.5 = 50%); "mean" is the mean share of the drawn segments. Example: stack: "percent"
 horizontal: boolean = false. Categories on left axis. bar dumbbell.
@@ -31,7 +31,7 @@ frame: field = null. Playback: one frame per distinct value (data order, matched
 format: preset|template|{[field]: preset|template|Intl} = auto. Per field or one string for all measures. Template: "{value:percent} gross". Example: format: {margin: "{value:percent} gross"}
 titles: {[field]: string} = {}. Display names everywhere (axis, tooltip, legend, table).
 labels: boolean = null. Formatted value on marks. heatmap: true at ≥24 px. treemap and sunburst: names, marimekko: shares, on unless false.
-text: {[key]: string} = {}. Localised UI strings with {0} placeholders. Keys: noData other back reset showing drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures crumbs positive negative above below vs sortedBy ascending descending ofTarget total shareOf fromTo reduced points point range density perCell mean rule play pause frameOf frame was since forms waffle bars swarm perDot count rank speedBy alike nearest.
+text: {[key]: string} = {}. Localised UI strings with {0} placeholders. Keys: noData other back reset showing drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures crumbs positive negative above below vs sortedBy ascending descending ofTarget total shareOf fromTo reduced points point range density perCell mean rule play pause frameOf frame was since forms waffle bars swarm perDot count rank speedBy alike nearest max q3 median q1 min rows ofPrevious ofFirst.
 locale: BCP47 = en-US. Formatting locale.
 currency: ISO4217 = USD. Currency for "currency" preset.
 title: string = "". Visible heading and accessible name.
@@ -83,6 +83,8 @@ EXAMPLES:
 24. Units, one dot per customer (import "mayacharts/units"): {type: "units", x: "plan", y: "spend", name: "customer", data: [{customer: "c1", plan: "Pro", spend: 120}, {customer: "c2", plan: "Free", spend: 0}]}
 25. Orbit with growth (import "mayacharts/orbit"): {type: "orbit", x: "product", y: "revenue", y2: "growth", format: {growth: "percent"}, data: [{product: "A", revenue: 500, growth: 0.12}, {product: "B", revenue: 300, growth: -0.05}]}
 26. Constellation (import "mayacharts/constellation"): {type: "constellation", x: "account", y: ["revenue", "seats", "tickets"], data: [{account: "Acme", revenue: 120, seats: 40, tickets: 3}, {account: "Globex", revenue: 80, seats: 25, tickets: 9}, {account: "Initech", revenue: 95, seats: 30, tickets: 4}]}
+27. Box plot (import "mayacharts/stats"): {type: "boxplot", x: "region", y: "sales", name: "store", data: [{region: "North", store: "N1", sales: 120}, {region: "North", store: "N2", sales: 95}]}
+28. Funnel, wide, stages are fields (import "mayacharts/stats"): {type: "funnel", y: ["visits", "signups", "paid"], data: [{visits: 12000, signups: 2900, paid: 1100}]}
 
 ERROR CODES:
 spec-not-object: spec must be a plain object
@@ -93,7 +95,7 @@ row-not-object: data[i] must be a plain object
 unknown-field: field-valued option names no field in data
 non-numeric-y: y field value not a finite number (null allowed)
 non-numeric-field: size/scatter x/colorBy field value not a finite number
-non-positive-value: treemap/sunburst/sankey y value must be positive
+non-positive-value: treemap/sunburst/sankey y value must be positive; funnel y value must not be negative
 unknown-option: top-level spec key not recognized
 invalid-option: option value wrong type or invalid value
 option-unsupported: option not valid for this chart type or incompatible with another option
@@ -120,5 +122,5 @@ Two-way sync properties:
 
 RULES FOR AGENTS:
 1. Never put functions in spec: the spec is JSON, serializable, diffable, and hashable. No callbacks, formatters, or data transforms.
-2. Unknown types need imports: if a module type ("treemap", "sankey", "hexmap", "weave", "units", "orbit", "constellation"...) fails with unknown-type, add the import the error names, e.g. import "mayacharts/weave".
+2. Unknown types need imports: if a module type ("treemap", "sankey", "hexmap", "boxplot", "funnel", "weave", "units", "orbit", "constellation"...) fails with unknown-type, add the import the error names, e.g. import "mayacharts/weave".
 3. Read errors.html when MayaSpecError thrown: every error links https://bbekshr.github.io/mayacharts/errors.html#<code> with cause and fixed example.

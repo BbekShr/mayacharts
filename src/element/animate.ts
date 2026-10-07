@@ -180,7 +180,8 @@ const pop = (out = false) => {
 
 function enter(e: Element, origin?: Box, o = DATA): void {
   const g = geo(e);
-  const at = { ...o, delay: delay(e) };
+  // Funnel connectors wait for their stages to pop.
+  const at = { ...o, delay: e.hasAttribute("data-total") ? Number(o.duration) * 0.6 : delay(e) };
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, false);
   if (f) run(e, [f, arc(e)], ZOOM);
@@ -189,10 +190,7 @@ function enter(e: Element, origin?: Box, o = DATA): void {
     const c = e.localName === "circle";
     run(
       e,
-      [
-        { transform: tf(g, seed(e, g, origin)), opacity: 0 },
-        { transform: "none", opacity: 1 },
-      ],
+      [{ transform: tf(g, seed(e, g, origin)), opacity: 0 }, { transform: "none" }],
       c && !origin ? { ...at, easing: POP } : at,
     );
   } else if (e.matches("path[data-maya=line]")) {
@@ -222,15 +220,7 @@ function exit(e: Element, origin?: Box): void {
   if (f) run(e, [arc(e, true), f], { ...ZOOM, fill: "forwards" }, done);
   else if (z) run(e, [{}, { transform: z, opacity: 0 }], { ...ZOOM, fill: "forwards" }, done);
   else if (g)
-    run(
-      e,
-      [
-        { transform: "none", opacity: 1 },
-        { transform: tf(g, seed(e, g, origin)), opacity: 0 },
-      ],
-      o,
-      done,
-    );
+    run(e, [{ transform: "none" }, { transform: tf(g, seed(e, g, origin)), opacity: 0 }], o, done);
   else if (e.localName === "path" && !e.matches("[data-maya=line],[data-maya=area]"))
     run(e, pop(true), o, done);
   // The old sunburst hub stays until the clicked slice has nearly reached the centre.
@@ -262,16 +252,20 @@ const outline = (m: Element, d0: string) => {
 function morph(m: Element, from: string, d1: string): void {
   for (const a of m.getAnimations?.() ?? []) a.cancel();
   if (instant) return;
-  const a = m.animate?.([{ d: from }, { d: `path("${d1}")` }], DATA);
+  const a = m.animate?.([{ d: from }, { d: `path("${d1}")` }], {
+    ...DATA,
+    delay: delay(m) / 2,
+    fill: "backwards",
+  });
   if (a) morphs.set(m, a);
 }
 
 /** Path whose shape changed: the old outline fades out over the new one. */
-function crossfade(m: Element): void {
+function crossfade(m: Element, o = { ...DATA, delay: delay(m) / 2 }): void {
   const gh = m.cloneNode(true) as Element;
   retire(gh);
   m.before(gh);
-  fade(gh, true, () => gh.remove());
+  fade(gh, true, () => gh.remove(), o);
 }
 
 // Numbers in text marks (kpi value): count to the new value. Digits are replaced in place, so
@@ -382,7 +376,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
       moved = true;
       for (const a of m.getAnimations?.() ?? []) a.cancel();
       run(m, [{ transform: tf(g1, v) }, { transform: "none" }], { ...DATA, delay: delay(m) / 2 });
-    } else if (shaped && !morphed) fade(m, false);
+    } else if (shaped && !morphed) fade(m, false, undefined, { ...DATA, delay: delay(m) / 2 });
     if (m.localName === "text" && m.textContent !== was) count(m, was, DATA);
     order.push(m);
   }

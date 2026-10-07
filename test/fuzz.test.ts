@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import "../src/hierarchy.ts";
 import "../src/flow.ts";
 import "../src/geo.ts";
+import "../src/stats.ts";
 import "../src/weave.ts";
 import "../src/units.ts";
 import "../src/orbit.ts";
@@ -73,6 +74,8 @@ const TYPES = [
   "sunburst",
   "sankey",
   "hexmap",
+  "boxplot",
+  "funnel",
   "weave",
   "units",
   "orbit",
@@ -185,7 +188,18 @@ describe("fuzz: validateSpec and renderParts", () => {
 
   it("mutations of valid specs (higher validity rate) only throw MayaSpecError", () => {
     const base = () => ({
-      type: pick(["bar", "line", "area", "scatter", "heatmap", "waterfall", "kpi", "dumbbell"]),
+      type: pick([
+        "bar",
+        "line",
+        "area",
+        "scatter",
+        "heatmap",
+        "waterfall",
+        "kpi",
+        "dumbbell",
+        "boxplot",
+        "funnel",
+      ]),
       x: "c",
       y: "v",
       data: Array.from({ length: 6 }, (_, i) => ({

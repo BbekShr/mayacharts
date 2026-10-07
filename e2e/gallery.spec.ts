@@ -22,6 +22,8 @@ const TILES = [
   "weave",
   "scatter",
   "bubble",
+  "boxplot",
+  "funnel",
   "beeswarm",
   "heatmap",
   "calendar",

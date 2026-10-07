@@ -11,6 +11,7 @@ it("renders with no window/document", async () => {
     "flow",
     "geo",
     "radial",
+    "stats",
     "weave",
     "units",
     "orbit",
@@ -22,7 +23,7 @@ it("renders with no window/document", async () => {
     { a: "y", b: 3, c: 1 },
     { a: "z", b: 2, c: 3 },
   ];
-  for (const type of ["weave", "units", "orbit"] as const)
+  for (const type of ["weave", "units", "orbit", "boxplot"] as const)
     expect(
       render({ type, data, x: "a", y: "b", ...(type === "weave" && { series: "a" }) }),
     ).toContain('data-maya="mark"');

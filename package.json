@@ -58,6 +58,10 @@
       "types": "./dist/radial.d.ts",
       "default": "./dist/radial.js"
     },
+    "./stats": {
+      "types": "./dist/stats.d.ts",
+      "default": "./dist/stats.js"
+    },
     "./weave": {
       "types": "./dist/weave.d.ts",
       "default": "./dist/weave.js"
@@ -87,6 +91,7 @@
     "./dist/flow.js",
     "./dist/geo.js",
     "./dist/radial.js",
+    "./dist/stats.js",
     "./dist/weave.js",
     "./dist/units.js",
     "./dist/orbit.js",
@@ -101,6 +106,7 @@
     "./src/orbit.ts",
     "./src/constellation.ts",
     "./src/geo.ts",
+    "./src/stats.ts",
     "./src/global.ts"
   ],
   "files": [
@@ -116,7 +122,7 @@
   },
   "scripts": {
     "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
-    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode weave && vite build --mode units && vite build --mode orbit && vite build --mode constellation && vite build --mode global && tsc -p tsconfig.build.json",
+    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode stats && vite build --mode weave && vite build --mode units && vite build --mode orbit && vite build --mode constellation && vite build --mode global && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -141,7 +147,8 @@
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 63276,
+    "dist/stats.js": 3456,
+    "dist/maya.global.js": 65724,
     "dist/weave.js": 2560,
     "dist/units.js": 2560,
     "dist/orbit.js": 2560,

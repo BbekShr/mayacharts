@@ -12,6 +12,7 @@ const modeToEntry = {
   flow: "src/flow.ts",
   geo: "src/geo.ts",
   radial: "src/radial.ts",
+  stats: "src/stats.ts",
   weave: "src/weave.ts",
   units: "src/units.ts",
   orbit: "src/orbit.ts",

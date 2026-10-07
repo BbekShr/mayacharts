@@ -26,6 +26,8 @@ export type ChartType =
   | "waffle"
   | "radial"
   | "hexmap"
+  | "boxplot"
+  | "funnel"
   | "weave"
   | "units"
   | "orbit"
@@ -90,7 +92,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Ignored; lets editors and LLMs find the JSON schema.
    * @example "$schema": "https://unpkg.com/mayacharts/schema.json" */
   $schema?: string;
-  /** Chart type. treemap/sunburst/marimekko/waffle need `mayacharts/hierarchy`, sankey/chord `flow`, radial `radial`, hexmap `geo`; weave, units, orbit and constellation each need the module of the same name.
+  /** Chart type. treemap/sunburst/marimekko/waffle need `mayacharts/hierarchy`, sankey/chord `flow`, radial `radial`, hexmap `geo`, boxplot/funnel `stats`; weave, units, orbit and constellation each need the module of the same name.
    * @example type: "bar" */
   type: ChartType;
   /** Row objects.
@@ -106,16 +108,16 @@ export interface ChartSpec<R extends object = Row> {
    * @example limit: 10 */
   limit?: number;
 
-  /** Category field (scatter: numeric x; hexmap: US state; kpi: optional period, last one is the headline; beeswarm: optional row; parallel: one line each; table: row label). Not used by path types.
+  /** Category field (scatter: numeric x; hexmap: US state; kpi: optional period, last one is the headline; beeswarm: optional row; parallel: one line each; table: row label; boxplot: one box each; funnel: the stage, omitted when `y` lists the stages). Not used by path types.
    * @example x: "month" */
   x?: Field<R>;
   /** How x is spaced. "auto": a time axis when every x is an ISO 8601 date ("2024-03" or longer) on line, area or vertical bar without sort or limit; else categories. "time" also accepts epoch ms numbers. Default "auto".
    * @example xType: "category" */
   xType?: "auto" | "category" | "time";
-  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each).
+  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`).
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
-  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial weave.
+  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave.
    * @example series: "region" */
   series?: Field<R>;
   /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with `drill` (replaces `x`).
@@ -124,7 +126,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Bubble area field (sqrt scale). scatter constellation.
    * @example size: "population" */
   size?: Field<R>;
-  /** Point identity and tooltip title (units: one dot per row, keyed by it). scatter beeswarm units.
+  /** Point identity and tooltip title (units: one dot per row, keyed by it). scatter, beeswarm, boxplot (outliers and dots) and units.
    * @example name: "country" */
   name?: Field<R>;
   /** x values drawn as running-total bars. waterfall only.
@@ -534,6 +536,9 @@ export interface MarkOut {
   cross?: string;
   /** A sentence appended to the auto description (scatter density cells). */
   note?: string;
+  /** Replaces the hidden data table (plain text, escaped by a11y.ts): boxplot five numbers, funnel steps.
+   * The first cell of each row is its row header. */
+  table?: { head: readonly string[]; rows: readonly (readonly string[])[] };
 }
 
 /** A chart type. Core marks live in render.ts's CORE map; modules `register()` theirs. */

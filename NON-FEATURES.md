@@ -65,6 +65,10 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Measure toggle up to 4 options**: a `y` array works with more measures, but the sliding indicator is styled for 2 to 4.
 - **kpi in a short box**: the sparkline needs about 28 px of free height; with a target bullet and too little room, the bullet stays and the sparkline is dropped.
 - **kpi delta is against the previous period only**: compare with a year earlier by passing two rows (for example "2025 YTD" and "2026 YTD") as the x periods.
+- **Box plot scope**: vertical boxes only; no notches, violins or mean marker; every row is drawn as a dot only when a box holds 30 rows or fewer (outliers always); quartiles use linear interpolation (R-7, Excel QUARTILE.INC); median labels sit beside a lone series' box when they fit, else above each upper cap.
+- **Funnel scope**: one measure, so no period compare (use dumbbell for two periods); stages keep data order, with no sort or limit; stages enter with a 0.6 scale pop from their centre, not from zero width.
+- **Box median label**: the median value beside a box shows only with one visible series, and is dropped when it would reach the next box (the tooltip and table still carry it).
+- **Funnel step labels**: the step % between bands is dropped when the gap between bands is under 12 px (the tooltip still carries it).
 - **One y2 line**: `y2` takes one field, aggregated per category across every series, on a 0-anchored right axis.
 - **Dumbbell sort**: `sort` orders categories by the total of both values, not by the gap between them.
 - **Ridgeline scale**: rows share one value scale from zero with no per-row axis; peaks overlap the row above by at most 40%. A scale from the data minimum does not help when rows differ in magnitude, and per-row scaling would exaggerate small movements.
