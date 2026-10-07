@@ -2,7 +2,7 @@
 
 Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.
 
-[![npm](https://img.shields.io/npm/v/mayacharts)](https://www.npmjs.com/package/mayacharts) [![license](https://img.shields.io/npm/l/mayacharts)](LICENSE) [![gzip](https://img.shields.io/bundlejs/size/mayacharts)](https://bundlejs.com/?q=mayacharts)
+[![npm](https://img.shields.io/npm/v/mayacharts)](https://www.npmjs.com/package/mayacharts) [![license](https://img.shields.io/npm/l/mayacharts)](LICENSE) [![gzip](https://img.shields.io/bundlejs/size/mayacharts)](https://bundlejs.com/?q=mayacharts) [![support](https://img.shields.io/badge/support-mayaCharts-635bff)](https://bbekshr.github.io/mayacharts/support/)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/hero-dark.png">
@@ -1016,6 +1016,14 @@ Tokens spent with Claude Code since the first commit, across 11,972 API calls. M
 
 <!-- tokens:end -->
 
+## Support
+
+mayaCharts is free and MIT, built by one person with the Claude tokens counted above. If it saves you time, a one-off tip helps pay for the next release.
+
+**[Support mayaCharts](https://bbekshr.github.io/mayacharts/support/)**
+
+You pick the amount. Tips buy no features or priority, and nothing in the library will ever sit behind a paywall.
+
 ## Versioning
 
 mayaCharts follows semantic versioning. Public API: spec keys and semantics, schema.json, error code/path, element properties/methods, event detail shapes, CSS custom property tokens, data-_ attribute roles and values, .maya-_ class names. See [STABILITY.md](STABILITY.md) for the full stability policy and pre-1.0 deprecation path via HINTS.
@@ -1023,5 +1031,3 @@ mayaCharts follows semantic versioning. Public API: spec keys and semantics, sch
 ## License
 
 MIT, and the core library will stay MIT. Any paid offerings will be things outside the core, such as support contracts, hosted services and separate add-ons. Nothing in the library will move behind a paywall. See [LICENSE](LICENSE).
-
-If mayaCharts saves you time, you can [support it](https://buy.stripe.com/00wdRbame9g2bmu5zuaIM01). Support buys no features or priority.
