@@ -89,9 +89,87 @@ const svg = render(spec, { width: 640, height: 320 }); // bare SVG string
 const html = renderShell(spec, { width: 640, height: 320 }); // full chart, works without JS
 ```
 
+## Chart types
+
+Twenty-six types from one spec format. Pick a picture to open that chart live in the [gallery](https://bbekshr.github.io/mayacharts/gallery.html).
+
+<table>
+  <tr>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#hbar"><img src="https://bbekshr.github.io/mayacharts/readme/bar.png" alt="A bar chart" width="240"><br>bar</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#monthly-line"><img src="https://bbekshr.github.io/mayacharts/readme/line.png" alt="A line chart" width="240"><br>line</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#stacked-area"><img src="https://bbekshr.github.io/mayacharts/readme/area.png" alt="An area chart" width="240"><br>area</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#scatter"><img src="https://bbekshr.github.io/mayacharts/readme/scatter.png" alt="A scatter chart" width="240"><br>scatter</a></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#heatmap"><img src="https://bbekshr.github.io/mayacharts/readme/heatmap.png" alt="A heatmap chart" width="240"><br>heatmap</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#waterfall"><img src="https://bbekshr.github.io/mayacharts/readme/waterfall.png" alt="A waterfall chart" width="240"><br>waterfall</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#kpi"><img src="https://bbekshr.github.io/mayacharts/readme/kpi.png" alt="A kpi chart" width="240"><br>kpi</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#dumbbell"><img src="https://bbekshr.github.io/mayacharts/readme/dumbbell.png" alt="A dumbbell chart" width="240"><br>dumbbell</a></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#ridgeline"><img src="https://bbekshr.github.io/mayacharts/readme/ridgeline.png" alt="A ridgeline chart" width="240"><br>ridgeline</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#beeswarm"><img src="https://bbekshr.github.io/mayacharts/readme/beeswarm.png" alt="A beeswarm chart" width="240"><br>beeswarm</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#parallel"><img src="https://bbekshr.github.io/mayacharts/readme/parallel.png" alt="A parallel chart" width="240"><br>parallel</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#table"><img src="https://bbekshr.github.io/mayacharts/readme/table.png" alt="A table chart" width="240"><br>table</a></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#treemap"><img src="https://bbekshr.github.io/mayacharts/readme/treemap.png" alt="A treemap chart" width="240"><br>treemap</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#sunburst"><img src="https://bbekshr.github.io/mayacharts/readme/sunburst.png" alt="A sunburst chart" width="240"><br>sunburst</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#marimekko"><img src="https://bbekshr.github.io/mayacharts/readme/marimekko.png" alt="A marimekko chart" width="240"><br>marimekko</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#waffle"><img src="https://bbekshr.github.io/mayacharts/readme/waffle.png" alt="A waffle chart" width="240"><br>waffle</a></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#sankey"><img src="https://bbekshr.github.io/mayacharts/readme/sankey.png" alt="A sankey chart" width="240"><br>sankey</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#chord"><img src="https://bbekshr.github.io/mayacharts/readme/chord.png" alt="A chord chart" width="240"><br>chord</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#radial"><img src="https://bbekshr.github.io/mayacharts/readme/radial.png" alt="A radial chart" width="240"><br>radial</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#hexmap"><img src="https://bbekshr.github.io/mayacharts/readme/hexmap.png" alt="A hexmap chart" width="240"><br>hexmap</a></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#boxplot"><img src="https://bbekshr.github.io/mayacharts/readme/boxplot.png" alt="A boxplot chart" width="240"><br>boxplot</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#funnel"><img src="https://bbekshr.github.io/mayacharts/readme/funnel.png" alt="A funnel chart" width="240"><br>funnel</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#weave"><img src="https://bbekshr.github.io/mayacharts/readme/weave.png" alt="A weave chart" width="240"><br>weave</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#units"><img src="https://bbekshr.github.io/mayacharts/readme/units.png" alt="A units chart" width="240"><br>units</a></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#orbit"><img src="https://bbekshr.github.io/mayacharts/readme/orbit.png" alt="An orbit chart" width="240"><br>orbit</a></td>
+    <td align="center" width="25%"><a href="https://bbekshr.github.io/mayacharts/gallery.html#constellation"><img src="https://bbekshr.github.io/mayacharts/readme/constellation.png" alt="A constellation chart" width="240"><br>constellation</a></td>
+  </tr>
+</table>
+
+The twelve core types ship with `mayacharts` and `mayacharts/element`. Each other type is an optional module you import once for its side effect, so you pay only for the types you draw. Sizes are gzip, from `npm run size`.
+
+| Type            | Use it for                                                                                              | Import                              | Gzip    |
+| --------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------- |
+| `bar`           | Compare categories, stacked or grouped, with an Other bucket and optional ghosts of the previous value. | `mayacharts`                        | in core |
+| `line`          | Trends over time, one series or several.                                                                | `mayacharts`                        | in core |
+| `area`          | Totals over time and what each series contributes.                                                      | `mayacharts`                        | in core |
+| `scatter`       | Two measures per row, with an optional size for bubbles.                                                | `mayacharts`                        | in core |
+| `heatmap`       | A value for every pair of categories, including a week by weekday calendar.                             | `mayacharts`                        | in core |
+| `waterfall`     | How a start value becomes an end value through gains and losses.                                        | `mayacharts`                        | in core |
+| `kpi`           | One headline number with its change, a sparkline and progress to target.                                | `mayacharts`                        | in core |
+| `dumbbell`      | Two values per category, such as before and after.                                                      | `mayacharts`                        | in core |
+| `ridgeline`     | The shape of several distributions or seasonal profiles, stacked.                                       | `mayacharts`                        | in core |
+| `beeswarm`      | Every row as a dot along one axis, so spread and outliers stay visible.                                 | `mayacharts`                        | in core |
+| `parallel`      | Many measures per row on parallel axes, to spot patterns across them.                                   | `mayacharts`                        | in core |
+| `table`         | Rows and columns with inline bars, for when people need the exact numbers.                              | `mayacharts`                        | in core |
+| `treemap`       | Part of a whole as nested rectangles.                                                                   | `import "mayacharts/hierarchy"`     | 4.08 KB |
+| `sunburst`      | Part of a whole as rings, with drill-down.                                                              | `import "mayacharts/hierarchy"`     | 4.08 KB |
+| `marimekko`     | Column width is the column total, segments are shares within it.                                        | `import "mayacharts/hierarchy"`     | 4.08 KB |
+| `waffle`        | A share as a grid of squares that people can count.                                                     | `import "mayacharts/hierarchy"`     | 4.08 KB |
+| `sankey`        | Flow between stages, with drill into a node.                                                            | `import "mayacharts/flow"`          | 3.46 KB |
+| `chord`         | Flow between every pair in a group.                                                                     | `import "mayacharts/flow"`          | 3.46 KB |
+| `radial`        | Bars around a circle, for cyclical categories such as months.                                           | `import "mayacharts/radial"`        | 2.81 KB |
+| `hexmap`        | US states as equal hexagons, so small states stay visible.                                              | `import "mayacharts/geo"`           | 2.47 KB |
+| `boxplot`       | Median, quartiles and outliers per group.                                                               | `import "mayacharts/stats"`         | 3.37 KB |
+| `funnel`        | Drop-off through ordered stages.                                                                        | `import "mayacharts/stats"`         | 3.37 KB |
+| `weave`         | A ranking over time, with threads that pass over and under at crossings.                                | `import "mayacharts/weave"`         | 2.05 KB |
+| `units`         | One dot per row that changes form between waffle, bars and swarm.                                       | `import "mayacharts/units"`         | 2.47 KB |
+| `orbit`         | Categories as planets around their total, with motion from growth.                                      | `import "mayacharts/orbit"`         | 2.04 KB |
+| `constellation` | Accounts placed by how alike their measures are, not by one axis.                                       | `import "mayacharts/constellation"` | 2.50 KB |
+
 ## Signature charts
 
-Five things no other chart library draws. Each is a spec like any other and costs 2.5 KB gzip or less (`was` is part of the core bar).
+Five of the types above that no other chart library draws. Each is a spec like any other and costs 2.5 KB gzip or less (`was` is part of the core bar).
 
 **Shapeshifter (`units`).** One dot per row, and the dots change form: a waffle, bars, or a swarm along the value axis. Every dot keeps the same key in every form, so switching form flies each dot to its new place instead of redrawing. Maya means illusion, and this is the one that earns the name. Other libraries make you pick a chart; here the control is part of the chart.
 
@@ -921,15 +999,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 10,224 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 10,272 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
 - claude-opus-5-5: 1,008,624,057 total, 2,126,860 output
-- claude-sonnet-5-5: 400,508,674 total, 68,521 output
-- claude-fable-5-1: 157,706,227 total, 350,576 output
+- claude-sonnet-5-5: 403,306,620 total, 68,842 output
+- claude-fable-5-1: 165,580,938 total, 358,688 output
 - claude-haiku-4-5-20251001: 26,122,384 total, 1,063 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,600,759,201 total, 2,590,333 output
+- all: 1,611,431,858 total, 2,598,766 output
 
 <!-- tokens:end -->
 

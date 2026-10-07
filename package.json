@@ -121,6 +121,7 @@
     "access": "public"
   },
   "scripts": {
+    "readme:shots": "node scripts/readme-shots.mjs",
     "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
     "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode stats && vite build --mode weave && vite build --mode units && vite build --mode orbit && vite build --mode constellation && vite build --mode global && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
