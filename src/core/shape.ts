@@ -49,7 +49,7 @@ export function shape(
   const series: string[] = [];
   const si = new Map<string, number>();
   const shown = () => series.flatMap((k, j) => (hidden.includes(k) ? [] : [j]));
-  if (s.type === "scatter") {
+  if (s.type === "scatter" || s.type === "units") {
     // Marks draw from rows: only the series list (and which are visible) is shared.
     if (s.series !== null)
       for (const row of s.data) {

@@ -15,7 +15,15 @@ async function settle(page: Page): Promise<void> {
           // WebKit and Firefox leave the first-paint axis fades "pending" forever; only count
           // animations that actually started.
           return all(document).flatMap((e) =>
-            e.getAnimations().filter((a) => !a.pending && a.playState === "running"),
+            e
+              .getAnimations()
+              // The orbit's endless rotation never settles.
+              .filter(
+                (a) =>
+                  !a.pending &&
+                  a.playState === "running" &&
+                  a.effect?.getTiming().iterations !== Infinity,
+              ),
           ).length;
         }),
       { timeout: 5000 },
@@ -383,5 +391,29 @@ test.describe("frame playback", () => {
     await expect(title).toContainText("2023", { timeout: 5000 });
     await expect(play).toHaveText("Play");
     expect((await view(page, "frames")).frame).toBe(2);
+  });
+});
+
+test.describe("units form control", () => {
+  test("a click or tap writes view.form, fires maya-view and keeps the dots", async ({ page }) => {
+    await open(page);
+    const keys = () =>
+      page.evaluate(() =>
+        [...document.getElementById("units")!.shadowRoot!.querySelectorAll("circle[data-key]")]
+          .map((c) => c.getAttribute("data-key"))
+          .sort(),
+      );
+    const before = await keys();
+    const radio = page.locator("#units [data-maya=form] [role=radio]").nth(1);
+    await radio.scrollIntoViewIfNeeded();
+    await page.evaluate(() =>
+      document
+        .getElementById("units")!
+        .addEventListener("maya-view", (e) => ((window as any).__form = (e as CustomEvent).detail)),
+    );
+    await radio.click();
+    await expect.poll(() => view(page, "units")).toEqual({ form: 1 });
+    expect(await page.evaluate(() => (window as any).__form)).toEqual({ form: 1 });
+    expect(await keys()).toEqual(before);
   });
 });

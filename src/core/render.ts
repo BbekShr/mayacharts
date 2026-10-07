@@ -12,7 +12,8 @@
  *
  * State: interaction state is not in the spec. RenderOptions.view = { measure, drill, window,
  *   hidden, sortBy, frame, form } and RenderOptions.selected = Sel[] (raw values). view.form
- *   indexes the units spec.forms (ResolvedSpec.forms/form, clamped). resolve() applies
+ *   indexes the units spec.forms (ResolvedSpec.forms/form, clamped); for units without colorBy
+ *   resolve() also makes x the series, so the legend and view.hidden toggle groups. It applies
  *   measure (active y, measures[] kept for the control), frame (keep the rows of one distinct
  *   spec.frame value, data order; view.frame indexes them, default and clamp: the last) and
  *   drill (filter rows, advance x/path). shape() applies, in order: aggregate -> time order ->
@@ -60,7 +61,7 @@
  *   first, last and evenly spaced indexes. Kept categories keep their keys; Shaped.reduced
  *   = [kept, before], and the description says so. view.window indexes the time-ordered list
  *   before reduction. Scatter is exempt from the pre-draw mark cap (it bins its own rows).
- *   Scatter's Shaped has empty categories and cells: its marks draw from rows.
+ *   Scatter's and units' Shaped has empty categories and cells: their marks draw from rows.
  *   Thinning in the mark (kpi, ridgeline; shape.thin): above one hover target per 4 px (kpi
  *   sparkline) or 6 px (ridgeline plot width) the mark draws only the kept categories, picked
  *   as on a time axis (shape.thin calls reduceTime): first, last, largest-triangle-three-buckets

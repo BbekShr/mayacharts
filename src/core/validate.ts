@@ -794,6 +794,8 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const fi = Math.min(view.frame ?? fv.length, fv.length - 1);
   const rows = F ? spec.data.filter((r) => String(r[F]) === fv[fi]) : spec.data;
   const forms = spec.forms ?? (spec.type === "units" ? (FORMS as ResolvedSpec["forms"]) : []);
+  // Units: the group is the series (legend toggles, view.hidden and colors by group), unless colorBy colours the dots.
+  const series = spec.series ?? (spec.type === "units" && !spec.colorBy ? spec.x! : null);
   const entries = <T>(o: Readonly<Partial<Record<string, T>>> | undefined) =>
     Object.entries(o ?? {}).filter((e): e is [string, T] => e[1] !== undefined);
   return {
@@ -807,7 +809,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     y: measures[measure]!,
     measures,
     measure,
-    series: spec.series ?? null,
+    series,
     y2: spec.y2 ?? null,
     was: spec.was ?? null,
     forms,
@@ -843,7 +845,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     description: spec.description ?? null,
     legend:
       spec.legend ??
-      (spec.series !== undefined ||
+      (series !== null ||
         (spec.y2 !== undefined && spec.type === "bar") ||
         spec.type === "waffle" ||
         spec.type === "hexmap"),

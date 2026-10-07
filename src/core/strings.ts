@@ -79,6 +79,8 @@ export const TEXT = {
   swarm: "Swarm",
   /** Units description: {0} = the name (or x) title. */
   perDot: "Each dot is one {0}",
+  /** Units data table: header of the rows-per-group column. */
+  count: "Count",
   /** Weave tooltip and description: {0} = rank (1 is the highest value). */
   rank: "Rank {0}",
   /** Orbit description: {0} = y2 title. */

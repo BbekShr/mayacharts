@@ -315,7 +315,8 @@
                 drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
                 crumbs positive negative above below vs ofTarget total shareOf sortedBy ascending
                 descending fromTo reduced points point range density perCell mean rule play pause
-                frameOf frame was since forms waffle bars swarm perDot rank speedBy alike nearest
+                frameOf frame was since forms waffle bars swarm perDot count rank speedBy alike
+                nearest
               </td>
             </tr>
             <tr>
@@ -393,9 +394,9 @@
               <td><a class="spec-anchor" id="legend"></a><code>legend</code></td>
               <td>boolean</td>
               <td>
-                Legend; clicking toggles series (default true when series is set, and for waffle and
-                hexmap). Line and area charts drop the legend when direct end labels show, unless
-                legend is set to true explicitly.
+                Legend; clicking toggles series (default true when series is set, and for waffle,
+                hexmap and units, where it toggles groups). Line and area charts drop the legend
+                when direct end labels show, unless legend is set to true explicitly.
               </td>
             </tr>
             <tr>
@@ -579,6 +580,36 @@
   "drill": true,
   "data": [{ "region": "West", "state": "CA", "product": "A", "revenue": 5000 }] }</code></pre>
         <p>Hierarchical treemap; click to drill into regions, states, and products.</p>
+
+        <h3>11. Weave</h3>
+        <pre><code>{ "type": "weave", "x": "year", "y": "sales", "series": "team",
+  "data": [{ "year": "2024", "team": "A", "sales": 10 }, { "year": "2024", "team": "B", "sales": 12 },
+    { "year": "2025", "team": "A", "sales": 15 }, { "year": "2025", "team": "B", "sales": 9 }] }</code></pre>
+        <p>Ranks per year as threads that cross over and under. Import mayacharts/weave.</p>
+
+        <h3>12. Units</h3>
+        <pre><code>{ "type": "units", "x": "plan", "y": "spend", "name": "customer",
+  "data": [{ "customer": "c1", "plan": "Pro", "spend": 120 }, { "customer": "c2", "plan": "Free", "spend": 0 }] }</code></pre>
+        <p>
+          One dot per customer that flies between waffle, bars and swarm. The legend toggles plans.
+          Import mayacharts/units.
+        </p>
+
+        <h3>13. Orbit</h3>
+        <pre><code>{ "type": "orbit", "x": "product", "y": "revenue", "y2": "growth",
+  "format": { "growth": "percent" },
+  "data": [{ "product": "A", "revenue": 500, "growth": 0.12 }, { "product": "B", "revenue": 300, "growth": -0.05 }] }</code></pre>
+        <p>
+          Planets sized by revenue; growth sets each planet's speed and direction. Import
+          mayacharts/orbit.
+        </p>
+
+        <h3>14. Constellation</h3>
+        <pre><code>{ "type": "constellation", "x": "account", "y": ["revenue", "seats", "tickets"],
+  "data": [{ "account": "Acme", "revenue": 120, "seats": 40, "tickets": 3 },
+    { "account": "Globex", "revenue": 80, "seats": 25, "tickets": 9 },
+    { "account": "Initech", "revenue": 95, "seats": 30, "tickets": 4 }] }</code></pre>
+        <p>Accounts placed by how alike their measures are. Import mayacharts/constellation.</p>
       </section>
     </main>
   </body>

@@ -31,7 +31,7 @@ frame: field = null. Playback: one frame per distinct value (data order, matched
 format: preset|template|{[field]: preset|template|Intl} = auto. Per field or one string for all measures. Template: "{value:percent} gross". Example: format: {margin: "{value:percent} gross"}
 titles: {[field]: string} = {}. Display names everywhere (axis, tooltip, legend, table).
 labels: boolean = null. Formatted value on marks. heatmap: true at ≥24 px. treemap and sunburst: names, marimekko: shares, on unless false.
-text: {[key]: string} = {}. Localised UI strings with {0} placeholders. Keys: noData other back reset showing drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures crumbs positive negative above below vs sortedBy ascending descending ofTarget total shareOf fromTo reduced points point range density perCell mean rule play pause frameOf frame was since forms waffle bars swarm perDot rank speedBy alike nearest.
+text: {[key]: string} = {}. Localised UI strings with {0} placeholders. Keys: noData other back reset showing drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures crumbs positive negative above below vs sortedBy ascending descending ofTarget total shareOf fromTo reduced points point range density perCell mean rule play pause frameOf frame was since forms waffle bars swarm perDot count rank speedBy alike nearest.
 locale: BCP47 = en-US. Formatting locale.
 currency: ISO4217 = USD. Currency for "currency" preset.
 title: string = "". Visible heading and accessible name.
@@ -40,7 +40,7 @@ yDomain: [min, max] = null. Fixed value-axis domain; [hi, lo] reverses it (ranks
 xDomain: [min, max] = null. Fixed x domain. scatter only.
 rules: (number|"mean"|{y, label?})[] = []. Reference lines across the value axis, at most 4; label at most 40 characters. "mean" is the average of the visible values (stacked: of the category totals; stack "percent": of the segment shares); unlabelled it reads "Average". The line shows its formatted value after the label. Numbers widen the value axis; outside a yDomain they are not drawn. bar line area scatter. Example: rules: [{y: 100, label: "Target"}, "mean"]
 tooltip: boolean = true. Hover/keyboard tooltip.
-legend: boolean = true if series, waffle, hexmap. Legend; clicking toggles series. Line and area: dropped when direct end labels show, unless set to true explicitly.
+legend: boolean = true if series, waffle, hexmap, units (toggles groups). Legend; clicking toggles series. Line and area: dropped when direct end labels show, unless set to true explicitly.
 endLabels: boolean = true. line area. Name each series at its right end with its last value (2 to 8 visible series, no value labels, no y2, width >= 400 px). false brings back the legend.
 drill: boolean = false. Click/Enter zooms into branch of path; breadcrumb, Back, Escape pop. treemap sunburst sankey; bar line area dumbbell with path.
 drillOut: boolean = true. With drill, a click on empty chart space goes back up one level.
@@ -79,6 +79,10 @@ EXAMPLES:
 20. Marimekko: {type: "marimekko", x: "category", y: "value", series: "segment", data: [{category: "A", segment: "X", value: 50}]}
 21. Waffle: {type: "waffle", x: "category", y: "value", data: [{category: "A", value: 45}, {category: "B", value: 30}]}
 22. Bar with memory: {type: "bar", x: "region", y: "sales", was: "lastWeek", titles: {lastWeek: "Last week"}, data: [{region: "North", sales: 112, lastWeek: 100}, {region: "West", sales: 90, lastWeek: 100}]}
+23. Weave (import "mayacharts/weave"): {type: "weave", x: "year", y: "sales", series: "team", data: [{year: "2024", team: "A", sales: 10}, {year: "2024", team: "B", sales: 12}, {year: "2025", team: "A", sales: 15}, {year: "2025", team: "B", sales: 9}]}
+24. Units, one dot per customer (import "mayacharts/units"): {type: "units", x: "plan", y: "spend", name: "customer", data: [{customer: "c1", plan: "Pro", spend: 120}, {customer: "c2", plan: "Free", spend: 0}]}
+25. Orbit with growth (import "mayacharts/orbit"): {type: "orbit", x: "product", y: "revenue", y2: "growth", format: {growth: "percent"}, data: [{product: "A", revenue: 500, growth: 0.12}, {product: "B", revenue: 300, growth: -0.05}]}
+26. Constellation (import "mayacharts/constellation"): {type: "constellation", x: "account", y: ["revenue", "seats", "tickets"], data: [{account: "Acme", revenue: 120, seats: 40, tickets: 3}, {account: "Globex", revenue: 80, seats: 25, tickets: 9}, {account: "Initech", revenue: 95, seats: 30, tickets: 4}]}
 
 ERROR CODES:
 spec-not-object: spec must be a plain object

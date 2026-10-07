@@ -531,7 +531,36 @@ function intro(svg: Element, kind: Intro): void {
     delay: kind === "wipe" ? WIPE : Number(INTRO.duration) * 0.6 + STAGGER / 2,
   };
   const l = part("labels");
-  if (l) fade(l, false, undefined, late);
+  // Memory (spec.was): each bar grows from its ghost's box (key "%00was~" + the bar's), its label with the bar's end.
+  const past = new Map<string, Box>(),
+    bars = new Map<string, Element>();
+  for (const e of m.children) {
+    const k = e.getAttribute("data-key")!;
+    if (!e.hasAttribute("data-past")) bars.set(k, e);
+    else if (geo(e)) past.set(k.slice(7), geo(e)!);
+  }
+  const hz = svg.getAttribute("data-dir") === "h";
+  for (const t of l?.children ?? []) {
+    const k = t.getAttribute("data-key") ?? "",
+      [p, bar] = [past.get(k), bars.get(k)],
+      b = bar && geo(bar),
+      i = +!hz;
+    if (!p || !b) {
+      fade(t, false, undefined, late);
+      continue;
+    }
+    const d =
+      hz !== bar!.hasAttribute("data-neg") ? p[i]! + p[i + 2]! - b[i]! - b[i + 2]! : p[i]! - b[i]!;
+    run(
+      t,
+      [{ transform: `translate${hz ? "X" : "Y"}(${d}px)`, opacity: 0 }, { transform: "none" }],
+      {
+        ...INTRO,
+        delay: delay(bar!),
+      },
+    );
+  }
+  if (l && !past.size) fade(l, false, undefined, late);
   if (kind === "wipe") {
     // Clip, not geometry: lines, areas and points are revealed together, left to right.
     const c = (r: string) => ({ clipPath: `inset(-20% ${r} -20% -1%)` });
@@ -547,7 +576,15 @@ function intro(svg: Element, kind: Intro): void {
       ],
       { duration: 1000, easing: EASE },
     );
-  } else for (const e of m.children) enter(e, undefined, INTRO);
+  } else
+    for (const e of m.children) {
+      const [k, g] = [e.getAttribute("data-key")!, geo(e)];
+      const p = past.get(k);
+      if (e.hasAttribute("data-past")) continue; // ghosts rest
+      if (g && p)
+        run(e, [{ transform: tf(g, p) }, { transform: "none" }], { ...INTRO, delay: delay(e) });
+      else enter(e, undefined, INTRO);
+    }
   for (const t of m.querySelectorAll("text[data-maya=mark]")) count(t, "", INTRO);
 }
 

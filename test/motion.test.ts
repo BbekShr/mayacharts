@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 import { patch } from "../src/element/animate.ts";
+import "../src/orbit.ts";
 
 const frame = () => new Promise((r) => setTimeout(r, 30));
 const root = (el: Element) => el.shadowRoot!;
@@ -288,5 +289,49 @@ describe("motion", () => {
     expect(s.calls.some((c) => c.e.hasAttribute("transform") && c.k.some((f) => f.transform))).toBe(
       false,
     );
+  });
+
+  it("first paint with spec.was grows each bar from its ghost; ghosts rest", async () => {
+    const s = spy();
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = {
+      type: "bar",
+      x: "x",
+      y: "v",
+      was: "w",
+      labels: true,
+      data: ["a", "b"].map((x, i) => ({ x, v: 10 * (i + 2), w: 10 })),
+    } as unknown as ChartSpec;
+    document.body.append(el);
+    await frame();
+    s.done();
+    const grew = s.calls.filter((c) => c.e.matches("rect[data-key]:not([data-past])"));
+    expect(grew).toHaveLength(2);
+    for (const c of grew) {
+      expect(c.k[0]!.transform).toMatch(/^translate\(/);
+      expect(c.k[0]).not.toHaveProperty("opacity"); // visible from the ghost's box
+    }
+    expect(s.calls.some((c) => c.e.hasAttribute("data-past"))).toBe(false);
+    const lab = s.calls.filter((c) => c.e.matches("[data-maya=labels] [data-key]"));
+    expect(lab.length).toBeGreaterThan(0);
+    for (const c of lab) expect(c.k[0]!.transform).toMatch(/^translate[XY]\(/);
+    el.remove();
+  });
+
+  it("orbit planet wrappers enter and leave by opacity only", async () => {
+    const spy2 = spy();
+    const el = document.createElement("maya-chart") as MayaChart;
+    const rows = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({ c: "p" + i, v: 10 + i, g: i - 1 }));
+    el.spec = { type: "orbit", x: "c", y: "v", y2: "g", data: rows(3) } as unknown as ChartSpec;
+    document.body.append(el);
+    await frame();
+    el.spec = { type: "orbit", x: "c", y: "v", y2: "g", data: rows(2) } as unknown as ChartSpec;
+    await frame();
+    spy2.done();
+    const wraps = spy2.calls.filter((c) => c.e.matches("g[data-key^='o~']"));
+    expect(wraps.length).toBeGreaterThan(0);
+    for (const c of wraps) for (const f of c.k) expect(f).not.toHaveProperty("transform");
+    el.remove();
   });
 });

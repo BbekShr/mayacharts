@@ -2,6 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import { reduce } from "../src/element/measure.ts";
+import "../src/units.ts";
 import type { ChartSpec, State } from "../src/core/types.ts";
 
 const rows = [
@@ -120,5 +121,49 @@ describe("<maya-chart> measure toggle", () => {
     expect(views).toEqual([{ measure: 1 }]);
     expect(radios(el)[1]!.getAttribute("aria-checked")).toBe("true");
     expect(el.shadowRoot!.activeElement).toBe(radios(el)[1]);
+  });
+});
+
+describe("units form control", () => {
+  const dots = Array.from({ length: 6 }, (_, i) => ({
+    g: i % 2 ? "A" : "B",
+    v: i + 1,
+    id: "r" + i,
+  }));
+  const keys = (el: Element) =>
+    [...el.shadowRoot!.querySelectorAll("circle[data-maya=mark]")].map((c) =>
+      c.getAttribute("data-key"),
+    );
+  const forms = (el: Element) => [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>("[data-maya=form] [role=radio]"),
+  ];
+
+  it("reduce writes view.form, clamped, and leaves measure alone", () => {
+    expect(reduce(st(1), { type: "form", index: 2 }).view).toEqual({ measure: 1, form: 2 });
+    expect(reduce(st(), { type: "form", index: 9, count: 3 }).view.form).toBe(2);
+  });
+
+  it("click and ArrowRight write view.form; the measure toggle ignores the control; keys stay", async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    const views: unknown[] = [];
+    el.addEventListener("maya-view", (e) => views.push((e as CustomEvent).detail));
+    el.spec = { type: "units", x: "g", y: "v", name: "id", data: dots } as ChartSpec;
+    document.body.append(el);
+    await frame();
+    expect(el.shadowRoot!.querySelectorAll(".maya-ctl")).toHaveLength(1);
+    const before = keys(el);
+    forms(el)[1]!.click();
+    await frame();
+    expect(el.view).toEqual({ form: 1 });
+    expect(views).toEqual([{ form: 1 }]);
+    expect(forms(el)[1]!.getAttribute("aria-checked")).toBe("true");
+    expect(keys(el)).toEqual(before);
+    forms(el)[1]!.focus();
+    forms(el)[1]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, composed: true }),
+    );
+    await frame();
+    expect(el.view.form).toBe(2);
+    expect(el.shadowRoot!.activeElement).toBe(forms(el)[2]);
   });
 });

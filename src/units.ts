@@ -3,7 +3,8 @@
  * scale, ticks and types.
  *
  * Spec: x = group, y = value (the swarm form's axis), name = row identity (the key), optional
- * colorBy and series (set series to the x field and the legend hides a group). spec.forms
+ * colorBy. resolve() makes x the series (without colorBy), so the legend toggles groups,
+ * view.hidden hides them and colors map by group. spec.forms
  * (default waffle, bars, swarm) lists the forms; view.form picks one (ResolvedSpec.form,
  * clamped). Core draws the form control. Every dot is `<circle data-maya="mark">` keyed
  * `u~NAME` (the row index without a name), identical in every form, so a form change is an
@@ -26,26 +27,31 @@ interface Dot {
   i: number;
   k: string;
   ci: number;
+  g: string;
   si: number;
   v: number;
   name: string | null;
   row: Record<string, unknown>;
 }
 
-/** One dot per row with a numeric y in a kept group and a visible series, in data order. */
+/**
+ * One dot per row with a numeric y and a visible series, in data order. Groups are numbered in
+ * first-appearance order over all rows, the order of shaped.series when x is the series.
+ */
 function dots(spec: ResolvedSpec, shaped: Shaped): Dot[] {
-  const cats = new Map(shaped.categories.map((c, i) => [c, i]));
+  const cats = new Map<string, number>();
   const seen = new Map<string, number>();
   const out: Dot[] = [];
   spec.data.forEach((row, i) => {
     const v = row[spec.y];
-    const ci = cats.get(String(row[spec.x]));
-    if (typeof v !== "number" || !Number.isFinite(v) || ci === undefined) return;
+    const g = String(row[spec.x]);
+    const ci = cats.get(g) ?? cats.set(g, cats.size).size - 1;
+    if (typeof v !== "number" || !Number.isFinite(v)) return;
     const nv = spec.name === null ? null : row[spec.name];
     const name = nv == null ? null : String(nv);
     const k = key("u", nameId(seen, name, i)); // before the visibility test: hiding never renames
     const si = shaped.series.indexOf(spec.series === null ? "" : String(row[spec.series]));
-    if (shaped.visible.includes(si)) out.push({ i, k, ci, si, v, name, row });
+    if (shaped.visible.includes(si)) out.push({ i, k, ci, g, si, v, name, row });
   });
   return out;
 }
@@ -162,7 +168,7 @@ export const units: Mark = {
       });
       cols.forEach((c, i) => {
         const room = Math.max(0, Math.floor(sw / 6.5));
-        const name = ctx.fmt(spec.x, shaped.categories[c]);
+        const name = ctx.fmt(spec.x, pts.find((d) => d.ci === c)!.g);
         const fit = name.length <= room ? name : room >= 4 ? `${name.slice(0, room - 1)}…` : "";
         const mid = r(ax + (i + 0.5) * sw);
         if (fit)
@@ -196,7 +202,7 @@ export const units: Mark = {
     const cb = cbField(spec);
     const marks = pts
       .map((d, i) => {
-        const grp = ctx.fmt(spec.x, shaped.categories[d.ci]);
+        const grp = ctx.fmt(spec.x, d.g);
         const ser = shaped.series[d.si]!;
         const cv = cb ? d.row[cb] : null;
         return el("circle", {
@@ -219,23 +225,11 @@ export const units: Mark = {
         });
       })
       .join("");
-    const legend =
-      spec.series === null
-        ? `<div class="maya-legend" data-maya="legend">` +
-          cols
-            .map(
-              (c) =>
-                `<span data-s="${c % 8}"><i></i>${esc(ctx.fmt(spec.x, shaped.categories[c]))} ${esc(ctx.fmt("", cnt.get(c)))}</span>`,
-            )
-            .join("") +
-          `</div>`
-        : undefined;
     return {
       marks,
       hits: "",
       labels: cap + labels,
       note: ctx.t("perDot", ti(spec.name ?? spec.x)) + ".",
-      ...(legend && { legend }),
     };
   },
 };

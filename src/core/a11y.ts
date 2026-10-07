@@ -66,8 +66,8 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
 }
 
 /**
- * Visually hidden table. Cartesian/heatmap: category rows x series columns. Scatter and path
- * types: the raw rows, only the encoded fields. Capped at 1000 rows. `tone` returns the tone
+ * Visually hidden table. Cartesian/heatmap: category rows x series columns. Units: rows per
+ * group. Scatter and path types: the raw rows, only the encoded fields. Capped at 1000 rows. `tone` returns the tone
  * word for a value (never colour alone) or null.
  */
 export function dataTable(
@@ -86,7 +86,16 @@ export function dataTable(
   let h: string;
   let rows: string;
   let n: number;
-  if (ROWS.includes(spec.type)) {
+  if (spec.type === "units") {
+    // One row per group: how many rows (dots) it holds.
+    const c = new Map<string, number>();
+    for (const r of spec.data) c.set(String(r[spec.x]), (c.get(String(r[spec.x])) ?? 0) + 1);
+    n = c.size;
+    h = `<th>${esc(ti(spec.x))}</th><th>${esc(t(spec, "count"))}</th>`;
+    rows = [...c]
+      .map(([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${esc(fmt("", v))}</td></tr>`)
+      .join("");
+  } else if (ROWS.includes(spec.type)) {
     const cols = [
       ...new Set(
         [

@@ -56,6 +56,25 @@ describe("units", () => {
     expect(renderParts(two, { width: 640, height: 360 }).controls).toContain('data-maya="form"');
   });
 
+  it("makes the group the series: legend buttons, view.hidden per group, colors by group", () => {
+    const p = renderParts(spec, { width: 640, height: 360 });
+    expect(p.legend).toContain('data-si="1"');
+    expect(p.legend).toContain('aria-pressed="true"');
+    const hid = render(spec, { width: 640, height: 360, view: { hidden: ["B"] } });
+    expect(dots(hid)).toHaveLength(40 - 13);
+    expect(dots(hid).some((d) => attr(d, "data-series") === "B")).toBe(false);
+    expect(dots(hid).map((d) => attr(d, "data-key"))).toContain("u~c0"); // keys survive hiding
+    const out = renderParts({ ...spec, colors: { A: "#ff0000" } }, { width: 640, height: 360 });
+    expect(out.style).toContain("#ff0000");
+    expect(() => render({ ...spec, series: "g" } as ChartSpec)).toThrow(/series/);
+  });
+
+  it("lists rows per group in the data table", () => {
+    const tbl = renderParts(spec).table;
+    expect(tbl).toContain('<th scope="row">A</th><td>14</td>');
+    expect(tbl).toContain("<th>g</th><th>Count</th>");
+  });
+
   it("applies colorBy", () => {
     const out = render({ ...spec, colorBy: "v" }, { width: 640, height: 360 });
     expect(dots(out).every((d) => d.includes("data-q="))).toBe(true);

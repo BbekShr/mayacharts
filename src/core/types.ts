@@ -186,7 +186,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Hover/keyboard tooltip. Default true.
    * @example tooltip: false */
   tooltip?: boolean;
-  /** Legend; clicking toggles series. Default: true when `series` is set, and for waffle and hexmap (colour ramp).
+  /** Legend; clicking toggles series. Default: true when `series` is set, and for waffle, hexmap (colour ramp) and units (toggles groups).
    * @example legend: false */
   legend?: boolean;
   /** Line and area: name each series at its right end and drop the legend (keep it with `legend: true`). Default true.

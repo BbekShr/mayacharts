@@ -141,16 +141,16 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Interaction
 
-| Field       | Type           | Applies to                                                  | Default                            | Meaning                                                                                                                                               |
-| ----------- | -------------- | ----------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tooltip`   | boolean        | all                                                         | true                               | Hover/keyboard tooltip                                                                                                                                |
-| `legend`    | boolean        | all                                                         | true with `series`, waffle, hexmap | Legend; clicking toggles series. Line and area: dropped when direct end labels show, unless set to true explicitly.                                   |
-| `endLabels` | boolean        | line area                                                   | true                               | Name each series at its right end with its last value (2 to 8 visible series, no value labels, no y2, width >= 400 px). false brings back the legend. |
-| `drill`     | boolean        | treemap sunburst sankey; bar line area dumbbell with `path` | false                              | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop                                                                              |
-| `drillOut`  | boolean        | types that take `drill`                                     | true                               | With drill, a click on empty chart space goes back up one level                                                                                       |
-| `select`    | true / "multi" | all but sankey                                              | off                                | Click/Enter/legend selects marks; Escape clears. Not with drill                                                                                       |
-| `zoom`      | boolean        | line area scatter                                           | false                              | Drag to zoom; Reset, double-click, Escape restore                                                                                                     |
-| `animate`   | boolean        | all (element only)                                          | true                               | Animate the first draw and every update                                                                                                               |
+| Field       | Type           | Applies to                                                  | Default                                   | Meaning                                                                                                                                               |
+| ----------- | -------------- | ----------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tooltip`   | boolean        | all                                                         | true                                      | Hover/keyboard tooltip                                                                                                                                |
+| `legend`    | boolean        | all                                                         | true with `series`, waffle, hexmap, units | Legend; clicking toggles series. Line and area: dropped when direct end labels show, unless set to true explicitly.                                   |
+| `endLabels` | boolean        | line area                                                   | true                                      | Name each series at its right end with its last value (2 to 8 visible series, no value labels, no y2, width >= 400 px). false brings back the legend. |
+| `drill`     | boolean        | treemap sunburst sankey; bar line area dumbbell with `path` | false                                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop                                                                              |
+| `drillOut`  | boolean        | types that take `drill`                                     | true                                      | With drill, a click on empty chart space goes back up one level                                                                                       |
+| `select`    | true / "multi" | all but sankey                                              | off                                       | Click/Enter/legend selects marks; Escape clears. Not with drill                                                                                       |
+| `zoom`      | boolean        | line area scatter                                           | false                                     | Drag to zoom; Reset, double-click, Escape restore                                                                                                     |
+| `animate`   | boolean        | all (element only)                                          | true                                      | Animate the first draw and every update                                                                                                               |
 
 ### Style
 
@@ -472,6 +472,69 @@ Line and area charts on a time axis automatically reduce long time series to abo
 }
 ```
 
+**Weave** (`mayacharts/weave`)
+
+```json
+{
+  "type": "weave",
+  "x": "year",
+  "y": "sales",
+  "series": "team",
+  "data": [
+    { "year": "2024", "team": "A", "sales": 10 },
+    { "year": "2024", "team": "B", "sales": 12 },
+    { "year": "2025", "team": "A", "sales": 15 },
+    { "year": "2025", "team": "B", "sales": 9 }
+  ]
+}
+```
+
+**Units** (`mayacharts/units`): one dot per row; the legend toggles groups
+
+```json
+{
+  "type": "units",
+  "x": "plan",
+  "y": "spend",
+  "name": "customer",
+  "data": [
+    { "customer": "c1", "plan": "Pro", "spend": 120 },
+    { "customer": "c2", "plan": "Free", "spend": 0 }
+  ]
+}
+```
+
+**Orbit** (`mayacharts/orbit`): growth sets speed and direction
+
+```json
+{
+  "type": "orbit",
+  "x": "product",
+  "y": "revenue",
+  "y2": "growth",
+  "format": { "growth": "percent" },
+  "data": [
+    { "product": "A", "revenue": 500, "growth": 0.12 },
+    { "product": "B", "revenue": 300, "growth": -0.05 }
+  ]
+}
+```
+
+**Constellation** (`mayacharts/constellation`)
+
+```json
+{
+  "type": "constellation",
+  "x": "account",
+  "y": ["revenue", "seats", "tickets"],
+  "data": [
+    { "account": "Acme", "revenue": 120, "seats": 40, "tickets": 3 },
+    { "account": "Globex", "revenue": 80, "seats": 25, "tickets": 9 },
+    { "account": "Initech", "revenue": 95, "seats": 30, "tickets": 4 }
+  ]
+}
+```
+
 ## Modules
 
 Each module extends the core with chart types and shares the same spec, theme, tooltip, a11y, and animation.
@@ -788,15 +851,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 8,990 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 9,134 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 971,986,546 total, 2,122,916 output
-- claude-sonnet-5-5: 347,677,536 total, 62,104 output
-- claude-fable-5-1: 85,437,213 total, 233,119 output
+- claude-opus-5-5: 978,302,040 total, 2,123,716 output
+- claude-sonnet-5-5: 353,090,969 total, 62,748 output
+- claude-fable-5-1: 88,026,610 total, 245,833 output
 - claude-haiku-4-5-20251001: 24,576,982 total, 987 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,437,476,136 total, 2,462,439 output
+- all: 1,451,794,460 total, 2,476,597 output
 
 <!-- tokens:end -->
 

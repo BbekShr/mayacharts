@@ -111,7 +111,7 @@ const ORBIT =
   [80, 52, 36, 24, 16].map((s, i) => `g[data-v="${i + 1}"]{--p:${s}s}`).join("") +
   ".maya:not([data-still]) g[data-v]{animation:maya-orbit var(--p) linear infinite}.maya:not([data-still]) g[data-v] g[data-up]{animation:maya-orbit var(--p) linear infinite reverse}" +
   ".maya:not([data-still]) g[data-neg]{animation-direction:reverse}.maya:not([data-still]) g[data-neg] g[data-up]{animation-direction:normal}" +
-  ".maya:not([data-still]) .maya-svg:hover :is(g[data-v],g[data-up]){animation-play-state:paused}}" +
+  ".maya:not([data-still]) .maya-svg:is(:hover,:focus-visible,:has([data-active])) :is(g[data-v],g[data-up]){animation-play-state:paused}}" +
   // Weave threads and halos: dim with legend hover, selection and the lit thread.
   "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks]:has([data-active]) [data-w]:not([data-lit]){opacity:.18}" +
   // Memory ghost (bar `was`): the previous value, behind its bar.

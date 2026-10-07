@@ -286,6 +286,7 @@
           "bars",
           "swarm",
           "perDot",
+          "count",
           "rank",
           "speedBy",
           "alike",
@@ -372,7 +373,7 @@
     },
     "legend": {
       "type": "boolean",
-      "description": "Legend; clicking toggles series. Default: true when `series` is set."
+      "description": "Legend; clicking toggles series. Default: true when `series` is set, and for waffle, hexmap and units (toggles groups)."
     },
     "endLabels": {
       "type": "boolean",
