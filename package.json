@@ -1,6 +1,6 @@
 {
   "name": "mayacharts",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.",
   "keywords": [
     "chart",
