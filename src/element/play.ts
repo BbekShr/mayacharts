@@ -9,7 +9,7 @@ import { listen } from "./listen.ts";
 import { t } from "../core/strings.ts";
 
 export const reduce = (s: State, e: SpecEvent): State => {
-  if (s.view.frame === undefined || e.prev?.frame === e.next.frame) return s;
+  if (s.view.frame === undefined || !e.prev || e.prev.frame === e.next.frame) return s;
   const { frame: _drop, ...view } = s.view;
   return { ...s, view };
 };

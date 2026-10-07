@@ -1,12 +1,11 @@
 // mayacharts/radial: polar bars. Imports only registry, svg, scale, ticks and types.
 import { register } from "./core/registry.ts";
-import { el, esc, key, OTHER, r } from "./core/svg.ts";
+import { TAU } from "./core/scale.ts";
+import { clip, el, esc, key, OTHER, r } from "./core/svg.ts";
 import { niceTicks } from "./core/ticks.ts";
 import type { Mark } from "./core/types.ts";
 
-const TAU = Math.PI * 2;
 const W = 7.2; // estimated glyph width at 12px, the same estimate core layout uses
-const cut = (s: string, n: number) => (s.length > n ? s.slice(0, Math.max(1, n - 1)) + "…" : s);
 
 export const radial: Mark = {
   noun: "Radial bar",
@@ -41,7 +40,7 @@ export const radial: Mark = {
     const yr = names.every((s) => s.endsWith(y)) ? y : "";
     names = names.map((s) => s.replace(yr, ""));
     const room = along ? 7 : Math.max(4, Math.floor((plot.w * 0.2) / W));
-    const shown = names.map((s) => cut(s, room));
+    const shown = names.map((s) => clip(s, room));
     // One series: a name rides on its bar when it fits, so the outer ring of names is only
     // reserved (and drawn, for the bars that miss) when some bar is too short for its name.
     const solo = shaped.series.length === 1 && n <= 40;
@@ -234,7 +233,7 @@ export const radial: Mark = {
           "font-size": 11,
           "data-ring": "",
         },
-        esc(cut((tt + yr).length > cap ? tt : tt + yr, cap)), // the year goes before an ellipsis does
+        esc(clip((tt + yr).length > cap ? tt : tt + yr, cap)), // the year goes before an ellipsis does
       );
 
     labels += tipText;

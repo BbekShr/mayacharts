@@ -147,9 +147,13 @@ describe("line end labels", () => {
       m[1]!.replace(/<[^>]*>/g, ""),
     );
   };
-  it("name each series and its last value at the right end, never one for a single series", () => {
+  it("name each series and its last value at the right end, a lone series too", () => {
     expect(ends(spec)).toEqual(["b31", "a30"]);
-    expect(ends({ ...spec, data: data.filter((d) => d.s === "a") })).toEqual([]);
+    const one = data.filter((d) => d.s === "a");
+    expect(ends({ ...spec, data: one })).toEqual(["a30"]);
+    expect(ends({ ...spec, type: "area", data: one })).toEqual(["a30"]);
+    expect(ends({ type: "line", x: "m", y: "v", data: one })).toEqual(["30"]);
+    expect(ends({ ...spec, data: one }, 360)).toEqual([]);
   });
   it("reserve a right gutter and drop the legend", () => {
     const p = renderParts(spec, { width: 640 });

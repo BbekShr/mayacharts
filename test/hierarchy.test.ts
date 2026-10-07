@@ -283,3 +283,20 @@ describe("treemap names and drill hooks", () => {
     expect(tags(s, "rect").map((t) => at(t, "data-s"))).toEqual(["2", "2"]);
   });
 });
+
+describe("empty waffle and marimekko", () => {
+  const zero = data.map((d) => ({ ...d, v: 0 }));
+  for (const type of ["waffle", "marimekko"] as const)
+    it(`${type} with all-zero values shows the no-data text, no legend`, () => {
+      const s: ChartSpec = {
+        type,
+        x: "g",
+        y: "v",
+        data: zero,
+        ...(type === "marimekko" && { series: "n" }),
+      };
+      const svg = renderParts(s, { width: W, height: H }).svg;
+      expect(svg).toContain("No data");
+      expect(svg).not.toContain("maya-legend");
+    });
+});

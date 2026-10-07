@@ -556,4 +556,45 @@ describe("review fixes", () => {
     expect(live(el).querySelector(".maya-err")).toBeTruthy();
     expect(live(el).querySelector("table.maya-sr")).toBeNull();
   });
+  it("a view set before the first spec survives it", async () => {
+    const el = await mount((e) => {
+      e.view = { measure: 1, sortBy: ["v", "asc"], frame: 1 } as never;
+      e.spec = spec();
+    });
+    expect(el.view.measure).toBe(1);
+    expect(el.view.sortBy).toEqual(["v", "asc"]);
+    expect(el.view.frame).toBe(1);
+  });
+
+  it("Enter on a focused legend button does not act on the hovered mark", async () => {
+    const el = await mount((e) => (e.spec = spec(rows, { select: true })));
+    const m = marks(el)[0]!;
+    m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+    m.dispatchEvent(
+      Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    expect(m.hasAttribute("data-active")).toBe(true);
+    const got: unknown[] = [];
+    el.addEventListener("maya-select", (e) => got.push(e));
+    const b = live(el).querySelector<HTMLElement>("[data-maya=legend] button")!;
+    const ev = new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    b.dispatchEvent(ev);
+    expect(got.length).toBe(0);
+    expect(ev.defaultPrevented).toBe(false);
+  });
+
+  it("a removed chart does not render", async () => {
+    const el = await mount((e) => (e.spec = spec()));
+    let n = 0;
+    el.addEventListener("maya-render", () => n++);
+    el.spec = spec(rows.map((r) => ({ ...r, v: r.v + 1 })));
+    el.remove();
+    await frame();
+    expect(n).toBe(0);
+  });
 });

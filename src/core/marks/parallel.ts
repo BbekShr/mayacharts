@@ -1,4 +1,4 @@
-import { el, esc, key, OTHER, r, repel } from "../svg.ts";
+import { el, esc, key, OTHER, r, repel, tw } from "../svg.ts";
 import { niceTicks } from "../ticks.ts";
 import type { Mark, Row } from "../types.ts";
 
@@ -34,7 +34,7 @@ export const parallel: Mark = {
     const x0 = LEFT;
     // Room right of the last axis for each line's category name (end labels).
     const room = Math.min(
-      lines.reduce((m, l) => Math.max(m, ctx.fmt(spec.x, l.cat).length * 7.2 + 12), 0),
+      lines.reduce((m, l) => Math.max(m, tw(ctx.fmt(spec.x, l.cat), 12)), 0),
       W * 0.3,
     );
     const x1 = Math.max(x0 + 1, W - Math.max(RIGHT, room));

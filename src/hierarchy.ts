@@ -1,5 +1,6 @@
 // treemap + sunburst. Importing this file registers both types.
 import { register } from "./core/registry.ts";
+import { DEG } from "./core/scale.ts";
 import { OTHER, cbField, el, esc, hit, key, r } from "./core/svg.ts";
 import type { Aggregate, Mark, MarkCtx, MarkOut, Row } from "./core/types.ts";
 
@@ -138,6 +139,12 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
 
 const text = (s: string) => s.length * 7.2 + 4;
 
+/** The no-data text, centred on the plot, for a mark with nothing to draw. */
+const none = (c: MarkCtx): MarkOut => (
+  c.label(c.plot.x + c.plot.w / 2, c.plot.y + c.plot.h / 2 + 4, c.t("noData"), "above"),
+  { marks: "", hits: "" }
+);
+
 const treemap: Mark = {
   noun: "Treemap",
   draw(ctx): MarkOut {
@@ -188,7 +195,6 @@ const treemap: Mark = {
   },
 };
 
-const DEG = 180 / Math.PI;
 const pct = (p: number) => (p > 0 && p < 0.005 ? "<1%" : `${Math.round(p * 100)}%`);
 
 /*
@@ -329,7 +335,7 @@ export const marimekko: Mark = {
       tot[c.ci] = (tot[c.ci] ?? 0) + v;
     }
     const grand = tot.reduce((a, b) => a + b, 0);
-    if (!grand) return { marks: "", hits: "" };
+    if (!grand) return none(ctx);
     // Left gutter for the 0-100% scale, bottom strip for "name · share of total".
     const [x0, top, bot] = [plot.x + 36, plot.y + 8, plot.y + plot.h - 26];
     const [gap, sg] = [3, 1.5];
@@ -427,7 +433,7 @@ export const waffle: Mark = {
     const vals = shaped.categories.map(() => 0);
     for (const c of shaped.cells) vals[c.ci] = (vals[c.ci] ?? 0) + Math.max(0, c.value ?? 0);
     const sum = vals.reduce((a, b) => a + b, 0);
-    if (!sum) return { marks: "", hits: "" };
+    if (!sum) return none(ctx);
     const n = vals.map((v) => Math.floor((v / sum) * 100));
     const left = 100 - n.reduce((a, b) => a + b, 0);
     vals

@@ -16,6 +16,15 @@ export function r(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/** Estimated label width in px: 7.2 per code point plus `pad` (no text measurement in Node). */
+export const tw = (s: string, pad = 4) => [...s].length * 7.2 + pad;
+
+/** `s` cut to `n` code points, the last one an ellipsis; `n` below 2 keeps one character. */
+export const clip = (s: string, n: number) => {
+  const c = [...s];
+  return c.length > n ? c.slice(0, Math.max(1, n - 1)).join("") + "…" : s;
+};
+
 export function el(
   tag: string,
   attrs: Record<string, string | number | boolean | null | undefined>,

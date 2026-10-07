@@ -44,7 +44,7 @@ const RADIAL =
 
 // marimekko
 const MEKKO =
-  "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}[data-maya=labels] [data-ink=b]{fill:var(--maya-bg)}" +
+  "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}[data-maya=labels] [data-ink=b]{fill:var(--maya-bg)}[data-maya=labels] [data-ink=t]{fill:light-dark(#12161c,#fff)}" +
   "[data-maya=labels] [data-ax]{stroke:none;font-size:11px}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
   "[data-maya=marks]:has([data-active]) [data-mm]:not([data-active],[data-lit]){opacity:.62}";
 
@@ -70,7 +70,7 @@ const HEXMAP =
   `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--c);stroke-width:1.5;stroke-linejoin:round}` +
   `${HEX}:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2.5}` +
   "[data-maya=grid] [data-none]{stroke-opacity:.7;shape-rendering:auto}" +
-  "[data-hex] i{width:120px;height:10px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}";
+  "[data-hex] i{width:120px;height:10px}";
 
 // scatter
 // SCAT = a chart with two linear axes (scatter only).
@@ -88,8 +88,8 @@ const SCATTER =
   `${SCAT}[data-maya=marks]{--p:58%;stroke-width:1.25;${P("var(--maya-series-1)")}}${SCAT}[data-maya=marks]:has(>[data-dense]){--p:30%}` +
   `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit;transform-origin:center}` +
   `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))")}}` +
-  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q],[data-hm],circle[data-key^="c~"][data-q]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 35%)*1.15)))")}}` +
-  `[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${DENS("0%")},${DENS("37%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("37%")},${DENS("75%")})}` +
+  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q],circle[data-key^="c~"][data-q]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 35%)*1.15)))")}}` +
+  `[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,var(--maya-accent),${DENS("37%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("37%")},${DENS("75%")})}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
@@ -105,7 +105,7 @@ const ORBIT =
   "g[data-v],g[data-up]{transform-box:view-box;transform-origin:0 0}" +
   "[data-trail]{fill:none;stroke:var(--c);stroke-width:3;stroke-linecap:round;stroke-opacity:.5}" +
   "g[data-s] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1.5}g[data-s] circle[data-maya=mark]:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2}" +
-  "[data-maya=marks]:has([data-active]) g[data-s]:not(:has([data-active])) :is([data-trail],[data-up]){opacity:.4}" +
+  "[data-maya=marks]:has([data-active]) g[data-s]:not(:has([data-active]),[data-lit]) :is([data-trail],[data-up]){opacity:.4}" +
   "[data-up] text{paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round;font-size:11px;font-weight:600;fill:var(--maya-fg)}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
   "@media (prefers-reduced-motion:no-preference){@keyframes maya-orbit{to{transform:rotate(360deg)}}" +
   [80, 52, 36, 24, 16].map((s, i) => `g[data-v="${i + 1}"]{--p:${s}s}`).join("") +
@@ -113,11 +113,11 @@ const ORBIT =
   ".maya:not([data-still]) g[data-neg]{animation-direction:reverse}.maya:not([data-still]) g[data-neg] g[data-up]{animation-direction:normal}" +
   ".maya:not([data-still]) .maya-svg:is(:hover,:focus-visible,:has([data-active])) :is(g[data-v],g[data-up]){animation-play-state:paused}" +
   // Labels were placed at rest: in motion only the active or lit planet shows its name.
-  ".maya:not([data-still]) g[data-s]:not(:has(:is([data-active],[data-lit]))) g[data-up]{opacity:0}.maya:not([data-still]) g[data-up]{transition:opacity .25s}}" +
+  ".maya:not([data-still]) g[data-s]:not([data-lit],:has([data-active])) g[data-up]{opacity:0}.maya:not([data-still]) g[data-up]{transition:opacity .25s}}" +
   // Weave threads and halos: dim with legend hover, selection and the lit thread.
   "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks]:has([data-active]) [data-w]:not([data-lit]){opacity:.18}" +
   // Memory ghost (bar `was`): the previous value, behind its bar.
-  "[data-past]{fill:var(--maya-fg);fill-opacity:.12;stroke:var(--maya-fg);stroke-opacity:.6;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}";
+  "[data-past]{fill:var(--maya-fg);fill-opacity:.12;stroke:var(--maya-fg);stroke-opacity:.3;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}";
 
 export const css =
   L +
@@ -135,7 +135,8 @@ export const css =
   "[data-maya=ramp]{display:flex;align-items:center;gap:6px}[data-maya=ramp] span{unicode-bidi:plaintext}[data-maya=ramp] b{font-weight:500;color:var(--maya-fg);margin-inline-end:4px}" +
   ".maya-legend [data-past] i{background:color-mix(in oklab,var(--maya-fg) 12%,transparent);outline:1px dashed var(--maya-fg-muted);outline-offset:-1px}" +
   "[data-maya=ramp] circle{fill:none;stroke:var(--maya-fg-muted)}" +
-  `[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,${DENS("0%")},${DENS("75%")})}` +
+  // The ramp legend is the cells' ramp (--q 35% to 100% of the accent over --b); a constellation's stars use the density ramp.
+  `[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}.maya:has(circle[data-key^="c~"]) [data-maya=ramp] i{background:linear-gradient(90deg,var(--maya-accent),${DENS("75%")})}` +
   // Ramp floor: the background, lifted toward the accent in dark mode so low steps stay visible.
   // Declared once where the theme overrides live, not on every ramp mark (speed).
   ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +

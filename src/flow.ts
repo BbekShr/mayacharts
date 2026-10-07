@@ -1,16 +1,13 @@
 // mayacharts/flow: sankey and chord. Imports only registry, svg and types (never validate/render/shape).
 import { register } from "./core/registry.ts";
-import { el, esc, key, r } from "./core/svg.ts";
+import { TAU } from "./core/scale.ts";
+import { clip, el, esc, key, r } from "./core/svg.ts";
 import type { Mark, MarkCtx } from "./core/types.ts";
 
 const W = 14;
 const PAD = 10;
 const CH = 7.2; // label width per character, the same estimate the core uses
 
-const clip = (s: string, max: number) => {
-  const c = [...s];
-  return c.length > max ? c.slice(0, Math.max(1, max - 1)).join("") + "…" : s;
-};
 // Colour rule shared by both charts: the outer column is one neutral (`data-neu`, the muted
 // foreground), the next column takes palette slots, and a link takes its level-1 node's colour.
 interface C {
@@ -310,7 +307,6 @@ export const sankey: Mark = {
 register("sankey", sankey);
 
 const RING = 14;
-const TAU = Math.PI * 2;
 
 /** Chord diagram: from-nodes on the left half, to-nodes on the right, ribbons between them. */
 export const chord: Mark = {

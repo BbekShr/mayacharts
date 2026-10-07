@@ -138,6 +138,14 @@ describe("weave", () => {
     const ok = many.slice(0, 8);
     expect(render(spec({}, ok))).toContain("<svg");
   });
+  it("under 32 px a step the middle dots are pinpricks and the last value labels the end", () => {
+    const wide = Array.from({ length: 12 }, (_, i) => `P${i}`);
+    const data = ["A", "B"].flatMap((s, k) => wide.map((p, i) => ({ p, s, y: 10 + k * 5 + i })));
+    const dots = (v: string) => [...v.matchAll(/<circle [^>]*r="([\d.]+)"/g)].map((m) => m[1]);
+    const out = render(spec({}, data), { width: 200 });
+    expect(new Set(dots(out))).toEqual(new Set(["2.5", "5.5"]));
+    expect(out).toMatch(/>26<\/text>/);
+  });
 });
 
 it("renders in core with no window or document", async () => {

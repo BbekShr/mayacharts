@@ -175,4 +175,14 @@ describe("orbit and ghost rules", () => {
     expect(css).toContain('circle[data-key^="c~"][data-q]');
     expect(css).toContain("[data-maya=ramp] span{unicode-bidi:plaintext}");
   });
+  it("heatmap cells use the generic ramp and its legend and ink match", () => {
+    expect(css).not.toContain("[data-hm]");
+    expect(css).toContain("[data-maya=labels] [data-ink=t]{fill:light-dark(#12161c,#fff)}");
+    expect(css).toContain(
+      "[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b))",
+    );
+  });
+  it("orbit names light with their planet through data-lit", () => {
+    expect(css).toContain("g[data-s]:not([data-lit],:has([data-active])) g[data-up]");
+  });
 });

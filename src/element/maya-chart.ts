@@ -268,7 +268,11 @@ export class MayaChart extends HTMLElement {
         ix.zoom.cancel?.() || ix.select.escape?.() || ix.zoom.escape?.() || ix.drill.escape?.();
     else if (k === "Enter") {
       const m = this.#tip?.active();
-      done = !!m && (ix.drill.enter?.(m) || ix.select.enter?.(m));
+      done = !!(
+        m &&
+        (e.target as Element).closest(".maya-svg") &&
+        (ix.drill.enter?.(m) || ix.select.enter?.(m))
+      );
     }
     if (done) e.preventDefault();
   };
@@ -300,6 +304,7 @@ export class MayaChart extends HTMLElement {
   }
 
   #render(fromRaf = false): void {
+    if (!this.isConnected) return;
     const root = this.shadowRoot!;
     if (!this.spec) this.#readJson();
     const spec = this.spec;

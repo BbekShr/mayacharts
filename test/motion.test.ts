@@ -177,6 +177,32 @@ describe("motion", () => {
     for (const t of lines) expect(t).toContain("matrix(1,0,0,"); // stroke width keeps its scale
   });
 
+  it("a kept line glides from its old box; unkeyed axis text matches by content, not position", () => {
+    const box = document.createElement("div");
+    const svg = (inner: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="10 10 80 80">${inner}</svg>`;
+    const ln = (x: number) =>
+      `<line data-maya="link" data-key="k~A" x1="${x}" y1="20" x2="${x}" y2="40"/>`;
+    const ax = (...t: string[]) =>
+      `<g data-maya="axis">${t.map((x) => `<text x="5" y="${x.length}">${x}</text>`).join("")}</g>`;
+    patch(box, svg(`<g data-maya="marks">${ln(20)}</g>` + ax("Sales", "0", "50", "100")), false);
+    const title = box.querySelector("text")!;
+    const tick50 = [...box.querySelectorAll("text")].find((t) => t.textContent === "50")!;
+    const s = spy();
+    patch(
+      box,
+      svg(`<g data-maya="marks">${ln(60)}</g>` + ax("Sales", "0", "30", "60", "90")),
+      true,
+    );
+    s.done();
+    const l = s.calls.find((c) => c.e.matches("line"))!;
+    expect(l.k[0]!.transform).toContain("translate(-40px");
+    expect(box.querySelector("text")).toBe(title);
+    expect(title.textContent).toBe("Sales");
+    expect(tick50.isConnected).toBe(false); // no longer present: faded out, never rewritten
+    expect(tick50.textContent).toBe("50");
+  });
+
   it("a group already fading out is not ghosted again by the next patch", async () => {
     const el = document.createElement("maya-chart") as MayaChart;
     const at = (k: number) =>
@@ -375,5 +401,46 @@ describe("motion", () => {
     Element.prototype.getAnimations = was;
     expect(asked.filter((e) => e.matches("circle")).length).toBe(0);
     expect(asked.length).toBeLessThanOrEqual(2);
+  });
+  it("sunburst updates read ring styles before the first write; a new area gets no fade-in", () => {
+    const box = document.createElement("div");
+    const ring = (i: number, a: number) =>
+      `<circle data-maya="mark" data-key="r~${i}" cx="50" cy="50" r="${10 + a}" pathLength="360" stroke-width="5" stroke-dasharray="30 330" stroke-dashoffset="${90 - i * 30}"/>`;
+    const svg = (m: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks">${m}</g></svg>`;
+    const rings = (a: number) => [0, 1, 2, 3].map((i) => ring(i, a)).join("");
+    patch(box, svg(rings(0)), false);
+    const wasA = Element.prototype.getAnimations;
+    Element.prototype.getAnimations = function () {
+      return this.localName === "circle" ? [{} as Animation] : [];
+    };
+    const wasC = globalThis.getComputedStyle;
+    const wasN = Element.prototype.animate;
+    const log: string[] = [];
+    globalThis.getComputedStyle = ((e: Element) => (log.push("c"), wasC(e))) as never;
+    Element.prototype.animate = function (this: Element, ...a: never[]) {
+      log.push("w");
+      return (wasN as any).apply(this, a);
+    } as never;
+    patch(box, svg(rings(2)), true);
+    Element.prototype.getAnimations = wasA;
+    globalThis.getComputedStyle = wasC;
+    Element.prototype.animate = wasN;
+    expect(log.indexOf("w")).toBeGreaterThan(-1);
+    expect(log.lastIndexOf("c")).toBeLessThan(log.indexOf("w"));
+    // WebKit dip: without CSS d morphing, the ghost fade-out alone carries an area change.
+    const area = (d: string) => `<path data-maya="area" data-key="a~1" d="${d}" fill="red"/>`;
+    const b2 = document.createElement("div");
+    patch(b2, svg(area("M0 0L9 9")), false);
+    const opa: Element[] = [];
+    Element.prototype.animate = function (this: Element, k: Keyframe[]) {
+      if (k.some((f) => "opacity" in f)) opa.push(this);
+      return (wasN as any).apply(this, arguments);
+    } as never;
+    patch(b2, svg(area("M0 0L9 9L5 5")), true);
+    Element.prototype.animate = wasN;
+    const fresh = b2.querySelector("path[data-key]")!;
+    expect(opa).not.toContain(fresh);
+    expect(opa.length).toBe(1);
   });
 });

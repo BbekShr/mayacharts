@@ -11,8 +11,9 @@ The following are covered by semantic versioning:
 - Event names and `detail` shapes: `maya-select`, `maya-view`, `maya-error`, `maya-render`
 - CSS custom properties `--maya-*`
 - Data attributes: `data-maya` group names (grid, axis-y, axis-x, marks, labels, cross, hits), `data-key`, `data-c` (category), `data-x` (x value), `data-f` (formatted value), `data-series`, `data-plot` (plot box "x y w h"), `data-t` (present on a time axis), `data-tone`, `data-q`, `data-y`
-- Signature chart attributes: `data-past` (the ghost bar behind a bar with `was`), `data-was` (the bar's previous value, as tooltip text), `data-neg` (a negative value; on orbit, a reversed orbit), `data-v` on the orbit group that rotates (speed bucket 1 to 5), `data-trail` (orbit's static growth arc), `data-w` (a weave thread; `data-w="h"` is its halo)
+- Signature chart attributes: `data-past` (the ghost bar over a bar with `was`), `data-was` (the bar's previous value, as tooltip text), `data-neg` (a negative value; on orbit, a reversed orbit), `data-v` on the orbit group that rotates (speed bucket 1 to 5), `data-trail` (orbit's static growth arc), `data-w` (a weave thread; `data-w="h"` is its halo)
 - `view.form` and the `forms` spec field (units)
+- Spec: chart types `boxplot`, `funnel`, `weave`, `units`, `orbit` and `constellation`, and `stack: "percent"`
 - Class names: `.maya-*` available for host styling
 - Exported functions: `render`, `renderShell`, `renderParts`, `validateSpec`
 

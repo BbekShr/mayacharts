@@ -199,14 +199,15 @@ export const boxplot: Mark = {
         ctx.fmt("", s.length),
       ]);
     }
-    // ponytail: one placement for every median label: beside a lone series' box when the longest
-    // fits the gap, else above each upper cap (a collision drops that label only).
+    // ponytail: one placement per chart: beside a lone series' box when the longest label fits the gap,
+    // else above the upper cap; a label that collides or leaves the svg moves onto the box, above its median.
     const side =
       shaped.visible.length === 1 &&
-      Math.max(...meds.map((m) => m[4].length)) * 7.2 + 4 <= cat.step - w - 6;
+      Math.max(...meds.map((m) => m[4].length * 7.2 + 4)) <= cat.step - w - 6;
     if (spec.labels !== false)
       for (const [x1, cx, yh, ym, t] of meds)
-        side ? ctx.label(x1 + 4, ym, t, "start") : ctx.label(cx, yh - 2, t, "above");
+        (side && ctx.label(x1 + 4, ym, t, "start")) ||
+          [yh - 2, ym].some((y) => ctx.label(cx, y, t, "above"));
     all.sort((a, b) => a - b);
     const ti = (x: string) => spec.titles.get(x) ?? x;
     return {

@@ -88,7 +88,7 @@
  *
  * Memory (spec.was, bar): the was field aggregated per (category, series) like colorBy. Each bar
  *   with a was value gets a ghost `<rect data-past>` in the marks group after every bar (so
- *   on top: a fall reads past the bar end, a rise as a dashed box inside it), keyed "%00was~" + the bar's key (key("\u0000was", series, category)), carrying
+ *   on top: a fall reads past the bar end, a rise as a dashed box inside it), keyed `\u0000was~S~C` (key("\u0000was", series, category)), carrying
  *   data-c, data-s, data-neg and fill="none" (the theme's [data-past] rule
  *   paints it) but no data-maya: not a mark, never hit-tested or counted. The bar
  *   and its hit carry data-was = text.was with the formatted previous value (the tooltip line).
@@ -314,7 +314,7 @@ import { MODULES } from "./registry.ts";
 import { agg, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
-import { el, esc, OTHER, r } from "./svg.ts";
+import { el, esc, OTHER, r, tw } from "./svg.ts";
 import {
   ALL_Y,
   fail,
@@ -485,7 +485,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const boxes: number[][] = [];
   let labels = "";
   const label = (x: number, y: number, text: string, place: LabelPlace, k?: string) => {
-    const w = text.length * 7.2 + 4;
+    const w = tw(text);
     const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
     const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
     // ponytail: O(n^2) overlap scan; MAX_MARKS bounds it.

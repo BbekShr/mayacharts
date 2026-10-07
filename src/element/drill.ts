@@ -81,6 +81,7 @@ export const mount = (host: Host): Handlers => {
   /** After the next paint: focus the first mark (push) or the parent mark (pop); after a
    * pointer drill only the chart, so Escape works without a focus ring jumping onto a mark. */
   let want: { first: true } | { value: string } | { svg: true } | undefined;
+  let seq = 0;
   let ptr = false;
 
   const marks = () =>
@@ -167,8 +168,16 @@ export const mount = (host: Host): Handlers => {
       // focus is still on the chart (a mark focused mid-zoom draws its outline scaled over the plot).
       const svg = host.root.querySelector<HTMLElement>(".maya-svg");
       svg?.focus({ preventScroll: true });
+      const id = ++seq; // only the latest drill may move focus when its zoom settles
       const go = () => {
-        if (!m || host.root.activeElement !== svg) return;
+        if (
+          id !== seq ||
+          !m?.isConnected ||
+          !m.hasAttribute("data-key") ||
+          host.root.activeElement !== svg ||
+          host.root.querySelector("[data-active]")
+        )
+          return;
         if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
         (m as unknown as HTMLElement).focus?.({ preventScroll: true });
       };

@@ -235,4 +235,14 @@ describe("funnel", () => {
     expect(render({ ...long, data: [{ stage: evil, n: 1 }] })).not.toContain("<script>");
     expect(render(long)).toBe(render(long));
   });
+  it("a median label that cannot sit above its whisker falls back to the box, at 1280 and 360", () => {
+    // Max 100 is the axis top, so there is no room above the upper cap for a label.
+    const d = ["A", "B", "C", "D"].flatMap((g) =>
+      [0, 20000, 47000, 80000, 100000].map((v, i) => ({ g, v, id: `${g}${i}` })),
+    );
+    for (const width of [1280, 360])
+      expect(
+        renderParts({ ...box, data: d }, { width, height: 320 }).svg.match(/>47,000<\/text>/g),
+      ).toHaveLength(4);
+  });
 });

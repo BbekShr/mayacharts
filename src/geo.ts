@@ -108,7 +108,7 @@ export const hexmap: Mark = {
     // Values only when the longest still fits in a hex (so narrow maps drop them first, then codes).
     const f = new Map([...sum].map(([st, v]) => [st, ctx.fmt(spec.y, v)] as const));
     const showV =
-      fv >= 8 && Math.max(0, ...[...f.values()].map((x) => x.length)) * fv * 0.6 <= w * 0.8;
+      fv >= 10 && Math.max(0, ...[...f.values()].map((x) => x.length)) * fv * 0.6 <= w * 0.8;
     const showC = w >= 15;
     const dy = showV ? fc * 0.3 : 0;
     for (const st of STATES) {

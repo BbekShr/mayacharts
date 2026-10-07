@@ -906,6 +906,7 @@ export function snippets(spec: ChartSpec): Record<Tab, File[]> {
       {
         name: "chart.html",
         code: `<maya-chart id="chart" style="display: block; height: 360px"></maya-chart>
+<!-- Pin this file: add integrity="sha384-..." and crossorigin="anonymous" from the release summary at https://github.com/BbekShr/mayacharts/releases -->
 <script src="${CDN}"></script>
 <script>
   document.getElementById("chart").spec = ${literal(spec, "  ")};
@@ -920,6 +921,7 @@ export function snippets(spec: ChartSpec): Record<Tab, File[]> {
       {
         name: "chart.html",
         code: `<!-- mayaCharts draws the chart into this element. -->
+<!-- Pin this file: add integrity="sha384-..." and crossorigin="anonymous" from the release summary at https://github.com/BbekShr/mayacharts/releases -->
 <script src="${CDN}"></script>
 <maya-chart id="chart"></maya-chart>
 `,

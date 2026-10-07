@@ -235,3 +235,16 @@ describe("step-less tiny values keep their digits", () => {
     ).toContain("0.00004");
   });
 });
+
+describe("tiny and huge values", () => {
+  it("auto goes scientific", () => {
+    expect(f(undefined)(1e-300).length).toBeLessThan(12);
+    expect(f(undefined)(1e-7)).toMatch(/E-7/i);
+    expect(f(undefined)(1e21)).toMatch(/E21/i);
+  });
+  it("leaves ordinary values and user formats alone", () => {
+    expect(f(undefined)(0.004)).toBe("0.004");
+    expect(f(undefined)(1234)).toBe("1,234");
+    expect(f({ v: { maximumFractionDigits: 2 } })(1e-7)).toBe("0");
+  });
+});

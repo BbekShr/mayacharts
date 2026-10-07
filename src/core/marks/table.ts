@@ -1,4 +1,4 @@
-import { el, esc, hit, key, r } from "../svg.ts";
+import { clip, el, esc, hit, key, r } from "../svg.ts";
 import type { Mark } from "../types.ts";
 
 const HEAD = 30;
@@ -64,10 +64,7 @@ export const table: Mark = {
     const cw = (W - lw) / ms.length;
     const colX = (i: number) => lw + i * cw; // left edge of measure column i
     const max = ms.map((_, i) => Math.max(0, ...rows.map((rw) => Math.abs(rw.vals[i] ?? 0))));
-    const cut = (s: string, w: number) => {
-      const n = Math.max(1, Math.floor((w - PAD) / 7));
-      return s.length > n ? s.slice(0, n - 1) + "…" : s;
-    };
+    const cut = (s: string, w: number) => clip(s, Math.max(1, Math.floor((w - PAD) / 7)));
 
     let labels = "";
     let grid = "";

@@ -1,4 +1,4 @@
-import { el, esc, hit, key, r } from "../svg.ts";
+import { el, esc, hit, key, r, tw } from "../svg.ts";
 import { inText } from "./bar.ts";
 import type { BandScale, Mark } from "../types.ts";
 
@@ -53,15 +53,18 @@ export const heatmap: Mark = {
         height: r(h),
       });
       hits += hit(d, x, y, w, h);
-      // Drawn here (not ctx.label) so the ink can follow the step: dark on the two palest, the page background (white in light, dark in dark mode) on the rest.
+      // Drawn here (not ctx.label) so the ink can follow the step: dark on steps 7 to 9 (data-q lets theme.ts use black in dark mode), "t" (dark in light mode, white in dark mode) on the paler ones.
+      // ponytail: tuned for the default accent; a spec.colors accent far from it may need other cut steps.
       // Too wide for the cell: the same value to 2 significant digits ("35.2M" becomes "35M") before dropping it.
       let text = ctx.fmt(spec.y, v);
-      if (text.length * 7.2 + 4 > w) text = ctx.fmt(spec.y, +v.toPrecision(2));
-      if (spec.labels !== false && w >= 24 && h >= 24 && text.length * 7.2 + 4 <= w)
+      if (tw(text) > w) text = ctx.fmt(spec.y, +v.toPrecision(2));
+      const dk = d["data-q"] > 7;
+      if (spec.labels !== false && w >= 24 && h >= 24 && tw(text) <= w)
         labels += inText(x + w / 2, y + h / 2, text, {
           "data-key": d["data-key"],
-          "data-dark": d["data-q"] < 2,
-          "data-ink": d["data-q"] < 2 ? null : "b",
+          "data-q": dk,
+          "data-dark": dk,
+          "data-ink": dk ? null : "t",
         });
     }
     const legend =

@@ -110,6 +110,15 @@ const folded = (e: Element): Keyframe | undefined => {
 /** Geometry of a rect or circle (circle = its bounding square); undefined for paths etc. */
 const geo = (e: Element): Box | undefined => {
   if (ring(e)) return;
+  if (e.localName === "line") {
+    const [x, y] = [n(e, "x1"), n(e, "y1")];
+    return [
+      Math.min(x, n(e, "x2")),
+      Math.min(y, n(e, "y2")),
+      Math.abs(x - n(e, "x2")),
+      Math.abs(y - n(e, "y2")),
+    ];
+  }
   if (e.localName === "rect") return [n(e, "x"), n(e, "y"), n(e, "width"), n(e, "height")];
   if (e.localName === "circle") {
     const r = n(e, "r");
@@ -126,7 +135,10 @@ const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () =
   // A delayed animation holds its first frame while it waits (else the mark flashes in place).
   if (o.delay) o = { ...o, fill: o.fill === "forwards" ? "both" : (o.fill ?? "backwards") };
   // Scatter circles rest on a centre origin (hover scale): the box maths here starts at 0 0.
-  if (e.localName === "circle") k = k.map((f) => ({ ...f, transformOrigin: "0 0" }));
+  // Connectors scale about their own box too (the drill zoom's matrix is in view-box units, so not that one).
+  const ln = e.localName === "line" && k.some((f) => `${f.transform}`.startsWith("t"));
+  if (e.localName === "circle" || ln)
+    k = k.map((f) => ({ ...f, transformOrigin: "0 0", ...(ln && { transformBox: "fill-box" }) }));
   const a = instant ? undefined : e.animate?.(k, o);
   if (!then) return;
   if (!a) return then();
@@ -170,12 +182,8 @@ function seed(e: Element, g: Box, origin?: Box): Box {
 
 function fade(e: Element, out: boolean, then?: () => void, o = DATA): void {
   // The open end is implicit: it is the CSS opacity (translucent links rest at .45, not 1).
-  run(
-    e,
-    out ? [{}, { opacity: 0 }] : [{ opacity: 0 }, {}],
-    out ? { ...o, fill: "forwards" } : o,
-    then,
-  );
+  const k = [{}, { opacity: 0 }];
+  run(e, out ? k : k.reverse(), out ? { ...o, fill: "forwards" } : o, then);
 }
 
 /** Paths (arcs, hexes, ribbons): grow from their own centre while fading in. */
@@ -189,6 +197,7 @@ const pop = (out = false) => {
 };
 
 function enter(e: Element, origin?: Box, o = DATA): void {
+  moved = true;
   const g = geo(e);
   // Funnel connectors wait for their stages to pop.
   const at = { ...o, delay: e.hasAttribute("data-total") ? Number(o.duration) * 0.6 : delay(e) };
@@ -220,6 +229,7 @@ function retire(e: Element): void {
 const gk = new WeakMap<Element, string>(); // exiting node -> the key it had
 
 function exit(e: Element, origin?: Box): void {
+  moved = true;
   gk.set(e, e.getAttribute("data-key")!);
   retire(e);
   const g = geo(e);
@@ -342,6 +352,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
     live.get(k)?.push(a) ?? live.set(k, [a]);
   }
   const pre = new Map<Element, Box | undefined>();
+  const arcs = new Map<Element, Keyframe>();
   for (const e of w.children) {
     const m = at(e.getAttribute("data-key")!);
     if (!m || m.localName !== e.localName) continue;
@@ -349,6 +360,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
     const g = geo(t);
     // The on-screen box of an animating mark: its transform is in user units, origin 0 0 (fill-box).
     const c = g && live.get(t) && new DOMMatrix(getComputedStyle(t).transform);
+    if (ring(m)) arcs.set(m, arc(m, true));
     pre.set(e, c && g ? [g[0] + c.e, g[1] + c.f, g[2] * c.a, g[3] * c.d] : g);
   }
   const order: Element[] = [];
@@ -366,7 +378,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
     const t = nest(m);
     const [as, ta] = [live.get(m) ?? [], live.get(t) ?? []];
     if (ring(m)) {
-      const from = arc(m, true);
+      const from = arcs.get(m)!;
       stop(as);
       sync(m, e);
       if (!instant) run(m, [from, arc(m)], ZOOM);
@@ -398,11 +410,12 @@ function marks(o: Element, w: Element, origin?: Box): void {
       moved = true;
       stop(ta);
       run(t1, [{ transform: tf(g1, v) }, { transform: "none" }], { ...DATA, delay: delay(m) / 2 });
-    } else if (shaped && !morphed) fade(m, false, undefined, { ...DATA, delay: delay(m) / 2 });
+    } else if (shaped && !morphed && !m.matches("[data-maya=area]"))
+      fade(m, false, undefined, { ...DATA, delay: delay(m) / 2 });
     if (m.localName === "text" && m.textContent !== was) count(m, was, DATA);
     order.push(m);
   }
-  for (const m of old.values()) (exit(m, origin), (moved = true));
+  for (const m of old.values()) exit(m, origin);
   let ref = o.firstElementChild;
   for (const m of order) {
     while (ref && ref !== m && !ref.hasAttribute("data-key")) ref = ref.nextElementSibling;
@@ -410,7 +423,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
     else {
       const fresh = !m.isConnected;
       o.insertBefore(m, ref);
-      if (fresh) (enter(m, origin), (moved = true));
+      if (fresh) enter(m, origin);
     }
   }
 }
@@ -429,7 +442,8 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
   sync(p, c);
   for (const e of [...c.children]) {
     const k = key(e);
-    const m = k ? byKey.get(k) : plain.shift();
+    const i = plain.findIndex((x) => x.textContent === e.textContent); // equal ticks glide, the rest fade
+    const m = k ? byKey.get(k) : plain.splice(i, i < 0 ? 0 : 1)[0];
     if (
       !m ||
       m.localName !== e.localName ||
@@ -587,14 +601,10 @@ function intro(svg: Element, kind: Intro): void {
   } else if (kind === "bloom") {
     const p = (svg.getAttribute("data-plot") ?? "0 0 0 0").split(" ").map(Number);
     (m as SVGElement).style.transformOrigin = `${p[0]! + p[2]! / 2}px ${p[1]! + p[3]! / 2}px`;
-    run(
-      m,
-      [
-        { transform: "rotate(-24deg) scale(.82)", opacity: 0 },
-        { transform: "none", opacity: 1 },
-      ],
-      { duration: 1000, easing: EASE },
-    );
+    run(m, [{ transform: "rotate(-24deg) scale(.82)", opacity: 0 }, { transform: "none" }], {
+      duration: 1000,
+      easing: EASE,
+    });
   } else
     for (const e of m.children) {
       const [k, g] = [e.getAttribute("data-key")!, geo(e)];
