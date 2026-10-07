@@ -743,3 +743,32 @@ legend .info {
 #signature .tiles section:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
+
+/* Comparison charts: each sits above the table it is drawn from. */
+.cmp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 20px 24px;
+  margin: 12px 0 16px;
+}
+.cmp-grid figure {
+  margin: 0;
+}
+.cmp-grid figcaption {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+maya-chart.cmp {
+  height: 340px;
+}
+maya-chart.cmp-tall {
+  height: 440px;
+}
+.cmp-grid:has(.cmp-tall) {
+  grid-template-columns: 1fr;
+}
+details > summary {
+  cursor: pointer;
+  margin: 8px 0;
+}
