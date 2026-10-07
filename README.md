@@ -2,7 +2,7 @@
 
 Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.
 
-[![npm](https://img.shields.io/npm/v/mayacharts)](https://www.npmjs.com/package/mayacharts) [![license](https://img.shields.io/npm/l/mayacharts)](LICENSE) [![gzip](https://img.shields.io/bundlejs/size/mayacharts)](https://bundlejs.com/?q=mayacharts) [![support](https://img.shields.io/badge/support-mayaCharts-635bff)](https://bbekshr.github.io/mayacharts/support/)
+[![npm](https://img.shields.io/npm/v/mayacharts)](https://www.npmjs.com/package/mayacharts) [![license](https://img.shields.io/npm/l/mayacharts)](LICENSE) [![gzip](https://img.shields.io/bundlejs/size/mayacharts)](https://bundlejs.com/?q=mayacharts) [![support](https://img.shields.io/badge/support-mayaCharts-635bff?logo=githubsponsors&logoColor=ff6b81)](https://bbekshr.github.io/mayacharts/support/)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/hero-dark.png">
