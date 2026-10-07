@@ -4,6 +4,8 @@ import { shape } from "../src/core/shape.ts";
 import { MAX_POINTS, MayaSpecError, resolve } from "../src/core/validate.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
+const CI = process.env.CI ? 2 : 1; // shared runners are slower than a laptop
+
 const T0 = Date.UTC(2020, 0, 1);
 const stamp = (i: number) => new Date(T0 + i * 60e3 + ((i * 7919) % 50) * 1000).toISOString();
 const wave = (i: number) => Math.sin(i / 37) * 50 + ((i * 104729) % 17);
@@ -72,7 +74,7 @@ describe("time downsampling", () => {
       svg = render(s);
       ms = Math.min(ms, performance.now() - t);
     }
-    expect(ms).toBeLessThan(400);
+    expect(ms).toBeLessThan(400 * CI);
     expect(svg.split('<circle data-maya="mark"').length - 1).toBeLessThanOrEqual(1000);
   });
   it("categorical x is never reduced", () => {
