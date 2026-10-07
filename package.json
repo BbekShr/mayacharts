@@ -134,14 +134,14 @@
     "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
   },
   "mayaSize": {
-    "dist/index.js": 34432,
+    "dist/index.js": 34688,
     "dist/element.js": 49536,
     "dist/theme.css": 4506,
     "dist/hierarchy.js": 4198,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 58112,
+    "dist/maya.global.js": 62854,
     "dist/weave.js": 2560,
     "dist/units.js": 2560,
     "dist/orbit.js": 2560,
