@@ -38,6 +38,10 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 **Fan-out**
 
+- A theme change lands in index and global too (the core bundle embeds the stylesheet): price theme bytes three times.
+- The auto-mode classifier blocks budget and tsconfig edits even from the shell; ask the owner once with the measured numbers, never retry the edit.
+- Before matching unkeyed text by position in an update, match by content: axis titles and ticks swap otherwise (2026-10-07).
+
 - Parallel editors in one tree: one owner per file, no builds from editors, temporary `src/styles/wip-<name>.ts` parts for `theme.ts`, folded in by the CEO.
 - The element bundle contains core; check every bundle with `npm run size` after merging fan-out work, not per agent.
 - Size budgets are the human's call: report an overage with the cut that would fix it. Ponytail trims of repeated code save almost nothing in gzip; quote the feature's real cost instead.

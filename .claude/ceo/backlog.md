@@ -14,16 +14,20 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Open
 
-- **Waffle and marimekko all zero or negative render blank**, no "No data" text (negatives clamp to 0 by ceiling). Owner: chart designer.
-- **Tiny values below about 1e-6 print long decimals** (1e-300 gives about 300 characters) since the step-less significant-digit formatter has no exponent fallback. Security L, 2026-10-06. Owner: core engineer.
+- **Calendar at 360 px**: cells shrink to about 3 px (hexmap now prints values only when they are readable, 2026-10-07). Owner: chart designer.
+- **Memory delta labels**: with `was`, a signed delta at the bar tip ("value (+12%)") so the change reads without hovering (design critic M1). Measured +40 B core; needs budget. Owner: human, then chart designer.
+- **Orbit update motion** (motion critic M1, 2026-10-07): trails and labels jump at t=0 while planets glide, planets cut through the sun, and a speed-bucket change restarts the rotation. Fix in animate.ts (translate the label group with its planet) and theme (rescale currentTime by period ratio). Owner: element engineer, chart designer.
+- **Brush zoom does not read as a zoom** (motion critic M2): #zoom is only set for a drill, so leaving points shrink in place and the old and new lines crossfade at different scales. Pass a box zoom for a window change. Owner: element engineer.
+- **2D brush selects axis text** in Chromium (motion critic M4): `.maya-svg{user-select:none}` in theme.ts (theme has 7 B headroom). Owner: chart designer.
+- **Table value cells jump on re-sort** (text marks have no geo()). Owner: element engineer.
+- **Live region reads raw tabs and newlines** from multi-line data-f (tooltip.ts). Owner: element engineer.
+- **Exiting sunburst rings still read getComputedStyle in the write loop** (animate.ts exit path). Owner: element engineer.
+- **Units swarm**: colour carries nothing and one outlier squeezes the dots; a labelled median rule (units at 98.8% of budget). Owner: chart designer.
+- **Stats and hierarchy keep local width estimates**: switching to `tw()` cost bytes in those two bundles (code-point spread), so they still use `length * 7.2`. Revisit if either budget moves. Owner: chart designer.
+- **Heatmap and hexmap ink cut is tuned to the default accent**: a host accent with a different lightness can fail 4.5:1 on a step. Owner: chart designer.
+- **Builder HTML snippet uses an inline style attribute** (security L), which fails under style-src without unsafe-inline. Owner: chart designer.
+- **tokens.mjs and the README token block** are personal tooling in the repo (ponytail audit). Owner: human.
 
 - **First full compare run after the dependency move** (`compare/package.json`): only `compare:bundle` and `compare:size` were run. Watch the next `compare.yml` run. Owner: core engineer.
-- **Calendar and hexmap at 360 px**: calendar cells shrink to about 3 px, hexmap drops its values so colour alone carries them (RI 1.82:1). Owner: chart designer.
-- **Single-series line or area shows no value without hovering** (end labels need 2 or more series). Owner: core engineer.
-- **Chord at 360 px**: the Accessories arc label collides and is dropped. Owner: chart designer.
 - **Waffle share change**: cells keyed by name slide through each other (about 8% overlap mid-flight); key by grid position and let the fill transition carry the change. Owner: chart designer.
 - **Treemap rank swaps**: tiles that change order cross mid-flight (15 to 36% overlap). Keep order stable or record a ceiling. Owner: chart designer.
-- **WebKit area crossfade** dips to about 75% coverage mid-flight (motion M12). Owner: element engineer.
-- **Labels blink on streamed updates** (hbar, kpi, and the gallery bar race at 900 ms and live line at 600 ms): value and end labels vanish for part of every step. Top item for the motion showcase; crossfade in place when keys are unchanged. Element has 25 B headroom. Owner: element engineer.
-- **Enter after an arrow key mid-zoom** following a keyboard drill-out does nothing (tooltip blur clears the active mark). Owner: element engineer.
-- **Builder snippet SRI** and quoted keys in generated code (security L-2, L-3). Owner: release manager, core engineer.
