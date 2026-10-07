@@ -6,6 +6,7 @@ import "mayacharts/hierarchy";
 import "mayacharts/flow";
 import "mayacharts/geo";
 import "mayacharts/radial";
+import "mayacharts/stats";
 import type { ChartSpec, ChartType, MayaErrorDetail } from "../src/index.ts";
 import {
   GROUPS,

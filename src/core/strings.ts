@@ -57,6 +57,16 @@ export const TEXT = {
   density: "Shown as {0} density cells, {1} to {2} points each",
   /** Title of the density colour legend. */
   perCell: "Points per cell",
+  /** Boxplot tooltip and table labels: the five numbers and the row count. */
+  max: "Max",
+  q3: "Upper quartile",
+  median: "Median",
+  q1: "Lower quartile",
+  min: "Min",
+  rows: "Rows",
+  /** Funnel tooltip and table labels: step conversion. */
+  ofPrevious: "% of previous",
+  ofFirst: "% of first",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

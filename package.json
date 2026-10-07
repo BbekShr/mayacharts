@@ -58,6 +58,10 @@
       "types": "./dist/radial.d.ts",
       "default": "./dist/radial.js"
     },
+    "./stats": {
+      "types": "./dist/stats.d.ts",
+      "default": "./dist/stats.js"
+    },
     "./global": "./dist/maya.global.js",
     "./theme.css": "./dist/theme.css",
     "./schema.json": "./schema.json",
@@ -71,12 +75,14 @@
     "./dist/flow.js",
     "./dist/geo.js",
     "./dist/radial.js",
+    "./dist/stats.js",
     "./dist/maya.global.js",
     "./src/element.ts",
     "./src/hierarchy.ts",
     "./src/flow.ts",
     "./src/radial.ts",
     "./src/geo.ts",
+    "./src/stats.ts",
     "./src/global.ts"
   ],
   "files": [
@@ -92,7 +98,7 @@
   },
   "scripts": {
     "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
-    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode global && tsc -p tsconfig.build.json",
+    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode stats && vite build --mode global && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -110,14 +116,15 @@
     "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
   },
   "mayaSize": {
-    "dist/index.js": 32128,
-    "dist/element.js": 45952,
+    "dist/index.js": 32512,
+    "dist/element.js": 46336,
     "dist/theme.css": 4096,
     "dist/hierarchy.js": 4198,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/maya.global.js": 55040
+    "dist/stats.js": 3456,
+    "dist/maya.global.js": 57600
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

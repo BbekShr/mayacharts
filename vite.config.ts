@@ -12,6 +12,7 @@ const modeToEntry = {
   flow: "src/flow.ts",
   geo: "src/geo.ts",
   radial: "src/radial.ts",
+  stats: "src/stats.ts",
   global: "src/global.ts",
 };
 
@@ -38,6 +39,7 @@ export default defineConfig(({ mode }) => {
             flow: "flow.js",
             geo: "geo.js",
             radial: "radial.js",
+            stats: "stats.js",
           };
           return names[mode] || "index.js";
         },
@@ -62,6 +64,7 @@ export default defineConfig(({ mode }) => {
             "flow.js",
             "geo.js",
             "radial.js",
+            "stats.js",
             "maya.global.js",
           ];
 

@@ -358,3 +358,16 @@ export function makeMonths(seed: number) {
       orders: Math.round(900 + rng() * 700 + m * 40),
     }));
 }
+
+/** Five shopping stages, each a seeded share of the one before (Visits to Paid). */
+export function makeFunnel(seed: number) {
+  const rng = mulberry32(seed);
+  let n = Math.round(42000 + rng() * 26000);
+  return [
+    ["Visits", 1],
+    ["Product view", 0.52 + rng() * 0.16],
+    ["Cart", 0.2 + rng() * 0.16],
+    ["Checkout", 0.45 + rng() * 0.2],
+    ["Paid", 0.6 + rng() * 0.25],
+  ].map(([stage, keep]) => ({ stage, users: (n = Math.round(n * (keep as number))) }));
+}

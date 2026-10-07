@@ -3,9 +3,11 @@ import "mayacharts/hierarchy";
 import "mayacharts/flow";
 import "mayacharts/geo";
 import "mayacharts/radial";
+import "mayacharts/stats";
 import type { ChartSpec, Row } from "../src/index.ts";
 import {
   makeData,
+  makeFunnel,
   makeMonths,
   makePoints,
   makeReadings,
@@ -328,6 +330,33 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     name: "item",
     format: { margin: "percent" },
     data: rollup(FACTS, ["item", "family"], { margin: mean("margin") }) as Row[],
+  });
+
+  // 18b. Box plot: the same margins as boxes, one dot per row.
+  tile("boxplot", {
+    type: "boxplot",
+    title: "Margin spread by product family",
+    titles: { margin: "Margin", family: "Family", item: "Item" },
+    x: "family",
+    y: "margin",
+    name: "item",
+    format: { margin: "percent" },
+    data: rows(rollup(FACTS, ["item", "family", "region"], { margin: mean("margin") }), (r) => ({
+      family: r.family,
+      item: `${r.item}, ${r.region}`,
+      margin: r.margin,
+    })),
+  });
+
+  // 18c. Funnel: five shopping stages with the share kept at each step.
+  tile("funnel", {
+    type: "funnel",
+    title: "Visits to paid orders",
+    titles: { users: "Users" },
+    x: "stage",
+    y: "users",
+    format: "compact",
+    data: makeFunnel(seedOf(FACTS)),
   });
 
   // 19. Parallel coordinates: one line per region across three measures.

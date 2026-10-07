@@ -8,6 +8,7 @@ import "../src/hierarchy.ts";
 import "../src/flow.ts";
 import "../src/geo.ts";
 import "../src/radial.ts";
+import "../src/stats.ts";
 import type { ChartSpec, ChartType } from "../src/index.ts";
 import {
   INLINE,

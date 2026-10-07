@@ -6,6 +6,11 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
+### Added
+
+- New optional module `mayacharts/stats` with two chart types. `boxplot` summarises raw rows per category (and per `series`, side by side) as quartiles, whiskers to 1.5 IQR and outliers; `aggregate` is rejected. `funnel` draws stage-to-stage conversion, either long (`x` the stage, one `y`) or wide (`y` lists the stage fields, no `x`); negative values raise `non-positive-value`.
+- Text keys `max`, `q3`, `median`, `q1`, `min`, `rows`, `ofPrevious` and `ofFirst` for their tooltips and data tables.
+
 ### Fixed
 
 - Small values no longer print as "0". Without a tick step (value labels, the KPI headline, tooltips), `auto`, `compact` and `percent` give a non-zero value below 0.05 two significant digits: 0.004 is "0.004", 0.0012 is "0.0012", 0.012 is "0.012". Axis ticks are unchanged.

@@ -59,7 +59,16 @@ test("B. eval-permitting host: new Function(src)", async ({ page }) => {
 
 test.describe("types", () => {
   test.skip(({ browserName }) => browserName !== "chromium", "baselines are Chromium only");
-  for (const type of ["treemap", "sunburst", "sankey", "hexmap", "waterfall", "heatmap"]) {
+  for (const type of [
+    "treemap",
+    "sunburst",
+    "sankey",
+    "hexmap",
+    "waterfall",
+    "heatmap",
+    "boxplot",
+    "funnel",
+  ]) {
     test(`${type} light`, async ({ page }) => {
       await page.setViewportSize({ width: 700, height: 400 });
       await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });

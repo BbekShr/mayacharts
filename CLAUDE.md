@@ -16,7 +16,7 @@ Owner: Bibek Shrestha (GitHub BbekShr). MIT, forever. See STABILITY.md for what 
 
 - `npm test` - Vitest (node + one happy-dom file). ~440 tests incl. fuzz, hostile-string, property, perf and leak suites.
 - `npm run typecheck` - strict TS 7 (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `erasableSyntaxOnly`: no enums, no parameter properties). Imports use `.ts` extensions.
-- `npm run build` - seven Vite lib builds (index, element, hierarchy, flow, geo, radial, global IIFE) then `tsc` declarations.
+- `npm run build` - eight Vite lib builds (index, element, hierarchy, flow, geo, radial, stats, global IIFE) then `tsc` declarations.
 - `npm run size` - gzip budgets from `package.json` `mayaSize`; CI fails when over. Also checks the license banner and that the global build has no top-level `var maya`.
 - `npm run e2e` - Playwright on chromium, firefox, webkit, mobile-webkit (interactions only). Builds and serves `site/` itself.
 - `npm run dev` - demo site (`/` and `/gallery.html`).
@@ -30,7 +30,7 @@ Screenshot baselines live in `e2e/__screenshots__/{darwin,linux}/<browser>/`. CI
 - `src/core/render.ts` - the DESIGN NOTE at the top is the contract: pipeline, SVG groups, hydration attributes (`data-maya`, `data-key`, `data-c`, `data-s`, `data-y`, `data-x`, `data-tone`, `data-q`, `data-plot`), key grammar, shell slot order, CSS hooks, keyboard priority. Read it before touching core or element.
 - `src/core/types.ts` - the spec (`ChartSpec`), one JSDoc line + example per field. `validate.ts` - all validation, error catalogue, `ONLY` table of field-to-type rules, `HINTS`. `shape.ts` - aggregate, sort, limit (Other bucket), window, hidden, in that order. `format.ts` - per-field Intl formatting (UTC dates). `layout.ts` - `frame()`: axes, ticks, grid, margins, label thinning. `a11y.ts` - title/desc/data table. `registry.ts` - mark registry on a version-keyed global symbol. `strings.ts` - every user-visible string (`spec.text` overrides).
 - `src/core/marks/*.ts` - bar (also waterfall), line (also area), scatter, heatmap, kpi, dumbbell, ridgeline, beeswarm, parallel, table. Each is a `Mark { noun, axes?, check?, draw }` using only `MarkCtx` closures (`fmt label tone q agg fail t`).
-- `src/hierarchy.ts`, `flow.ts`, `geo.ts`, `radial.ts` - optional modules (treemap/sunburst/marimekko/waffle, sankey/chord, US hexmap, radial bars). They may import only `registry.ts`, `svg.ts`, `scale.ts`, `ticks.ts` and types; never render/validate/shape/format (they are bundled separately).
+- `src/hierarchy.ts`, `flow.ts`, `geo.ts`, `radial.ts`, `stats.ts` - optional modules (treemap/sunburst/marimekko/waffle, sankey/chord, US hexmap, radial bars, boxplot/funnel). They may import only `registry.ts`, `svg.ts`, `scale.ts`, `ticks.ts` and types; never render/validate/shape/format (they are bundled separately).
 - `src/element/` - `maya-chart.ts` (element, events, `view`/`selected`, keydown dispatcher), `animate.ts` (key diff, WAAPI entrance/update/exit, stagger, path morph), `tooltip.ts`, `html.ts` (Trusted Types policy `mayacharts`), and the interactions `measure.ts`, `drill.ts`, `select.ts`, `zoom.ts` as pure reducers plus `mount(host)` handlers.
 - `src/styles/theme.ts` - the whole stylesheet as one string (budget 4 KB gzip). Tokens `--maya-*`.
 - `site/` - demo and gallery (synthetic data in `site/data.ts`; never copy data from elsewhere). `docs/spec.html`, `site/errors.html` (one anchor per error code; error messages link here).
