@@ -51,6 +51,9 @@ nav {
 a {
   color: var(--accent);
 }
+nav .support span {
+  color: #e5484d;
+}
 nav a[aria-current="page"] {
   color: var(--fg);
   font-weight: 600;

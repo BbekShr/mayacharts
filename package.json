@@ -32,7 +32,7 @@
     "url": "git+https://github.com/BbekShr/mayacharts.git"
   },
   "bugs": "https://github.com/BbekShr/mayacharts/issues",
-  "funding": "https://buy.stripe.com/00wdRbame9g2bmu5zuaIM01",
+  "funding": "https://bbekshr.github.io/mayacharts/support/",
   "type": "module",
   "exports": {
     ".": {
