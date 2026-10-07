@@ -1018,8 +1018,10 @@ Tokens spent with Claude Code since the first commit, across 11,972 API calls. M
 
 ## Versioning
 
-mayaCharts follows semantic versioning. Public API: spec keys and semantics, schema.json, error code/path, element properties/methods, event detail shapes, CSS custom property tokens, data-* attribute roles and values, .maya-* class names. See [STABILITY.md](STABILITY.md) for the full stability policy and pre-1.0 deprecation path via HINTS.
+mayaCharts follows semantic versioning. Public API: spec keys and semantics, schema.json, error code/path, element properties/methods, event detail shapes, CSS custom property tokens, data-_ attribute roles and values, .maya-_ class names. See [STABILITY.md](STABILITY.md) for the full stability policy and pre-1.0 deprecation path via HINTS.
 
 ## License
 
 MIT, and the core library will stay MIT. Any paid offerings will be things outside the core, such as support contracts, hosted services and separate add-ons. Nothing in the library will move behind a paywall. See [LICENSE](LICENSE).
+
+If mayaCharts saves you time, you can [support it on GitHub Sponsors](https://github.com/sponsors/BbekShr). Sponsorship buys no features or priority.
