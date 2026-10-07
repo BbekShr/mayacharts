@@ -266,7 +266,7 @@ export function tooltip(
   const tone = (k: Element) => {
     const v = a(k, "data-tone"),
       s = spec();
-    if (!v) return "";
+    if (!v || v == "zero") return "";
     const tgt = typeof s?.colorBy === "object";
     return str(s ?? {}, v === "good" ? (tgt ? "above" : "positive") : tgt ? "below" : "negative");
   };
@@ -345,7 +345,8 @@ export function tooltip(
     // The probe's containing block is the host's padding box (:host is position:relative).
     // Charts with a crosshair anchor to it: the tooltip sits beside the line, never over the points.
     const svg = box.querySelector("svg"),
-      side = !!svg?.querySelector("[data-maya=cross] :not(text,[data-g])");
+      side = !!svg?.querySelector("[data-maya=cross] :not(text,[data-g])"),
+      weave = sp?.type === "weave"; // its tooltip stands above the plot, over no thread
     let r: {
       left: number;
       top: number;
@@ -354,14 +355,23 @@ export function tooltip(
       right: number;
       bottom: number;
     } = m.getBoundingClientRect();
-    if (side && svg) {
+    if ((side || weave) && svg) {
       const s = svg.getBoundingClientRect(),
         k = 1 / unit(svg, s),
         [, py, , ph] = a(svg, "data-plot").split(" ").map(Number) as number[],
         left = r.left + r.width / 2,
         top = s.top + py! * k;
-      r = { left, top, width: 0, height: ph! * k, right: left, bottom: top + ph! * k };
+      const h = weave ? 0 : ph! * k;
+      r = { left, top, width: 0, height: h, right: left, bottom: top + h };
     }
+    // Orbit (the name) and constellation (the web): anchor to the mark and what it lights, so the tooltip clears them.
+    if (/^(orbit|constellation)$/.test(sp?.type ?? ""))
+      for (const e of peers) {
+        const b = e.getBoundingClientRect();
+        const [left, top] = [Math.min(r.left, b.left), Math.min(r.top, b.top)];
+        const [right, bottom] = [Math.max(r.right, b.right), Math.max(r.bottom, b.bottom)];
+        r = { left, top, right, bottom, width: right - left, height: bottom - top };
+      }
     tip.toggleAttribute("data-side", side);
     const p = host.getBoundingClientRect();
     Object.assign(probe.style, {
@@ -435,6 +445,8 @@ export function tooltip(
     if (!p.includes(box) || !markOf(p[0], e)) hide();
   };
   const leave = (e: Event) => (e as PointerEvent).pointerType === "mouse" && hide();
+  let ring: Element[] = [];
+  const ang = (e: Element) => Math.atan2(+a(e, "cx"), -a(e, "cy"));
   const key = (e: Event) => {
     const k = (e as KeyboardEvent).key;
     kb = true;
@@ -453,8 +465,19 @@ export function tooltip(
     } else if (k.startsWith("Arrow")) {
       const d = k === "ArrowRight" || k === "ArrowDown" ? 1 : -1;
       const i = cur ? list.indexOf(cur) : -1;
+      const ty = spec()?.type;
+      const v = k === "ArrowUp" || k === "ArrowDown";
+      // Orbit: clockwise by angle (rank order is golden-angle scattered). Constellation up/down:
+      // the star, then the 3 stars it lights.
+      if (i >= 0 && ty === "constellation" && v && !ring.includes(cur!))
+        ring = [cur!, ...box.querySelectorAll(`[data-a~="${a(cur!, "data-n")}"]`)];
+      const c =
+        ty === "orbit"
+          ? list.filter((e) => e.localName === "circle").sort((p, q) => ang(p) - ang(q))
+          : ty === "constellation" && v && ring;
       if (i < 0) next = list[0];
-      else if (k === "ArrowUp" || k === "ArrowDown") {
+      else if (c) next = c[(c.indexOf(cur!) + d + c.length) % c.length];
+      else if (v) {
         const g = group(list[i]!);
         next = g[g.indexOf(list[i]!) + d];
       } else {

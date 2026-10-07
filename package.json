@@ -141,19 +141,19 @@
     "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
   },
   "mayaSize": {
-    "dist/index.js": 35261,
-    "dist/element.js": 50557,
-    "dist/theme.css": 4506,
+    "dist/index.js": 35500,
+    "dist/element.js": 52000,
+    "dist/theme.css": 4560,
     "dist/hierarchy.js": 4198,
     "dist/flow.js": 3584,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
-    "dist/stats.js": 3456,
-    "dist/maya.global.js": 66833,
+    "dist/stats.js": 3750,
+    "dist/maya.global.js": 69500,
     "dist/weave.js": 2560,
     "dist/units.js": 2560,
-    "dist/orbit.js": 2560,
-    "dist/constellation.js": 2560
+    "dist/orbit.js": 2600,
+    "dist/constellation.js": 2900
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

@@ -1,7 +1,7 @@
 // mayacharts/stats: box plot and funnel. Imports only registry, svg, scale, ticks and types.
 import { register } from "./core/registry.ts";
 import { bandScale } from "./core/scale.ts";
-import { el, esc, hit, key, nameId, r } from "./core/svg.ts";
+import { el, esc, hit, key, nameId, r, tw } from "./core/svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "./core/types.ts";
 
 interface Pt {
@@ -76,15 +76,36 @@ export const boxplot: Mark = {
       0,
     );
     const f = (v: number) => ctx.fmt(spec.y, v);
-    const all: number[] = [];
     let marks = "";
     let top = "";
     let hits = "";
     const rows: string[][] = [];
-    const w = Math.min(inner.bandwidth * 0.7, MAX_BOX);
-    // Median labels, decided once per chart below: [x of box right edge, cx, cap y, median y, text].
-    const meds: [number, number, number, number, string][] = [];
-    for (const { ci, si, pts } of boxes(spec, shaped)) {
+    const all = boxes(spec, shaped);
+    let w = Math.min(inner.bandwidth * 0.7, MAX_BOX);
+    // A lone series with labels: slim the boxes (to 24 px at least, else leave them) so the longest median label fits beside each,
+    // the last one included.
+    if (shaped.visible.length === 1 && spec.labels !== false) {
+      const lab = Math.max(
+        ...all.map((b) =>
+          tw(
+            f(
+              q(
+                b.pts.map((p) => p.v).sort((a, b) => a - b),
+                0.5,
+              ),
+            ),
+          ),
+        ),
+      );
+      const fit = Math.min(
+        cat.step - lab - 8,
+        cat.step - 2 * (lab + 4 - (ctx.width - ctx.plot.x - ctx.plot.w)),
+      );
+      if (fit >= 24) w = Math.min(w, fit);
+    }
+    // Median labels, decided once per chart below: [box left, box right, median y, q3 y, text, box name].
+    const meds: [number, number, number, number, string, string, number][] = [];
+    for (const { ci, si, pts } of all) {
       const ser = shaped.series[si]!;
       const cname = shaped.categories[ci]!;
       const s = pts.map((p) => p.v).sort((a, b) => a - b);
@@ -92,7 +113,6 @@ export const boxplot: Mark = {
       const [fl, fh] = [q1 - 1.5 * (q3 - q1), q3 + 1.5 * (q3 - q1)];
       const inside = s.filter((v) => v >= fl && v <= fh);
       const [wl, wh] = [inside[0]!, inside.at(-1)!];
-      all.push(...s);
 
       const cx = cat.at(ci) + inner.at(shaped.visible.indexOf(si)) + inner.bandwidth / 2;
       const [x0, x1, cp] = [cx - w / 2, cx + w / 2, w / 4];
@@ -106,6 +126,17 @@ export const boxplot: Mark = {
       const bh = Math.max(Math.abs(y1 - y3), 2);
       const by = Math.min(y1, y3) - (bh - Math.abs(y1 - y3)) / 2;
       const base = { "data-c": ci, "data-s": si % 8 };
+      const ln = (k: string, a: number, b: number, c: number, e: number, more = {}) =>
+        el("line", {
+          "data-maya": "line",
+          "data-key": key(k, ser, cname),
+          ...base,
+          ...more,
+          x1: r(a),
+          y1: r(b),
+          x2: r(c),
+          y2: r(e),
+        });
       const lines: [string, number | string][] = [
         [ctx.t("max"), f(s.at(-1)!)],
         [ctx.t("q3"), f(q3)],
@@ -135,14 +166,14 @@ export const boxplot: Mark = {
           width: r(w),
           height: r(bh),
         }) +
-        el("path", {
-          "data-maya": "line",
-          "data-key": key("w", ser, cname),
-          ...base,
-          d: `M${r(cx)} ${r(yh)}V${r(y3)}M${r(cx)} ${r(yl)}V${r(y1)}M${r(cx - cp)} ${r(yh)}H${r(cx + cp)}M${r(cx - cp)} ${r(yl)}H${r(cx + cp)}`,
-        });
+        // Stems and caps are <line>s, each with its own stable key: the element glides lines by
+        // transform, so they travel with the box in every browser (a path would crossfade).
+        ln("ws", cx, yh, cx, y3) +
+        ln("wt", cx, yl, cx, y1) +
+        ln("wh", cx - cp, yh, cx + cp, yh) +
+        ln("wl", cx - cp, yl, cx + cp, yl);
       hits += hit(d, x0, py(wh), w, py(wl) - py(wh));
-      meds.push([x1, cx, yh, ym, f(med)]);
+      meds.push([x0, x1, ym, y3, f(med), ser ? `${cname} (${ser})` : cname, y1]);
 
       // Every row is a faint dot when the box holds few rows; outliers are always marks. One key
       // prefix for both, so a row crossing the fence moves instead of re-entering.
@@ -185,13 +216,7 @@ export const boxplot: Mark = {
         });
         hits += hit(od, cx - OUT, py(p.v) - OUT, OUT * 2, OUT * 2);
       });
-      marks += el("path", {
-        "data-maya": "line",
-        "data-kpi": "target",
-        "data-key": key("m", ser, cname),
-        ...base,
-        d: `M${r(x0)} ${r(ym)}H${r(x1)}`,
-      });
+      marks += ln("m", x0, ym, x1, ym, { "data-kpi": "target" });
       rows.push([
         ctx.fmt(spec.x, cname),
         ...(spec.series === null ? [] : [ser]),
@@ -199,21 +224,35 @@ export const boxplot: Mark = {
         ctx.fmt("", s.length),
       ]);
     }
-    // ponytail: one placement per chart: beside a lone series' box when the longest label fits the gap,
-    // else above the upper cap; a label that collides or leaves the svg moves onto the box, above its median.
-    const side =
-      shaped.visible.length === 1 &&
-      Math.max(...meds.map((m) => m[4].length * 7.2 + 4)) <= cat.step - w - 6;
-    if (spec.labels !== false)
-      for (const [x1, cx, yh, ym, t] of meds)
-        (side && ctx.label(x1 + 4, ym, t, "start")) ||
-          [yh - 2, ym].some((y) => ctx.label(cx, y, t, "above"));
-    all.sort((a, b) => a - b);
+    // One placement for every box, never mixed and never above the cap (that reads as the max), always
+    // on the box's own median line: right of the box when every label fits before the next box (the
+    // last one may use the svg's right margin), else on the box above the median, else below it, when
+    // every box is tall enough; else no labels (the tooltip and table carry them).
+    // ponytail: three placements, all or nothing.
+    const order = [...meds].sort((a, b) => a[0] - b[0]);
+    const step = Math.min(...order.map((o, i) => (order[i + 1]?.[0] ?? Infinity) - o[0])) - 4;
+    const side = order.every((m, i) => tw(m[4]) <= (order[i + 1]?.[0] ?? ctx.width + 2) - m[1] - 6);
+    const fits = meds.every((m) => tw(m[4]) <= step);
+    const up = fits && meds.every((m) => m[2] - m[3] >= 18);
+    const down = fits && meds.every((m) => m[6] - m[2] >= 18);
+    if (spec.labels !== false && (side || up || down))
+      for (const [x0, x1, ym, , t] of meds)
+        side
+          ? ctx.label(x1 + 4, ym, t, "start")
+          : ctx.label((x0 + x1) / 2, ym, t, up ? "above" : "below");
     const ti = (x: string) => spec.titles.get(x) ?? x;
     return {
       marks: marks + top,
       hits,
-      note: all.length ? `${ctx.t("median")} ${f(q(all, 0.5))}.` : "",
+      note: !meds.length
+        ? ""
+        : ((lo, hi) =>
+            lo[4] === hi[4]
+              ? `${ctx.t("median")} ${lo[4]}.`
+              : `${ctx.t("median")}: ${lo[5]} ${lo[4]} to ${hi[5]} ${hi[4]}.`)(
+            meds.reduce((a, b) => (b[2] > a[2] ? b : a)),
+            meds.reduce((a, b) => (b[2] < a[2] ? b : a)),
+          ),
       table: {
         head: [
           ti(spec.x),

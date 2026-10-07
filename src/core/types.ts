@@ -516,8 +516,8 @@ export interface MarkCtx {
   fmt(field: string, v: unknown, step?: number): string;
   /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. `key` = the data-key of the mark it labels. */
   label(x: number, y: number, text: string, place: LabelPlace, key?: string): boolean;
-  /** colorBy tone for a value: "good" | "bad", or null when colorBy is not sign/target. */
-  tone(v: number): "good" | "bad" | null;
+  /** colorBy tone for a value: "good" | "bad" ("zero" for 0 under sign), or null when colorBy is not sign/target. */
+  tone(v: number): "good" | "bad" | "zero" | null;
   /** colorBy ramp bucket 0..9 for a value of the colorBy field; null when colorBy is not a field. */
   q(v: number): number | null;
   /** Shared aggregation (same rules as shape: nulls skipped, count = non-null). */

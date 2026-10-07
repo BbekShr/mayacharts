@@ -23,39 +23,58 @@ import { register } from "./core/registry.ts";
 import { clip, el, esc, key, r } from "./core/svg.ts";
 import type { BandScale, Cell, Mark, Shaped } from "./core/types.ts";
 
-/** Per period (in order), series index -> [rank, value] of the series present, in rank order. */
+/**
+ * Per period (in order), series index -> [slot, value, rank] of the series present, in slot order.
+ * The slot places the thread (1 = top, ties in series order); the rank is what is shown: ties share
+ * it (competition ranking) and read "=1".
+ */
 const ranks = (sh: Shaped) => {
   const by = sh.categories.map(() => [] as Cell[]);
   for (const c of sh.cells) if (c.value !== null) by[c.ci]!.push(c);
-  return by.map(
-    (cs) =>
-      new Map(
-        cs
-          .sort((a, b) => b.value! - a.value! || a.si - b.si)
-          .map((c, i) => [c.si, [i + 1, c.value!] as const]),
-      ),
-  );
+  return by.map((cs) => {
+    cs.sort((a, b) => b.value! - a.value! || a.si - b.si);
+    let top = 0;
+    return new Map(
+      cs.map((c, i) => {
+        if (cs[i - 1]?.value !== c.value) top = i + 1;
+        const tied = cs[i - 1]?.value === c.value || cs[i + 1]?.value === c.value;
+        return [c.si, [i + 1, c.value!, (tied ? "=" : "") + top] as const];
+      }),
+    );
+  });
 };
+
+/** The visible series that have a value somewhere: the ones that get a slot, a thread and a name. */
+const live = (sh: Shaped) =>
+  sh.visible.filter((si) => sh.cells.some((c) => c.si === si && c.value !== null));
 
 export const weave: Mark = {
   noun: "Weave",
   axes(spec, sh) {
     // Slot k holds the series ranked k + 1 in the first period; a series absent then leaves a
     // blank slot (distinct blanks, so the axis keys stay unique).
-    const names = sh.visible.map((_, k) => " ".repeat(k + 1));
-    ranks(sh)[0]?.forEach(([k], si) => (names[k - 1] = sh.series[si]!));
+    const names = live(sh).map((_, k) => " ".repeat(k + 1));
+    // Long names are cut so they do not take the plot: the right labels and the legend carry them whole.
+    // Names that clip alike all keep their ends instead (as orbit does), so each label names its own series.
+    const cut = (n: string) => clip(n, 16);
+    const mid = (n: string) => [...n].slice(0, 9).join("") + "…" + [...n].slice(-6).join("");
+    const all = live(sh).map((si) => cut(sh.series[si]!));
+    ranks(sh)[0]?.forEach(([k], si) => {
+      const n = sh.series[si]!;
+      names[k - 1] = all.filter((c) => c === cut(n)).length > 1 ? mid(n) : cut(n);
+    });
     return [
       { kind: "band", field: spec.x, domain: sh.categories },
       { kind: "band", field: spec.series ?? "", domain: names },
     ];
   },
   ends: (spec, sh, fmt) =>
-    spec.labels || sh.visible.length !== sh.series.length || sh.visible.length < 2
+    spec.labels || sh.visible.length !== sh.series.length || live(sh).length < 2
       ? []
-      : sh.visible.flatMap((si) => {
-          const c = sh.cells.filter((c) => c.si === si && c.value !== null).at(-1);
+      : live(sh).map((si) => {
+          const c = sh.cells.filter((c) => c.si === si && c.value !== null).at(-1)!;
           const n = sh.series[si]!;
-          return c ? [[spec.titles.get(n) ?? n, fmt(spec.y, c.value)] as [string, string]] : [];
+          return [spec.titles.get(n) ?? n, fmt(spec.y, c.value)] as [string, string];
         }),
   check(spec, fail) {
     const f = spec.series as string;
@@ -78,8 +97,13 @@ export const weave: Mark = {
     const py = (k: number) => r(Y.at(k - 1) + Y.bandwidth / 2);
 
     // ponytail: under 32 px a step, only the first and last dot are full size (the rest are pinpricks);
-    // with no gutter the last value sits above the last dot, where the legend leaves the names.
+    // with no gutter the last value sits right of the last dot, if the margin has room (else the tooltip has it).
     const quiet = X.step < 32;
+    // Room to label a dot above it: two rows apart enough that the value neither leaves the svg nor
+    // lands beside the next rank. ponytail: denser than that, the legend and the tooltip name the threads.
+    const roomy = Y.step >= 32;
+    // A halo along a steep S-curve (under 48 px between periods) chops the thread under it into pieces.
+    const halo = X.step < 48 ? 0 : 12;
     let threads = "";
     for (let i = 0; i < R.length - 1; i++) {
       const B = R[i + 1]!;
@@ -99,7 +123,7 @@ export const weave: Mark = {
           "data-key": key("w", ser, i, "h"),
           "data-w": "h",
           stroke: "var(--maya-bg)",
-          "stroke-width": 13,
+          "stroke-width": halo,
         });
         threads += el("path", {
           ...at,
@@ -114,12 +138,13 @@ export const weave: Mark = {
     let dots = "";
     let hits = "";
     let end = "";
-    const last = new Map<number, [number, number, number]>(); // si -> [ci, rank, x] of the last point
+    const last = new Map<number, [number, number, number]>(); // si -> [ci, slot, x] of the last point
     R.forEach((P, ci) => {
-      for (const [si, [k, v]] of P) {
+      for (const [si, [k, v, rk]] of P) {
         const ser = sh.series[si]!;
         const kk = key(ser, sh.categories[ci]);
         const [cx, cy] = [px(ci), py(k)];
+        const pin = quiet && ci > 0 && ci < R.length - 1;
         last.set(si, [ci, k, cx]);
         dots += el("circle", {
           "data-maya": "mark",
@@ -131,11 +156,11 @@ export const weave: Mark = {
           "data-x": ctx.fmt(spec.x, sh.categories[ci]),
           "data-series": ser,
           "data-y": v,
-          "data-f": `${ctx.t("rank", k)} · ${ctx.fmt(spec.y, v)}`,
+          "data-f": `${ctx.t("rank", rk)} · ${ctx.fmt(spec.y, v)}`,
           "data-tone": ctx.tone(v),
           stroke: "var(--maya-bg)",
-          "stroke-width": 2,
-          r: quiet && ci && ci < R.length - 1 ? 2.5 : 5.5,
+          "stroke-width": pin ? 1 : 2,
+          r: pin ? 2.5 : 5.5,
           cx,
           cy,
         });
@@ -148,15 +173,31 @@ export const weave: Mark = {
           height: 24,
           fill: "transparent",
         });
-        if (spec.labels || (!ctx.gutter && ci === R.length - 1))
-          ctx.label(cx, cy - 10, ctx.fmt(spec.y, v), "above", kk);
+        // With no gutter the last value stands right of its dot when the margin has room, else just
+        // above it (rows 32 px apart keep it nearer its own dot than the rank above).
+        const val = ctx.fmt(spec.y, v);
+        if (!ctx.gutter && ci === R.length - 1 && !spec.labels)
+          (Y.step >= 16 && ctx.label(cx + 9, cy, val, "start", kk)) ||
+            (roomy && ctx.label(cx, cy - 6, val, "above", kk));
+        if (roomy) {
+          if (spec.labels) ctx.label(cx, cy - 6, val, "above", kk);
+          // A thread that starts late, or after a gap, has no name on the left axis: name it here.
+          if (ci && !R[ci - 1]!.has(si))
+            ctx.label(
+              cx,
+              cy - 6,
+              clip(spec.titles.get(ser) ?? ser, 12),
+              "above",
+              key("w", ser, sh.categories[ci], "n"),
+            );
+        }
       }
     });
 
     // Right end labels in the gutter, at the slot of each thread's last point.
     if (ctx.gutter) {
       const cap = Math.max(1, Math.floor((ctx.gutter - 12) / 7.2));
-      sh.visible.forEach((si, n) => {
+      live(sh).forEach((si, n) => {
         const [ci, k, x] = last.get(si) ?? [];
         const [name, v] = ctx.ends[n] ?? [];
         if (ci === undefined || name === undefined || v === undefined) return;
@@ -184,7 +225,7 @@ export const weave: Mark = {
 
     const lead = (ci: number) =>
       sh.categories.length
-        ? `${ctx.fmt(spec.x, sh.categories[ci])}: ${[...R[ci]!.keys()].map((si) => sh.series[si]).join(" > ")}`
+        ? `${ctx.fmt(spec.x, sh.categories[ci])}: ${[...R[ci]!].map(([si, [, v]], i, a) => (i ? (a[i - 1]![1][1] === v ? " = " : " > ") : "") + sh.series[si]).join("")}`
         : "";
     return {
       marks: threads + dots,

@@ -98,22 +98,22 @@ const SCATTER =
   "[data-maya=cross] text,[data-maya=rules] text{font-size:11px;font-weight:600;fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:4;stroke-linejoin:round}";
 
 // orbit
-// Planets orbit a sun: the theme rotates g[data-v] about the sun (its origin) and counter-rotates
-// the label, so the chart is a still, trails included, unless motion is allowed and not `data-still`.
+// Planets orbit a sun: the theme rotates g[data-v] about the sun (its origin); names are static, at the rest angle.
+// The chart is a still, trails included, unless motion is allowed and not `data-still`: then it spins while the pointer is over it.
 // ponytail: five speed buckets, one period each (--p).
 const ORBIT =
-  "g[data-v],g[data-up]{transform-box:view-box;transform-origin:0 0}" +
-  "[data-trail]{fill:none;stroke:var(--c);stroke-width:3;stroke-linecap:round;stroke-opacity:.5}" +
+  "g[data-v]{transform-box:view-box;transform-origin:0 0}" +
+  "[data-trail]{fill:none;stroke:var(--c);stroke-width:3;stroke-linecap:round}" +
   "g[data-s] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1.5}g[data-s] circle[data-maya=mark]:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2}" +
-  "[data-maya=marks]:has([data-active]) g[data-s]:not(:has([data-active]),[data-lit]) :is([data-trail],[data-up]){opacity:.4}" +
-  "[data-up] text{paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round;font-size:11px;font-weight:600;fill:var(--maya-fg)}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
+  "[data-maya=marks]:has([data-active]) g[data-s]:not([data-lit],:has([data-active])) g[data-up],[data-maya=marks]:has([data-active]) g[data-s]:not([data-lit],:has([data-active])) [data-trail]{opacity:.4}" +
+  "g[data-s] circle[data-below]{fill-opacity:.45;stroke:var(--c)}[data-up] text{font-size:11px;font-weight:600}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
   "@media (prefers-reduced-motion:no-preference){@keyframes maya-orbit{to{transform:rotate(360deg)}}" +
   [80, 52, 36, 24, 16].map((s, i) => `g[data-v="${i + 1}"]{--p:${s}s}`).join("") +
-  ".maya:not([data-still]) g[data-v]{animation:maya-orbit var(--p) linear infinite}.maya:not([data-still]) g[data-v] g[data-up]{animation:maya-orbit var(--p) linear infinite reverse}" +
-  ".maya:not([data-still]) g[data-neg]{animation-direction:reverse}.maya:not([data-still]) g[data-neg] g[data-up]{animation-direction:normal}" +
-  ".maya:not([data-still]) .maya-svg:is(:hover,:focus-visible,:has([data-active])) :is(g[data-v],g[data-up]){animation-play-state:paused}" +
-  // Labels were placed at rest: in motion only the active or lit planet shows its name.
-  ".maya:not([data-still]) g[data-s]:not([data-lit],:has([data-active])) g[data-up]{opacity:0}.maya:not([data-still]) g[data-up]{transition:opacity .25s}}" +
+  // At rest (paused at 0, the angle the names are placed for); `data-spin` (element.js: pointer over the chart) turns it, an active planet holds it, and the names step aside.
+  ".maya:not([data-still]) g[data-v]{animation:maya-orbit var(--p) linear infinite paused}.maya:not([data-still]) g[data-neg]{animation-direction:reverse}" +
+  ".maya[data-spin] g[data-v]{animation-play-state:running}.maya[data-spin] .maya-svg:has([data-active]) g[data-v]{animation-play-state:paused}" +
+  ".maya:not([data-still]) g[data-up]{transition:opacity .25s}.maya[data-spin] g[data-up]{opacity:0!important}" +
+  "}" +
   // Weave threads and halos: dim with legend hover, selection and the lit thread.
   "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks]:has([data-active]) [data-w]:not([data-lit]){opacity:.18}" +
   // Memory ghost (bar `was`): the previous value, behind its bar.
@@ -132,7 +132,7 @@ export const css =
   ".maya-legend [aria-pressed=false]{opacity:.5}.maya-legend [aria-pressed=false] i{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}" +
   ":is(button,a):focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
   "i{width:10px;height:10px;border-radius:3px;background:var(--c)}" +
-  "[data-maya=ramp]{display:flex;align-items:center;gap:6px}[data-maya=ramp] span{unicode-bidi:plaintext}[data-maya=ramp] b{font-weight:500;color:var(--maya-fg);margin-inline-end:4px}" +
+  "[data-maya=ramp]{display:flex;align-items:center;gap:6px}[data-maya=ramp] span{unicode-bidi:plaintext}.maya-legend b{font-weight:500;color:var(--maya-fg);unicode-bidi:plaintext}[data-maya=ramp]:dir(rtl) i{scale:-1 1}" +
   ".maya-legend [data-past] i{background:color-mix(in oklab,var(--maya-fg) 12%,transparent);outline:1px dashed var(--maya-fg-muted);outline-offset:-1px}" +
   "[data-maya=ramp] circle{fill:none;stroke:var(--maya-fg-muted)}" +
   // The ramp legend is the cells' ramp (--q 35% to 100% of the accent over --b); a constellation's stars use the density ramp.
@@ -153,7 +153,7 @@ export const css =
   ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:11px}" +
   "[data-maya=grid] *{stroke:var(--maya-grid);shape-rendering:crispEdges}" +
   S +
-  "[data-other],[data-total],[data-neu]{--c:var(--maya-fg-muted)}" +
+  "[data-other],[data-total],[data-neu],[data-tone=zero]{--c:var(--maya-fg-muted)}" +
   "[data-tone=good]{--c:var(--maya-good)}[data-tone=bad]{--c:var(--maya-bad)}" +
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
@@ -198,7 +198,7 @@ export const css =
   H +
   "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}[data-maya=rules],[data-maya=brush],[data-ghost],[data-brk],text[data-total]{pointer-events:none}[data-maya=rules] line{stroke:var(--maya-fg);stroke-dasharray:3 3}[data-maya=cross],[data-maya=band]{opacity:0;transition:opacity .2s}" +
   "[data-on]:is([data-maya=cross],[data-maya=band]){opacity:1;transition:opacity .2s,transform .25s var(--maya-ease)}[data-maya=band]{fill:var(--maya-fg);fill-opacity:.05;rx:6px}" +
-  "[data-maya=labels] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}[data-maya=labels] [data-dark]{fill:light-dark(#12161c,var(--maya-bg))}" +
+  "[data-maya=labels] text,[data-up] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}[data-maya=labels] [data-dark]{fill:light-dark(#12161c,var(--maya-bg))}" +
   "[data-maya=cross] line{stroke:var(--maya-fg-muted);stroke-opacity:.55}" +
   "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke}" +
   ".maya-svg:focus{outline:none}.maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +
@@ -224,8 +224,10 @@ export const css =
   HEXMAP +
   SCATTER +
   ORBIT +
-  // Box plot (stats.ts): tinted box, faint row dots (whisker and median are line paths).
+  // Box plot (stats.ts): tinted box, faint row dots (whisker and median are lines).
   "[data-bx]{fill:var(--c);fill-opacity:.25;stroke:var(--c);transform-box:fill-box}" +
+  // Whiskers are as light as the box outline; Tukey outliers are hollow rings.
+  "rect[data-bx]~line:not([data-kpi]){stroke-width:1}circle[data-bx]~circle[data-last]{fill-opacity:0;stroke:var(--c);stroke-width:1.5}" +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +
   "@media (forced-colors:active){.maya-svg,i{forced-color-adjust:none}[data-maya=mark]:not(circle[data-depth]){stroke:CanvasText;stroke-width:1}[data-tone=bad]{stroke-dasharray:4 2}}" +
   "@media (prefers-reduced-motion:no-preference){[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}[data-maya=labels] [data-in]{transition:fill .25s var(--maya-ease)}" +

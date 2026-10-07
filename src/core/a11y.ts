@@ -33,11 +33,23 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
   const ti = (f: string) => spec.titles.get(f) ?? f;
   let s =
     spec.x || spec.path.length
-      ? t(spec, "chartOf", noun, ti(spec.y), spec.x ? ti(spec.x) : spec.path.join(" / "))
+      ? t(
+          spec,
+          "chartOf",
+          noun,
+          // A constellation has no single value: name every measure.
+          spec.type === "constellation" ? spec.measures.map(ti).join(", ") : ti(spec.y),
+          spec.x ? ti(spec.x) : spec.path.join(" / "),
+        )
       : t(spec, "chartOfAll", noun, ti(spec.y));
-  if (spec.series !== null && shaped.series.length)
-    s += `, ${spec.stack ? "stacked" : "grouped"} by ${ti(spec.series)} (${shaped.series.join(", ")})`;
-  if (ROWS.includes(spec.type)) return `${s}. ${fmt("", spec.data.length)} rows.`;
+  if (spec.series !== null && shaped.series.length) {
+    // Name only series that hold a value (a series of nulls is not in the picture).
+    const live = new Set(shaped.cells.flatMap((c) => (c.value === null ? [] : [c.si])));
+    const names = shaped.series.filter((_, i) => live.has(i));
+    s += `, ${spec.stack ? "stacked" : "grouped"} by ${ti(spec.series)} (${(names.length ? names : shaped.series).join(", ")})`;
+  }
+  if (ROWS.includes(spec.type))
+    return `${s}. ${fmt("", spec.data.length)} ${spec.data.length === 1 ? "row" : "rows"}.`;
   // Reduce loops: Math.min(...v) throws RangeError past ~65k values.
   let n = 0;
   let lo = Infinity;

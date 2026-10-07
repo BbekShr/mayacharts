@@ -64,10 +64,18 @@ const DATA: KeyframeAnimationOptions = { duration: 520, easing: EASE };
 const INTRO: KeyframeAnimationOptions = { duration: 760, easing: EASE };
 const UI: KeyframeAnimationOptions = { duration: 220, easing: EASE };
 const ZOOM: KeyframeAnimationOptions = { duration: 640, easing: SWEEP };
+const SWEEP_MS = 1500; // orbit entrance
 const WIPE = 1100; // ms, line and area first draw
 const MAX = 1500; // ponytail: no animation above this many marks
 const STAGGER = 320; // total stagger spread across categories, ms
 const Z = 1e-6;
+/** Put an orbit rotation at angle fraction `f` (its direction decides which end of the clock that is). */
+const seek = (a: Animation, f: number) => {
+  const c = a.effect!.getComputedTiming();
+  a.currentTime = (c.direction === "reverse" ? 1 - f : f) * Number(c.duration);
+};
+const orbiting = (a: Animation) => (a as CSSAnimation).animationName === "maya-orbit";
+const mid = (b: Box) => [b[0] + b[2] / 2, b[1] + b[3] / 2] as const;
 const n = (e: Element, k: string) => +(e.getAttribute(k) ?? 0);
 
 /*
@@ -272,7 +280,10 @@ function morph(m: Element, from: string, d1: string): void {
 }
 
 /** Path whose shape changed: the old outline fades out over the new one. */
-function crossfade(m: Element, o = { ...DATA, delay: delay(m) / 2 }): void {
+function crossfade(
+  m: Element,
+  o: KeyframeAnimationOptions = { ...DATA, delay: delay(m) / 2 },
+): void {
   const gh = m.cloneNode(true) as Element;
   retire(gh);
   m.before(gh);
@@ -347,10 +358,16 @@ function marks(o: Element, w: Element, origin?: Box): void {
   // Read pass: every animation list and on-screen box before the first write, so the writes below
   // never force a style flush per mark (1500 dots: 3000 flushes otherwise).
   const live = new Map<Element | null, Animation[]>();
+  // Orbit rotations (CSS animations): their angle as a fraction, kept across the reorder below.
+  const phase = new Map<Element, number>();
   for (const a of o.getAnimations?.({ subtree: true }) ?? []) {
     const k = (a.effect as KeyframeEffect).target;
     live.get(k)?.push(a) ?? live.set(k, [a]);
+    const f = orbiting(a) && a.effect!.getComputedTiming();
+    if (f && f.progress != null) phase.set(k!, f.progress);
   }
+  const jump = !MORPH && !!w.querySelector("[data-w]"); // weave without CSS `d`: threads crossfade, so dots do
+
   const pre = new Map<Element, Box | undefined>();
   const arcs = new Map<Element, Keyframe>();
   for (const e of w.children) {
@@ -361,7 +378,16 @@ function marks(o: Element, w: Element, origin?: Box): void {
     // The on-screen box of an animating mark: its transform is in user units, origin 0 0 (fill-box).
     const c = g && live.get(t) && new DOMMatrix(getComputedStyle(t).transform);
     if (ring(m)) arcs.set(m, arc(m, true));
-    pre.set(e, c && g ? [g[0] + c.e, g[1] + c.f, g[2] * c.a, g[3] * c.d] : g);
+    // An orbit planet's transform rotates about the sun: carry its centre through it.
+    const q = c && t !== m && c.transformPoint({ x: g[0] + g[2] / 2, y: g[1] + g[3] / 2 });
+    pre.set(
+      e,
+      q && g
+        ? [q.x - g[2] / 2, q.y - g[3] / 2, g[2], g[3]]
+        : c && g
+          ? [g[0] + c.e, g[1] + c.f, g[2] * c.a, g[3] * c.d]
+          : g,
+    );
   }
   const order: Element[] = [];
   moved = false;
@@ -392,6 +418,28 @@ function marks(o: Element, w: Element, origin?: Box): void {
     const morphed = shaped && !zm && morphable(d0, d1); // a drill swaps the category set: crossfade
     const from = morphed ? outline(m, d0) : "";
     const was = m.textContent ?? "";
+    const g = jump && m.localName === "circle" && v && geo(e);
+    const sw = g && v!.some((x, i) => Math.abs(x - g[i]!) > 0.01);
+    if (sw && !instant) crossfade(m);
+    let glided = false;
+    // Orbit: a planet's trail and a name sit at their new place at once; they wait for the planet.
+    const pick = () =>
+      t !== m
+        ? m.querySelector("[data-trail]")
+        : m.localName === "g" && m.hasAttribute("data-a")
+          ? m
+          : null;
+    const sig = (e: Element | null) => e?.getAttribute("d") ?? e?.outerHTML;
+    const s0 = sig(pick());
+    // A name whose place or words change: the old one fades out where it stood.
+    if (
+      m.localName === "g" &&
+      t === m &&
+      m.hasAttribute("data-a") &&
+      !instant &&
+      m.outerHTML !== e.outerHTML
+    )
+      crossfade(m, UI);
     if (m.hasAttribute("data-ghost") || instant || (shaped && !morphed)) stop(as);
     if (shaped && !instant) moved = true;
     if (shaped && !morphed && !instant) crossfade(m); // the ghost keeps the old outline
@@ -407,12 +455,42 @@ function marks(o: Element, w: Element, origin?: Box): void {
       g1 &&
       (v.some((x, i) => Math.abs(x - g1[i]!) > 0.01) || g1.some((x, i) => x !== g0?.[i]))
     ) {
-      moved = true;
+      moved = glided = true;
       stop(ta);
-      run(t1, [{ transform: tf(g1, v) }, { transform: "none" }], { ...DATA, delay: delay(m) / 2 });
+      if (sw) fade(m, false, undefined, DATA);
+      else if (t !== m) {
+        // Orbit planet: glide in polar terms about the sun (the group origin), not a chord through it.
+        const [[x0, y0], [x1, y1]] = [mid(v), mid(g1)];
+        const f = (a: number, p: number, q: number) =>
+          `rotate(${a}rad) scale(${p}) translate(${x1}px,${y1}px) scale(${q}) translate(${-x1}px,${-y1}px)`;
+        const [r0, r1] = [Math.hypot(x0, y0), Math.hypot(x1, y1)];
+        const o = { transformBox: "view-box" };
+        run(
+          t1,
+          [
+            {
+              ...o,
+              transform: f(
+                Math.atan2(x1 * y0 - y1 * x0, x1 * x0 + y1 * y0),
+                r0 / r1,
+                v[2] / g1[2] / (r0 / r1),
+              ),
+            },
+            { ...o, transform: f(0, 1, 1) },
+          ],
+          DATA,
+        );
+      } else
+        run(t1, [{ transform: tf(g1, v) }, { transform: "none" }], {
+          ...DATA,
+          delay: delay(m) / 2,
+        });
     } else if (shaped && !morphed && !m.matches("[data-maya=area]"))
       fade(m, false, undefined, { ...DATA, delay: delay(m) / 2 });
     if (m.localName === "text" && m.textContent !== was) count(m, was, DATA);
+    const tg = pick();
+    if (tg && !instant && sig(tg) !== s0)
+      fade(tg, false, undefined, { ...UI, delay: glided || tg === m ? 120 : 0 });
     order.push(m);
   }
   for (const m of old.values()) exit(m, origin);
@@ -426,6 +504,10 @@ function marks(o: Element, w: Element, origin?: Box): void {
       if (fresh) enter(m, origin);
     }
   }
+  // Re-inserting a node restarts its CSS animations and a new period or direction rescales them:
+  // put every orbit rotation back at the angle it had.
+  for (const [t, f] of phase)
+    for (const a of t.getAnimations?.() ?? []) if (orbiting(a)) seek(a, f);
 }
 
 const mold = (t: string) => t.replace(/\d/g, "0"); // same label and digit count: safe to count from the old number
@@ -439,6 +521,13 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
   const byKey = new Map(old.flatMap((e) => (key(e) ? [[key(e), e] as const] : [])));
   const plain = old.filter((e) => !key(e));
   const used = new Set<Element>();
+  // Interrupted: a label still sliding starts from where it is drawn, not from its old attributes.
+  const shift = new Map(
+    old.map((e) => [
+      e,
+      e.getAnimations?.().length ? new DOMMatrix(getComputedStyle(e).transform) : null,
+    ]),
+  );
   sync(p, c);
   for (const e of [...c.children]) {
     const k = key(e);
@@ -461,7 +550,8 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
     sync(m, e);
     m.replaceChildren(...e.childNodes);
     const t = m.querySelector("[data-v]") ?? m;
-    const [dx, dy] = [x - at(m)[0], y - at(m)[1]];
+    const s = shift.get(m);
+    const [dx, dy] = [x + (s?.e ?? 0) - at(m)[0], y + (s?.f ?? 0) - at(m)[1]];
     if (dx || dy)
       run(m, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
     if (!num) continue;
@@ -520,7 +610,17 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   for (const g of ghosts) ghost(g);
   // Value labels wait for the marks to land; axes swap at once (on a drill, after the marks are under way).
   for (const c of fadeIn)
-    fade(c, false, undefined, z ? (id(c) === "labels" ? late : { ...UI, delay: 160 }) : UI);
+    fade(
+      c,
+      false,
+      undefined,
+      // An axisless grid (a constellation's web) crosses the old one at once: a wait would leave a gap.
+      z && !(id(c) === "grid" && !w.querySelector("[data-maya^=axis]>*"))
+        ? id(c) === "labels"
+          ? late
+          : { ...UI, delay: 160 }
+        : UI,
+    );
 }
 
 /** An outgoing group: unaddressable while it fades, then removed. */
@@ -610,11 +710,23 @@ function intro(svg: Element, kind: Intro): void {
       const [k, g] = [e.getAttribute("data-key")!, geo(e)];
       const p = past.get(k);
       if (e.hasAttribute("data-past")) continue; // ghosts rest
+      if (e.matches("g[data-a]")) {
+        fade(e, false, undefined, { ...UI, delay: SWEEP_MS - 100 }); // names wait for the planets to settle
+        continue;
+      }
       if (g && p)
         run(e, [{ transform: tf(g, p) }, { transform: "none" }], { ...INTRO, delay: delay(e) });
       else enter(e, undefined, INTRO);
     }
   for (const t of m.querySelectorAll("text[data-maya=mark]")) count(t, "", INTRO);
+  // Orbit: each planet sweeps in its own direction, further the faster it is, and settles at rest.
+  for (const g of m.querySelectorAll("g[data-v]")) {
+    const a = (70 + 50 * +g.getAttribute("data-v")!) * (g.hasAttribute("data-neg") ? 1 : -1);
+    run(g, [{ transform: `rotate(${a}deg)` }, { transform: "none" }], {
+      duration: SWEEP_MS,
+      easing: EASE,
+    });
+  }
 }
 
 /** ms between categories so the whole stagger spans at most STAGGER. */
@@ -645,7 +757,7 @@ export function patch(
     }
   } else {
     instant = !!opts.instant;
-    lag = spread(wm);
+    lag = wm.querySelector("[data-w]") ? 0 : spread(wm); // weave threads must meet their dots
     zm = undefined;
     const z = opts.zoom;
     if (z) {
@@ -677,4 +789,47 @@ export function patch(
     zm = undefined;
   }
   opts.after?.(box.firstElementChild!);
+}
+
+/** Orbit motion on demand: the planets turn while the pointer is over the chart (theme rule on
+ * `data-spin`); when it leaves they glide home the short way and the names return. */
+let home = 0;
+export function spin(maya: Element, on: boolean): void {
+  const gs = [...maya.querySelectorAll("g[data-v]")];
+  if (!gs.length || maya.hasAttribute("data-still")) return;
+  const was = new Map(gs.map((g) => [g, new DOMMatrix(getComputedStyle(g).transform)]));
+  const th = (g: Element) => Math.atan2(was.get(g)!.b, was.get(g)!.a); // where it is drawn, radians
+  const mine = gs.flatMap((g) => g.getAnimations().filter((a) => !orbiting(a)));
+  mine.forEach((a) => a.cancel()); // a sweep or a glide home in progress
+  const id = ++home;
+  if (on) {
+    maya.setAttribute("data-spin", "");
+    for (const g of gs)
+      for (const a of g.getAnimations()) if (orbiting(a)) seek(a, (th(g) / (2 * Math.PI) + 1) % 1);
+    return;
+  }
+  const land = Promise.all(
+    gs.map((g) => {
+      const t = th(g);
+      const d = -Math.atan2(Math.sin(t), Math.cos(t));
+      return g.animate?.([{ transform: `rotate(${t}rad)` }, { transform: `rotate(${t + d}rad)` }], {
+        duration: 450 + 250 * Math.abs(d),
+        easing: EASE,
+        fill: "forwards",
+      })?.finished;
+    }),
+  );
+  land.then(
+    () => {
+      if (id !== home) return;
+      maya.removeAttribute("data-spin");
+      for (const g of gs) {
+        for (const a of g.getAnimations()) if (orbiting(a)) seek(a, 0);
+        g.getAnimations()
+          .filter((a) => !orbiting(a))
+          .forEach((a) => a.cancel());
+      }
+    },
+    () => {},
+  );
 }

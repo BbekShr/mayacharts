@@ -159,4 +159,88 @@ describe("constellation", () => {
     expect(out).toContain("Closer points are more alike");
     expect(out).toContain("…</text>");
   });
+
+  const view = (svg: string) => {
+    const st = stars(svg).map((t) => ({
+      name: at(t, "data-x")!,
+      x: +at(t, "cx")!,
+      y: +at(t, "cy")!,
+      r: +at(t, "r")!,
+    }));
+    const lab = [
+      ...svg.matchAll(
+        /<text x="([\d.]+)" y="([\d.]+)" text-anchor="(\w+)"[^>]*data-key="c~[^"]*">([^<]*)<\/text>/g,
+      ),
+    ].map((m) => ({ x: +m[1]!, y: +m[2]!, a: m[3]!, t: m[4]! }));
+    return { st, lab };
+  };
+
+  it("one scale for both axes: the sky keeps its proportions as the container reshapes", () => {
+    const d = rows(20);
+    const a = view(render(spec(d), { width: 640, height: 420 })).st;
+    const b = view(render(spec(d), { width: 640, height: 260 })).st;
+    // distance ratios between star pairs are the same in both frames (uniform scale)
+    const dist = (s: typeof a, i: number, j: number) =>
+      Math.hypot(s[i]!.x - s[j]!.x, s[i]!.y - s[j]!.y);
+    const k = dist(b, 0, 7) / dist(a, 0, 7);
+    for (const [i, j] of [
+      [1, 9],
+      [3, 15],
+      [2, 18],
+    ])
+      expect(dist(b, i!, j!) / dist(a, i!, j!)).toBeCloseTo(k, 1);
+  });
+
+  it("a name sits clearly nearer its own star than any other star", () => {
+    for (const [n, w, h] of [
+      [40, 1280, 500],
+      [40, 360, 360],
+      [60, 480, 300],
+    ] as const) {
+      const { st, lab } = view(render(spec(rows(n)), { width: w, height: h }));
+      expect(lab.length).toBeGreaterThan(0);
+      for (const l of lab) {
+        // the label's nearest edge point (start/end anchors touch the star side)
+        const gap = (s: (typeof st)[number]) => {
+          const hw = (l.t.length * 7.2) / 2;
+          const cx = l.a === "start" ? l.x + hw : l.a === "end" ? l.x - hw : l.x;
+          return (
+            Math.hypot(Math.max(0, Math.abs(s.x - cx) - hw), Math.max(0, Math.abs(s.y - l.y) - 7)) -
+            s.r
+          );
+        };
+        const own = st.filter((s) => s.name === l.t);
+        expect(own).toHaveLength(1);
+        for (const s of st) if (s !== own[0]) expect(gap(s)).toBeGreaterThan(gap(own[0]!) + 3);
+      }
+    }
+  });
+
+  it("identical rows stay separate hoverable stars and one name carries the count", () => {
+    const d = [...rows(12), ...[1, 2, 3].map((i) => ({ n: `Twin ${i}`, a: 99, b: 99, c: 99 }))];
+    const out = render(spec(d));
+    const { st, lab } = view(out);
+    const twins = st.filter((s) => s.name.startsWith("Twin"));
+    expect(twins).toHaveLength(3);
+    expect(new Set(twins.map((s) => s.x + "," + s.y)).size).toBe(3);
+    expect(lab.filter((l) => l.t.startsWith("Twin"))).toSatisfy(
+      (a: { t: string }[]) => a.length <= 1 && a.every((l) => l.t.endsWith("+2")),
+    );
+  });
+
+  it("describes every measure, pluralises rows and leaves no double space", () => {
+    const desc = (s: string) => /<desc[^>]*>([^<]*)</.exec(s)![1]!;
+    expect(desc(render(spec(rows(20))))).toContain("chart of a, b, c by n. 20 rows.");
+    expect(desc(render(spec(rows(1))))).toContain("1 row.");
+    const d = rows(8);
+    d[2]!.a = null;
+    expect(desc(render(spec(d)))).not.toContain("  ");
+    expect(desc(render(spec(d)))).toContain("1 of 8 rows has a missing measure and is left out.");
+  });
+
+  it("keeps the lowest star above the hint line", () => {
+    const out = render(spec(rows(40)), { width: 360, height: 300 });
+    const hint = +/<text x="[\d.]+" y="([\d.]+)"[^>]*data-v/.exec(out)![1]!;
+    for (const s of view(out).st) expect(s.y + s.r).toBeLessThanOrEqual(hint - 8);
+  });
 });

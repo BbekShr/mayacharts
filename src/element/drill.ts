@@ -74,7 +74,7 @@ const branchOf = (key: string, depth: number, type = ""): string | undefined => 
 };
 
 /** Not a target of its own: a click here means "go back up" (drillOut). */
-const BUSY =
+export const BUSY =
   "[data-maya=mark],[data-maya=hit],[data-maya=link],[data-maya=legend],button,a,input,select,.maya-ctl,.maya-tip,.maya-table";
 
 export const mount = (host: Host): Handlers => {

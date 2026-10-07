@@ -461,11 +461,13 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       const v = row[cb];
       if (typeof v === "number") ((lo = Math.min(lo, v)), (hi = Math.max(hi, v)));
     }
-  const tone = (v: number): "good" | "bad" | null =>
+  const tone = (v: number): "good" | "bad" | "zero" | null =>
     cb === "sign"
       ? v < 0
         ? "bad"
-        : "good"
+        : v > 0
+          ? "good"
+          : "zero"
       : cb && typeof cb === "object"
         ? v >= cb.target
           ? "good"
@@ -478,7 +480,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     );
   const toneText = (v: number) => {
     const n = tone(v);
-    return n && toneWord(n);
+    return n && n !== "zero" ? toneWord(n) : "";
   };
 
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
@@ -741,6 +743,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     legend =
       cb === "sign" || typeof cb === "object"
         ? `<div class="maya-legend" data-maya="tone">` +
+          // Orbit and constellation colour by a measure the reader cannot guess: name it.
+          (cb === "sign" && (s.type === "orbit" || s.type === "constellation")
+            ? `<b>${esc(s.titles.get(s.y2 ?? s.y) ?? s.y2 ?? s.y)}</b>`
+            : "") +
           (["good", "bad"] as const)
             .map((n) => `<span data-tone="${n}"><i></i>${esc(toneWord(n))}</span>`)
             .join("") +

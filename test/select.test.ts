@@ -120,6 +120,22 @@ describe("<maya-chart select>", () => {
     expect(on(el)).toEqual(["Feb"]);
   });
 
+  it("empty chart space, a click elsewhere and the same mark again all deselect", async () => {
+    const el = await mount(spec({ select: true }));
+    let n = 0;
+    el.addEventListener("maya-select", () => n++);
+    await click(mk(el)[0]!);
+    await click(mk(el)[0]!);
+    expect(on(el)).toEqual([]);
+    await click(mk(el)[0]!);
+    await click(el.shadowRoot!.querySelector(".maya-svg")!);
+    expect(on(el)).toEqual([]);
+    await click(mk(el)[1]!);
+    await click(document.body);
+    expect(on(el)).toEqual([]);
+    expect(n).toBe(6);
+  });
+
   it("multi toggles two; Escape clears and announces", async () => {
     const el = await mount(spec({ select: "multi" }, rows.slice(0, 2)));
     await click(mk(el)[0]!);

@@ -71,7 +71,7 @@ export const constellation: Mark = {
     const n = rows.length;
     const left = spec.data.length - n;
     const note = left
-      ? ` ${ctx.fmt("", left)} of ${ctx.fmt("", spec.data.length)} rows have a missing measure and are left out.`
+      ? `${ctx.fmt("", left)} of ${ctx.fmt("", spec.data.length)} rows ${left === 1 ? "has" : "have"} a missing measure and ${left === 1 ? "is" : "are"} left out.`
       : "";
     if (!n) return { marks: "", hits: "", note };
 
@@ -113,16 +113,35 @@ export const constellation: Mark = {
       return [Math.min(...c), Math.max(...c)] as const;
     };
     const [[x0, x1], [y0, y1]] = [span(0), span(1)];
-    // The hint is clipped to the plot's width (the key words come first).
+    // The hint is clipped to the plot's width (the key words come first); its line is kept clear of stars.
+    const hintH = plot.w < 99 ? 0 : 16;
     const pad = PAD + Math.max(...rad);
     const bw = Math.max(1, plot.w - 2 * pad);
-    const bh = Math.max(1, plot.h - 2 * pad);
-    // Each axis fills the box on its own, so a flat sky still spreads (distances on screen are
-    // a picture; the neighbours below are measured in the data).
+    const bh = Math.max(1, plot.h - 2 * pad - hintH);
+    // One scale for both axes, sky centred in the box: on-screen distance means the same thing in
+    // every direction and at every container shape (the neighbours below are measured in the data).
+    const sc = Math.min(x1 > x0 ? bw / (x1 - x0) : Infinity, y1 > y0 ? bh / (y1 - y0) : Infinity);
     const fit = (a: number, lo: number, hi: number, o: number, len: number) =>
-      p.map((q) => r(o + (hi > lo ? ((q[a]! - lo) / (hi - lo)) * len : len / 2)));
+      p.map((q) => o + len / 2 + (Number.isFinite(sc) ? (q[a]! - (lo + hi) / 2) * sc : 0));
     const px = fit(0, x0, x1, plot.x + pad, bw);
     const py = fit(1, y0, y1, plot.y + pad, bh);
+    // Identical rows land on one point: spread each such group on a small ring so every star stays
+    // hoverable. group[i] = first member's index; size[i] = that group's member count.
+    const at = new Map<string, number[]>();
+    rows.forEach((_, i) => {
+      const k = r(px[i]!) + "," + r(py[i]!);
+      (at.get(k) ?? at.set(k, []).get(k)!).push(i);
+    });
+    const group = rows.map(() => 0);
+    const size = rows.map(() => 1);
+    for (const m of at.values())
+      m.forEach((i, k) => {
+        [group[i], size[i]] = [m[0]!, m.length];
+        const a = (2 * Math.PI * k) / m.length;
+        const jr = m.length > 1 ? rad[i]! * 0.9 : 0;
+        px[i] = r(px[i]! + Math.cos(a) * jr);
+        py[i] = r(py[i]! + Math.sin(a) * jr);
+      });
 
     // Nearest neighbours in the full standardised space.
     const near = rows.map((_, i) =>
@@ -186,34 +205,46 @@ export const constellation: Mark = {
 
     // Names, spread over the sky: start at the largest star, then take the star farthest from
     // every named one. Each tries above, below, right of it, left of it, and takes the first spot
-    // whose box clears every star and the hint and that ctx.label accepts (no collision, inside).
+    // whose box clears every star and the hint, sits clearly nearer its own star than any other
+    // (a name must not read as another star's), and that ctx.label accepts. A group of identical
+    // rows is one name "First +2".
     // ponytail: greedy, 5 names.
     const named: number[] = [];
     const dist = (i: number) =>
       Math.min(...named.map((j) => Math.hypot(px[i]! - px[j]!, py[i]! - py[j]!)));
-    const todo = new Set(rows.keys());
+    const todo = new Set([...rows.keys()].filter((i) => group[i] === i));
     while (named.length < 5 && todo.size) {
       const i = [...todo].reduce((m, c) =>
         (named.length ? dist(c) - dist(m) : val[c]! - val[m]!) > 0 ? c : m,
       );
       todo.delete(i);
-      const [x, y, q, w] = [px[i]!, py[i]!, rad[i]!, tw(names[i]!)];
-      // Label centres: above, below, right, left.
-      const ok = [
-        [x, y - q - 9],
-        [x, y + q + 9],
-        [x + q + 3 + w / 2, y],
-        [x - q - 3 - w / 2, y],
-      ].some(
-        ([a, b]) =>
-          b! + 22 <= plot.y + plot.h &&
-          rows.every(
-            (_, j) =>
-              Math.max(0, Math.abs(px[j]! - a!) - w / 2) + Math.max(0, Math.abs(py[j]! - b!) - 7) >
-              rad[j]! + 1,
-          ) &&
-          ctx.label(a!, b!, names[i]!, "center", key("c", ids[i])),
-      );
+      const txt = names[i]! + (size[i]! > 1 ? ` +${size[i]! - 1}` : "");
+      // A group is judged as one star of its ring's outer radius.
+      const [x, y, w] = [px[i]!, py[i]!, tw(txt)];
+      const q = rad[i]! + (size[i]! > 1 ? rad[i]! * 0.9 : 0);
+      // [box centre x, centre y, label x, anchor]: above, below, right, left.
+      const ok = (
+        [
+          [x, y - q - 9, x, "center"],
+          [x, y + q + 9, x, "center"],
+          [x, y, x + q + 3, "start"],
+          [x, y, x - q - 3, "end"],
+        ] as const
+      ).some(([, b, lx, pl]) => {
+        const a = pl === "center" ? lx : pl === "start" ? lx + w / 2 : lx - w / 2;
+        // Gap from the label box to a star's edge.
+        const gap = (j: number) =>
+          Math.hypot(
+            Math.max(0, Math.abs(px[j]! - a) - w / 2),
+            Math.max(0, Math.abs(py[j]! - b) - 7),
+          ) - rad[j]!;
+        const own = Math.min(...[...rows.keys()].filter((j) => group[j] === i).map(gap));
+        return (
+          b + 22 <= plot.y + plot.h - hintH &&
+          [...rows.keys()].every((j) => group[j] === i || (gap(j) > 1 && own + 4 < gap(j))) &&
+          ctx.label(lx, b, txt, pl, key("c", ids[i]))
+        );
+      });
       if (ok) named.push(i);
     }
 
