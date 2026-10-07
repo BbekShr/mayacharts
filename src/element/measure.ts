@@ -19,8 +19,9 @@ const FORM = "[data-maya=form]"; // units' form control: the same radiogroup, wr
 
 export const reduce = (s: State, e: MeasureEvent): State => {
   if (e.type === "spec") {
+    if (!e.prev) return s;
     const y = e.next.y;
-    const same = e.prev && JSON.stringify(y) === JSON.stringify(e.prev.y);
+    const same = JSON.stringify(y) === JSON.stringify(e.prev.y);
     if (Array.isArray(y) && same) return s;
     if (s.view.measure === undefined) return s;
     const { measure: _drop, ...view } = s.view;

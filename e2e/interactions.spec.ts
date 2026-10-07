@@ -159,6 +159,18 @@ test.describe("drill", () => {
     await expect.poll(async () => (await view(page, "treemap")).drill?.length ?? 0).toBe(0);
     await expect(crumbs).toHaveCount(0);
   });
+
+  test("Enter after an arrow key mid-zoom drills the arrowed mark", async ({ page }) => {
+    await open(page);
+    await page.locator("#treemap svg").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await view(page, "treemap")).drill?.length).toBe(1);
+    await page.keyboard.press("ArrowRight"); // before the zoom lands
+    await settle(page);
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await view(page, "treemap")).drill?.length).toBe(2);
+  });
 });
 
 test.describe("select", () => {

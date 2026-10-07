@@ -22,7 +22,7 @@ const unit = (svg: Element, s: DOMRect) => {
   const w = +(a(svg, "viewBox").split(" ")[2] || s.width) || 1;
   return w / (s.width || w);
 };
-const still = () => matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export interface Tooltip {
   off(): void;
@@ -74,9 +74,7 @@ export function tooltip(
       byKey.set(a(m, "data-key"), m);
       if (!m.hasAttribute("data-c")) continue;
       const c = a(m, "data-c");
-      const g = byC.get(c);
-      if (g) g.push(m);
-      else byC.set(c, [m]);
+      byC.set(c, [...(byC.get(c) ?? []), m]);
     }
   };
   const group = (m: Element) =>

@@ -168,7 +168,8 @@ export const mount = (host: Host): Handlers => {
       const svg = host.root.querySelector<HTMLElement>(".maya-svg");
       svg?.focus({ preventScroll: true });
       const go = () => {
-        if (!m || host.root.activeElement !== svg) return;
+        if (!m || host.root.activeElement !== svg || host.root.querySelector("[data-active]"))
+          return;
         if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
         (m as unknown as HTMLElement).focus?.({ preventScroll: true });
       };

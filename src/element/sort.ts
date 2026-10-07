@@ -15,8 +15,8 @@ export const reduce = (s: State, e: SortEvent): State => {
     const { prev, next } = e;
     if (
       !s.view.sortBy ||
-      (prev &&
-        prev.type === next.type &&
+      !prev ||
+      (prev.type === next.type &&
         prev.x === next.x &&
         JSON.stringify(prev.y) === JSON.stringify(next.y))
     )
