@@ -144,7 +144,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction.
    * @example y2: "units" */
   y2?: Field<R>;
-  /** Previous value field: a ghost bar at the old value behind each bar, "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves. bar; not with `stack` or a `y` array.
+  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves. bar; not with `stack` or a `y` array.
    * @example was: "lastWeek" */
   was?: Field<R>;
   /** Forms a units chart switches between, first one shown (view.form picks another); the element adds a form control when there are 2 or more. Default all three. units only.

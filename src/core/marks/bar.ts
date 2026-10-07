@@ -97,7 +97,7 @@ export const bar: Mark = {
     const keys = shaped.visible.map((j) => shaped.series[j]!);
     const inner = bandScale(keys, [0, cat.bandwidth], 0.1, 0);
     const cvOf = colorVals(spec);
-    // spec.was: a ghost bar at the previous value behind each bar (key "%00was~" + the bar's key).
+    // spec.was: a ghost bar at the previous value over each bar (key "%00was~" + the bar's key).
     const wasOf = spec.was === null ? null : colorVals(spec, spec.was);
     let ghosts = "";
     const moves: [string, number][] = [];
@@ -296,7 +296,7 @@ export const bar: Mark = {
     });
     const top = moves.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 2);
     return {
-      marks: ghosts + marks,
+      marks: marks + ghosts, // ghosts on top: a fall shows past the bar, a rise as a dashed box inside it
       hits,
       labels: labels + (brk ? el("path", { "data-brk": true, d: brk }) : ""),
       note: top.length

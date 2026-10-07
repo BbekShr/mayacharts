@@ -16,7 +16,7 @@
  *     screen. A star's data-a lists the stars that count it among their 3 nearest, and its
  *     data-n is its own index, so the tooltip's flow lighting (`[data-a~=n]`) lights the 3 stars
  *     nearest to the one hovered. A thin line joins each star to its single nearest.
- *   - Labels on the 5 largest stars via ctx.label() collision. Visible hint: text.alike.
+ *   - Up to 5 labels, spread over the sky, only where the box clears every star. Visible hint: text.alike.
  *   - Stars are `<circle data-maya="mark">` keyed `c~NAME` (svg.ts nameId for repeats).
  *   - No hits: the element's nearest-point pick (scatter's) is the intended hit model.
  */
@@ -183,11 +183,45 @@ export const constellation: Mark = {
         });
       });
 
-    // Names on the 5 largest stars; the label scan drops any that would collide.
-    [...rows.keys()]
-      .sort((a, b) => val[b]! - val[a]! || a - b)
-      .slice(0, 5)
-      .forEach((i) => ctx.label(px[i]!, r(py[i]! - rad[i]!), names[i]!, "above", key("c", ids[i])));
+    // Names, spread over the sky: start at the largest star, then take the star farthest from
+    // every named one, skipping any whose label box would cover a star or a chosen label.
+    // ponytail: greedy, 5 names; ctx.label still drops what collides or leaves the svg.
+    const boxes: number[][] = [];
+    const named: number[] = [];
+    const free = (i: number, below: boolean) => {
+      const w = names[i]!.length * 7.2 + 4;
+      const x = px[i]! - w / 2;
+      const y = below ? py[i]! + rad[i]! + 2 : py[i]! - rad[i]! - 16;
+      const ok =
+        !boxes.some((b) => x < b[2]! && x + w > b[0]! && y < b[3]! && y + 14 > b[1]!) &&
+        rows.every(
+          (_, j) =>
+            Math.abs(px[j]! - Math.max(x, Math.min(px[j]!, x + w))) +
+              Math.abs(py[j]! - Math.max(y, Math.min(py[j]!, y + 14))) >
+            rad[j]! + 1,
+        );
+      if (ok) boxes.push([x, y, x + w, y + 14]);
+      return ok;
+    };
+    const dist = (i: number) =>
+      Math.min(...named.map((j) => Math.hypot(px[i]! - px[j]!, py[i]! - py[j]!)));
+    const todo = new Set(rows.keys());
+    while (named.length < 5 && todo.size) {
+      const i = [...todo].reduce((m, c) =>
+        (named.length ? dist(c) - dist(m) : val[c]! - val[m]!) > 0 ? c : m,
+      );
+      todo.delete(i);
+      const below = !free(i, false);
+      if (below && !free(i, true)) continue;
+      named.push(i);
+      ctx.label(
+        px[i]!,
+        below ? r(py[i]! + rad[i]!) : r(py[i]! - rad[i]!),
+        names[i]!,
+        below ? "below" : "above",
+        key("c", ids[i]),
+      );
+    }
 
     const hint = ctx.t("alike", ms.map(ti).join(", "));
     const hintEl =

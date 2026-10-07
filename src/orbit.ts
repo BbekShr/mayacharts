@@ -49,11 +49,37 @@ export const orbit: Mark = {
     const P = Math.max(4, Math.min(16, Math.min(plot.w, plot.h) * 0.05, 40 / Math.sqrt(n))); // largest planet radius
     const R0 = Math.max(18, Math.min(Math.min(plot.w, plot.h) * 0.12, 40)); // sun
     const inner = R0 + P + 4;
-    const R = Math.max(inner + 12, Math.min(plot.w / 2 - 36, plot.h / 2 - P - 16));
+    const R = Math.max(inner + 12, Math.min(plot.w / 2 - 40, plot.h / 2 - P - 28));
     const ring = (k: number) => (n > 1 ? inner + (k * (R - inner)) / (n - 1) : (inner + R) / 2);
     const fv = (v: number) => ctx.fmt(spec.y, v);
     const [ty, t2] = [spec.titles.get(spec.y) ?? spec.y, spec.titles.get(spec.y2 ?? "") ?? spec.y2];
 
+    // The growth title says "%" and no format of its own: say it on every figure too.
+    const pct = spec.y2 && !spec.format.has(spec.y2) && /%/.test(t2 ?? "") ? "%" : "";
+    const text = (s: string, x: number, y: number, o = {}) =>
+      el("text", { x, y, "text-anchor": "middle", ...o }, esc(s));
+    // Label block centred radially outward from the planet (px, py are sun-relative); "" when it
+    // would touch the sun, so the sun's title stays clear.
+    const lab = (px: number, py: number, pr: number, nm: string, gf: string) => {
+      const [w, h, len] = [Math.max(nm.length, gf.length) * 6.4, gf ? 24 : 13, Math.hypot(px, py)];
+      const [ux, uy] = [px / len, py / len];
+      const d = pr + 3 + Math.abs(ux) * (w / 2) + Math.abs(uy) * (h / 2);
+      const [x, y] = [r(ux * d), r(uy * d)];
+      if (
+        Math.hypot(Math.max(0, Math.abs(px + x) - w / 2), Math.max(0, Math.abs(py + y) - h / 2)) <
+        R0 + 2
+      )
+        return "";
+      return el(
+        "g",
+        { transform: `translate(${px} ${py})` },
+        el(
+          "g",
+          { "data-up": true },
+          text(nm, x, y - (gf ? 1 : -4)) + (gf ? text(gf, x, y + 10, { "data-g": true }) : ""),
+        ),
+      );
+    };
     let marks = "";
     let grid = el("circle", { cx, cy, r: r(R0), "data-disc": true });
     ps.forEach((p, k) => {
@@ -67,7 +93,10 @@ export const orbit: Mark = {
       const neg = (p.g ?? 0) < 0;
       const sweep = Math.max(6, share * 110) * D;
       const tone = p.g === null ? null : ctx.tone(p.g);
-      const [f, gf] = [fv(p.v), p.g === null ? "" : (p.g > 0 ? "+" : "") + ctx.fmt(spec.y2!, p.g)];
+      const [f, gf] = [
+        fv(p.v),
+        p.g === null ? "" : (p.g > 0 ? "+" : "") + ctx.fmt(spec.y2!, p.g) + pct,
+      ];
       const name = ctx.fmt(spec.x, p.name);
       const d = {
         "data-key": key(shaped.series[0] ?? "", p.name),
@@ -80,8 +109,6 @@ export const orbit: Mark = {
         "data-tone": tone,
         "data-other": p.name === OTHER,
       };
-      const text = (s: string, y: number, o = {}) =>
-        el("text", { y, "text-anchor": "middle", ...o }, esc(s));
       grid += el("circle", { cx, cy, r: r(rr) });
       marks += el(
         "g",
@@ -102,18 +129,9 @@ export const orbit: Mark = {
             : "") +
             el("circle", { "data-maya": "mark", ...d, cx: px, cy: py, r: r(pr) }) +
             // ponytail: only the 8 innermost planets are named; the rest answer to hover.
-            (k < 8
-              ? el(
-                  "g",
-                  { transform: `translate(${px} ${py})` },
-                  el(
-                    "g",
-                    { "data-up": true },
-                    text(cut(name, 12), r(pr + 11)) +
-                      (gf ? text(gf, r(pr + 22), { "data-g": true }) : ""),
-                  ),
-                )
-              : ""),
+            // The name sits radially outward from the planet as drawn at rest (it is upright but
+            // not orbiting with it, so under motion it drifts); a label that would touch the sun is skipped.
+            (k < 8 ? lab(px, py, pr, cut(name, 12), gf) : ""),
         ),
       );
     });

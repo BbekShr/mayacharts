@@ -25,7 +25,7 @@ totals: string[] = []. x values drawn as running-total bars. waterfall only.
 stack: boolean|"percent" = false. Stack series instead of grouping. bar area only. "percent": each category's visible values as shares of its total (axis 0 to 100%, hidden series renormalise; negatives are shares of the summed magnitudes, below 0). Labels, tooltips and the table show the share, not the raw value. y is formatted "percent" unless format sets it. Numeric rules are shares (0.5 = 50%); "mean" is the mean share of the drawn segments. Example: stack: "percent"
 horizontal: boolean = false. Categories on left axis. bar dumbbell.
 y2: field = null. Second value field drawn as line on right axis (vertical bar). orbit: growth, which sets each planet's speed and direction. bar orbit.
-was: field = null. Previous value: a ghost bar at the old value behind each bar, "was {value}" in the tooltip (text.was), a data table column, and a description sentence naming the 2 largest relative moves (text.since: "Since Last week: North +12%, West -10%."). bar; not with stack or a y array. Example: was: "lastWeek"
+was: field = null. Previous value: a dashed ghost bar at the old value over each bar, keyed in the legend by the was title, "was {value}" in the tooltip (text.was), a data table column, and a description sentence naming the 2 largest relative moves (text.since: "Since Last week: North +12%, West -10%."). bar; not with stack or a y array. Example: was: "lastWeek"
 forms: ("waffle"|"bars"|"swarm")[] = all three. Forms a units chart switches between, first shown (view.form picks another); with 2 or more a form control appears. units only. Example: forms: ["waffle", "swarm"]
 frame: field = null. Playback: one frame per distinct value (data order, matched as strings, null skipped, at most 200 or too-many-marks). Renders one frame, the last by default (view.frame picks another); the title becomes "{title}, {frame value}" (text.frameOf, value formatted by format[frame]); value axes span every frame so they hold still. The element adds a Play button. bar line area scatter dumbbell. Example: frame: "year"
 format: preset|template|{[field]: preset|template|Intl} = auto. Per field or one string for all measures. Template: "{value:percent} gross". Example: format: {margin: "{value:percent} gross"}
@@ -113,7 +113,7 @@ too-few-measures: constellation y is not an array of at least 2 measures
 EVENTS AND STATE:
 Events (bubbles: true, composed: true):
   maya-select {selected: Sel[], target: (Sel & {value}) | null}
-  maya-view {measure, drill, window, hidden, sortBy} (user actions only; window = zoom slice; sortBy = table header click sort)
+  maya-view {measure, drill, window, hidden, form, sortBy} (user actions only; window = zoom slice; sortBy = table header click sort)
   maya-error {code, path, message} (cancelable with preventDefault())
   maya-render {} (signals host that render is complete)
 Two-way sync properties:

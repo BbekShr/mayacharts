@@ -89,6 +89,49 @@ const svg = render(spec, { width: 640, height: 320 }); // bare SVG string
 const html = renderShell(spec, { width: 640, height: 320 }); // full chart, works without JS
 ```
 
+## Signature charts
+
+Five things no other chart library draws. Each is a spec like any other and costs 2.5 KB gzip or less (`was` is part of the core bar).
+
+**Shapeshifter (`units`).** One dot per row, and the dots change form: a waffle, bars, or a swarm along the value axis. Every dot keeps the same key in every form, so switching form flies each dot to its new place instead of redrawing. Maya means illusion, and this is the one that earns the name. Other libraries make you pick a chart; here the control is part of the chart.
+
+```js
+import "mayacharts/units";
+chart.spec = { type: "units", x: "region", y: "spend", name: "customer", data: customers };
+// forms defaults to ["waffle", "bars", "swarm"]; view.form picks the one shown; 1500 rows at most
+```
+
+**Dhaka weave (`weave`).** A ranking over time, woven like Dhaka cloth. Bump charts exist, but their lines just cross. Here the series that climbs passes over the one that falls at every crossing, with a halo under each thread so over and under read at a glance. Hover a dot to light its thread and see that period's order.
+
+```js
+import "mayacharts/weave";
+chart.spec = { type: "weave", x: "quarter", y: "sales", series: "line", data: rows };
+// series is required, at most 8; a missing period breaks that thread
+```
+
+**Memory (`was`).** A bar chart that remembers. Name a column that holds the previous value and each bar gets a dashed ghost at that value, grows from the ghost on first paint, and the description gains a "Since ..." sentence naming the largest moves. The memory comes from your data, never from browser storage. It is part of the core bar, so there is nothing to import.
+
+```js
+chart.spec = { type: "bar", x: "family", y: "sales", was: "before", data: rows };
+// not with stack or a y array; a row whose was is not a number shows no ghost
+```
+
+**Orrery (`orbit`).** Categories as planets around their total. Orbit radius is rank (largest innermost), planet size is value, and orbital speed and direction follow growth, so a shrinking category circles the other way. A static trail arc shows the growth too, so the chart still reads with motion off: under reduced motion, with `animate: false`, in server rendering and in an exported image.
+
+```js
+import "mayacharts/orbit";
+chart.spec = { type: "orbit", x: "family", y: "sales", y2: "growth", data: rows };
+// without y2 nothing moves; limit rolls the rest into a fixed Other planet
+```
+
+**Constellation (`constellation`).** Accounts placed by how alike their measures are, not by any one axis. Two or more measures are standardised and flattened to a sky by a deterministic PCA, so the same data always draws the same sky. Each star is joined to its nearest neighbour, and hovering one lights its three nearest.
+
+```js
+import "mayacharts/constellation";
+chart.spec = { type: "constellation", x: "account", y: ["spend", "tickets", "tenure"], data: rows };
+// optional size; 500 rows and 12 measures at most
+```
+
 ## The spec
 
 Rule: `x` is always the category, `y` is always the value, whatever the orientation. `yDomain` is always the value axis.
@@ -119,7 +162,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `stack`      | boolean / "percent"             | bar area                                                                                          | Stack series instead of grouping; "percent" shows shares of each category's visible total (axis 0 to 100%, y formatted as percent unless `format` sets it)                                    |
 | `horizontal` | boolean                         | bar dumbbell                                                                                      | Categories on the left axis                                                                                                                                                                   |
 | `y2`         | field                           | bar orbit                                                                                         | Second value field as a line on right axis (vertical bars only); orbit: growth, which sets planet speed and direction                                                                         |
-| `was`        | field                           | bar                                                                                               | Previous value: a ghost bar behind each bar, "was" in the tooltip, a table column and a description sentence naming the 2 largest moves. Not with `stack` or a `y` array                      |
+| `was`        | field                           | bar                                                                                               | Previous value: a ghost bar over each bar keyed in the legend, "was" in the tooltip, a table column and a description sentence naming the 2 largest moves. Not with `stack` or a `y` array    |
 | `forms`      | ("waffle" / "bars" / "swarm")[] | units                                                                                             | Forms a units chart switches between, first shown (`view.form` picks another); a form control appears with 2 or more. Default all three                                                       |
 | `frame`      | field                           | bar line area scatter dumbbell                                                                    | Playback: one frame per distinct value, the last shown by default (`view.frame` picks another); the title names the frame and the value axes span every frame. The element adds a Play button |
 
@@ -565,17 +608,17 @@ Line and area charts on a time axis automatically reduce long time series to abo
 
 Each module extends the core with chart types and shares the same spec, theme, tooltip, a11y, and animation.
 
-| Module                     | Types                                                     | Size budget (gzip) |
-| -------------------------- | --------------------------------------------------------- | ------------------ |
-| `mayacharts/hierarchy`     | treemap, sunburst, marimekko, waffle                      | 3.5 KB             |
-| `mayacharts/flow`          | sankey, chord                                             | 3 KB               |
-| `mayacharts/radial`        | radial                                                    | 2 KB               |
-| `mayacharts/geo`           | hexmap (50 US states + DC + PR)                           | 3.5 KB             |
-| `mayacharts/stats`         | boxplot, funnel                                           | 2.5 KB             |
-| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.5 KB             |
-| `mayacharts/units`         | units (one dot per row: waffle, bars, swarm)              | 2.5 KB             |
-| `mayacharts/orbit`         | orbit (planets sized by value, speed by growth)           | 2.5 KB             |
-| `mayacharts/constellation` | constellation (rows placed by similarity across measures) | 2.5 KB             |
+| Module                     | Types                                                     | Size (gzip) |
+| -------------------------- | --------------------------------------------------------- | ----------- |
+| `mayacharts/hierarchy`     | treemap, sunburst, marimekko, waffle                      | 4.1 KB      |
+| `mayacharts/flow`          | sankey, chord                                             | 3.5 KB      |
+| `mayacharts/radial`        | radial                                                    | 2.8 KB      |
+| `mayacharts/geo`           | hexmap (50 US states + DC + PR)                           | 2.5 KB      |
+| `mayacharts/stats`         | boxplot, funnel                                           | 3.4 KB      |
+| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.0 KB      |
+| `mayacharts/units`         | units (one dot per row: waffle, bars, swarm)              | 2.5 KB      |
+| `mayacharts/orbit`         | orbit (planets sized by value, speed by growth)           | 2.0 KB      |
+| `mayacharts/constellation` | constellation (rows placed by similarity across measures) | 2.5 KB      |
 
 ## Global build
 
@@ -633,7 +676,7 @@ Touch: show tooltip on pointerup if moved < 4 px.
 Four events, all `bubbles: true, composed: true`:
 
 - `maya-select {selected: Sel[], target: (Sel & {value}) | null}` - mark selected
-- `maya-view {measure, drill, window, hidden}` - measure toggled, drilled, zoomed, or a legend series hidden (user actions only; `window` is the zoom slice)
+- `maya-view {measure, drill, window, hidden, form}` - measure toggled, drilled, zoomed, a legend series hidden, or a units form picked (user actions only; `window` is the zoom slice)
 - `maya-error {code, path, message}` - spec error (cancelable; preventDefault() hides error box)
 - `maya-render {}` - render complete (use it to tell a host the chart has painted)
 
@@ -878,15 +921,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 9,287 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 9,480 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 988,503,166 total, 2,124,845 output
-- claude-sonnet-5-5: 353,597,785 total, 62,845 output
-- claude-fable-5-1: 91,308,282 total, 256,408 output
+- claude-opus-5-5: 991,883,590 total, 2,125,163 output
+- claude-sonnet-5-5: 364,660,481 total, 64,270 output
+- claude-fable-5-1: 96,943,307 total, 264,990 output
 - claude-haiku-4-5-20251001: 24,576,982 total, 987 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,465,784,074 total, 2,488,398 output
+- all: 1,485,862,219 total, 2,498,723 output
 
 <!-- tokens:end -->
 

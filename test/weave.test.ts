@@ -54,8 +54,8 @@ describe("weave", () => {
     expect(order.at(-1)).toBe("w~A~0");
     expect(order.indexOf("w~A~0~h")).toBe(order.length - 2);
     expect(order.indexOf("w~B~0")).toBeLessThan(order.indexOf("w~A~0~h"));
-    // No halo for the thread that crosses nothing.
-    expect(order).not.toContain("w~C~0~h");
+    // Every segment has a halo, so keys stay stable when crossings change.
+    expect(order).toContain("w~C~0~h");
   });
 
   it("every thread carries the series slot and period", () => {
@@ -90,7 +90,12 @@ describe("weave", () => {
         rows.filter((r) => r.s === "A"),
       ),
     );
-    expect(threads(solo).map((t) => at(t, "data-key"))).toEqual(["w~A~0", "w~A~1"]); // no halo, nothing crosses
+    expect(threads(solo).map((t) => at(t, "data-key"))).toEqual([
+      "w~A~0~h",
+      "w~A~0",
+      "w~A~1~h",
+      "w~A~1",
+    ]);
   });
 
   it("breaks the thread at a missing period", () => {

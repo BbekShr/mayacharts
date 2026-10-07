@@ -120,7 +120,7 @@ export function formatter(
         : preset === "decimal"
           ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
           : preset === "compact"
-            ? { notation: "compact", maximumFractionDigits: 1 }
+            ? { notation: "compact", maximumFractionDigits: step === undefined ? 1 : 2 } // ticks: 1.25K, not 1.3K
             : preset === "percent"
               ? {
                   style: "percent",

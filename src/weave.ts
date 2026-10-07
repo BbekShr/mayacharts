@@ -90,14 +90,14 @@ export const weave: Mark = {
         const d = `M${x0} ${y0}C${xm} ${y0} ${xm} ${y1} ${x1} ${y1}`;
         const at = { "data-s": si % 8, "data-a": si, "data-c": i, d, fill: "none" };
         const ser = sh.series[si]!;
-        if (seg.some(([, a2, b2]) => (a - a2!) * (b - b2!) < 0))
-          threads += el("path", {
-            ...at,
-            "data-key": key("w", ser, i, "h"),
-            "data-w": "h",
-            stroke: "var(--maya-bg)",
-            "stroke-width": 13,
-          });
+        // Every segment has a halo, so its key is stable when crossings change in an update.
+        threads += el("path", {
+          ...at,
+          "data-key": key("w", ser, i, "h"),
+          "data-w": "h",
+          stroke: "var(--maya-bg)",
+          "stroke-width": 13,
+        });
         threads += el("path", {
           ...at,
           "data-key": key("w", ser, i),
@@ -158,18 +158,24 @@ export const weave: Mark = {
         const [ci, k, x] = last.get(si) ?? [];
         const [name, v] = ctx.ends[n] ?? [];
         if (ci === undefined || name === undefined || v === undefined) return;
+        // One line when name and value fit; else the name, with the value on a second line if the
+        // slot is tall enough, else the name alone. The theme sets unicode-bidi:plaintext, so a leading LRM
+        // pins the base direction to LTR and the value is an LTR isolate: bidi cannot reorder either.
         const fit = [...`${name} ${v}`].length <= cap;
+        const two = !fit && Y.step >= 30;
+        const at = r(x! + 11);
+        const val = `<tspan data-v=""${two ? ` x="${at}" dy="14"` : ' dx="4"'}>\u2066${esc(v)}\u2069</tspan>`;
         end += el(
           "text",
           {
             "data-end": true,
             "data-key": key(sh.series[si], sh.categories[ci]),
             "data-s": si % 8,
-            x: r(x! + 11),
-            y: py(k!),
+            x: at,
+            y: py(k!) - (two ? 7 : 0),
             "dominant-baseline": "middle",
           },
-          esc(fit ? name : clip(name)) + (fit ? `<tspan data-v="" dx="4">${esc(v)}</tspan>` : ""),
+          "\u200e" + esc(fit ? name : clip(name)) + (fit || two ? val : ""),
         );
       });
     }

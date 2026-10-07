@@ -322,6 +322,26 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     data: makeRanks(5),
   });
 
+  // Memory: each family's second-half sales with its first-half sales as the ghost.
+  const byHalf = rollup(
+    FACTS.map((r) => ({ ...r, half: r.monthMs < Date.UTC(2025, 6, 1) ? "h1" : "h2" })),
+    ["family", "half"],
+    { sales: sum("sales") },
+  ) as { family: string; half: string; sales: number }[];
+  const fams = [...new Set(byHalf.map((r) => r.family))];
+  const halfOf = (f: string, h: string) =>
+    byHalf.find((r) => r.family === f && r.half === h)?.sales ?? 0;
+  tile("memory", {
+    type: "bar",
+    title: "Sales by family, against the first half",
+    titles: { sales: "Second half ($)", before: "First half ($)" },
+    x: "family",
+    y: "sales",
+    was: "before",
+    format: "compact",
+    data: fams.map((f) => ({ family: f, sales: halfOf(f, "h2"), before: halfOf(f, "h1") })),
+  });
+
   // 16. Dumbbell: first half against second half by region and family.
   const half = FACTS.map((r) => ({ ...r, half: r.monthMs < Date.UTC(2025, 6, 1) ? "H1" : "H2" }));
   tile("dumbbell", {

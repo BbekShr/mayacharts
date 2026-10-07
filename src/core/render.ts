@@ -87,8 +87,8 @@
  *   registry.ts, svg.ts, scale.ts, ticks.ts and types.
  *
  * Memory (spec.was, bar): the was field aggregated per (category, series) like colorBy. Each bar
- *   with a was value gets a ghost `<rect data-past>` in the marks group before every bar (so
- *   behind), keyed "%00was~" + the bar's key (key("\u0000was", series, category)), carrying
+ *   with a was value gets a ghost `<rect data-past>` in the marks group after every bar (so
+ *   on top: a fall reads past the bar end, a rise as a dashed box inside it), keyed "%00was~" + the bar's key (key("\u0000was", series, category)), carrying
  *   data-c, data-s, data-neg and fill="none" (the theme's [data-past] rule
  *   paints it) but no data-maya: not a mark, never hit-tested or counted. The bar
  *   and its hit carry data-was = text.was with the formatted previous value (the tooltip line).
@@ -207,6 +207,8 @@
  *                       With y2 the legend also holds non-button <span data-s data-line>
  *                       entries (the line; the bar measure too when there is no series).
  *                       Ramp/tone legends are non-button <div data-maya="ramp|tone">.
+ *                       spec.was (unless legend:false) appends <div class="maya-legend">
+ *                       <span data-past><i></i>WAS TITLE</span></div>, the ghosts' key.
  *   The tooltip reads its content from these attributes; the element never sees rows.
  *
  * Key grammar (svg.ts key(...parts)): each part encodeURIComponent'ed with `~` -> %7E,
@@ -686,6 +688,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       style: sheet === null ? null : style || null,
       "data-plot": `${r(plot.x)} ${r(plot.y)} ${r(plot.w)} ${r(plot.h)}`,
       ...f?.attrs,
+      // Units have no axes in the waffle and bars forms; data-n keeps the element's stagger on.
+      ...(s.type === "units" && !f?.attrs["data-n"] ? { "data-n": shaped.series.length } : {}),
       "data-dir": s.horizontal ? "h" : null,
       "data-stack": s.stack || null,
       // A line path: its point circles are hidden until active (one search, not a CSS :has).
@@ -747,6 +751,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // A mark legend replaces the normal one, except scatter's size key, which stacks below it.
   if (markLegend !== null && spec.legend !== false)
     legend = s.type === "scatter" ? legend + markLegend : markLegend;
+  // spec.was: a dashed swatch named by the was title says what the ghosts are.
+  if (s.was !== null && spec.legend !== false)
+    legend += `<div class="maya-legend"><span data-past><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
   return {
     svg,
     legend,

@@ -17,6 +17,7 @@ const TILES = [
   "league",
   "diverging",
   "bar-y2",
+  "memory",
   "dumbbell",
   "parallel",
   "weave",

@@ -425,13 +425,16 @@ describe("was (memory from a data column)", () => {
   };
   const marks = (svg: string) => svg.match(/<g data-maya="marks">.*?<\/g>/)![0];
 
-  it("draws a keyed ghost behind each bar at the previous value", () => {
+  it("draws a keyed ghost over each bar at the previous value, keyed in the legend", () => {
     const g = marks(render(was));
     const ghosts = [...g.matchAll(/<rect data-key="%00was~~(\w+)" data-past=""[^>]*>/g)];
     expect(ghosts.map((m) => m[1])).toEqual(months);
-    // behind: every ghost comes before the first bar
-    expect(g.indexOf("data-past")).toBeLessThan(g.indexOf('data-maya="mark"'));
-    expect(g.lastIndexOf("data-past")).toBeLessThan(g.indexOf('data-maya="mark"'));
+    // over: every ghost comes after the last bar, so a bar that grew cannot hide its ghost
+    expect(g.indexOf("data-past")).toBeGreaterThan(g.lastIndexOf('data-maya="mark"'));
+    expect(renderParts(was).legend).toBe(
+      '<div class="maya-legend"><span data-past><i></i>Last week</span></div>',
+    );
+    expect(renderParts({ ...was, legend: false }).legend).toBe("");
     // same height for every ghost (all were 20), not hit-testable marks
     const h = ghosts.map((m) => /height="([\d.]+)"/.exec(m[0])![1]);
     expect(new Set(h).size).toBe(1);

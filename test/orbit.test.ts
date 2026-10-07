@@ -83,4 +83,9 @@ describe("orbit", () => {
       g.document = d;
     }
   });
+  it("puts growth labels outward from the planet, with the % of the title", () => {
+    const s = svg({ ...spec, titles: { g: "Growth (%)" } });
+    expect(s).toContain("+30%");
+    expect(s).toContain("-10%");
+  });
 });

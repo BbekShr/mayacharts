@@ -171,4 +171,8 @@ describe("orbit and ghost rules", () => {
   it("styles the bar ghost", () => {
     expect(css).toContain("[data-past]{fill:var(--maya-fg)");
   });
+  it("colours constellation stars with the legend ramp and isolates legend numbers", () => {
+    expect(css).toContain('circle[data-key^="c~"][data-q]');
+    expect(css).toContain("[data-maya=ramp] span{unicode-bidi:plaintext}");
+  });
 });

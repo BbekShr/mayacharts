@@ -334,4 +334,46 @@ describe("motion", () => {
     for (const c of wraps) for (const f of c.k) expect(f).not.toHaveProperty("transform");
     el.remove();
   });
+
+  const svg = (marks: string) =>
+    `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks">${marks}</g></svg>`;
+  const planet = (r: number) =>
+    `<g data-key="o~a" data-s="0"><g data-v="1"><circle data-maya="mark" data-key="~a" cx="9" cy="9" r="${r}"/></g></g>`;
+
+  it("a kept orbit wrapper syncs in place: g[data-v] keeps its node (and CSS phase), the planet glides", () => {
+    const box = document.createElement("div");
+    patch(box, svg(planet(3)), false);
+    const [v, c] = [box.querySelector("g[data-v]")!, box.querySelector("circle")!];
+    const marks = box.querySelector("[data-maya=marks]");
+    c.setAttribute("data-active", "");
+    const s = spy();
+    patch(box, svg(planet(5)), true);
+    s.done();
+    expect(box.querySelector("[data-maya=marks]")).toBe(marks); // never re-inserted: CSS animations keep running
+    expect(box.querySelector("g[data-v]")).toBe(v);
+    expect(box.querySelector("circle")).toBe(c);
+    expect(c.getAttribute("r")).toBe("5");
+    expect(c.hasAttribute("data-active")).toBe(true); // hover survives the update
+    expect(s.calls.some((x) => x.e === c && x.k[0]!.transform)).toBe(true);
+  });
+
+  it("a patch reads every mark's animations in one pass, never per mark", () => {
+    const box = document.createElement("div");
+    const dots = (d: number) =>
+      Array.from(
+        { length: 40 },
+        (_, i) => `<circle data-maya="mark" data-key="d~${i}" cx="${i + d}" cy="5" r="2"/>`,
+      ).join("");
+    patch(box, svg(dots(0)), false);
+    const asked: Element[] = [];
+    const was = Element.prototype.getAnimations;
+    Element.prototype.getAnimations = function () {
+      asked.push(this);
+      return [];
+    };
+    patch(box, svg(dots(3)), true);
+    Element.prototype.getAnimations = was;
+    expect(asked.filter((e) => e.matches("circle")).length).toBe(0);
+    expect(asked.length).toBeLessThanOrEqual(2);
+  });
 });

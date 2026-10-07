@@ -145,4 +145,10 @@ describe("constellation", () => {
       [g.window, g.document] = saved;
     }
   });
+  it("names stars that do not sit on other stars", () => {
+    const s = render(spec(rows(30)));
+    const names = [...s.matchAll(/<text[^>]*data-key="c~[^"]*"/g)];
+    expect(names.length).toBeGreaterThan(1);
+    expect(names.length).toBeLessThanOrEqual(5);
+  });
 });

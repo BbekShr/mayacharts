@@ -22,6 +22,7 @@ import type { LinearScale, Mark, ResolvedSpec, Shaped } from "./core/types.ts";
 const MAX = 1500;
 const TOP = 22; // caption row
 const BASE = 30; // bars: group name and count under the columns
+const WAFFLE = 16; // waffle: group counts under the blocks
 
 interface Dot {
   i: number;
@@ -131,7 +132,7 @@ export const units: Mark = {
     const sw = aw / Math.max(1, cols.length);
     const bw = sw * 0.8;
     const most = Math.max(0, ...cnt.values());
-    const wf = best(n, aw, ah);
+    const wf = best(n, aw, ah - WAFFLE);
     const wr = Math.max(1, Math.ceil(n / wf.k)); // waffle rows
     const wp = wf.p || 1;
     const bb = best(most, bw, ah - BASE);
@@ -143,12 +144,30 @@ export const units: Mark = {
     let labels = "";
     const cap = el(
       "text",
-      { x: r(ax), y: r(plot.y + 12), "data-ax": true },
-      esc(`${ctx.t("perDot", ti(spec.name ?? spec.x))} · ${ctx.t(form)}`),
+      { x: r(ax), y: r(plot.y + 12), "data-ax": true, "data-h": true },
+      esc(ctx.t("perDot", ti(spec.name ?? spec.x).toLowerCase())),
     );
     if (form === "waffle") {
       const nc = Math.ceil(n / wr);
-      const [ox, oy] = [ax + (aw - nc * pitch) / 2, ay + (ah - wr * pitch) / 2];
+      const [ox, oy] = [ax + (aw - nc * pitch) / 2, ay + (ah - WAFFLE - wr * pitch) / 2];
+      // A count under each block, centred on the columns it spans; skipped when it cannot fit.
+      let from = 0;
+      for (const c of cols) {
+        const [c0, c1] = [Math.floor(from / wr), Math.floor((from + cnt.get(c)! - 1) / wr)];
+        from += cnt.get(c)!;
+        const t = ctx.fmt("", cnt.get(c));
+        if ((c1 - c0 + 1) * pitch >= t.length * 6.5)
+          labels += el(
+            "text",
+            {
+              x: r(ox + ((c0 + c1 + 1) / 2) * pitch),
+              y: r(oy + wr * pitch + 12),
+              "text-anchor": "middle",
+              "data-v": true,
+            },
+            esc(t),
+          );
+      }
       pts.forEach((d, i) => {
         const j = rank.get(d)!;
         ((cx[i] = ox + (Math.floor(j / wr) + 0.5) * pitch),
@@ -208,7 +227,7 @@ export const units: Mark = {
         return el("circle", {
           "data-maya": "mark",
           "data-key": d.k,
-          "data-c": d.i,
+          "data-c": d.ci,
           "data-s": d.ci % 8,
           "data-n": "g" + d.ci,
           "data-a": "g" + d.ci,
@@ -216,7 +235,7 @@ export const units: Mark = {
           "data-x": d.name ?? grp,
           "data-series": d.name !== null ? grp : ser || null,
           "data-y": d.v,
-          "data-f": ctx.fmt(spec.y, d.v),
+          "data-f": `${ti(spec.y)}\t${ctx.fmt(spec.y, d.v)}`,
           "data-tone": ctx.tone(d.v),
           "data-q": typeof cv === "number" ? ctx.q(cv) : null,
           r: r(rad),

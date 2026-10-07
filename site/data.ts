@@ -474,20 +474,27 @@ export function makeGrowth(seed: number) {
   }));
 }
 
-/** Weave ranks: six product lines over ten quarters; each line's sales swing on its own beat, so the ranks keep swapping. */
+/** Weave ranks: six product lines over ten quarters. Most hold their place; Cedar and Ember climb, Atlas falls, so each quarter has a crossing or two. */
 export function makeRanks(seed: number) {
   const rng = mulberry32(seed);
-  const lines = ["Atlas", "Birch", "Cedar", "Delta", "Ember", "Flint"];
+  // [line, start value, ramp from quarter, ramp to quarter, change over the ramp]
+  const lines: [string, number, number, number, number][] = [
+    ["Atlas", 116, 5, 8, -40],
+    ["Birch", 102, 0, 0, 0],
+    ["Cedar", 92, 0, 3, 20],
+    ["Delta", 82, 0, 0, 0],
+    ["Ember", 70, 4, 8, 26],
+    ["Flint", 60, 0, 0, 0],
+  ];
   const quarters = Array.from(
     { length: 10 },
     (_, q) => `Q${((q + 1) % 4) + 1} ${24 + Math.floor((q + 1) / 4)}`,
   );
-  return lines.flatMap((line, p) => {
-    const [base, amp, beat, phase] = [90 + p * 4, 18 + rng() * 14, 0.7 + rng() * 0.7, rng() * 6];
-    return quarters.map((quarter, q) => ({
-      quarter,
-      line,
-      sales: Math.round((base + amp * Math.sin(phase + q * beat) + gauss(rng) * 3) * 10) / 10,
-    }));
-  });
+  return lines.flatMap(([line, base, q0, q1, dv]) =>
+    quarters.map((quarter, q) => {
+      const t = q1 > q0 ? Math.min(1, Math.max(0, (q - q0) / (q1 - q0))) : 0;
+      const sales = base + dv * t * t * (3 - 2 * t) + (rng() - 0.5) * 2;
+      return { quarter, line, sales: Math.round(sales * 10) / 10 };
+    }),
+  );
 }
