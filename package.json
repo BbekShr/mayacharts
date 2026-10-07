@@ -140,8 +140,8 @@
     "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
   },
   "mayaSize": {
-    "dist/index.js": 34688,
-    "dist/element.js": 49536,
+    "dist/index.js": 35128,
+    "dist/element.js": 49971,
     "dist/theme.css": 4506,
     "dist/hierarchy.js": 4198,
     "dist/flow.js": 3584,
