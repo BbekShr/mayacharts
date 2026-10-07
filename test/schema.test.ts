@@ -18,7 +18,7 @@ describe("schema.json", () => {
     expect(schemaTypes).toEqual(allTypes);
   });
 
-  it("lists every text key, and only those, in schema.json, llms.txt and docs/spec.html", () => {
+  it("lists every text key, and only those, in schema.json, llms.txt and site/docs.html", () => {
     const keys = Object.keys(TEXT).sort();
     expect([...schema.properties.text.propertyNames.enum].sort()).toEqual(keys);
     const list = (f: string, re: RegExp) =>
@@ -28,7 +28,7 @@ describe("schema.json", () => {
         .split(/\s+/)
         .sort();
     expect(list("../llms.txt", /Keys: ([\w ]+)\./)).toEqual(keys);
-    expect(list("../docs/spec.html", /placeholders: ([\w\s]+)<\/td>/)).toEqual(keys);
+    expect(list("../site/docs.html", /placeholders: ([\w\s]+)<\/td>/)).toEqual(keys);
   });
 
   it("validates 10 canonical examples", () => {

@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>mayaCharts</title>
+    <title>mayaCharts: the browser is the chart engine</title>
     <meta
       name="description"
-      content="Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine."
+      content="Twenty-six chart types from one JSON spec. About 53 KB, zero dependencies, accessible and server-rendered by default."
     />
     <link rel="stylesheet" href="./site.css" />
     <!-- Apply the saved theme before first paint; theme.ts keeps the button in step. -->
@@ -17,21 +17,15 @@
       } catch {}
     </script>
   </head>
-  <body>
-    <header class="site">
-      <h1>mayaCharts</h1>
-      <p class="tagline">
-        Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart
-        engine.
-      </p>
-      <nav>
-        <a href="./index.html" aria-current="page">Home</a>
+  <body class="home">
+    <header class="bar">
+      <a class="brand" href="./index.html" aria-current="page">mayaCharts</a>
+      <nav aria-label="Site">
         <a href="./builder.html">Builder</a>
         <a href="./gallery.html">Gallery</a>
         <a href="./scale.html">Scale</a>
         <a href="./compare.html">Compare</a>
-        <a href="./errors.html">Errors</a>
-        <a href="https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md">Non-features</a>
+        <a href="./docs.html">Docs</a>
         <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
         <a class="support" href="https://bbekshr.github.io/mayacharts/support/"
           ><span aria-hidden="true">♥</span> Support</a
@@ -39,36 +33,121 @@
         <button id="theme" type="button">Theme: auto</button>
       </nav>
     </header>
+
+    <div class="hero">
+      <div class="hero-copy">
+        <h1>The browser is the chart engine.</h1>
+        <p class="lede">
+          Twenty-six chart types from one JSON spec. About 53 KB, zero dependencies, accessible and
+          server-rendered by default.
+        </p>
+        <div class="ctas">
+          <a class="btn primary" href="./gallery.html">Open the gallery</a>
+          <button class="btn install" id="install" type="button">
+            <code>npm i mayacharts</code><span class="copy" aria-hidden="true">Copy</span>
+          </button>
+          <span id="install-status" class="sr-only" aria-live="polite"></span>
+        </div>
+      </div>
+      <figure class="hero-chart">
+        <maya-chart id="units" style="height: 400px"></maya-chart>
+        <figcaption>
+          One dot per customer. The same dots fly between a waffle, bars and a spend swarm.
+        </figcaption>
+      </figure>
+    </div>
+
+    <ul class="facts" aria-label="At a glance">
+      <li>
+        <strong>53 KB</strong
+        ><span>gzip for the element: twelve core types and every interaction</span>
+      </li>
+      <li>
+        <strong>26</strong><span>chart types; fourteen are optional modules of 2 to 4 KB</span>
+      </li>
+      <li><strong>0</strong><span>runtime dependencies, no build step, no framework</span></li>
+      <li><strong>1M rows</strong><span>drawn by reducing marks, never by hiding data</span></li>
+    </ul>
+
+    <section class="band" aria-labelledby="sig-h">
+      <h2 id="sig-h">Five signature charts</h2>
+      <p class="sub">
+        The shapeshifter above is one of five chart types designed for mayaCharts. Each is one spec
+        and costs under 3 KB.
+      </p>
+      <div class="bento">
+        <article class="wide">
+          <h3>Dhaka weave</h3>
+          <p>A ranking over time. The climbing thread passes over the falling one.</p>
+          <maya-chart id="weave" style="height: 320px"></maya-chart>
+        </article>
+        <article>
+          <h3>Orrery</h3>
+          <p>Size is sales, speed is growth. Point at it and the planets turn.</p>
+          <maya-chart id="orbit" style="height: 320px"></maya-chart>
+        </article>
+        <article>
+          <h3>Constellation</h3>
+          <p>Accounts placed by how alike their five measures are.</p>
+          <maya-chart id="constellation" style="height: 320px"></maya-chart>
+        </article>
+        <article class="wide">
+          <h3>Memory</h3>
+          <p>Every bar remembers last period as a ghost, and grows from it.</p>
+          <maya-chart id="memory" style="height: 320px"></maya-chart>
+        </article>
+      </div>
+    </section>
+
     <main>
+      <section class="intro" aria-labelledby="start-h">
+        <h2 id="start-h">Start in five lines</h2>
+        <p>
+          Load the element, hand it a spec. You get animation, a tooltip, keyboard navigation, a
+          screen-reader table and dark mode with nothing else to wire.
+        </p>
+        <pre><code>&lt;script type="module" src="https://cdn.jsdelivr.net/npm/mayacharts/dist/element.js"&gt;&lt;/script&gt;
+&lt;maya-chart style="height: 300px" spec='{"type": "bar", "x": "month", "y": "revenue",
+  "data": [{"month": "Jan", "revenue": 12}, {"month": "Feb", "revenue": 19}]}'&gt;&lt;/maya-chart&gt;</code></pre>
+      </section>
       <section>
-        <h2>Simple</h2>
+        <h3>Simple</h3>
         <p>One series, compact number format.</p>
         <maya-chart id="simple" style="height: 300px"></maya-chart>
         <div class="controls">
           <button type="button" data-reroll="simple">Re-roll data</button>
         </div>
-        <pre><code id="simple-code"></code></pre>
+        <details>
+          <summary>Spec</summary>
+          <pre><code id="simple-code"></code></pre>
+        </details>
       </section>
       <section>
-        <h2>Grouped</h2>
+        <h3>Grouped</h3>
         <p>Add <code>series</code> to split rows into grouped bars.</p>
         <maya-chart id="grouped" style="height: 300px"></maya-chart>
         <div class="controls">
           <button type="button" data-reroll="grouped">Re-roll data</button>
         </div>
-        <pre><code id="grouped-code"></code></pre>
+        <details>
+          <summary>Spec</summary>
+          <pre><code id="grouped-code"></code></pre>
+        </details>
       </section>
       <section>
-        <h2>Stacked</h2>
+        <h3>Stacked</h3>
         <p>Set <code>stack: true</code>. Negative values stack below zero.</p>
         <maya-chart id="stacked" style="height: 300px"></maya-chart>
         <div class="controls">
           <button type="button" data-reroll="stacked">Re-roll data</button>
         </div>
-        <pre><code id="stacked-code"></code></pre>
+        <details>
+          <summary>Spec</summary>
+          <pre><code id="stacked-code"></code></pre>
+        </details>
       </section>
       <section>
-        <h2>Live updates</h2>
+        <h3>Live updates</h3>
         <p>
           Assign <code>el.data</code> and the change animates. Adding or removing a series animates
           enter and exit.
@@ -78,10 +157,13 @@
           <button id="toggle-series" type="button">Toggle series</button>
         </div>
         <maya-chart id="live" style="height: 300px"></maya-chart>
-        <pre><code id="live-code"></code></pre>
+        <details>
+          <summary>Spec</summary>
+          <pre><code id="live-code"></code></pre>
+        </details>
       </section>
       <section>
-        <h2>Plain HTML</h2>
+        <h3>Plain HTML</h3>
         <p>No JavaScript needed beyond loading the element: put the spec in a JSON child.</p>
         <maya-chart id="html" style="height: 240px">
           <script type="application/json">
@@ -108,13 +190,68 @@
 &lt;/maya-chart&gt;</code></pre>
       </section>
       <section>
-        <h2>Server rendering</h2>
+        <h3>Server rendering</h3>
         <p>
           <code>renderShell(spec)</code> returns plain HTML and SVG that works without JavaScript.
           See the <a href="./ssr.html">server-rendered example</a>.
         </p>
       </section>
     </main>
+
+    <section class="band" aria-labelledby="ent-h">
+      <h2 id="ent-h">Passes the enterprise checklist</h2>
+      <dl class="ticks">
+        <div>
+          <dt>Strict CSP and Trusted Types</dt>
+          <dd>No inline styles, no eval, one named policy. Every string is escaped.</dd>
+        </div>
+        <div>
+          <dt>WCAG 2.2 AA</dt>
+          <dd>Axe-clean in light and dark, full keyboard navigation and a data table.</dd>
+        </div>
+        <div>
+          <dt>Server rendering</dt>
+          <dd><code>render(spec)</code> is a pure function. The shell works before JavaScript.</dd>
+        </div>
+        <div>
+          <dt>One JSON spec</dt>
+          <dd>No callbacks, so a spec can live in a database or be written by an LLM.</dd>
+        </div>
+        <div>
+          <dt>Any framework</dt>
+          <dd>A custom element: React, Vue, Svelte, Angular, Astro or plain HTML.</dd>
+        </div>
+        <div>
+          <dt>RTL and every locale</dt>
+          <dd>Intl formatting, mirrored layouts and every visible string replaceable.</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="band split" aria-labelledby="cmp-h">
+      <div>
+        <h2 id="cmp-h">A fraction of the weight</h2>
+        <p class="sub">
+          Each library draws the same twelve charts the way its own docs show, with every module it
+          needs bundled in. This chart is mayaCharts drawing the result.
+        </p>
+        <a class="more" href="./compare.html">See speed, memory and accessibility results</a>
+      </div>
+      <maya-chart id="weight" style="height: 260px"></maya-chart>
+    </section>
+
+    <section class="finale" aria-labelledby="fin-h">
+      <h2 id="fin-h">Paste your data. Copy the code.</h2>
+      <p>The builder writes ready code for HTML, React, Vue, Svelte, Angular or Node.</p>
+      <a class="btn primary" href="./builder.html">Open the builder</a>
+    </section>
+
+    <footer class="site">
+      MIT licensed, and the core stays MIT.
+      <a href="https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md">Non-features</a>
+      <a href="./errors.html">Errors</a>
+      <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
+    </footer>
     <script type="module" src="./demo.ts"></script>
   </body>
 </html>

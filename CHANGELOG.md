@@ -14,9 +14,16 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - Re-renders of the same `data` array (resize, legend toggle, zoom) skip the row pass: shape, validation, scatter columns and table groups are cached per array. Assign a new array after editing rows in place.
 - `renderParts().warnings` reports roll-ups and thinning, and the `too-many-marks` message gives the mark count, the cap and the row count.
 - Scale page (`site/scale.html`): eleven charts drawn from up to a million generated rows, with rows in, marks drawn and draw times measured in your browser.
+- A new home page for the site: a live shapeshifter hero that cycles its forms while on screen (still under reduced motion), the four other signature charts and a bundle-size chart that draw as they scroll into view, the enterprise checklist and a builder call to action. The spec walkthrough stays, with each spec behind a Spec toggle.
+- README reorganised: a centred header with the site links, an animated shapeshifter in light and dark, the type cost table and the 27 canonical specs behind toggles, and a Reference index above the spec.
+- Every site page shares one header: Builder, Gallery, Scale, Compare, Docs, GitHub and a heart Support link, with the page title and summary set large beneath it. On phones the links scroll sideways with Support first.
+- Docs page on the site (`site/docs.html`, moved from `docs/spec.html`): the full spec reference with an on-page index.
 
 ### Fixed
 
+- Pages with many charts no longer end in a long blank stretch (the gallery was 31,600 px tall for 13,000 px of content): the hidden data table grows up from its chart instead of down past it.
+- README and site sizes match the measurements: the element with every core type is about 53 KB gzip (it said 45 KB), and the compare set is 58 KB (it said 51 KB, an older measurement). The home page reads its bundle chart from `compare-size.json`, so it cannot drift.
+- Tooltips stay inside their own chart on each axis where they fit, instead of spilling over the next panel or above the chart; only a chart smaller than its tooltip falls back to the viewport. Weave tooltips sit beside the hovered column, like a crosshair chart.
 - Units: a dot's tooltip shows its own row, not every dot of its region. Boxplot: the whole box and whisker span is hoverable, an outlier's tooltip no longer lists the box, and the box tooltip clears the whiskers and outliers. Weave: the tooltip no longer flickers between dots. Tooltips show at most 12 rows, then a `+N` row.
 - Phone widths no longer scroll sideways: the hidden data table kept its natural width.
 - Safari: hovering a multi-series line or area no longer repaints every hidden point (about 210 ms a move with 1840 points, now 17 ms).

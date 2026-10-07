@@ -1,4 +1,11 @@
 import "mayacharts/element";
+import "mayacharts/units";
+import "mayacharts/weave";
+import "mayacharts/orbit";
+import "mayacharts/constellation";
+import { makeData } from "./data.ts";
+import size from "./compare-size.json";
+import { signature } from "./signature.ts";
 import { theme } from "./theme.ts";
 import type { ChartSpec, Row } from "../src/index.ts";
 
@@ -111,6 +118,82 @@ document.addEventListener("click", (e) => {
     ...spec,
     data: spec.data.map((r) => ({ ...r, [y]: Math.round(Number(r[y]) * (0.4 + rand() * 1.2)) })),
   });
+});
+
+// Showcase: the hero shapeshifter draws now; the rest draw as they scroll into view, so their
+// entrance plays where it is seen. The spec demos above stay eager (the e2e suite reads them).
+const sig = signature(makeData(7));
+const hero = $<Chart & { view: { form?: number } }>("units");
+hero.spec = sig.units!;
+
+// Cycle the hero's forms while it is on screen, until someone touches it. Off under reduced motion.
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let seen = false;
+let timer = 0;
+const cycle = (): void => {
+  clearInterval(timer);
+  if (seen && !still)
+    timer = window.setInterval(() => {
+      hero.view = { ...hero.view, form: ((hero.view.form ?? 0) + 1) % 3 };
+    }, 3200);
+};
+new IntersectionObserver(([e]) => {
+  seen = !!e?.isIntersecting;
+  cycle();
+}).observe(hero);
+hero.addEventListener("pointerdown", () => ((seen = false), cycle()), { once: true });
+
+const later = new IntersectionObserver(
+  (es) =>
+    es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      later.unobserve(e.target);
+      (e.target as Chart).spec = lazy.get(e.target.id)!;
+    }),
+  { rootMargin: "0px 0px -15% 0px", threshold: 0.2 },
+);
+const lazy = new Map<string, ChartSpec>([
+  ["weave", sig.weave!],
+  ["orbit", sig.orbit!],
+  ["constellation", sig.constellation!],
+  ["memory", sig.memory!],
+  [
+    "weight",
+    {
+      type: "bar",
+      horizontal: true,
+      x: "library",
+      y: "kb",
+      labels: true,
+      grid: false,
+      xAxis: false,
+      titles: { library: "Library", kb: "Bundle for the compare set, gzip" },
+      format: { kb: { maximumFractionDigits: 0, suffix: " KB" } },
+      title: "Gzip bundle for the same twelve charts, modules included",
+      // The compare page's own measurement: every chart of the set in one bundle, gzip.
+      data: Object.entries({
+        maya: "mayaCharts",
+        chartjs: "Chart.js",
+        recharts: "Recharts",
+        echarts: "ECharts",
+        plotly: "Plotly",
+      }).map(([k, library]) => ({
+        library,
+        kb: size.libs[k as keyof typeof size.libs].all.gzip / 1024,
+      })),
+    },
+  ],
+]);
+for (const id of lazy.keys()) later.observe($(id));
+
+$("install").addEventListener("click", () => {
+  const done = (msg: string) => ($("install-status").textContent = msg);
+  navigator.clipboard.writeText("npm i mayacharts").then(
+    () => done("Copied npm i mayacharts"),
+    () => done("Copy failed; select the text instead"),
+  );
+  $("install").dataset.copied = "";
+  setTimeout(() => delete $("install").dataset.copied, 1600);
 });
 
 theme();
