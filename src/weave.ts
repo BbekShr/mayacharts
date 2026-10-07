@@ -20,7 +20,7 @@
  *   transition:opacity .25s}[data-maya=marks]:has([data-active]) [data-w]:not([data-lit]){opacity:.18}
  */
 import { register } from "./core/registry.ts";
-import { el, esc, key, r } from "./core/svg.ts";
+import { clip, el, esc, key, r } from "./core/svg.ts";
 import type { BandScale, Cell, Mark, Shaped } from "./core/types.ts";
 
 /** Per period (in order), series index -> [rank, value] of the series present, in rank order. */
@@ -77,6 +77,9 @@ export const weave: Mark = {
     const px = (ci: number) => r(X.at(ci) + X.bandwidth / 2);
     const py = (k: number) => r(Y.at(k - 1) + Y.bandwidth / 2);
 
+    // ponytail: under 32 px a step, only the first and last dot are full size (the rest are pinpricks);
+    // with no gutter the last value sits above the last dot, where the legend leaves the names.
+    const quiet = X.step < 32;
     let threads = "";
     for (let i = 0; i < R.length - 1; i++) {
       const B = R[i + 1]!;
@@ -132,7 +135,7 @@ export const weave: Mark = {
           "data-tone": ctx.tone(v),
           stroke: "var(--maya-bg)",
           "stroke-width": 2,
-          r: 5.5,
+          r: quiet && ci && ci < R.length - 1 ? 2.5 : 5.5,
           cx,
           cy,
         });
@@ -145,15 +148,14 @@ export const weave: Mark = {
           height: 24,
           fill: "transparent",
         });
-        if (spec.labels) ctx.label(cx, cy - 10, ctx.fmt(spec.y, v), "above", kk);
+        if (spec.labels || (!ctx.gutter && ci === R.length - 1))
+          ctx.label(cx, cy - 10, ctx.fmt(spec.y, v), "above", kk);
       }
     });
 
     // Right end labels in the gutter, at the slot of each thread's last point.
     if (ctx.gutter) {
       const cap = Math.max(1, Math.floor((ctx.gutter - 12) / 7.2));
-      const clip = (s: string) =>
-        [...s].length > cap ? [...s].slice(0, cap - 1).join("") + "…" : s;
       sh.visible.forEach((si, n) => {
         const [ci, k, x] = last.get(si) ?? [];
         const [name, v] = ctx.ends[n] ?? [];
@@ -175,7 +177,7 @@ export const weave: Mark = {
             y: py(k!) - (two ? 7 : 0),
             "dominant-baseline": "middle",
           },
-          "\u200e" + esc(fit ? name : clip(name)) + (fit || two ? val : ""),
+          "\u200e" + esc(fit ? name : clip(name, cap)) + (fit || two ? val : ""),
         );
       });
     }

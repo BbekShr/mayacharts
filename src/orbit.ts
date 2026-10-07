@@ -11,17 +11,18 @@
  *       trail <path data-trail>      static arc behind the planet, sweep proportional to growth
  *       <circle data-maya=mark>      the keyed mark, key S~C, cx/cy on its orbit
  *       <g translate(planet)><g data-up>name and growth</g></g>   counter-rotated: stays upright
- * Orbit radius is the rank of y (largest innermost); planet radius is sqrt(y); the total sits at
- * the sun as a text mark keyed `t` that counts up. The trail reads with motion off, in SSR and
+ * Names are drawn after every planet, each in its own keyed group `o~CATEGORY~l` that rotates in the
+ * same bucket as its planet (data-a = the planet's data-n, so hovering the planet lights its name),
+ * so no trail crosses a name. Orbit radius is the rank of y (largest innermost); planet area is
+ * |y|; the total sits at the sun as a text mark keyed `t` that counts up, the sum of |y| so the
+ * planet areas add up to it (with negative values it is gross, not net). The trail reads with motion off, in SSR and
  * in toSVG(). Motion is a theme rule, not JS (see theme.ts): no y2 means no data-v, so nothing moves.
  * The tooltip's second line (growth) rides in data-f as "label\tvalue" lines, as scatter's does.
  */
 import { register } from "./core/registry.ts";
-import { el, esc, key, OTHER, r } from "./core/svg.ts";
+import { clip, el, esc, key, OTHER, r } from "./core/svg.ts";
+import { DEG } from "./core/scale.ts";
 import type { Mark } from "./core/types.ts";
-
-const D = Math.PI / 180;
-const cut = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
 export const orbit: Mark = {
   noun: "Orbit",
@@ -63,7 +64,7 @@ export const orbit: Mark = {
     const lab = (px: number, py: number, pr: number, nm: string, gf: string) => {
       const [w, h, len] = [Math.max(nm.length, gf.length) * 6.4, gf ? 24 : 13, Math.hypot(px, py)];
       const [ux, uy] = [px / len, py / len];
-      const d = pr + 3 + Math.abs(ux) * (w / 2) + Math.abs(uy) * (h / 2);
+      const d = pr + 2 + Math.abs(ux) * (w / 2) + Math.abs(uy) * (h / 2);
       const [x, y] = [r(ux * d), r(uy * d)];
       if (
         Math.hypot(Math.max(0, Math.abs(px + x) - w / 2), Math.max(0, Math.abs(py + y) - h / 2)) <
@@ -81,9 +82,10 @@ export const orbit: Mark = {
       );
     };
     let marks = "";
+    let names = ""; // labels, drawn after every planet so no trail crosses a name
     let grid = el("circle", { cx, cy, r: r(R0), "data-disc": true });
     ps.forEach((p, k) => {
-      const [rr, a] = [ring(k), (((k * 137.5 + 20) % 360) * Math.PI) / 180];
+      const [rr, a] = [ring(k), ((k * 137.5 + 20) % 360) / DEG];
       const at = (t: number) => `${r(rr * Math.sin(t))} ${r(-rr * Math.cos(t))}`;
       const [px, py] = [r(rr * Math.sin(a)), r(-rr * Math.cos(a))];
       const pr = Math.max(4, P * Math.sqrt(Math.abs(p.v) / vmax));
@@ -91,7 +93,7 @@ export const orbit: Mark = {
       // ponytail: speed quantised to 5 buckets (theme durations), not continuous.
       const v = share ? Math.ceil(share * 5) : 0;
       const neg = (p.g ?? 0) < 0;
-      const sweep = Math.max(6, share * 110) * D;
+      const sweep = Math.max(6, share * 110) / DEG;
       const tone = p.g === null ? null : ctx.tone(p.g);
       const [f, gf] = [
         fv(p.v),
@@ -101,6 +103,7 @@ export const orbit: Mark = {
       const d = {
         "data-key": key(shaped.series[0] ?? "", p.name),
         "data-c": p.ci,
+        "data-n": p.ci,
         "data-s": 0,
         "data-x": name,
         "data-series": "",
@@ -126,18 +129,28 @@ export const orbit: Mark = {
                 "data-trail": true,
                 d: `M${at(a + (neg ? sweep : -sweep))}A${r(rr)} ${r(rr)} 0 0 ${neg ? 0 : 1} ${at(a)}`,
               })
-            : "") +
-            el("circle", { "data-maya": "mark", ...d, cx: px, cy: py, r: r(pr) }) +
-            // ponytail: only the 8 innermost planets are named; the rest answer to hover.
-            // The name sits radially outward from the planet as drawn at rest (it is upright but
-            // not orbiting with it, so under motion it drifts); a label that would touch the sun is skipped.
-            (k < 8 ? lab(px, py, pr, cut(name, 12), gf) : ""),
+            : "") + el("circle", { "data-maya": "mark", ...d, cx: px, cy: py, r: r(pr) }),
         ),
       );
+      // ponytail: only the 8 innermost planets are named; the rest answer to hover.
+      // The name sits radially outward from the planet as drawn at rest (it is upright but
+      // not orbiting with it, so under motion it drifts); a label that would touch the sun is skipped.
+      const l = k < 8 ? lab(px, py, pr, clip(name, 12), gf) : "";
+      if (l)
+        names += el(
+          "g",
+          {
+            "data-key": key("o", p.name, "l"),
+            transform: `translate(${cx} ${cy})`,
+            "data-s": 0,
+            "data-a": p.ci,
+          },
+          v ? el("g", { "data-v": v, "data-neg": neg }, l) : l,
+        );
     });
 
     // The sun: the grand total counts up like radial's centre.
-    const total = ps.reduce((s, p) => s + p.v, 0);
+    const total = ps.reduce((s, p) => s + Math.abs(p.v), 0);
     const f = fv(total);
     const sub = R0 > 28;
     const fs = Math.max(11, Math.min(R0 * 0.42, 22, (R0 * 1.5) / (f.length * 0.62)));
@@ -171,11 +184,11 @@ export const orbit: Mark = {
             "font-size": 11,
             "data-ring": "",
           },
-          esc(cut(ty, Math.floor((R0 * 1.8) / 6.2))),
+          esc(clip(ty, Math.floor((R0 * 1.8) / 6.2))),
         )
       : "";
     return {
-      marks,
+      marks: marks + names,
       hits: "",
       labels,
       grid,

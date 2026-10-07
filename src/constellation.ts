@@ -21,7 +21,7 @@
  *   - No hits: the element's nearest-point pick (scatter's) is the intended hit model.
  */
 import { register } from "./core/registry.ts";
-import { cbField, el, esc, key, nameId, r } from "./core/svg.ts";
+import { cbField, clip, el, esc, key, nameId, r, tw } from "./core/svg.ts";
 import type { Mark } from "./core/types.ts";
 
 // ponytail: the nearest-neighbour search is O(n^2) and the measure columns are standardised in
@@ -113,6 +113,7 @@ export const constellation: Mark = {
       return [Math.min(...c), Math.max(...c)] as const;
     };
     const [[x0, x1], [y0, y1]] = [span(0), span(1)];
+    // The hint is clipped to the plot's width (the key words come first).
     const pad = PAD + Math.max(...rad);
     const bw = Math.max(1, plot.w - 2 * pad);
     const bh = Math.max(1, plot.h - 2 * pad);
@@ -184,25 +185,10 @@ export const constellation: Mark = {
       });
 
     // Names, spread over the sky: start at the largest star, then take the star farthest from
-    // every named one, skipping any whose label box would cover a star or a chosen label.
-    // ponytail: greedy, 5 names; ctx.label still drops what collides or leaves the svg.
-    const boxes: number[][] = [];
+    // every named one. Each tries above, below, right of it, left of it, and takes the first spot
+    // whose box clears every star and the hint and that ctx.label accepts (no collision, inside).
+    // ponytail: greedy, 5 names.
     const named: number[] = [];
-    const free = (i: number, below: boolean) => {
-      const w = names[i]!.length * 7.2 + 4;
-      const x = px[i]! - w / 2;
-      const y = below ? py[i]! + rad[i]! + 2 : py[i]! - rad[i]! - 16;
-      const ok =
-        !boxes.some((b) => x < b[2]! && x + w > b[0]! && y < b[3]! && y + 14 > b[1]!) &&
-        rows.every(
-          (_, j) =>
-            Math.abs(px[j]! - Math.max(x, Math.min(px[j]!, x + w))) +
-              Math.abs(py[j]! - Math.max(y, Math.min(py[j]!, y + 14))) >
-            rad[j]! + 1,
-        );
-      if (ok) boxes.push([x, y, x + w, y + 14]);
-      return ok;
-    };
     const dist = (i: number) =>
       Math.min(...named.map((j) => Math.hypot(px[i]! - px[j]!, py[i]! - py[j]!)));
     const todo = new Set(rows.keys());
@@ -211,23 +197,34 @@ export const constellation: Mark = {
         (named.length ? dist(c) - dist(m) : val[c]! - val[m]!) > 0 ? c : m,
       );
       todo.delete(i);
-      const below = !free(i, false);
-      if (below && !free(i, true)) continue;
-      named.push(i);
-      ctx.label(
-        px[i]!,
-        below ? r(py[i]! + rad[i]!) : r(py[i]! - rad[i]!),
-        names[i]!,
-        below ? "below" : "above",
-        key("c", ids[i]),
+      const [x, y, q, w] = [px[i]!, py[i]!, rad[i]!, tw(names[i]!)];
+      // Label centres: above, below, right, left.
+      const ok = [
+        [x, y - q - 9],
+        [x, y + q + 9],
+        [x + q + 3 + w / 2, y],
+        [x - q - 3 - w / 2, y],
+      ].some(
+        ([a, b]) =>
+          b! + 22 <= plot.y + plot.h &&
+          rows.every(
+            (_, j) =>
+              Math.max(0, Math.abs(px[j]! - a!) - w / 2) + Math.max(0, Math.abs(py[j]! - b!) - 7) >
+              rad[j]! + 1,
+          ) &&
+          ctx.label(a!, b!, names[i]!, "center", key("c", ids[i])),
       );
+      if (ok) named.push(i);
     }
 
-    const hint = ctx.t("alike", ms.map(ti).join(", "));
     const hintEl =
-      hint.length * 6 < plot.w
-        ? el("text", { x: r(plot.x + 4), y: r(plot.y + plot.h - 4), "data-v": true }, esc(hint))
-        : "";
+      plot.w < 99
+        ? ""
+        : el(
+            "text",
+            { x: r(plot.x + 4), y: r(plot.y + plot.h - 4), "data-v": true },
+            esc(clip(ctx.t("alike", ms.map(ti).join(", ")), Math.floor((plot.w - 8) / 6))),
+          );
     return { marks, hits: "", grid, labels: hintEl, note };
   },
 };

@@ -14,7 +14,7 @@ const svg = (s: ChartSpec, o = {}) => renderParts(s, o).svg;
 const planets = (s: string) => [...s.matchAll(/<circle data-maya="mark"[^>]*>/g)].map((m) => m[0]);
 const attr = (tag: string, a: string) => new RegExp(` ${a}="([^"]*)"`).exec(tag)?.[1];
 const buckets = (s: string) =>
-  [...s.matchAll(/<g data-v="(\d)"( data-neg="")?/g)].map((m) => m.slice(1));
+  [...s.matchAll(/<g data-v="(\d)"( data-neg="")?><path/g)].map((m) => m.slice(1));
 
 describe("orbit", () => {
   it("one keyed planet per category, ranked by size, plus the sun total", () => {
@@ -82,6 +82,20 @@ describe("orbit", () => {
       g.window = w;
       g.document = d;
     }
+  });
+  it("draws every name after every planet, in its own group that turns with the planet", () => {
+    const s = svg(spec);
+    const last = s.lastIndexOf('data-maya="mark" data-key="~');
+    const names = [
+      ...s.matchAll(/<g data-key="o~[^"]*~l"[^>]*data-a="(\d)"[^>]*><g data-v="(\d)"/g),
+    ];
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.every((m) => m.index! > last)).toBe(true);
+    expect(planets(s).map((t) => attr(t, "data-n"))).toEqual(["0", "1", "2", "3"]);
+  });
+  it("the sun adds the magnitudes, as the planet areas do", () => {
+    const s = svg({ ...spec, data: [...data, { f: "Bags", s: -30, g: 2 }] });
+    expect(s).toContain("240");
   });
   it("puts growth labels outward from the planet, with the % of the title", () => {
     const s = svg({ ...spec, titles: { g: "Growth (%)" } });

@@ -151,4 +151,12 @@ describe("constellation", () => {
     expect(names.length).toBeGreaterThan(1);
     expect(names.length).toBeLessThanOrEqual(5);
   });
+  it("names up to five stars, beside a star when above and below are taken, and clips the hint", () => {
+    const out = render(spec(rows(60)), { width: 240, height: 200 });
+    const names = [...out.matchAll(/<text [^>]*>(Star \d+)<\/text>/g)];
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.length).toBeLessThanOrEqual(5);
+    expect(out).toContain("Closer points are more alike");
+    expect(out).toContain("…</text>");
+  });
 });
