@@ -65,6 +65,7 @@ export default defineConfig({
         scale: `${here}scale.html`,
         builder: `${here}builder.html`,
         compare: `${here}compare.html`,
+        docs: `${here}docs.html`,
       },
     },
   },

@@ -3,8 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>mayaCharts spec</title>
-    <link rel="stylesheet" href="../site/site.css" />
+    <title>mayaCharts docs</title>
+    <link rel="stylesheet" href="./site.css" />
+    <!-- Apply the saved theme before first paint; theme.ts keeps the button in step. -->
+    <script>
+      try {
+        const m = localStorage.getItem("maya-theme");
+        if (m === "light" || m === "dark") document.documentElement.style.colorScheme = m;
+      } catch {}
+    </script>
     <style>
       .spec-anchor {
         display: block;
@@ -13,6 +20,8 @@
         height: 0;
       }
       table {
+        display: block;
+        overflow-x: auto;
         width: 100%;
         border-collapse: collapse;
         margin: 16px 0;
@@ -35,15 +44,42 @@
     </style>
   </head>
   <body>
-    <header class="site">
-      <h1>Specification</h1>
-      <p class="tagline">
-        Complete API reference for the mayaCharts spec. Anchor links for error messages.
-      </p>
-      <nav><a href="../README.md">Back to README</a></nav>
+    <header class="bar">
+      <a class="brand" href="./index.html">mayaCharts</a>
+      <nav aria-label="Site">
+        <a href="./builder.html">Builder</a>
+        <a href="./gallery.html">Gallery</a>
+        <a href="./scale.html">Scale</a>
+        <a href="./compare.html">Compare</a>
+        <a href="./docs.html" aria-current="page">Docs</a>
+        <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
+        <a class="support" href="https://bbekshr.github.io/mayacharts/support/"
+          ><span aria-hidden="true">♥</span> Support</a
+        >
+        <button id="theme" type="button">Theme: auto</button>
+      </nav>
     </header>
+    <header class="site">
+      <h1>Spec reference</h1>
+      <p class="tagline">
+        Every field of the spec, what it applies to and what it does. Error messages link to the
+        field they name.
+      </p>
+    </header>
+    <nav class="toc doc-toc" aria-label="On this page">
+      <a href="#overview">Overview</a>
+      <a href="#where-the-element-reads-the-spec">Where the element reads the spec</a>
+      <a href="#data-fields">Data fields</a>
+      <a href="#encoding-fields">Encoding fields</a>
+      <a href="#formatting-fields">Formatting fields</a>
+      <a href="#interaction-fields">Interaction fields</a>
+      <a href="#time-axes">Time axes</a>
+      <a href="#large-data">Large data</a>
+      <a href="#style-fields">Style fields</a>
+      <a href="#examples">Examples</a>
+    </nav>
     <main>
-      <section>
+      <section id="overview">
         <h2>Overview</h2>
         <p>
           The mayaCharts spec is plain JSON. Rule: <code>x</code> is always the category,
@@ -52,7 +88,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="where-the-element-reads-the-spec">
         <h2>Where the element reads the spec</h2>
         <p>
           The <code>&lt;maya-chart&gt;</code> element takes its spec from the first of these that is
@@ -63,7 +99,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="data-fields">
         <h2>Data fields</h2>
         <table>
           <thead>
@@ -132,7 +168,7 @@
         </table>
       </section>
 
-      <section>
+      <section id="encoding-fields">
         <h2>Encoding fields</h2>
         <table>
           <thead>
@@ -277,7 +313,7 @@
         </table>
       </section>
 
-      <section>
+      <section id="formatting-fields">
         <h2>Formatting fields</h2>
         <table>
           <thead>
@@ -382,7 +418,7 @@
         </table>
       </section>
 
-      <section>
+      <section id="interaction-fields">
         <h2>Interaction fields</h2>
         <table>
           <thead>
@@ -450,7 +486,7 @@
         </table>
       </section>
 
-      <section>
+      <section id="time-axes">
         <h2>Time axes</h2>
         <p>
           Dates in x values are automatically detected and placed on a proportional time axis when
@@ -465,7 +501,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="large-data">
         <h2>Large data</h2>
         <p>
           A chart handles up to a million rows wherever the chart makes sense, by reducing what it
@@ -493,7 +529,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="style-fields">
         <h2>Style fields</h2>
         <table>
           <thead>
@@ -545,7 +581,7 @@
         </table>
       </section>
 
-      <section>
+      <section id="examples">
         <h2>Examples</h2>
 
         <h3>1. Currency bar</h3>
@@ -634,5 +670,9 @@
         <p>Accounts placed by how alike their measures are. Import mayacharts/constellation.</p>
       </section>
     </main>
+    <script type="module">
+      import { theme } from "./theme.ts";
+      theme();
+    </script>
   </body>
 </html>

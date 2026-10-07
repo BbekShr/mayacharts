@@ -34,7 +34,7 @@ Stress scripts live in `bench/` (`node bench/million.mjs` after a build times 1M
 - `src/hierarchy.ts`, `flow.ts`, `geo.ts`, `radial.ts`, `stats.ts` - optional modules (treemap/sunburst/marimekko/waffle, sankey/chord, US hexmap, radial bars, boxplot/funnel). They may import only `registry.ts`, `svg.ts`, `scale.ts`, `ticks.ts` and types; never render/validate/shape/format (they are bundled separately).
 - `src/element/` - `maya-chart.ts` (element, events, `view`/`selected`, keydown dispatcher), `animate.ts` (key diff, WAAPI entrance/update/exit, stagger, path morph), `tooltip.ts`, `html.ts` (Trusted Types policy `mayacharts`), and the interactions `measure.ts`, `drill.ts`, `select.ts`, `zoom.ts` as pure reducers plus `mount(host)` handlers.
 - `src/styles/theme.ts` - the whole stylesheet as one string (budget 4 KB gzip). Tokens `--maya-*`.
-- `site/` - demo, gallery and the Scale page (synthetic data in `site/data.ts`; never copy data from elsewhere). `docs/spec.html`, `site/errors.html` (one anchor per error code; error messages link here).
+- `site/` - demo, gallery and the Scale page (synthetic data in `site/data.ts`; never copy data from elsewhere). `site/docs.html`, `site/errors.html` (one anchor per error code; error messages link here).
 - `schema.json`, `llms.txt` - kept in sync with `types.ts` by `test/schema.test.ts`.
 
 ## Rules
@@ -45,7 +45,7 @@ Stress scripts live in `bench/` (`node bench/million.mjs` after a build times 1M
 - Animation is transform/opacity only, keyed by `data-key`; never tween SVG geometry attributes. Three exceptions, all in `animate.ts`: a changed path morphs through CSS `d` where the browser interpolates it (else crossfade), a changed number in a text mark counts up, and sunburst slices (stroked circles, `pathLength` 360) tween `r`, `stroke-width` and the stroke dash as CSS properties so a drill sweeps in angle space. See the render.ts DESIGN NOTE.
 - Core stays pure: no `window`/`document` (a test deletes them and imports core).
 - `x` is always the category and `y` the value, whatever the orientation. `format` and `titles` are keyed by field.
-- Changing the spec means updating, together: `types.ts` JSDoc, `validate.ts` (`ONLY`/`HINTS`), README spec tables, `schema.json`, `llms.txt`, `docs/spec.html`, CHANGELOG. `test/schema.test.ts` catches drift.
+- Changing the spec means updating, together: `types.ts` JSDoc, `validate.ts` (`ONLY`/`HINTS`), README spec tables, `schema.json`, `llms.txt`, `site/docs.html`, CHANGELOG. `test/schema.test.ts` catches drift.
 - New chart types are a `Mark` in core or a module; they never get a plugin API (`register` is internal).
 - Prose in docs: plain sentences, no em or en dashes, no emojis, no eyebrow labels.
 

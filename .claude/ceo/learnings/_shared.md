@@ -60,7 +60,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Check a CSS hook beats `[data-maya=labels] text{fill}` before trusting a wip rule: the end-label colour lost on specificity after folding.
 
 - Defaults that vary by chart type go in `resolve()` (`validate.ts`), not as type checks in `render.ts`.
-- Changing a spec default is a docs change too: `types.ts`, README, `schema.json` if described, `llms.txt`, `docs/spec.html`, CHANGELOG.
+- Changing a spec default is a docs change too: `types.ts`, README, `schema.json` if described, `llms.txt`, `site/docs.html`, CHANGELOG.
 
 ## Archive
 

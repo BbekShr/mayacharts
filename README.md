@@ -1,15 +1,25 @@
+<div align="center">
+
 # mayaCharts
 
-Beautiful, accessible charts in five lines. Zero dependencies. The browser is the chart engine.
+**The browser is the chart engine.**
 
-[![npm](https://img.shields.io/npm/v/mayacharts)](https://www.npmjs.com/package/mayacharts) [![license](https://img.shields.io/npm/l/mayacharts)](LICENSE) [![gzip](https://img.shields.io/bundlejs/size/mayacharts)](https://bundlejs.com/?q=mayacharts) [![support](https://img.shields.io/badge/support-mayaCharts-635bff)](https://bbekshr.github.io/mayacharts/support/)
+Twenty-six chart types from one JSON spec. About 53 KB, zero dependencies,<br>accessible and server-rendered by default.
+
+[![npm](https://img.shields.io/npm/v/mayacharts?color=1d4ed8&label=npm)](https://www.npmjs.com/package/mayacharts) [![gzip](https://img.shields.io/bundlejs/size/mayacharts?color=1d4ed8)](https://bundlejs.com/?q=mayacharts) [![dependencies](https://img.shields.io/badge/dependencies-0-1d4ed8)](package.json) [![license](https://img.shields.io/npm/l/mayacharts?color=1d4ed8)](LICENSE) [![support](https://img.shields.io/badge/%E2%99%A5-support-e5484d)](https://bbekshr.github.io/mayacharts/support/)
+
+**[Website](https://bbekshr.github.io/mayacharts/)** · **[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[A million rows](https://bbekshr.github.io/mayacharts/scale.html)** · **[Compare](https://bbekshr.github.io/mayacharts/compare.html)** · **[Docs](https://bbekshr.github.io/mayacharts/docs.html)** · **[♥ Support](https://bbekshr.github.io/mayacharts/support/)**
+
+</div>
+
+<br>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/hero-dark.png">
   <img alt="Six mayaCharts: a multi-series line, a ranked bar with an Other bucket, a heatmap, a sunburst, a sankey and a US state hexmap" src="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/hero-light.png">
 </picture>
 
-**[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Chart builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[Scale: a million rows](https://bbekshr.github.io/mayacharts/scale.html)** · **[Compare with other libraries](https://bbekshr.github.io/mayacharts/compare.html)** · **[Spec reference](#the-spec)**
+## Five lines
 
 ```html
 <script type="module" src="https://cdn.jsdelivr.net/npm/mayacharts/dist/element.js"></script>
@@ -21,9 +31,18 @@ Beautiful, accessible charts in five lines. Zero dependencies. The browser is th
 
 That is a complete, animated, keyboard-navigable chart with a tooltip, a screen-reader data table and dark mode. No build step, no framework.
 
+## Motion that means something
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/shapeshift-dark.gif">
+  <img alt="A units chart: 240 customer dots fly from a waffle into bars by region, then into a spend swarm, then back" src="https://raw.githubusercontent.com/BbekShr/mayacharts/main/docs/img/shapeshift-light.gif" width="720">
+</picture>
+
+One dot per customer, and the same dots fly between a waffle, bars and a spend swarm. Every mark is keyed, so an update moves what changed instead of redrawing. This is a `units` chart, one of the [signature charts](#signature-charts), and it is one line of spec. See every type move on the [website](https://bbekshr.github.io/mayacharts/).
+
 ## Why mayaCharts
 
-- **Small.** Twelve chart types with tooltips, drill, zoom, selection and animation in about 45 KB gzip, with no runtime dependencies. Fourteen more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, hexmap, boxplot, funnel, weave, units, orbit, constellation) are optional modules of 2 to 4 KB each.
+- **Small.** Twelve chart types with tooltips, drill, zoom, selection and animation in about 53 KB gzip, with no runtime dependencies. Fourteen more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, hexmap, boxplot, funnel, weave, units, orbit, constellation) are optional modules of 2 to 4 KB each.
 - **Passes the enterprise checklist.** Works under a strict CSP with Trusted Types, meets WCAG 2.2 AA (axe-clean in light and dark), supports RTL, and every user-visible string is localisable.
 - **Renders on the server.** `render(spec)` is a pure function that returns an SVG string in Node or any runtime without a DOM. `renderShell` returns a full chart that works before any JavaScript loads.
 - **One JSON spec.** No callbacks in the config, so a spec can be stored in a database, sent over the wire, or written by an LLM. A [JSON Schema](schema.json) and [llms.txt](llms.txt) ship with the package.
@@ -31,11 +50,11 @@ That is a complete, animated, keyboard-navigable chart with a tooltip, a screen-
 
 ## How it compares
 
-Measured on 2026-10-05 by the [compare page](https://bbekshr.github.io/mayacharts/compare.html): each library draws the same charts the way its own docs show.
+Measured by the [compare page](https://bbekshr.github.io/mayacharts/compare.html), bundle sizes on 2026-10-07 and the rest on 2026-10-05: each library draws the same charts the way its own docs show, with every module it needs bundled in.
 
 |                                                    | mayaCharts | Chart.js | ECharts | Recharts | Plotly   |
 | -------------------------------------------------- | ---------- | -------- | ------- | -------- | -------- |
-| Bundle for the compare set, gzip                   | 51 KB      | 71 KB    | 382 KB  | 202 KB   | 1,471 KB |
+| Bundle for the compare set, gzip                   | 58 KB      | 70 KB    | 373 KB  | 197 KB   | 1,437 KB |
 | Lines of user code for the compare set             | 150        | 223      | 213     | 264      | 157      |
 | Renders under `require-trusted-types-for 'script'` | yes        | yes      | no      | yes      | no       |
 | Server-side SVG with no DOM                        | yes        | no       | yes     | no       | no       |
@@ -138,6 +157,9 @@ Twenty-six types from one spec format. Pick a picture to open that chart live in
 
 The twelve core types ship with `mayacharts` and `mayacharts/element`. Each other type is an optional module you import once for its side effect, so you pay only for the types you draw. Sizes are gzip, from `npm run size`.
 
+<details>
+<summary>What each type is for, and what it costs</summary>
+
 | Type            | Use it for                                                                                              | Import                              | Gzip    |
 | --------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------- |
 | `bar`           | Compare categories, stacked or grouped, with an Other bucket and optional ghosts of the previous value. | `mayacharts`                        | in core |
@@ -167,9 +189,11 @@ The twelve core types ship with `mayacharts` and `mayacharts/element`. Each othe
 | `orbit`         | Categories as planets around their total, with motion from growth.                                      | `import "mayacharts/orbit"`         | 2.50 KB |
 | `constellation` | Accounts placed by how alike their measures are, not by one axis.                                       | `import "mayacharts/constellation"` | 2.80 KB |
 
+</details>
+
 ## Signature charts
 
-Five of the types above that no other chart library draws. Each is a spec like any other and costs under 3 KB gzip (`was` is part of the core bar).
+Five of the types above were designed for mayaCharts. None of them ships in Chart.js, ECharts, Recharts or Plotly, the libraries on the [compare page](https://bbekshr.github.io/mayacharts/compare.html). Each is a spec like any other and costs under 3 KB gzip (`was` is part of the core bar).
 
 **Shapeshifter (`units`).** One dot per row, and the dots change form: a waffle, bars, or a swarm along the value axis. Every dot keeps the same key in every form, so switching form flies each dot to its new place instead of redrawing. Maya means illusion, and this is the one that earns the name. Other libraries make you pick a chart; here the control is part of the chart.
 
@@ -209,6 +233,12 @@ import "mayacharts/constellation";
 chart.spec = { type: "constellation", x: "account", y: ["spend", "tickets", "tenure"], data: rows };
 // optional size; 500 rows and 12 measures at most
 ```
+
+## Reference
+
+[The spec](#the-spec) · [Canonical examples](#canonical-examples) · [Modules](#modules) · [Global build](#global-build) · [Interactions](#interactions) · [Events](#events-and-two-way-sync) · [Export](#export) · [Frameworks](#frameworks) · [Embedding](#embedding-in-hosts) · [Theming](#theming) · [Security](#security) · [Accessibility](#accessibility) · [Performance](#performance) · [Errors](#errors) · [Development](#development) · [Support](#support)
+
+The full field reference is also on the website at [Docs](https://bbekshr.github.io/mayacharts/docs.html).
 
 ## The spec
 
@@ -298,6 +328,11 @@ A chart handles up to a million rows wherever the chart makes sense, by reducing
 The row pass (grouping, aggregation, time parsing, validation) is cached per `data` array: a resize, legend toggle, zoom or view change re-renders without walking the rows again, so at a million rows a re-render of a line, bar, scatter or kpi costs tens of milliseconds. The cache is keyed by the array's identity and length, so after changing rows in place, assign a new array (`chart.data = [...rows]`).
 
 ## Canonical examples
+
+One working spec for each common shape. Paste any of them into the [builder](https://bbekshr.github.io/mayacharts/builder.html) to see it drawn.
+
+<details>
+<summary>Show all 27 specs</summary>
 
 **Currency bar**
 
@@ -686,6 +721,8 @@ The row pass (grouping, aggregation, time parsing, validation) is cached per `da
 }
 ```
 
+</details>
+
 ## Modules
 
 Each module extends the core with chart types and shares the same spec, theme, tooltip, a11y, and animation.
@@ -1004,15 +1041,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 11,972 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 12,130 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,080,215,143 total, 2,287,473 output
+- claude-opus-5-5: 1,116,563,199 total, 2,370,587 output
 - claude-sonnet-5-5: 558,969,125 total, 79,607 output
 - claude-fable-5-1: 186,794,492 total, 369,749 output
 - claude-haiku-4-5-20251001: 26,122,384 total, 1,063 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,859,899,003 total, 2,781,205 output
+- all: 1,896,247,059 total, 2,864,319 output
 
 <!-- tokens:end -->
 

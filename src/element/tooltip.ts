@@ -358,8 +358,8 @@ export function tooltip(
     // The probe's containing block is the host's padding box (:host is position:relative).
     // Charts with a crosshair anchor to it: the tooltip sits beside the line, never over the points.
     const svg = box.querySelector("svg"),
-      side = !!svg?.querySelector("[data-maya=cross] :not(text,[data-g])"),
-      weave = sp?.type === "weave"; // its tooltip stands above the plot, over no thread
+      // Weave: beside the hovered column like a crosshair, so it stays inside the chart.
+      side = sp?.type === "weave" || !!svg?.querySelector("[data-maya=cross] :not(text,[data-g])");
     let r: {
       left: number;
       top: number;
@@ -368,13 +368,13 @@ export function tooltip(
       right: number;
       bottom: number;
     } = m.getBoundingClientRect();
-    if ((side || weave) && svg) {
+    if (side && svg) {
       const s = svg.getBoundingClientRect(),
         k = 1 / unit(svg, s),
         [, py, , ph] = a(svg, "data-plot").split(" ").map(Number) as number[],
         left = r.left + r.width / 2,
         top = s.top + py! * k;
-      const h = weave ? 0 : ph! * k;
+      const h = ph! * k;
       r = { left, top, width: 0, height: h, right: left, bottom: top + h };
     }
     // Orbit (the name) and constellation (the web): anchor to the mark and what it lights, so the tooltip clears them.
@@ -403,18 +403,24 @@ export function tooltip(
     if (clamped) for (const k of FIXED) tip.style.removeProperty(k);
     clamped = false;
     let t = tip.getBoundingClientRect();
-    if (!anchored || t.left < 0 || t.top < 0 || t.right > vw || t.bottom > vh) {
+    // The tooltip stays over its own chart on each axis where it fits, so it never covers a
+    // neighbour; else the viewport bounds it.
+    let [lo, hi] = [Math.max(8, p.left), Math.min(vw - 8, p.right)];
+    if (hi - lo < t.width) [lo, hi] = [8, vw - 8];
+    let [top, bot] = [Math.max(8, p.top), Math.min(vh - 8, p.bottom)];
+    if (bot - top < t.height) [top, bot] = [8, vh - 8];
+    if (!anchored || t.left < lo || t.top < top || t.right > hi || t.bottom > bot) {
       // Leave the anchor (position-area would resolve insets against the anchor area).
       for (const k of ["left", "top", "margin"]) tip.style.setProperty(k, "0px");
       tip.style.setProperty("position", "fixed");
       tip.style.setProperty("position-area", "none");
       t = tip.getBoundingClientRect();
       let y = side ? r.top : r.top - t.height - 8;
-      if (y < 8) y = r.bottom + 8;
-      y = Math.max(8, Math.min(y, vh - t.height - 8));
+      if (y < top) y = r.bottom + 8;
+      y = Math.max(top, Math.min(y, bot - t.height));
       let x = side ? r.left + 12 : r.left + r.width / 2 - t.width / 2;
-      if (side && x + t.width > vw - 8) x = r.left - 12 - t.width;
-      x = Math.max(8, Math.min(x, vw - t.width - 8));
+      if (side && x + t.width > hi) x = r.left - 12 - t.width;
+      x = Math.max(lo, Math.min(x, hi - t.width));
       tip.style.setProperty("left", x + "px");
       tip.style.setProperty("top", y + "px");
       clamped = true;

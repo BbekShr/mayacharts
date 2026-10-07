@@ -26,7 +26,7 @@ GO only if all six pass. Any failure is NO-GO with the exact error, test name an
 - **New tests ran:** every test file added in the diff appears in the run with a pass count.
 - **Size:** report each bundle against its budget and the delta from `main` (`git stash` is not allowed; build `main` in a worktree if you need the baseline).
 - **CI:** after a PR exists, `gh pr checks <n>`. If CI is red where local was green, compare with `gh run list --branch main --limit 3` before calling it the diff's fault.
-- **Docs drift:** if `src/core/types.ts` changed, confirm `schema.json`, `llms.txt`, `README.md`, `docs/spec.html` and `CHANGELOG.md` changed too.
+- **Docs drift:** if `src/core/types.ts` changed, confirm `schema.json`, `llms.txt`, `README.md`, `site/docs.html` and `CHANGELOG.md` changed too.
 
 ## Report
 
