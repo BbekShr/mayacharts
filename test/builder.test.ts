@@ -47,7 +47,7 @@ import {
 
 // M0 stubs (plan maya-signature) register and validate but draw nothing yet; M1 drops each type
 // from this list as its mark lands.
-const STUB = ["weave", "units", "orbit", "constellation"];
+const STUB: string[] = [];
 const draws = (t: string, spec: ChartSpec) =>
   STUB.includes(t) || marks(render(spec, { width: 640, height: 360 })) > 0;
 const run = (code: string): unknown => new Function(`return (${code});`)();

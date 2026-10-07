@@ -97,6 +97,26 @@ const SCATTER =
   "[data-maya=cross] line[data-g]{stroke-dasharray:3 3;stroke-opacity:.7}" +
   "[data-maya=cross] text,[data-maya=rules] text{font-size:11px;font-weight:600;fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:4;stroke-linejoin:round}";
 
+// orbit
+// Planets orbit a sun: the theme rotates g[data-v] about the sun (its origin) and counter-rotates
+// the label, so the chart is a still, trails included, unless motion is allowed and not `data-still`.
+// ponytail: five speed buckets, one period each (--p).
+const ORBIT =
+  "g[data-v],g[data-up]{transform-box:view-box;transform-origin:0 0}" +
+  "[data-trail]{fill:none;stroke:var(--c);stroke-width:3;stroke-linecap:round;stroke-opacity:.5}" +
+  "g[data-s] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1.5}g[data-s] circle[data-maya=mark]:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2}" +
+  "[data-maya=marks]:has([data-active]) g[data-s]:not(:has([data-active])) :is([data-trail],[data-up]){opacity:.4}" +
+  "[data-up] text{paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round;font-size:11px;font-weight:600;fill:var(--maya-fg)}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
+  "@media (prefers-reduced-motion:no-preference){@keyframes maya-orbit{to{transform:rotate(360deg)}}" +
+  [80, 52, 36, 24, 16].map((s, i) => `g[data-v="${i + 1}"]{--p:${s}s}`).join("") +
+  ".maya:not([data-still]) g[data-v]{animation:maya-orbit var(--p) linear infinite}.maya:not([data-still]) g[data-v] g[data-up]{animation:maya-orbit var(--p) linear infinite reverse}" +
+  ".maya:not([data-still]) g[data-neg]{animation-direction:reverse}.maya:not([data-still]) g[data-neg] g[data-up]{animation-direction:normal}" +
+  ".maya:not([data-still]) .maya-svg:hover :is(g[data-v],g[data-up]){animation-play-state:paused}}" +
+  // Weave threads and halos: dim with legend hover, selection and the lit thread.
+  "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks]:has([data-active]) [data-w]:not([data-lit]){opacity:.18}" +
+  // Memory ghost (bar `was`): the previous value, behind its bar.
+  "[data-past]{fill:var(--maya-fg);fill-opacity:.12;stroke:var(--maya-fg-muted);stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}";
+
 export const css =
   L +
   `@supports not (color:light-dark(#000,#fff)){:host,.maya-root{${D}}@media (prefers-color-scheme:dark){:host,.maya-root{${N}}}}` +
@@ -199,6 +219,7 @@ export const css =
   '[data-maya=labels] :is([data-q="6"],[data-q="7"]){fill:light-dark(var(--maya-fg),#fff)}' +
   HEXMAP +
   SCATTER +
+  ORBIT +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +
   "@media (forced-colors:active){.maya-svg,i{forced-color-adjust:none}[data-maya=mark]:not(circle[data-depth]){stroke:CanvasText;stroke-width:1}[data-tone=bad]{stroke-dasharray:4 2}}" +
   "@media (prefers-reduced-motion:no-preference){[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}[data-maya=labels] [data-in]{transition:fill .25s var(--maya-ease)}" +

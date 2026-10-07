@@ -476,8 +476,9 @@ describe("was (memory from a data column)", () => {
   });
 
   it("is absent without was", () => {
-    expect(render(simple)).not.toContain("data-past");
-    expect(render(simple)).not.toContain("data-was");
+    const svg = render(simple).replace(/<style>[^]*?<\/style>/, "");
+    expect(svg).not.toContain("data-past");
+    expect(svg).not.toContain("data-was");
   });
 
   it("keeps the was field in the shell's projected rows", () => {
