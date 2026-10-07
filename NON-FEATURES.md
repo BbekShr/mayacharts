@@ -106,6 +106,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Bar value labels that would print over a taller neighbour are dropped, not thinned.
 - **Sunburst ring names are cut with an ellipsis when the ring is too thin; the tooltip carries the full name.
 - **Weave caps at 8 series**: a weave throws `too-many-marks` above 8 threads (one per palette slot); `limit` rolls up categories, never series, so filter the rows or fold the tail into one series first. Ranks are among the series present in a period, and a thread is named at its first and last point only.
+- **Chord labels**: a label is cut to 36% of the plot width (20 characters at most) and dropped when its neighbour on the same side leaves no 16 px of height, so a narrow chart with many nodes names only the largest; the tooltip names the rest.
 
 ## What you can do instead
 
