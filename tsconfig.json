@@ -22,6 +22,10 @@
       "mayacharts/geo": ["./src/geo.ts"],
       "mayacharts/radial": ["./src/radial.ts"],
       "mayacharts/stats": ["./src/stats.ts"],
+      "mayacharts/weave": ["./src/weave.ts"],
+      "mayacharts/units": ["./src/units.ts"],
+      "mayacharts/orbit": ["./src/orbit.ts"],
+      "mayacharts/constellation": ["./src/constellation.ts"],
       "mayacharts/global": ["./src/global.ts"],
       "mayacharts/jsx": ["./src/jsx.d.ts"]
     },
