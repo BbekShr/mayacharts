@@ -6,6 +6,8 @@ import { timeTicks, toTime } from "../src/core/ticks.ts";
 import { MayaSpecError, resolve } from "../src/core/validate.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
+const CI = process.env.CI ? 2 : 1; // shared runners are slower than a laptop
+
 const rows = (xs: unknown[]) => xs.map((x, i) => ({ x: x as string | number | null, v: i + 1 }));
 const sh = (spec: Partial<ChartSpec> & { data: readonly object[] }) =>
   shape(resolve({ type: "line", x: "x", y: "v", ...spec } as ChartSpec));
@@ -187,7 +189,7 @@ describe("time axis review fixes", () => {
     expect(toTime(1e300)).toBeNull();
     const t = performance.now();
     const k = timeTicks(-8.64e15, 8.64e15);
-    expect(performance.now() - t).toBeLessThan(500);
+    expect(performance.now() - t).toBeLessThan(500 * CI);
     expect(k.values.length).toBeGreaterThanOrEqual(2);
     expect(() => timeTicks(0, 8.64e15, 6, true)).not.toThrow();
     expect(
