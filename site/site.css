@@ -764,6 +764,15 @@ maya-chart.cmp {
 }
 maya-chart.cmp-tall {
   height: 440px;
+  min-width: 600px; /* grids stay legible on a phone: the figure scrolls sideways instead */
+}
+.cmp-grid figure:has(.cmp-tall) {
+  overflow-x: auto;
+}
+.cmp-grid figure:has(.cmp-tall) figcaption {
+  position: sticky;
+  left: 0;
+  max-width: calc(100vw - 32px);
 }
 .cmp-grid:has(.cmp-tall) {
   grid-template-columns: 1fr;

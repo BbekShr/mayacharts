@@ -498,3 +498,6 @@ export function makeRanks(seed: number) {
     }),
   );
 }
+
+/** A seed derived from the dataset so a re-roll redraws the synthetic points too. */
+export const seedOf = (f: Dataset["FACTS"]) => Math.round(f.reduce((a, r) => a + r.sales, 0)) >>> 0;

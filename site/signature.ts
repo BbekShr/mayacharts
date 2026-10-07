@@ -5,6 +5,7 @@ import {
   makeRanks,
   makeUnits,
   rollup,
+  seedOf,
   sum,
   type Dataset,
 } from "./data.ts";
@@ -22,7 +23,7 @@ export function signature({ FACTS }: Pick<Dataset, "FACTS">): Record<string, Cha
     y: "sales",
     series: "line",
     select: true,
-    data: makeRanks(5),
+    data: makeRanks(seedOf(FACTS)),
   });
 
   // Memory: each family's second-half sales with its first-half sales as the ghost.
@@ -55,7 +56,7 @@ export function signature({ FACTS }: Pick<Dataset, "FACTS">): Record<string, Cha
     name: "customer",
     format: { spend: "compact" },
     select: true,
-    data: makeUnits(11),
+    data: makeUnits(seedOf(FACTS)),
   });
 
   // 35. Orrery: size is sales, orbit rank follows size, speed and direction are growth.
@@ -69,7 +70,7 @@ export function signature({ FACTS }: Pick<Dataset, "FACTS">): Record<string, Cha
     format: { sales: "compact" },
     colorBy: "sign",
     select: true,
-    data: makeGrowth(23),
+    data: makeGrowth(seedOf(FACTS)),
   });
 
   // Constellation: 40 accounts placed by how alike their five measures are.
@@ -88,7 +89,7 @@ export function signature({ FACTS }: Pick<Dataset, "FACTS">): Record<string, Cha
     size: "revenue",
     colorBy: "growth",
     select: true,
-    data: makeAccounts(FACTS.reduce((a, f) => a + f.units, 0)) as Row[],
+    data: makeAccounts(seedOf(FACTS)) as Row[],
   });
 
   return out;
