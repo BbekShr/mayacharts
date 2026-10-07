@@ -38,6 +38,8 @@ const TILES = [
   "drift",
   "feed",
   "rules",
+  "boxplot",
+  "funnel",
 ];
 
 test("gallery: every tile renders marks, no errors, spec shown as JSON", async ({ page }) => {

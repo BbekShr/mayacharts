@@ -84,6 +84,14 @@ const bridge: Row[] = [
   { Step: "End", Change: 0 },
 ];
 
+const stages: Row[] = [
+  { Stage: "Visits", Users: 12000 },
+  { Stage: "Product view", Users: 7400 },
+  { Stage: "Cart", Users: 2900 },
+  { Stage: "Checkout", Users: 1600 },
+  { Stage: "Paid", Users: 1100 },
+];
+
 const s = (spec: Omit<ChartSpec, "type">): Omit<ChartSpec, "type"> => spec;
 const MONTHLY = { Month: "month", Sales: "compact" } as const;
 export const SAMPLES: Readonly<Record<string, Omit<ChartSpec, "type">>> = {
@@ -199,6 +207,15 @@ export const SAMPLES: Readonly<Record<string, Omit<ChartSpec, "type">>> = {
   waffle: s({ title: "Share of units by family", x: "Family", y: "Units", data: regionFamily }),
   radial: s({ title: "Sales by month", x: "Month", y: "Sales", format: MONTHLY, data: monthly }),
   hexmap: s({ title: "Sales by state", x: "State", y: "Sales", format: "compact", data: states }),
+  boxplot: s({
+    title: "Monthly sales by region",
+    x: "Region",
+    y: "Sales",
+    name: "Month",
+    format: MONTHLY,
+    data: regionMonth,
+  }),
+  funnel: s({ title: "Checkout funnel", x: "Stage", y: "Users", labels: true, data: stages }),
 };
 
 /** A fresh copy of a type's sample spec (callers mutate it). */
@@ -226,6 +243,7 @@ const NAMES: Record<string, string> = {
   hexmap: "Hex map",
   radial: "Radial bar",
   parallel: "Parallel",
+  boxplot: "Box plot",
 };
 /** "hexmap" -> "Hex map", "drillOut" -> "Drill out": type names and option keys as labels. */
 export const label = (t: string): string =>
@@ -233,9 +251,9 @@ export const label = (t: string): string =>
 
 /** Picker groups. A type missing here still shows, under "More". */
 export const GROUPS: readonly (readonly [string, readonly string[]])[] = [
-  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "table"]],
+  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "funnel", "table"]],
   ["Trend", ["line", "area", "ridgeline", "radial"]],
-  ["Distribution", ["scatter", "beeswarm", "heatmap", "parallel"]],
+  ["Distribution", ["scatter", "beeswarm", "boxplot", "heatmap", "parallel"]],
   ["Part to whole", ["treemap", "sunburst", "marimekko", "waffle"]],
   ["Flow and map", ["sankey", "chord", "hexmap"]],
 ];
@@ -311,6 +329,8 @@ export const TYPE_HELP: Readonly<Record<string, string>> = {
   waffle: "A 10 by 10 grid of squares showing each category's share.",
   radial: "Bars arranged around a circle.",
   hexmap: "US states as equal hexagons coloured by value.",
+  boxplot: "How values spread in each category: the middle half as a box, the median as a line.",
+  funnel: "How many remain at each step of a process, with the share kept from step to step.",
 };
 
 const HELP: Readonly<Record<string, string>> = {

@@ -88,11 +88,12 @@
               <td>
                 <code
                   >bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel
-                  table treemap sunburst sankey chord marimekko waffle radial hexmap</code
+                  table treemap sunburst sankey chord marimekko waffle radial hexmap boxplot
+                  funnel</code
                 >
                 Core: ridgeline, beeswarm, parallel, table; Modules:
                 treemap/sunburst/marimekko/waffle (hierarchy), sankey/chord (flow), radial (radial),
-                hexmap (geo)
+                hexmap (geo), boxplot/funnel (stats)
               </td>
             </tr>
             <tr>
@@ -107,7 +108,7 @@
               <td>sum</td>
               <td>
                 How rows sharing a (category, series) combine. <code>count</code> = SQL COUNT(y) on
-                non-null rows
+                non-null rows. Not boxplot, which summarises raw rows
               </td>
             </tr>
             <tr>
@@ -145,7 +146,9 @@
               <td>field</td>
               <td>all but path types</td>
               <td>
-                Category; scatter numeric x; hexmap state (USPS code or full name, case-insensitive)
+                Category; scatter numeric x; hexmap state (USPS code or full name,
+                case-insensitive); boxplot one box each; funnel the stage, omitted when
+                <code>y</code> lists the stages
               </td>
             </tr>
             <tr>
@@ -162,7 +165,10 @@
               <td><a class="spec-anchor" id="y"></a><code>y</code></td>
               <td>field or field[]</td>
               <td>all</td>
-              <td>Value; array adds measure toggle, first active</td>
+              <td>
+                Value; array adds measure toggle, first active (parallel and table: all shown;
+                funnel without <code>x</code>: one stage per field)
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="y2"></a><code>y2</code></td>
@@ -186,8 +192,14 @@
             <tr>
               <td><a class="spec-anchor" id="series"></a><code>series</code></td>
               <td>field</td>
-              <td>bar line area scatter heatmap dumbbell</td>
-              <td>Split into series; heatmap row category; dumbbell exactly two (from, to)</td>
+              <td>
+                bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial
+                boxplot
+              </td>
+              <td>
+                Split into series; heatmap row category; dumbbell exactly two (from, to); boxplot
+                boxes side by side
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="path"></a><code>path</code></td>
@@ -204,7 +216,7 @@
             <tr>
               <td><a class="spec-anchor" id="name"></a><code>name</code></td>
               <td>field</td>
-              <td>scatter</td>
+              <td>scatter beeswarm boxplot</td>
               <td>Point identity and tooltip title; duplicates become #2, #3...</td>
             </tr>
             <tr>
@@ -281,7 +293,7 @@
                 drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
                 crumbs positive negative above below vs ofTarget total shareOf sortedBy ascending
                 descending fromTo reduced points point range density perCell mean rule play pause
-                frameOf frame
+                frameOf frame max q3 median q1 min rows ofPrevious ofFirst
               </td>
             </tr>
             <tr>

@@ -88,10 +88,15 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
       <section id="non-positive-value">
         <h2><code>non-positive-value</code></h2>
         <p>
-          Hierarchy types (treemap, sunburst, sankey) require positive y values (> 0) because area
-          or width represents magnitude. Filter out zero and negative rows.
+          Hierarchy and flow types (treemap, sunburst, sankey, chord) require positive y values (>
+          0) because area or width represents magnitude. Filter out zero and negative rows.
         </p>
         <pre><code>data: data.filter(r => r.revenue > 0)</code></pre>
+        <p>
+          A funnel counts what remains at each stage, so its y values cannot be negative. Zero is
+          allowed; the step after a zero shows no percentage.
+        </p>
+        <pre><code>data: data.filter(r => r.users >= 0)</code></pre>
       </section>
       <section id="unknown-option">
         <h2><code>unknown-option</code></h2>

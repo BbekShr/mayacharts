@@ -68,6 +68,16 @@ export const TEXT = {
   frameOf: "{0}, {1}",
   /** Auto description with spec.frame: {0} = frame number, {1} = frame count. */
   frame: "Frame {0} of {1}",
+  /** Boxplot tooltip and table labels: the five numbers and the row count. */
+  max: "Max",
+  q3: "Upper quartile",
+  median: "Median",
+  q1: "Lower quartile",
+  min: "Min",
+  rows: "Rows",
+  /** Funnel tooltip and table labels: step conversion. */
+  ofPrevious: "% of previous",
+  ofFirst: "% of first",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

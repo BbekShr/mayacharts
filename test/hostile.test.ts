@@ -4,6 +4,7 @@ import "../src/hierarchy.ts";
 import "../src/flow.ts";
 import "../src/geo.ts";
 import "../src/radial.ts";
+import "../src/stats.ts";
 import { render, renderShell } from "../src/core/render.ts";
 import { TEXT } from "../src/core/strings.ts";
 import { MayaSpecError } from "../src/core/validate.ts";
@@ -60,6 +61,15 @@ const BASE: Record<string, (c: unknown, s: unknown, n: unknown) => S> = {
   treemap: (c, s, n) => ({ type: "treemap", path: ["c", "s"], y: "v", data: D(c, s, n) }),
   sunburst: (c, s, n) => ({ type: "sunburst", path: ["c", "s"], y: "v", data: D(c, s, n) }),
   sankey: (c, s, n) => ({ type: "sankey", path: ["c", "s"], y: "v", data: D(c, s, n) }),
+  boxplot: (c, s, n) => ({
+    type: "boxplot",
+    x: "c",
+    y: "v",
+    name: "n",
+    series: "s",
+    data: D(c, s, n),
+  }),
+  funnel: (c, s, n) => ({ type: "funnel", x: "c", y: "v", data: D(c, s, n) }),
   hexmap: (c, s, n) => ({ type: "hexmap", x: "c", y: "v", data: D(c, s, n) }),
 };
 
@@ -157,6 +167,31 @@ describe.each(Object.keys(BASE))("hostile strings: %s", (type) => {
       void rendered;
     });
   }
+});
+
+// Wide funnel: hostile field names are the stages (no x), shown through titles, labels and the table.
+describe("hostile strings: funnel wide form", () => {
+  it.each(PAYLOADS)("%j is inert", (p) => {
+    const ys = [p, p + "2", p + "3"];
+    const spec = {
+      type: "funnel",
+      y: ys,
+      title: p,
+      description: p,
+      labels: true,
+      table: true,
+      titles: Object.fromEntries(ys.map((f) => [f, p])),
+      format: { [p]: { prefix: p, suffix: p } },
+      text: Object.fromEntries(Object.keys(TEXT).map((k) => [k, p])),
+      data: [5, 3, 1].map((v) => Object.fromEntries(ys.map((f, i) => [f, v * (3 - i)]))),
+    };
+    for (const html of [render(spec as never), renderShell(spec as never)])
+      expect(problems(html)).toEqual([]);
+    const shell = renderShell(spec as never);
+    const m = /<script type="application\/json">([\s\S]*)<\/script><\/maya-chart>$/.exec(shell);
+    expect(JSON.parse(m![1]!).y).toEqual(ys);
+    expect(shell).toContain('data-maya="mark"');
+  });
 });
 
 describe("format templates are inert", () => {

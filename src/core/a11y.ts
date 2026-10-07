@@ -1,6 +1,6 @@
 import { t } from "./strings.ts";
 import { cbField, esc } from "./svg.ts";
-import type { ResolvedSpec, Shaped } from "./types.ts";
+import type { MarkOut, ResolvedSpec, Shaped } from "./types.ts";
 
 /** Density scatter stats [cells, fewest, most], left by the mark's draw for describe (same spec object). */
 
@@ -12,7 +12,7 @@ export const titleText = (spec: ResolvedSpec): string =>
       : "");
 
 /** Types whose a11y table lists the raw rows (no category x series grid). */
-const ROWS = ["scatter", "treemap", "sunburst", "sankey", "hexmap"];
+const ROWS = ["scatter", "treemap", "sunburst", "sankey", "hexmap", "boxplot"];
 const CAP = 1000;
 
 export type Fmt = (field: string, v: unknown, step?: number) => string;
@@ -57,14 +57,15 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
 
 /**
  * Visually hidden table. Cartesian/heatmap: category rows x series columns. Scatter and path
- * types: the raw rows, only the encoded fields. Capped at 1000 rows. `tone` returns the tone
- * word for a value (never colour alone) or null.
+ * types: the raw rows, only the encoded fields. A mark's own `MarkOut.table` wins over both.
+ * Capped at 1000 rows. `tone` returns the tone word for a value (never colour alone) or null.
  */
 export function dataTable(
   spec: ResolvedSpec,
   shaped: Shaped,
   fmt: Fmt,
   tone: (v: number) => string | null,
+  own?: MarkOut["table"],
 ): string {
   const ti = (f: string) => spec.titles.get(f) ?? f;
   const cell = (f: string, v: unknown) => {
@@ -76,7 +77,17 @@ export function dataTable(
   let h: string;
   let rows: string;
   let n: number;
-  if (ROWS.includes(spec.type)) {
+  if (own) {
+    n = own.rows.length;
+    h = own.head.map((c) => `<th>${esc(c)}</th>`).join("");
+    rows = own.rows
+      .slice(0, CAP)
+      .map(
+        ([c, ...cs]) =>
+          `<tr><th scope="row">${esc(c ?? "")}</th>${cs.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`,
+      )
+      .join("");
+  } else if (ROWS.includes(spec.type)) {
     const cols = [
       ...new Set(
         [spec.x, ...spec.path, spec.series, spec.name, spec.size, spec.y, cbField(spec)].filter(

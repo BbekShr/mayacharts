@@ -178,7 +178,7 @@ export const css =
   "[data-maya=cross] line{stroke:var(--maya-fg-muted);stroke-opacity:.55}" +
   "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke}" +
   ".maya-svg:focus{outline:none}.maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +
-  ".maya-sr caption{position:absolute;clip-path:inset(50%)}.maya-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}" +
+  ".maya-sr caption{position:absolute;clip-path:inset(50%)}.maya-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}" +
   ".maya-probe{position:absolute;width:0;height:0;pointer-events:none;anchor-name:--maya-probe}" +
   ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
   "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}.maya-tip[data-side]{position-area:inline-end span-block-end;position-try-fallbacks:flip-inline;margin:0 12px}}" +
@@ -199,6 +199,8 @@ export const css =
   '[data-maya=labels] :is([data-q="6"],[data-q="7"]){fill:light-dark(var(--maya-fg),#fff)}' +
   HEXMAP +
   SCATTER +
+  // Box plot (stats.ts): tinted box, faint row dots (whisker and median are line paths).
+  "[data-bx]{fill:var(--c);fill-opacity:.25;stroke:var(--c);transform-box:fill-box}" +
   "@media (prefers-contrast:more){:host,.maya-root{--maya-fg-muted:var(--maya-fg);--maya-grid:color-mix(in oklab,var(--maya-fg) 40%,transparent)}}" +
   "@media (forced-colors:active){.maya-svg,i{forced-color-adjust:none}[data-maya=mark]:not(circle[data-depth]){stroke:CanvasText;stroke-width:1}[data-tone=bad]{stroke-dasharray:4 2}}" +
   "@media (prefers-reduced-motion:no-preference){[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}[data-maya=labels] [data-in]{transition:fill .25s var(--maya-ease)}" +

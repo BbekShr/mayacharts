@@ -14,6 +14,7 @@ export default defineConfig({
       { find: /^mayacharts\/flow$/, replacement: src("flow.ts") },
       { find: /^mayacharts\/geo$/, replacement: src("geo.ts") },
       { find: /^mayacharts\/radial$/, replacement: src("radial.ts") },
+      { find: /^mayacharts\/stats$/, replacement: src("stats.ts") },
       { find: /^mayacharts$/, replacement: src("index.ts") },
     ],
   },
@@ -25,13 +26,14 @@ export default defineConfig({
       enforce: "pre",
       // Vite's alias plugin has already rewritten the id to the absolute path by the time this runs.
       async resolveId(id, importer, opts) {
-        const sideEffectPattern = /^mayacharts\/(element|hierarchy|flow|geo|radial)$/;
+        const sideEffectPattern = /^mayacharts\/(element|hierarchy|flow|geo|radial|stats)$/;
         const srcFiles = [
           src("element.ts"),
           src("hierarchy.ts"),
           src("flow.ts"),
           src("geo.ts"),
           src("radial.ts"),
+          src("stats.ts"),
         ];
         if (!sideEffectPattern.test(id) && !srcFiles.includes(id)) return null;
         const r = await this.resolve(id, importer, { ...opts, skipSelf: true });

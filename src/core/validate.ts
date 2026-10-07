@@ -12,7 +12,7 @@
  *   unknown-field       a field-valued option names no field in data
  *   non-numeric-y       data[i][y] not a finite number (null allowed; numeric strings get a coercion hint)
  *   non-numeric-field   size / scatter x / colorBy field, as above
- *   non-positive-value  treemap/sunburst/sankey y <= 0
+ *   non-positive-value  treemap/sunburst/sankey y <= 0, funnel y < 0
  *   unknown-option      top-level key not in ChartSpec (HINTS, else "did you mean")
  *   invalid-option      wrong type/value for a known option
  *   option-unsupported  option not valid for this type or pair
@@ -85,7 +85,7 @@ const CART = ["bar", "line", "area"];
 const PATHX = [...CART, "dumbbell"];
 const PATH = ["treemap", "sunburst", "sankey", "chord"];
 /** y arrays on these types are shown together (axes, columns), never a measure toggle. */
-export const ALL_Y = ["parallel", "table"];
+export const ALL_Y = ["parallel", "table", "funnel"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
@@ -93,7 +93,7 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
+    `horizontal:bar,dumbbell y2:bar size:scatter name:scatter,beeswarm,boxplot path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle limit:${CPA},heatmap,dumbbell,table,waffle,radial stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -380,6 +380,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     s[need] === undefined &&
     t !== "kpi" &&
     t !== "beeswarm" &&
+    !(t === "funnel" && Array.isArray(s.y)) &&
     !(need === "x" && PATHX.includes(t) && s.path !== undefined)
   )
     missing(need);
@@ -552,6 +553,17 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       'spec.colorBy on "kpi" must be { target: number }.',
     ],
     [
+      t === "funnel" && s.x !== undefined && Array.isArray(y),
+      "x",
+      'spec.x cannot be combined with a y array on "funnel" (the fields are the stages).',
+    ],
+    [
+      t === "boxplot" && s.aggregate !== undefined,
+      "aggregate",
+      'spec.aggregate is not supported with spec.type = "boxplot".',
+      "A box plot summarises raw rows.",
+    ],
+    [
       cart && s.drill === true && path === undefined,
       "drill",
       `spec.drill on "${t}" needs spec.path.`,
@@ -655,16 +667,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       });
     if (typeof colorBy === "string" && colorBy !== "sign")
       numeric(colorBy, "non-numeric-field", "colorBy");
-    if (isPath)
+    if (isPath || t === "funnel")
       for (const f of ys)
         scan(f, (v, i) => {
-          if (typeof v === "number" && v <= 0) {
+          if (typeof v === "number" && (v < 0 || (isPath && v === 0))) {
             const p = `data[${i}].${f}`;
             fail(
               "non-positive-value",
               p,
-              `spec.${p} is ${v}, but ${t} sizes must be positive.`,
-              `Filter first: data.filter(r => r.${f} > 0), or chart the signed values with "bar".`,
+              `spec.${p} is ${v}, but ${t} ${isPath ? "sizes must be positive" : "values cannot be negative"}.`,
+              `Filter first: data.filter(r => r.${f} ${isPath ? ">" : ">="} 0), or chart the signed values with "bar".`,
             );
           }
         });
