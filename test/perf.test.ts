@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { render, renderParts } from "../src/core/render.ts";
 import { MAX_MARKS, MayaSpecError } from "../src/core/validate.ts";
 
+// Shared CI runners are 2 to 4 times slower than a laptop; the envelopes double there.
+const CI = process.env.CI ? 2 : 1;
 const time = (fn: () => unknown) => {
   fn(); // warm-up (JIT, Intl formatter caches)
   const t = performance.now();
@@ -28,7 +30,7 @@ describe("performance envelope", () => {
   it("5k-category bar: < 150 ms", (ctx) => {
     const data = big();
     const { ms } = guard(ctx, () => render({ type: "bar", x: "c", y: "v", data } as never));
-    expect(ms).toBeLessThan(400);
+    expect(ms).toBeLessThan(400 * CI);
   });
 
   // REAL BUG (perf): 5k-bar output is ~1.85 MB (> 1.5 MB envelope), ~370 B per mark (mark + hit + table row).
@@ -44,7 +46,7 @@ describe("performance envelope", () => {
       v: (i * 104729) % 977,
     }));
     const { ms } = guard(ctx, () => render({ type: "scatter", x: "a", y: "v", data } as never));
-    expect(ms).toBeLessThan(200);
+    expect(ms).toBeLessThan(200 * CI);
   });
 
   it("50x52 heatmap: < 100 ms", (ctx) => {
@@ -56,7 +58,7 @@ describe("performance envelope", () => {
     const { ms } = guard(ctx, () =>
       render({ type: "heatmap", x: "w", series: "d", y: "v", data } as never),
     );
-    expect(ms).toBeLessThan(100);
+    expect(ms).toBeLessThan(100 * CI);
   });
 
   it("20k rows with limit:20: < 150 ms", () => {
@@ -64,7 +66,7 @@ describe("performance envelope", () => {
     const { ms, out } = time(() =>
       render({ type: "bar", x: "c", y: "v", limit: 20, data } as never),
     );
-    expect(ms).toBeLessThan(400);
+    expect(ms).toBeLessThan(400 * CI);
     expect((out as string).length).toBeLessThan(2e5);
   });
 
@@ -100,12 +102,12 @@ describe("performance envelope", () => {
 
   it("line 100k: < 60 ms", () => {
     const data = minutes(100_000);
-    expect(best(() => renderParts(line(data))).ms).toBeLessThan(60);
+    expect(best(() => renderParts(line(data))).ms).toBeLessThan(60 * CI);
   });
 
   it("line 1M: < 600 ms", () => {
     const data = minutes(1_000_000);
-    expect(best(() => renderParts(line(data))).ms).toBeLessThan(600);
+    expect(best(() => renderParts(line(data))).ms).toBeLessThan(600 * CI);
   }, 30_000);
 
   it("scatter 1M: < 500 ms, and no hit elements", () => {
@@ -115,7 +117,7 @@ describe("performance envelope", () => {
     }));
     const spec = { type: "scatter", x: "x", y: "y", data } as never;
     const { ms, out } = best(() => renderParts(spec));
-    expect(ms).toBeLessThan(500);
+    expect(ms).toBeLessThan(500 * CI);
     expect((out as { svg: string }).svg).not.toContain('data-maya="hit"');
   }, 30_000);
 
@@ -166,14 +168,14 @@ describe("performance envelope", () => {
       const data = rows(1000);
       const { ms, out } = best(() => renderParts({ ...kinds[k], data } as never));
       expect((out as { svg: string }).svg.length).toBeLessThan(bytes);
-      expect(ms).toBeLessThan(limit);
+      expect(ms).toBeLessThan(limit * CI);
     });
   }
 
   for (const k of ["kpi", "ridgeline"] as const) {
     it(`${k} 10k rows: draws a thinned chart instead of throwing`, () => {
       const p = best(() => renderParts({ ...kinds[k], data: rows(10_000) } as never));
-      expect(p.ms).toBeLessThan(250);
+      expect(p.ms).toBeLessThan(250 * CI);
       const svg = (p.out as { svg: string }).svg;
       expect(svg.length).toBeLessThan(120e3);
       expect(svg.split(' data-maya="mark"').length - 1).toBeLessThan(1000);
