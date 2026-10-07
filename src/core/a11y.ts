@@ -1,3 +1,4 @@
+import { colorVals } from "./shape.ts";
 import { t } from "./strings.ts";
 import { cbField, esc } from "./svg.ts";
 import type { MarkOut, ResolvedSpec, Shaped } from "./types.ts";
@@ -12,7 +13,17 @@ export const titleText = (spec: ResolvedSpec): string =>
       : "");
 
 /** Types whose a11y table lists the raw rows (no category x series grid). */
-const ROWS = ["scatter", "treemap", "sunburst", "sankey", "hexmap", "boxplot"];
+const ROWS = [
+  "scatter",
+  "treemap",
+  "sunburst",
+  "sankey",
+  "hexmap",
+  "boxplot",
+  "units",
+  "orbit",
+  "constellation",
+];
 const CAP = 1000;
 
 export type Fmt = (field: string, v: unknown, step?: number) => string;
@@ -56,9 +67,10 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
 }
 
 /**
- * Visually hidden table. Cartesian/heatmap: category rows x series columns. Scatter and path
- * types: the raw rows, only the encoded fields. A mark's own `MarkOut.table` wins over both.
- * Capped at 1000 rows. `tone` returns the tone word for a value (never colour alone) or null.
+ * Visually hidden table. Cartesian/heatmap: category rows x series columns. Units: rows per
+ * group. Scatter and path types: the raw rows, only the encoded fields. A mark's own
+ * `MarkOut.table` wins over all of these. Capped at 1000 rows. `tone` returns the tone word for
+ * a value (never colour alone) or null.
  */
 export function dataTable(
   spec: ResolvedSpec,
@@ -87,12 +99,28 @@ export function dataTable(
           `<tr><th scope="row">${esc(c ?? "")}</th>${cs.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`,
       )
       .join("");
+  } else if (spec.type === "units") {
+    // One row per group: how many rows (dots) it holds.
+    const c = new Map<string, number>();
+    for (const r of spec.data) c.set(String(r[spec.x]), (c.get(String(r[spec.x])) ?? 0) + 1);
+    n = c.size;
+    h = `<th>${esc(ti(spec.x))}</th><th>${esc(t(spec, "count"))}</th>`;
+    rows = [...c]
+      .map(([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${esc(fmt("", v))}</td></tr>`)
+      .join("");
   } else if (ROWS.includes(spec.type)) {
     const cols = [
       ...new Set(
-        [spec.x, ...spec.path, spec.series, spec.name, spec.size, spec.y, cbField(spec)].filter(
-          (f): f is string => !!f,
-        ),
+        [
+          spec.x,
+          ...spec.path,
+          spec.series,
+          spec.name,
+          spec.size,
+          ...(spec.type === "constellation" ? spec.measures : [spec.y]),
+          spec.y2,
+          cbField(spec),
+        ].filter((f): f is string => !!f),
       ),
     ];
     n = spec.data.length;
@@ -104,12 +132,27 @@ export function dataTable(
   } else {
     const keys = spec.series === null ? [ti(spec.y)] : shaped.visible.map((j) => shaped.series[j]!);
     n = shaped.categories.length;
-    h = `<th>${esc(ti(spec.x))}</th>` + keys.map((k) => `<th>${esc(k)}</th>`).join("");
+    // spec.was: a previous-value column after each value column.
+    const was = spec.was;
+    const wv = was === null ? null : colorVals(spec, was);
+    const wt = was === null ? "" : ti(was);
+    h =
+      `<th>${esc(ti(spec.x))}</th>` +
+      keys
+        .map(
+          (k) =>
+            `<th>${esc(k)}</th>` +
+            (wv ? `<th>${esc(spec.series === null ? wt : `${k} ${wt}`)}</th>` : ""),
+        )
+        .join("");
     const by = new Map(shaped.cells.map((c) => [c.ci + "," + c.si, c.value]));
     rows = "";
     for (let i = 0; i < Math.min(n, CAP); i++) {
       rows += `<tr><th scope="row">${esc(shaped.time ? fmt(spec.x, shaped.categories[i]) : shaped.categories[i]!)}</th>`;
-      for (const j of shaped.visible) rows += `<td>${cell(spec.y, by.get(i + "," + j))}</td>`;
+      for (const j of shaped.visible)
+        rows +=
+          `<td>${cell(spec.y, by.get(i + "," + j))}</td>` +
+          (wv ? `<td>${esc(fmt(spec.y, wv(shaped.categories[i]!, shaped.series[j]!)))}</td>` : "");
       rows += "</tr>";
     }
   }

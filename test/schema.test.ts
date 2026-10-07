@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import schema from "../schema.json" with { type: "json" };
 import { validateSpec, KEYS } from "../src/core/validate.ts";
 import { CORE_TYPES, MODULE_OF } from "../src/core/registry.ts";
+import { TEXT } from "../src/core/strings.ts";
+import { readFileSync } from "node:fs";
 
 describe("schema.json", () => {
   it("has all known ChartSpec keys", () => {
@@ -14,6 +16,19 @@ describe("schema.json", () => {
     const allTypes = [...CORE_TYPES, ...Object.keys(MODULE_OF)].sort();
     const schemaTypes = schema.properties.type.enum.sort();
     expect(schemaTypes).toEqual(allTypes);
+  });
+
+  it("lists every text key, and only those, in schema.json, llms.txt and docs/spec.html", () => {
+    const keys = Object.keys(TEXT).sort();
+    expect([...schema.properties.text.propertyNames.enum].sort()).toEqual(keys);
+    const list = (f: string, re: RegExp) =>
+      re
+        .exec(readFileSync(new URL(f, import.meta.url), "utf8"))![1]!
+        .trim()
+        .split(/\s+/)
+        .sort();
+    expect(list("../llms.txt", /Keys: ([\w ]+)\./)).toEqual(keys);
+    expect(list("../docs/spec.html", /placeholders: ([\w\s]+)<\/td>/)).toEqual(keys);
   });
 
   it("validates 10 canonical examples", () => {

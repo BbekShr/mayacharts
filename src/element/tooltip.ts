@@ -221,7 +221,7 @@ export function tooltip(
     const svg = box.querySelector("svg"),
       p = ev as PointerEvent | undefined;
     if (
-      (!band && !/^(scatter|beeswarm)$/.test(spec()?.type ?? "")) ||
+      (!band && !/^(scatter|beeswarm|units|constellation)$/.test(spec()?.type ?? "")) ||
       !svg ||
       p?.clientX === undefined
     )

@@ -458,6 +458,7 @@ const INTRO: Record<string, Intro> = {
   sankey: "wipe",
   ridgeline: "wipe",
   parallel: "wipe",
+  weave: "wipe",
   sunburst: "bloom",
   chord: "bloom",
   radial: "bloom",

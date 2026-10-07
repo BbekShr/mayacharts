@@ -413,3 +413,104 @@ describe("fixed yDomain ticks", () => {
     expect(yl([20, 0])).toEqual(["0", "5", "10", "15", "20"]);
   });
 });
+
+describe("was (memory from a data column)", () => {
+  const was: ChartSpec = {
+    type: "bar",
+    x: "m",
+    y: "v",
+    was: "last",
+    titles: { last: "Last week" },
+    data: months.map((m, i) => ({ m, v: (i + 1) * 10, last: 20 })),
+  };
+  const marks = (svg: string) => svg.match(/<g data-maya="marks">.*?<\/g>/)![0];
+
+  it("draws a keyed ghost over each bar at the previous value, keyed in the legend", () => {
+    const g = marks(render(was));
+    const ghosts = [...g.matchAll(/<rect data-key="%00was~~(\w+)" data-past=""[^>]*>/g)];
+    expect(ghosts.map((m) => m[1])).toEqual(months);
+    // over: every ghost comes after the last bar, so a bar that grew cannot hide its ghost
+    expect(g.indexOf("data-past")).toBeGreaterThan(g.lastIndexOf('data-maya="mark"'));
+    expect(renderParts(was).legend).toBe(
+      '<div class="maya-legend"><span data-past><i></i>Last week</span></div>',
+    );
+    expect(renderParts({ ...was, legend: false }).legend).toBe("");
+    // same height for every ghost (all were 20), not hit-testable marks
+    const h = ghosts.map((m) => /height="([\d.]+)"/.exec(m[0])![1]);
+    expect(new Set(h).size).toBe(1);
+    expect(g.match(/data-maya="mark"/g)).toHaveLength(3);
+  });
+
+  it("puts 'was' on the mark and its hit, a column in the table, the moves in the description", () => {
+    const p = renderParts(was);
+    expect(p.svg).toContain('data-was="was 20"');
+    expect(p.table).toContain("<th>Last week</th>");
+    expect(p.table).toMatch(/<td>10<\/td><td>20<\/td>/);
+    // the 2 largest relative moves, ties in data order
+    expect(p.svg).toContain("Since Last week: Jan -50%, Mar +50%.");
+  });
+
+  it("names the series in a move, skips null and zero baselines, and works horizontally", () => {
+    const s: ChartSpec = {
+      type: "bar",
+      x: "m",
+      y: "v",
+      series: "r",
+      was: "last",
+      horizontal: true,
+      data: [
+        { m: "Jan", r: "N", v: 30, last: 10 },
+        { m: "Jan", r: "S", v: 5, last: 0 },
+        { m: "Feb", r: "N", v: 10, last: null },
+        { m: "Feb", r: "S", v: 9, last: 10 },
+      ],
+    };
+    const svg = render(s);
+    expect(svg).toContain("Since last: Jan N +200%, Feb S -10%.");
+    expect(marks(svg).match(/data-past/g)).toHaveLength(3); // the null baseline draws no ghost
+    expect(svg).toContain('data-key="%00was~S~Jan"');
+  });
+
+  it("escapes the was title and stays deterministic", () => {
+    const s = { ...was, titles: { last: '<img src=x onerror="1">' } };
+    const a = render(s);
+    expect(a).not.toContain("<img");
+    expect(a).toBe(render(s));
+  });
+
+  it("is absent without was", () => {
+    const svg = render(simple).replace(/<style>[^]*?<\/style>/, "");
+    expect(svg).not.toContain("data-past");
+    expect(svg).not.toContain("data-was");
+  });
+
+  it("keeps the was field in the shell's projected rows", () => {
+    expect(renderShell(was)).toContain('"last":20');
+  });
+});
+
+describe("units form control", () => {
+  const u: ChartSpec = {
+    type: "units",
+    x: "g",
+    y: "v",
+    name: "id",
+    data: [
+      { id: "a", g: "X", v: 1 },
+      { id: "b", g: "Y", v: 2 },
+    ],
+  };
+  it("is a radiogroup of the forms, view.form checked", async () => {
+    await import("../src/units.ts");
+    const c = renderParts(u, { view: { form: 1 } }).controls;
+    expect(c).toContain('data-maya="form"');
+    expect(c).toContain('data-n="3" data-i="1"');
+    expect([...c.matchAll(/aria-checked="(\w+)"[^>]*>(\w+)</g)].map((m) => m.slice(1))).toEqual([
+      ["false", "Waffle"],
+      ["true", "Bars"],
+      ["false", "Swarm"],
+    ]);
+    expect(renderParts({ ...u, forms: ["swarm"] }).controls).toBe("");
+    expect(renderParts({ ...u, text: { swarm: "Schwarm" } }).controls).toContain("Schwarm");
+  });
+});

@@ -15,6 +15,10 @@ export default defineConfig({
       { find: /^mayacharts\/geo$/, replacement: src("geo.ts") },
       { find: /^mayacharts\/radial$/, replacement: src("radial.ts") },
       { find: /^mayacharts\/stats$/, replacement: src("stats.ts") },
+      { find: /^mayacharts\/weave$/, replacement: src("weave.ts") },
+      { find: /^mayacharts\/units$/, replacement: src("units.ts") },
+      { find: /^mayacharts\/orbit$/, replacement: src("orbit.ts") },
+      { find: /^mayacharts\/constellation$/, replacement: src("constellation.ts") },
       { find: /^mayacharts$/, replacement: src("index.ts") },
     ],
   },
@@ -26,7 +30,8 @@ export default defineConfig({
       enforce: "pre",
       // Vite's alias plugin has already rewritten the id to the absolute path by the time this runs.
       async resolveId(id, importer, opts) {
-        const sideEffectPattern = /^mayacharts\/(element|hierarchy|flow|geo|radial|stats)$/;
+        const sideEffectPattern =
+          /^mayacharts\/(element|hierarchy|flow|geo|radial|stats|weave|units|orbit|constellation)$/;
         const srcFiles = [
           src("element.ts"),
           src("hierarchy.ts"),
@@ -34,6 +39,10 @@ export default defineConfig({
           src("geo.ts"),
           src("radial.ts"),
           src("stats.ts"),
+          src("weave.ts"),
+          src("units.ts"),
+          src("orbit.ts"),
+          src("constellation.ts"),
         ];
         if (!sideEffectPattern.test(id) && !srcFiles.includes(id)) return null;
         const r = await this.resolve(id, importer, { ...opts, skipSelf: true });

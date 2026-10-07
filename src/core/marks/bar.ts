@@ -1,3 +1,4 @@
+import { nf } from "../format.ts";
 import { bandScale } from "../scale.ts";
 import { colorVals } from "../shape.ts";
 import { el, esc, hit, key, OTHER, r } from "../svg.ts";
@@ -96,6 +97,10 @@ export const bar: Mark = {
     const keys = shaped.visible.map((j) => shaped.series[j]!);
     const inner = bandScale(keys, [0, cat.bandwidth], 0.1, 0);
     const cvOf = colorVals(spec);
+    // spec.was: a ghost bar at the previous value over each bar (key "%00was~" + the bar's key).
+    const wasOf = spec.was === null ? null : colorVals(spec, spec.was);
+    let ghosts = "";
+    const moves: [string, number][] = [];
     // A bar past the plot edge (the Other roll-up, a yDomain) is cut there; its label keeps the real value.
     const [e0, e1] = hz
       ? [ctx.plot.x, ctx.plot.x + ctx.plot.w]
@@ -132,6 +137,25 @@ export const bar: Mark = {
       const cname = shaped.categories[c.ci]!;
       const ser = shaped.series[c.si]!;
       const cv = cvOf(cname, ser);
+      const wv = wasOf?.(cname, ser) ?? null;
+      if (wv !== null) {
+        const [g0, g1] = [clip(val.of(0)), clip(val.of(wv))];
+        const gl = Math.min(g0, g1);
+        const gn = Math.abs(g0 - g1);
+        ghosts += el("rect", {
+          "data-key": key("\u0000was", ser, cname),
+          "data-past": true,
+          "data-c": c.ci,
+          "data-s": c.s,
+          "data-neg": wv < 0,
+          fill: "none", // until the theme's [data-past] rule paints it
+          ...(hz
+            ? { x: r(gl), y: r(pos), width: r(gn), height: r(th) }
+            : { x: r(pos), y: r(gl), width: r(th), height: r(gn) }),
+        });
+        if (wv)
+          moves.push([ctx.fmt(spec.x, cname) + (ser && " " + ser), (c.v - wv) / Math.abs(wv)]);
+      }
       const d = {
         "data-key": key(ser, cname),
         "data-c": c.ci,
@@ -144,6 +168,7 @@ export const bar: Mark = {
         "data-neg": c.v < 0,
         "data-tone": ctx.tone(c.v),
         "data-q": cv === null ? null : ctx.q(cv),
+        "data-was": wv === null ? null : ctx.t("was", ctx.fmt(spec.y, wv)),
         "data-other": cname === OTHER,
         // waterfall start and running total: neutral, so colour keeps one meaning (up or down)
         "data-total": shaped.totals[c.ci] || (wf && !tags.length),
@@ -263,6 +288,24 @@ export const bar: Mark = {
           d: d || null,
         }) + dots;
     }
-    return { marks, hits, labels: labels + (brk ? el("path", { "data-brk": true, d: brk }) : "") };
+    // The 2 largest relative moves, largest first (ties: data order).
+    const pct = nf(spec.locale, {
+      style: "percent",
+      signDisplay: "exceptZero",
+      maximumFractionDigits: 0,
+    });
+    const top = moves.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 2);
+    return {
+      marks: marks + ghosts, // ghosts on top: a fall shows past the bar, a rise as a dashed box inside it
+      hits,
+      labels: labels + (brk ? el("path", { "data-brk": true, d: brk }) : ""),
+      note: top.length
+        ? ctx.t(
+            "since",
+            spec.titles.get(spec.was!) ?? spec.was!,
+            top.map(([n, v]) => `${n} ${pct.format(v)}`).join(", "),
+          ) + "."
+        : "",
+    };
   },
 };

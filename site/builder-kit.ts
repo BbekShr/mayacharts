@@ -75,6 +75,11 @@ const states: Row[] = Object.keys(REGION_OF).map((State) => ({
   State,
   Sales: between(5000, 95000),
 }));
+const growth: Row[] = FAMILIES.map((Family) => ({
+  Family,
+  Sales: between(20000, 90000),
+  "Growth %": between(-12, 30),
+}));
 const bridge: Row[] = [
   { Step: "Start", Change: 120000 },
   { Step: "New customers", Change: 46000 },
@@ -216,6 +221,30 @@ export const SAMPLES: Readonly<Record<string, Omit<ChartSpec, "type">>> = {
     data: regionMonth,
   }),
   funnel: s({ title: "Checkout funnel", x: "Stage", y: "Users", labels: true, data: stages }),
+  weave: s({
+    title: "Sales rank by region",
+    x: "Month",
+    y: "Sales",
+    series: "Region",
+    format: MONTHLY,
+    data: regionMonth,
+  }),
+  units: s({ title: "Items by family", x: "Family", y: "Units", name: "Item", data: items }),
+  orbit: s({
+    title: "Sales and growth by family",
+    x: "Family",
+    y: "Sales",
+    y2: "Growth %",
+    format: { Sales: "compact" },
+    data: growth,
+  }),
+  constellation: s({
+    title: "Items alike in price, margin and units",
+    x: "Item",
+    y: ["Price", "Margin %", "Units"],
+    size: "Units",
+    data: items,
+  }),
 };
 
 /** A fresh copy of a type's sample spec (callers mutate it). */
@@ -251,22 +280,23 @@ export const label = (t: string): string =>
 
 /** Picker groups. A type missing here still shows, under "More". */
 export const GROUPS: readonly (readonly [string, readonly string[]])[] = [
-  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "funnel", "table"]],
-  ["Trend", ["line", "area", "ridgeline", "radial"]],
-  ["Distribution", ["scatter", "beeswarm", "boxplot", "heatmap", "parallel"]],
-  ["Part to whole", ["treemap", "sunburst", "marimekko", "waffle"]],
+  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "funnel", "table", "orbit"]],
+  ["Trend", ["line", "area", "ridgeline", "radial", "weave"]],
+  ["Distribution", ["scatter", "beeswarm", "boxplot", "heatmap", "parallel", "constellation"]],
+  ["Part to whole", ["treemap", "sunburst", "marimekko", "waffle", "units"]],
   ["Flow and map", ["sankey", "chord", "hexmap"]],
 ];
 
 // ---------------------------------------------------------------------------------------------
 // Field roles and option controls.
 
-export const ROLES = ["x", "y", "y2", "series", "size", "name", "path"] as const;
+export const ROLES = ["x", "y", "y2", "was", "series", "size", "name", "path"] as const;
 export type Role = (typeof ROLES)[number];
 export const ROLE_LABEL: Record<Role, string> = {
   x: "Category",
   y: "Value",
   y2: "Right axis line",
+  was: "Previous value",
   series: "Split by",
   size: "Bubble size",
   name: "Point name",
@@ -300,6 +330,7 @@ export const SKIP = new Set([
   "colorBy",
   "theme",
   "format", // set per field under Fields, see formatFields()
+  "forms", // units: an array of forms, set in the copied code
   ...ROLES,
 ]);
 
@@ -331,12 +362,17 @@ export const TYPE_HELP: Readonly<Record<string, string>> = {
   hexmap: "US states as equal hexagons coloured by value.",
   boxplot: "How values spread in each category: the middle half as a box, the median as a line.",
   funnel: "How many remain at each step of a process, with the share kept from step to step.",
+  weave: "Ranks over time as threads, so you see who passes whom.",
+  units: "One dot per row that regroups as a grid, bars or a swarm.",
+  orbit: "Categories as planets: size shows the value, speed shows the growth.",
+  constellation: "Rows as stars placed near the rows they are most alike.",
 };
 
 const HELP: Readonly<Record<string, string>> = {
   x: "The column that names each bar, point or slice, such as month or region.",
   y: "The number to plot. Tick more than one to add a toggle between them.",
-  y2: "A second number drawn as a line against its own axis on the right.",
+  y2: "A second number drawn as a line against its own axis on the right. On an orbit, the growth.",
+  was: "The earlier value of each bar, drawn as a faint bar behind it so the change shows.",
   series: "Split the rows into coloured groups by this column, such as region.",
   size: "A number that sets each bubble's size.",
   name: "The column that names each point in its tooltip.",

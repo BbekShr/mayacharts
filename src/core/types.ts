@@ -27,7 +27,11 @@ export type ChartType =
   | "radial"
   | "hexmap"
   | "boxplot"
-  | "funnel";
+  | "funnel"
+  | "weave"
+  | "units"
+  | "orbit"
+  | "constellation";
 
 export type Aggregate = "sum" | "mean" | "count" | "min" | "max";
 
@@ -88,7 +92,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Ignored; lets editors and LLMs find the JSON schema.
    * @example "$schema": "https://unpkg.com/mayacharts/schema.json" */
   $schema?: string;
-  /** Chart type. treemap/sunburst/marimekko/waffle need `mayacharts/hierarchy`, sankey/chord `flow`, radial `radial`, hexmap `geo`, boxplot/funnel `stats`.
+  /** Chart type. treemap/sunburst/marimekko/waffle need `mayacharts/hierarchy`, sankey/chord `flow`, radial `radial`, hexmap `geo`, boxplot/funnel `stats`; weave, units, orbit and constellation each need the module of the same name.
    * @example type: "bar" */
   type: ChartType;
   /** Row objects.
@@ -113,16 +117,16 @@ export interface ChartSpec<R extends object = Row> {
   /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`).
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
-  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot.
+  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave.
    * @example series: "region" */
   series?: Field<R>;
   /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with `drill` (replaces `x`).
    * @example path: ["region", "state"] */
   path?: readonly Field<R>[];
-  /** Bubble area field (sqrt scale). scatter only.
+  /** Bubble area field (sqrt scale). scatter constellation.
    * @example size: "population" */
   size?: Field<R>;
-  /** Point identity and tooltip title. scatter, beeswarm and boxplot (outliers and dots).
+  /** Point identity and tooltip title (units: one dot per row, keyed by it). scatter, beeswarm, boxplot (outliers and dots) and units.
    * @example name: "country" */
   name?: Field<R>;
   /** x values drawn as running-total bars. waterfall only.
@@ -137,9 +141,15 @@ export interface ChartSpec<R extends object = Row> {
   /** Playback: one frame per distinct value (data order); the chart shows one frame at a time, the last by default, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and "1" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell; not with `drill` or `zoom`.
    * @example frame: "year" */
   frame?: Field<R>;
-  /** Second value field, drawn as a line on a right axis over the bars. Vertical bar only.
+  /** Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction.
    * @example y2: "units" */
   y2?: Field<R>;
+  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves. bar; not with `stack` or a `y` array.
+   * @example was: "lastWeek" */
+  was?: Field<R>;
+  /** Forms a units chart switches between, first one shown (view.form picks another); the element adds a form control when there are 2 or more. Default all three. units only.
+   * @example forms: ["waffle", "swarm"] */
+  forms?: readonly ("waffle" | "bars" | "swarm")[];
 
   /** A preset for every `y`, or a preset / Intl options per field. Display only.
    * @example format: { revenue: "currency", month: "month", margin: { style: "percent", suffix: " gm" } } */
@@ -178,7 +188,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Hover/keyboard tooltip. Default true.
    * @example tooltip: false */
   tooltip?: boolean;
-  /** Legend; clicking toggles series. Default: true when `series` is set, and for waffle and hexmap (colour ramp).
+  /** Legend; clicking toggles series. Default: true when `series` is set, and for waffle, hexmap (colour ramp) and units (toggles groups).
    * @example legend: false */
   legend?: boolean;
   /** Line and area: name each series at its right end and drop the legend (keep it with `legend: true`). Default true.
@@ -244,6 +254,8 @@ export interface View {
   sortBy?: readonly [field: string, dir: "asc" | "desc"];
   /** Index into the distinct `frame` values (data order). Default: the last; larger is clamped. */
   frame?: number;
+  /** Index into the units `forms`. Default 0; larger is clamped. */
+  form?: number;
 }
 
 export interface RenderOptions {
@@ -289,7 +301,8 @@ export type ErrorCode =
   | "invalid-size"
   | "unknown-state"
   | "too-many-marks"
-  | "invalid-date";
+  | "invalid-date"
+  | "too-few-measures";
 
 /* ------------------------------------------------------------------ */
 /* Internal pipeline types (exported for tests, marks, the element).   */
@@ -311,8 +324,14 @@ export interface ResolvedSpec {
   /** Index of `y` in `measures`. */
   measure: number;
   series: string | null;
-  /** Right-axis line measure (bar only); null when unset. */
+  /** Right-axis line measure (bar), or growth (orbit); null when unset. */
   y2: string | null;
+  /** spec.was, the previous value field (bar); null when unset. */
+  was: string | null;
+  /** Units forms ([] for other types; all three when unset). */
+  forms: readonly ("waffle" | "bars" | "swarm")[];
+  /** Index into `forms` from view.form, clamped. */
+  form: number;
   /** Remaining path levels below the drilled branch ([] when no path). */
   path: string[];
   /** Applied drill values, outer first ([] at the root). */

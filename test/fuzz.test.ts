@@ -3,6 +3,10 @@ import "../src/hierarchy.ts";
 import "../src/flow.ts";
 import "../src/geo.ts";
 import "../src/stats.ts";
+import "../src/weave.ts";
+import "../src/units.ts";
+import "../src/orbit.ts";
+import "../src/constellation.ts";
 import { renderParts } from "../src/core/render.ts";
 import { KEYS, MayaSpecError, validateSpec } from "../src/core/validate.ts";
 
@@ -72,6 +76,10 @@ const TYPES = [
   "hexmap",
   "boxplot",
   "funnel",
+  "weave",
+  "units",
+  "orbit",
+  "constellation",
   "__proto__",
   "toString",
   "pie",

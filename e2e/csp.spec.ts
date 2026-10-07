@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { renderShell, type ChartSpec } from "../src/index.ts";
 
 const ELEMENT = "dist/element.js";
+const GLOBAL = "dist/maya.global.js";
 test.skip(({ browserName }) => browserName !== "chromium", "Trusted Types is Chromium-only");
 test.skip(!existsSync(ELEMENT), "dist/element.js missing: run `npm run build` first");
 
@@ -37,6 +38,27 @@ const shellPage = `<!doctype html><meta charset=utf-8><body>
 <div id=host>${renderShell(spec, { nonce: "abc" })}</div>
 <script type=module src="/element.js"></script></body>`;
 
+// A module chart (units, with its form control) through the global build, under the same CSP.
+const unitsSpec: ChartSpec = {
+  type: "units",
+  title: "Customers",
+  x: "g",
+  y: "v",
+  name: "n",
+  select: true,
+  data: Array.from({ length: 40 }, (_, i) => ({
+    g: "ABC"[i % 3]!,
+    n: `c${i}`,
+    v: 10 + ((i * 37) % 90),
+  })),
+};
+
+const unitsPage = `<!doctype html><meta charset=utf-8><body>
+<style nonce=abc>maya-chart,#host{display:block;height:300px}</style>
+<maya-chart id=c></maya-chart>
+<script nonce=abc src="/maya.global.js"></script>
+<script nonce=abc>document.getElementById("c").spec = ${JSON.stringify(unitsSpec)};</script></body>`;
+
 async function setup(page: Page, path: string): Promise<void> {
   await page.addInitScript(() => {
     (window as unknown as { __v: string[] }).__v = [];
@@ -54,8 +76,14 @@ async function setup(page: Page, path: string): Promise<void> {
         contentType: "text/javascript",
         headers: { "Content-Security-Policy": CSP },
       });
+    if (p === "/maya.global.js")
+      return route.fulfill({
+        body: readFileSync(GLOBAL),
+        contentType: "text/javascript",
+        headers: { "Content-Security-Policy": CSP },
+      });
     return route.fulfill({
-      body: p === "/shell" ? shellPage : elementPage,
+      body: p === "/shell" ? shellPage : p === "/units" ? unitsPage : elementPage,
       contentType: "text/html",
       headers: { "Content-Security-Policy": CSP },
     });
@@ -113,3 +141,21 @@ for (const [name, path] of [
     expect(errors).toEqual([]);
   });
 }
+
+test("CSP + Trusted Types: units module through the global build, form switch", async ({
+  page,
+}) => {
+  test.skip(!existsSync(GLOBAL), "dist/maya.global.js missing: run `npm run build` first");
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await setup(page, "/units");
+  const marks = page.locator("maya-chart [data-maya=mark]");
+  await expect.poll(() => marks.count()).toBe(40);
+  const keys = await marks.evaluateAll((es) => es.map((e) => e.getAttribute("data-key")));
+  await page.locator("maya-chart [data-maya=form] [role=radio]").nth(2).click();
+  await expect.poll(() => marks.count()).toBe(40);
+  expect(await marks.evaluateAll((es) => es.map((e) => e.getAttribute("data-key")))).toEqual(keys);
+  const v = await page.evaluate(() => (window as unknown as { __v: string[] }).__v);
+  expect(v).toEqual([]);
+  expect(errors).toEqual([]);
+});

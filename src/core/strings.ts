@@ -68,6 +68,27 @@ export const TEXT = {
   frameOf: "{0}, {1}",
   /** Auto description with spec.frame: {0} = frame number, {1} = frame count. */
   frame: "Frame {0} of {1}",
+  /** Tooltip line of a bar with spec.was: {0} = previous value. */
+  was: "was {0}",
+  /** Description with spec.was: {0} = was title, {1} = the 2 largest moves ("North +12%, West -10%"). */
+  since: "Since {0}: {1}",
+  /** aria-label of the units form radiogroup, and its three options. */
+  forms: "Form",
+  waffle: "Waffle",
+  bars: "Bars",
+  swarm: "Swarm",
+  /** Units description: {0} = the name (or x) title. */
+  perDot: "Each dot is one {0}",
+  /** Units data table: header of the rows-per-group column. */
+  count: "Count",
+  /** Weave tooltip and description: {0} = rank (1 is the highest value). */
+  rank: "Rank {0}",
+  /** Orbit description: {0} = y2 title. */
+  speedBy: "Orbit speed shows {0}",
+  /** Constellation description: {0} = measure titles joined with ", ". */
+  alike: "Closer points are more alike across {0}",
+  /** Constellation tooltip: {0} = the nearest names joined with ", ". */
+  nearest: "Closest: {0}",
   /** Boxplot tooltip and table labels: the five numbers and the row count. */
   max: "Max",
   q3: "Upper quartile",

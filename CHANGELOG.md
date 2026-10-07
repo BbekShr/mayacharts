@@ -4,6 +4,32 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased (0.9.0)
+
+### Added
+
+- Orbit labels sit radially outward from their planet, skip the sun and carry the `%` of a growth title. Constellation stars use the colour legend's ramp, and names are spread over the sky where they clear the stars. Ramp legend numbers keep their sign in right-to-left pages. The `was` ghost edge reads on a coloured bar and the legend gets a ghost row style.
+
+- `was: "<field>"` on bar gives the chart a memory from a data column. Each bar with a previous value gets a ghost bar at that value behind it (`<rect data-past>`, keyed `%00was~` plus the bar's key, styled by the theme), the bar's tooltip payload carries "was" and the formatted value (`data-was`, new `text.was`), the data table adds a column after each value column, and the description names the 2 largest relative moves (new `text.since`: "Since Last week: North +12%, West -10%."). Not with `stack` or a `y` array. Specs without `was` render exactly as before.
+- Four new chart types, each in its own module: `weave` (`mayacharts/weave`, ranks per period drawn as threads that cross over and under; needs `series`), `units` (`mayacharts/units`, one dot per row in a waffle, bar or swarm form), `orbit` (`mayacharts/orbit`, categories as planets sized by `y`, with `y2` as growth setting speed and direction) and `constellation` (`mayacharts/constellation`, rows placed by similarity across 2 or more measures in `y`, optional `size`). The global build includes all four. In this release candidate they register and validate but draw no marks yet.
+- `forms` (units only) lists the forms a units chart switches between, default `["waffle", "bars", "swarm"]`; `view.form` picks one (an index, larger values clamp). With 2 or more forms the controls slot holds a `.maya-ctl` radiogroup with `data-maya="form"`, labelled by new `text.forms`, `text.waffle`, `text.bars` and `text.swarm`.
+- `constellation` draws one star per row, placed by a deterministic 2-D principal component fit of the standardised measures (a constant measure is dropped, rows with a missing measure are left out and counted in the description), sized by `size` or the first measure, joined to its nearest neighbour, with the 5 largest named. Hovering a star lights its 3 nearest through `data-a`. At most 500 rows and 12 measures.
+- `units` now draws: one dot per row (keyed `u~NAME`, the row index without a `name`), coloured by `x`, as a waffle grid, unit bars with each group's name and count underneath, or a swarm along `y` (the only form with axes). A form change moves the same dots, so the element's keyed update flies them. One dot size in every form, a caption naming the form and `text.perDot`, group hover lighting, `colorBy` and `select`. Rows past 1500 fail with `too-many-marks`.
+- New error code `too-few-measures`: a constellation whose `y` is not an array of at least 2 measures.
+- New `text` keys for the new marks' descriptions and tooltips: `perDot`, `rank`, `speedBy`, `alike` and `nearest`. `type: "bump"` suggests `weave`, and the unknown option `previous` points to `was`.
+- `y2` is accepted on `orbit` (growth); there it adds no legend entry. `sort`, `limit`, `select` and `colorBy` are accepted on the new types where they apply (see the README tables), and the data table lists the raw rows for units, orbit and constellation (constellation: every measure; orbit: the growth column).
+- `orbit` draws an orrery: planets sized by `y`, orbit rank by size, speed and direction by `y2` growth (5 speed buckets in the theme, paused on hover, still under reduced motion or `animate: false`), a trail arc per planet whose sweep is the growth, and the total at the sun. `limit` rolls the rest into a fixed Other planet. The theme also styles the bar `was` ghost (`[data-past]`).
+- `weave` draws one thick thread per series per period segment (keys `w~SERIES~i`), each crossing with a `--maya-bg` halo beneath it so the thread that climbs passes over the one that falls. Left names stand at the first period's ranks, right end labels (`ends()`) give name and last value, hovering a dot lights its thread and the tooltip lists that period's order (`text.rank`). A missing period breaks the thread; at most 8 series.
+- `weave` end labels keep the value where it fits (second line when the slot is tall, else the name alone) and no longer reorder in right-to-left text; every segment now has a halo so keys stay stable when crossings change. `units` shows a count under each waffle block, the caption drops the form name and sits in a halo, the tooltip names the value field, and `data-c` is the group index.
+- `units` makes its group (`x`) the series when `colorBy` is not set, so the legend shows by default and toggles groups, `view.hidden` hides a group and `colors` maps by group. An explicit `series` on units is still an error. Its data table lists how many rows each group holds; the new `text.count` names that column.
+- The no-window test also loads every module and renders weave, units, orbit and constellation with no `window` or `document`.
+- The element wires the units form control (click, arrows, Home and End write `view.form` and fire `maya-view`; the measure toggle ignores it), lets the pointer find units dots and constellation stars within a few pixels as it does for scatter, plays a `weave` entrance as a wipe, and on first paint grows each bar with a `was` ghost, and its label, from the ghost's box.
+- New optional module `mayacharts/stats` with two chart types. `boxplot` summarises raw rows per category (and per `series`, side by side) as quartiles, whiskers to 1.5 IQR and outliers; `aggregate` is rejected. `funnel` draws stage-to-stage conversion, either long (`x` the stage, one `y`) or wide (`y` lists the stage fields, no `x`); negative values raise `non-positive-value`.
+- Text keys `max`, `q3`, `median`, `q1`, `min`, `rows`, `ofPrevious` and `ofFirst` for their tooltips and data tables.
+- The `was` ghost now draws over its bar instead of behind it, so a bar that grew shows its previous value as a dashed box inside it and a bar that fell shows the ghost past its end. The shell legend gains a key for the ghosts, `<span data-past><i></i>` plus the `was` field's title, in its own `.maya-legend` row (none with `legend: false`).
+- `format: "compact"` axis ticks keep up to 2 fraction digits, so a 250 step reads 1K, 1.25K, 1.5K instead of 1K, 1.3K, 1.5K.
+- A data update keeps every orbit turning: the element syncs a kept planet wrapper in place instead of replacing its children, and no longer re-inserts the marks group, so the rotation keeps its phase, the hovered planet keeps `data-active` and the planet's radius glides. While the orbit moves, only the active planet shows its name (all names show under `animate: false` and reduced motion). A form switch on 1500 units dots reads every mark's animations in one pass first and no longer stalls the main thread.
+
 ## 0.8.0 - 2026-10-06
 
 ### Added
@@ -15,11 +41,6 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 ### Changed
 
 - Value labels and band-axis category ticks carry `data-key` (the key of the mark they label, or of the category), so the element can move them with their marks on a data update instead of matching by index. A scatter with `frame` and `size` scales radii by the largest size over all frames, so one size is one radius in every frame.
-
-### Added
-
-- New optional module `mayacharts/stats` with two chart types. `boxplot` summarises raw rows per category (and per `series`, side by side) as quartiles, whiskers to 1.5 IQR and outliers; `aggregate` is rejected. `funnel` draws stage-to-stage conversion, either long (`x` the stage, one `y`) or wide (`y` lists the stage fields, no `x`); negative values raise `non-positive-value`.
-- Text keys `max`, `q3`, `median`, `q1`, `min`, `rows`, `ofPrevious` and `ofFirst` for their tooltips and data tables.
 
 ### Fixed
 

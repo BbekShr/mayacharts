@@ -7,6 +7,10 @@ import "mayacharts/flow";
 import "mayacharts/geo";
 import "mayacharts/radial";
 import "mayacharts/stats";
+import "mayacharts/weave";
+import "mayacharts/units";
+import "mayacharts/orbit";
+import "mayacharts/constellation";
 import type { ChartSpec, ChartType, MayaErrorDetail } from "../src/index.ts";
 import {
   GROUPS,

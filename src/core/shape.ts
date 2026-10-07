@@ -49,7 +49,7 @@ export function shape(
   const series: string[] = [];
   const si = new Map<string, number>();
   const shown = () => series.flatMap((k, j) => (hidden.includes(k) ? [] : [j]));
-  if (s.type === "scatter") {
+  if (s.type === "scatter" || s.type === "units") {
     // Marks draw from rows: only the series list (and which are visible) is shared.
     if (s.series !== null)
       for (const row of s.data) {
@@ -407,9 +407,11 @@ function reduceTime(
   return [...pin, ...picked].sort((a, b) => a - b);
 }
 
-/** colorBy field aggregated per (category, series) like the marks; null without a field colorBy. */
-export function colorVals(s: ResolvedSpec): (c: string, ser: string) => number | null {
-  const cb = cbField(s);
+/** A field (default: the colorBy field; also spec.was) aggregated per (category, series) like the marks; null without one. */
+export function colorVals(
+  s: ResolvedSpec,
+  cb: string | null = cbField(s),
+): (c: string, ser: string) => number | null {
   const m = new Map<string, ReturnType<typeof agg>>();
   if (cb)
     for (const row of s.data) {

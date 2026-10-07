@@ -121,6 +121,7 @@ const geo = (e: Element): Box | undefined => {
 const tf = (g: Box, b: Box) =>
   `translate(${b[0] - g[0]}px,${b[1] - g[1]}px) scale(${Math.max(b[2], Z) / Math.max(g[2], Z)},${Math.max(b[3], Z) / Math.max(g[3], Z)})`;
 
+const stop = (l: Animation[] = []) => l.forEach((a) => a.cancel());
 const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () => void) => {
   // A delayed animation holds its first frame while it waits (else the mark flashes in place).
   if (o.delay) o = { ...o, fill: o.fill === "forwards" ? "both" : (o.fill ?? "backwards") };
@@ -142,10 +143,19 @@ const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () =
 const delay = (e: Element) =>
   e.hasAttribute("data-c") && e.closest("svg[data-n],svg[data-xd]") ? n(e, "data-c") * lag : 0;
 
+/** Make `o`'s subtree match `w`'s in place where the shapes agree, so nested nodes (and the CSS
+ * animations on them, an orbit's rotation) survive an update; else replace the children. */
+function mend(o: Element, w: Element): void {
+  const [a, b] = [[...o.children], [...w.children]];
+  if (a.length && a.length === b.length && a.every((c, i) => c.localName === b[i]!.localName))
+    a.forEach((c, i) => (sync(c, b[i]!), mend(c, b[i]!)));
+  else o.replaceChildren(...w.childNodes);
+}
+
 function sync(o: Element, w: Element): void {
   // `style` holds element-owned CSSOM writes (bloom origin), never markup: keep it.
   for (const a of [...o.attributes])
-    if (!w.hasAttribute(a.name) && a.name !== "style") o.removeAttribute(a.name);
+    if (!w.hasAttribute(a.name) && !/^(style|data-active)$/.test(a.name)) o.removeAttribute(a.name);
   for (const a of [...w.attributes]) o.setAttribute(a.name, a.value);
 }
 
@@ -227,15 +237,6 @@ function exit(e: Element, origin?: Box): void {
   else fade(e, true, done, ring(e) && zoom ? { ...UI, delay: Number(ZOOM.duration) / 2 } : DATA);
 }
 
-/** Current on-screen box of an animating mark (its animations keep running). */
-function visual(m: Element, g: Box): Box {
-  if (!m.getAnimations?.().length) return g;
-  const t = getComputedStyle(m).transform; // user units under fill-box, origin 0 0
-  if (!t || t === "none" || typeof DOMMatrix === "undefined") return g;
-  const c = new DOMMatrix(t);
-  return [g[0] + c.e, g[1] + c.f, g[2] * c.a, g[3] * c.d];
-}
-
 // Paths morph through CSS `d` where the engine interpolates it (Chromium, Firefox) and the
 // command sequence is unchanged; otherwise the old outline crossfades out.
 const MORPH = !!globalThis.CSS?.supports?.("d", 'path("M0 0")');
@@ -250,7 +251,7 @@ const outline = (m: Element, d0: string) => {
 };
 
 function morph(m: Element, from: string, d1: string): void {
-  for (const a of m.getAnimations?.() ?? []) a.cancel();
+  stop(m.getAnimations?.());
   if (instant) return;
   const a = m.animate?.([{ d: from }, { d: `path("${d1}")` }], {
     ...DATA,
@@ -331,6 +332,25 @@ function marks(o: Element, w: Element, origin?: Box): void {
       ? undefined
       : ((kw && at(kw)) ?? [...w.children].find((e) => ko && e.getAttribute("data-key") === ko));
   zoom = slice && ring(slice) ? span(slice) : undefined;
+  // A mark's geometry lives on the mark, or on the planet nested in an orbit's `g`.
+  const nest = (m: Element) => m.querySelector("[data-maya=mark]") ?? m;
+  // Read pass: every animation list and on-screen box before the first write, so the writes below
+  // never force a style flush per mark (1500 dots: 3000 flushes otherwise).
+  const live = new Map<Element | null, Animation[]>();
+  for (const a of o.getAnimations?.({ subtree: true }) ?? []) {
+    const k = (a.effect as KeyframeEffect).target;
+    live.get(k)?.push(a) ?? live.set(k, [a]);
+  }
+  const pre = new Map<Element, Box | undefined>();
+  for (const e of w.children) {
+    const m = at(e.getAttribute("data-key")!);
+    if (!m || m.localName !== e.localName) continue;
+    const t = nest(m);
+    const g = geo(t);
+    // The on-screen box of an animating mark: its transform is in user units, origin 0 0 (fill-box).
+    const c = g && live.get(t) && new DOMMatrix(getComputedStyle(t).transform);
+    pre.set(e, c && g ? [g[0] + c.e, g[1] + c.f, g[2] * c.a, g[3] * c.d] : g);
+  }
   const order: Element[] = [];
   moved = false;
   for (const e of [...w.children]) {
@@ -342,40 +362,42 @@ function marks(o: Element, w: Element, origin?: Box): void {
       continue;
     }
     old.delete(k);
+    const v = pre.get(e);
+    const t = nest(m);
+    const [as, ta] = [live.get(m) ?? [], live.get(t) ?? []];
     if (ring(m)) {
       const from = arc(m, true);
-      for (const a of m.getAnimations?.() ?? []) a.cancel();
+      stop(as);
       sync(m, e);
       if (!instant) run(m, [from, arc(m)], ZOOM);
       order.push(m);
       continue;
     }
-    const g0 = geo(m);
-    const v = g0 && visual(m, g0);
-    if (m.hasAttribute("data-ghost")) for (const a of m.getAnimations?.() ?? []) a.cancel();
+    const g0 = geo(t);
     const d0 = m.getAttribute("d") ?? "",
       d1 = e.getAttribute("d") ?? "";
     const shaped = !g0 && d0 !== d1;
     const morphed = shaped && !zm && morphable(d0, d1); // a drill swaps the category set: crossfade
     const from = morphed ? outline(m, d0) : "";
     const was = m.textContent ?? "";
-    if (instant || (shaped && !morphed)) for (const a of m.getAnimations?.() ?? []) a.cancel();
+    if (m.hasAttribute("data-ghost") || instant || (shaped && !morphed)) stop(as);
     if (shaped && !instant) moved = true;
     if (shaped && !morphed && !instant) crossfade(m); // the ghost keeps the old outline
     sync(m, e);
     if (morphed) morph(m, from, d1);
-    if (m.innerHTML !== e.innerHTML) m.replaceChildren(...e.childNodes);
-    const g1 = geo(m);
+    mend(m, e);
+    const t1 = nest(m);
+    const g1 = geo(t1);
     // Moved: restart from where it is on screen now. Unmoved: a running entrance keeps playing.
     if (
       !instant &&
       v &&
       g1 &&
-      (v.some((x, i) => Math.abs(x - g1[i]!) > 0.01) || g1.some((x, i) => x !== g0[i]))
+      (v.some((x, i) => Math.abs(x - g1[i]!) > 0.01) || g1.some((x, i) => x !== g0?.[i]))
     ) {
       moved = true;
-      for (const a of m.getAnimations?.() ?? []) a.cancel();
-      run(m, [{ transform: tf(g1, v) }, { transform: "none" }], { ...DATA, delay: delay(m) / 2 });
+      stop(ta);
+      run(t1, [{ transform: tf(g1, v) }, { transform: "none" }], { ...DATA, delay: delay(m) / 2 });
     } else if (shaped && !morphed) fade(m, false, undefined, { ...DATA, delay: delay(m) / 2 });
     if (m.localName === "text" && m.textContent !== was) count(m, was, DATA);
     order.push(m);
@@ -475,7 +497,10 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     }
   }
   for (const p of pool.values()) if (fadeable(p)) (ghosts.push(p), out.push(p));
-  o.replaceChildren(...out);
+  // Reconcile in place: re-inserting the marks group would restart every CSS animation in it (the orbit).
+  let ref = o.firstChild;
+  for (const c of out) c === ref ? (ref = ref.nextSibling) : o.insertBefore(c, ref);
+  for (let n; ref; ref = n) ((n = ref.nextSibling), ref.remove());
   // Start every fade after the swap: animations on template children stay pending forever in
   // WebKit and Firefox, and a ghost removed synchronously would be re-inserted by the swap.
   for (const g of ghosts) ghost(g);
@@ -502,7 +527,7 @@ function ghost(g: Element): void {
   g.removeAttribute("data-maya");
   for (const d of g.querySelectorAll("[data-maya]")) d.removeAttribute("data-maya");
   g.setAttribute("data-ghost", "");
-  for (const a of g.getAnimations?.() ?? []) a.cancel();
+  stop(g.getAnimations?.());
   const d = hold ? Number(ZOOM.duration) * 0.75 : 0;
   run(g, [{ opacity: op }, { opacity: 0 }], { ...UI, delay: d, fill: "forwards" }, () =>
     g.remove(),
@@ -525,7 +550,36 @@ function intro(svg: Element, kind: Intro): void {
     delay: kind === "wipe" ? WIPE : Number(INTRO.duration) * 0.6 + STAGGER / 2,
   };
   const l = part("labels");
-  if (l) fade(l, false, undefined, late);
+  // Memory (spec.was): each bar grows from its ghost's box (key "%00was~" + the bar's), its label with the bar's end.
+  const past = new Map<string, Box>(),
+    bars = new Map<string, Element>();
+  for (const e of m.children) {
+    const k = e.getAttribute("data-key")!;
+    if (!e.hasAttribute("data-past")) bars.set(k, e);
+    else if (geo(e)) past.set(k.slice(7), geo(e)!);
+  }
+  const hz = svg.getAttribute("data-dir") === "h";
+  for (const t of l?.children ?? []) {
+    const k = t.getAttribute("data-key") ?? "",
+      [p, bar] = [past.get(k), bars.get(k)],
+      b = bar && geo(bar),
+      i = +!hz;
+    if (!p || !b) {
+      fade(t, false, undefined, late);
+      continue;
+    }
+    const d =
+      hz !== bar!.hasAttribute("data-neg") ? p[i]! + p[i + 2]! - b[i]! - b[i + 2]! : p[i]! - b[i]!;
+    run(
+      t,
+      [{ transform: `translate${hz ? "X" : "Y"}(${d}px)`, opacity: 0 }, { transform: "none" }],
+      {
+        ...INTRO,
+        delay: delay(bar!),
+      },
+    );
+  }
+  if (l && !past.size) fade(l, false, undefined, late);
   if (kind === "wipe") {
     // Clip, not geometry: lines, areas and points are revealed together, left to right.
     const c = (r: string) => ({ clipPath: `inset(-20% ${r} -20% -1%)` });
@@ -541,7 +595,15 @@ function intro(svg: Element, kind: Intro): void {
       ],
       { duration: 1000, easing: EASE },
     );
-  } else for (const e of m.children) enter(e, undefined, INTRO);
+  } else
+    for (const e of m.children) {
+      const [k, g] = [e.getAttribute("data-key")!, geo(e)];
+      const p = past.get(k);
+      if (e.hasAttribute("data-past")) continue; // ghosts rest
+      if (g && p)
+        run(e, [{ transform: tf(g, p) }, { transform: "none" }], { ...INTRO, delay: delay(e) });
+      else enter(e, undefined, INTRO);
+    }
   for (const t of m.querySelectorAll("text[data-maya=mark]")) count(t, "", INTRO);
 }
 

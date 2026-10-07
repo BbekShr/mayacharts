@@ -5,6 +5,10 @@ import "../src/flow.ts";
 import "../src/geo.ts";
 import "../src/radial.ts";
 import "../src/stats.ts";
+import "../src/weave.ts";
+import "../src/units.ts";
+import "../src/orbit.ts";
+import "../src/constellation.ts";
 import { render, renderShell } from "../src/core/render.ts";
 import { TEXT } from "../src/core/strings.ts";
 import { MayaSpecError } from "../src/core/validate.ts";
@@ -22,7 +26,15 @@ const D = (c: unknown, s: unknown, n: unknown) => [
   { c: typeof c === "number" ? c + 2 : "C", s, v: 2, n: typeof n === "string" ? n + "3" : n },
 ];
 const BASE: Record<string, (c: unknown, s: unknown, n: unknown) => S> = {
-  bar: (c, s, n) => ({ type: "bar", x: "c", y: "v", y2: "v", series: "s", data: D(c, s, n) }),
+  bar: (c, s, n) => ({
+    type: "bar",
+    x: "c",
+    y: "v",
+    y2: "v",
+    was: "v",
+    series: "s",
+    data: D(c, s, n),
+  }),
   waterfall: (c, s, n) => ({ type: "waterfall", x: "c", y: "v", totals: ["C"], data: D(c, s, n) }),
   line: (c, s, n) => ({ type: "line", x: "c", y: "v", series: "s", data: D(c, s, n) }),
   area: (c, s, n) => ({ type: "area", x: "c", y: "v", series: "s", data: D(c, s, n) }),
@@ -71,6 +83,16 @@ const BASE: Record<string, (c: unknown, s: unknown, n: unknown) => S> = {
   }),
   funnel: (c, s, n) => ({ type: "funnel", x: "c", y: "v", data: D(c, s, n) }),
   hexmap: (c, s, n) => ({ type: "hexmap", x: "c", y: "v", data: D(c, s, n) }),
+  weave: (c, s, n) => ({ type: "weave", x: "c", y: "v", series: "s", data: D(c, s, n) }),
+  units: (c, s, n) => ({ type: "units", x: "c", y: "v", name: "n", data: D(c, s, n) }),
+  orbit: (c, s, n) => ({ type: "orbit", x: "c", y: "v", y2: "v", data: D(c, s, n) }),
+  constellation: (c, s, n) => ({
+    type: "constellation",
+    x: "c",
+    y: ["v", "v"],
+    size: "v",
+    data: D(c, s, n),
+  }),
 };
 
 type Slot = (type: string, p: string) => S;

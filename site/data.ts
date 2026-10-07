@@ -388,3 +388,113 @@ export function makeLive(seed: number, n = 300) {
     }),
   ).flat();
 }
+
+/** 40 invented accounts in 3 loose segments, described by 5 measures (revenue $M, growth %, margin %, tickets, NPS). */
+export function makeAccounts(seed: number) {
+  const rng = mulberry32(seed);
+  const first = [
+    "Acme",
+    "Nordwind",
+    "Bluepine",
+    "Harbor",
+    "Quanta",
+    "Lumen",
+    "Orchard",
+    "Summit",
+    "Kestrel",
+    "Vireo",
+    "Delta",
+    "Marlow",
+    "Tidewater",
+    "Ironbridge",
+    "Pixel",
+    "Cedar",
+    "Fable",
+    "Granite",
+    "Juniper",
+    "Solstice",
+  ];
+  const last = [
+    "Retail",
+    "Logistics",
+    "Foods",
+    "Health",
+    "Energy",
+    "Media",
+    "Bank",
+    "Travel",
+    "Air",
+    "Pharma",
+  ];
+  // segment centres: [revenue, growth, margin, tickets, nps] and spreads
+  const mu = [
+    [8.5, 4, 28, 30, 55],
+    [3, 35, 10, 60, 40],
+    [5.5, -3, 35, 14, 70],
+  ];
+  const sd = [1.8, 6, 5, 10, 8];
+  return Array.from({ length: 40 }, (_, i) => {
+    const c = mu[i % 3]!;
+    const v = c.map((m, k) => Math.max(k === 1 ? -20 : k === 0 ? 0.6 : 1, m + gauss(rng) * sd[k]!));
+    return {
+      account: `${first[i % first.length]} ${last[(i * 3 + Math.floor(i / 20)) % last.length]}`,
+      revenue: R2(v[0]!),
+      growth: Math.round(v[1]!),
+      margin: Math.round(v[2]!),
+      tickets: Math.round(v[3]!),
+      nps: Math.round(v[4]!),
+    };
+  });
+}
+
+/** Shapeshifter customers: one row per customer, five regions, annual spend skewed high in the West. */
+export function makeUnits(seed: number, n = 240) {
+  const rng = mulberry32(seed);
+  const regions = ["North", "South", "East", "West", "Central"];
+  const w = [0.26, 0.2, 0.22, 0.18, 0.14];
+  return Array.from({ length: n }, (_, i) => {
+    let u = rng();
+    let g = 0;
+    while (g < 4 && u > w[g]!) ((u -= w[g]!), g++);
+    return {
+      customer: `C-${String(i + 1).padStart(3, "0")}`,
+      region: regions[g]!,
+      spend: Math.round(Math.exp(4.6 + gauss(rng) * 0.75 + g * 0.12)),
+    };
+  });
+}
+
+/** Orrery families: seven families with sales and year-on-year growth (%), some shrinking. */
+export function makeGrowth(seed: number) {
+  const rng = mulberry32(seed);
+  return ["Footwear", "Apparel", "Outdoor", "Home", "Beauty", "Toys", "Garden"].map((family) => ({
+    family,
+    sales: Math.round(180 + rng() * 1500) * 100,
+    growth: Math.round((rng() - 0.3) * 400) / 10,
+  }));
+}
+
+/** Weave ranks: six product lines over ten quarters. Most hold their place; Cedar and Ember climb, Atlas falls, so each quarter has a crossing or two. */
+export function makeRanks(seed: number) {
+  const rng = mulberry32(seed);
+  // [line, start value, ramp from quarter, ramp to quarter, change over the ramp]
+  const lines: [string, number, number, number, number][] = [
+    ["Atlas", 116, 5, 8, -40],
+    ["Birch", 102, 0, 0, 0],
+    ["Cedar", 92, 0, 3, 20],
+    ["Delta", 82, 0, 0, 0],
+    ["Ember", 70, 4, 8, 26],
+    ["Flint", 60, 0, 0, 0],
+  ];
+  const quarters = Array.from(
+    { length: 10 },
+    (_, q) => `Q${((q + 1) % 4) + 1} ${24 + Math.floor((q + 1) / 4)}`,
+  );
+  return lines.flatMap(([line, base, q0, q1, dv]) =>
+    quarters.map((quarter, q) => {
+      const t = q1 > q0 ? Math.min(1, Math.max(0, (q - q0) / (q1 - q0))) : 0;
+      const sales = base + dv * t * t * (3 - 2 * t) + (rng() - 0.5) * 2;
+      return { quarter, line, sales: Math.round(sales * 10) / 10 };
+    }),
+  );
+}

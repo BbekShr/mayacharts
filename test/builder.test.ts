@@ -9,6 +9,10 @@ import "../src/flow.ts";
 import "../src/geo.ts";
 import "../src/radial.ts";
 import "../src/stats.ts";
+import "../src/weave.ts";
+import "../src/units.ts";
+import "../src/orbit.ts";
+import "../src/constellation.ts";
 import type { ChartSpec, ChartType } from "../src/index.ts";
 import {
   INLINE,
@@ -42,6 +46,11 @@ import {
   snippets,
 } from "../site/builder-kit.ts";
 
+// M0 stubs (plan maya-signature) register and validate but draw nothing yet; M1 drops each type
+// from this list as its mark lands.
+const STUB: string[] = [];
+const draws = (t: string, spec: ChartSpec) =>
+  STUB.includes(t) || marks(render(spec, { width: 640, height: 360 })) > 0;
 const run = (code: string): unknown => new Function(`return (${code});`)();
 const marks = (svg: string) => (svg.match(/data-maya="mark"/g) ?? []).length;
 const ok = (text: string) => {
@@ -61,7 +70,7 @@ describe("builder stays in step with the spec", () => {
     for (const t of TYPES) {
       const spec = sample(t);
       expect(() => validateSpec(spec), t).not.toThrow();
-      expect(marks(render(spec, { width: 640, height: 360 })), t).toBeGreaterThan(0);
+      expect(draws(t, spec), t).toBe(true);
       expect(roles(t), t).toContain("y");
     }
   });
@@ -367,7 +376,7 @@ describe("re-roll", () => {
       });
       expect({ ...next, data: [] }).toEqual({ ...spec, data: [] });
       expect(() => validateSpec(next), t).not.toThrow();
-      expect(marks(render(next, { width: 640, height: 360 })), t).toBeGreaterThan(0);
+      expect(draws(t, next), t).toBe(true);
     }
     const changed = reroll(sample("bar")).data.some(
       (r, j) => r["Sales"] !== sample("bar").data[j]!["Sales"],

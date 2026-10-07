@@ -149,11 +149,30 @@ describe("theme css", () => {
       expect(css, h).toContain(h);
     expect(css).not.toContain("style=");
   });
-  it("gzips under 4128 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(4128);
+  it("gzips under 4506 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(4506);
   });
   it("narrow containers compact the legend, never hide it", () => {
     expect(css).toContain("@container (max-width:320px){.maya-legend{font-size:11px");
     expect(css).not.toContain("display:none}.maya-title");
+  });
+});
+
+describe("orbit and ghost rules", () => {
+  it("orbit motion sits inside the no-preference media query", () => {
+    const i = css.indexOf("@keyframes maya-orbit");
+    const m = css.lastIndexOf("@media (prefers-reduced-motion:no-preference){", i);
+    expect(i).toBeGreaterThan(0);
+    expect(m).toBeGreaterThan(-1);
+    expect(css.indexOf("animation:maya-orbit")).toBeGreaterThan(m);
+    expect(css.slice(0, m)).not.toContain("animation:maya-orbit");
+    expect(css).toContain(".maya:not([data-still]) g[data-v]");
+  });
+  it("styles the bar ghost", () => {
+    expect(css).toContain("[data-past]{fill:var(--maya-fg)");
+  });
+  it("colours constellation stars with the legend ramp and isolates legend numbers", () => {
+    expect(css).toContain('circle[data-key^="c~"][data-q]');
+    expect(css).toContain("[data-maya=ramp] span{unicode-bidi:plaintext}");
   });
 });
