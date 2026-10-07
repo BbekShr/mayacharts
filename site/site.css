@@ -740,3 +740,6 @@ legend .info {
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
   pointer-events: none;
 }
+#signature .tiles section:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
