@@ -1,7 +1,7 @@
 import { nf } from "../format.ts";
 import { bandScale } from "../scale.ts";
 import { colorVals } from "../shape.ts";
-import { el, esc, hit, key, OTHER, r } from "../svg.ts";
+import { el, esc, hit, key, OTHER, r, tw } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
 
 const MAX_BAR = 72;
@@ -193,7 +193,7 @@ export const bar: Mark = {
         const [c, x, y, w, h, d] = t;
         // Inside when it fits, else outside the bar end (collisions are dropped by ctx.label).
         const text = ctx.fmt(spec.y, c.v);
-        const est = text.length * 7.2 + 4;
+        const est = tw(text);
         if (wf && est > cat.step && t !== first && t !== last) continue;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;

@@ -11,13 +11,13 @@ const axes: Mark["axes"] = (spec, shaped) => [
   { kind: "linear", field: spec.y, domain: shaped.extent } satisfies Axis,
 ];
 
-// Direct end labels instead of a legend: 2 to 8 series, all visible (a hidden one needs the legend
+// Direct end labels instead of a legend: 1 to 8 series, all visible (a hidden one needs the legend
 // toggle back), no value labels, one axis.
 const ends: NonNullable<Mark["ends"]> = (spec, shaped, fmt) =>
   spec.labels ||
   spec.y2 !== null ||
   shaped.visible.length !== shaped.series.length ||
-  shaped.visible.length < 2 ||
+  shaped.visible.length < 1 ||
   shaped.visible.length > 8
     ? []
     : shaped.visible.flatMap((si) => {
@@ -104,7 +104,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         const at = (j: number) => (cells[j]?.value == null ? c.y1 : cells[j]!.y1);
         const [p, q] = [at(i - 1), at(i + 1)];
         const [lx, ly, text] = [+px(c.ci), val.of(c.y1), ctx.fmt(spec.y, c.value)];
-        const w = text.length * 7.2 + 4;
+        const w = tw(text) + 4;
         const f = p <= c.y1 && q <= c.y1 ? 0 : p >= c.y1 && q >= c.y1 ? 1 : p < c.y1 ? 2 : 3;
         // k: 0 above, 1 below, 2 end (left), 3 start (right); l, t the box's left and top.
         const k = [f, 0, 1, 2, 3].find((k) => {

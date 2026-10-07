@@ -76,12 +76,16 @@ describe("heatmap", () => {
       ]
     `);
   });
-  it("inks labels by ramp step: dark on the two palest, page background on the rest", () => {
+  it("inks labels by ramp step: dark ink on steps 7 to 9, the tint ink on the paler ones", () => {
     const svg = render(spec, { width: 800, height: 400 });
     const t = svg.match(/<text [^>]*data-in[^>]*>/g) ?? [];
+    const q = marks(svg).map((m) => Number(/data-q="(\d)"/.exec(m)![1]));
     expect(t.length).toBe(11);
-    expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(3); // q < 2 of 11 cells
-    expect(t.filter((x) => x.includes('data-ink="b"'))).toHaveLength(8);
+    expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(q.filter((n) => n > 7).length);
+    expect(t.filter((x) => x.includes('data-ink="t"'))).toHaveLength(q.filter((n) => n < 8).length);
+    expect(t.filter((x) => x.includes("data-dark") && x.includes("data-q"))).toHaveLength(
+      q.filter((n) => n > 7).length,
+    );
   });
   it("small cells are squares, large ones fill the band; the legend names the field", () => {
     const wh = (svg: string) => {
