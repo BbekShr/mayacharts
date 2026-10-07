@@ -27,8 +27,8 @@ export const TEXT = {
   /** aria-label of the breadcrumb nav. */
   crumbs: "Drill path",
   /** Tone text (never colour alone): colorBy "sign" and { target }. */
-  positive: "positive",
-  negative: "negative",
+  positive: "Positive",
+  negative: "Negative",
   above: "above target",
   below: "below target",
   /** kpi delta: {0} = signed change, {1} = previous period. */

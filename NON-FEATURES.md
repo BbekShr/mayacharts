@@ -17,6 +17,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 ## Known ceilings
 
 - **Builder paste size**: the demo site's chart builder previews at most 1 MB, 5,000 rows (the `too-many-marks` cap) and 50 columns of pasted data, and its copied code inlines at most 60 rows (the first 20 when there are more). The library itself has no such limit; load the full data in your own code.
+- **Radial bar centre label**: the centre label and the shared year hide below about 170 px wide, and a year-first locale keeps full names.
 - **Render batching**: property sets in one task coalesce into one render (microtask), but sets in separate tasks each render, so a host that updates faster than 60 Hz is not capped at one render per frame. Resizes still wait for a frame.
 - **Scatter pointer pick**: scatter has no hit circles; the tooltip and click pick the nearest point centre within 12 px by a linear scan, so a pick costs O(points) per pointer move.
 - **Thinned sparkline and ridgeline**: kpi (one hover point per 4 px) and ridgeline (one per 6 px of plot width) keep the same largest-triangle-three-buckets pick as a downsampled time axis (each series' minimum and maximum and every gap edge included), so a click or hover lands on a kept category only, not every row. When the kept set is still over the target it is thinned evenly, which can drop a gap edge or a peak in the densest cases.

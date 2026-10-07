@@ -1,5 +1,9 @@
 import type { BandScale, LinearScale, TimeScale } from "./types.ts";
 
+export const TAU = Math.PI * 2;
+/** Degrees per radian. */
+export const DEG = 180 / Math.PI;
+
 export function bandScale(
   domain: readonly string[],
   range: readonly [number, number],

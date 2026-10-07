@@ -1,6 +1,6 @@
 import { dtf } from "./format.ts";
 import { bandScale, linearScale, timeScale } from "./scale.ts";
-import { el, esc, key, r } from "./svg.ts";
+import { el, esc, key, r, tw as base } from "./svg.ts";
 import { niceTicks, timeTicks } from "./ticks.ts";
 import type { Axis, Box, LinearScale, ResolvedSpec, Scale, TimeScale } from "./types.ts";
 
@@ -9,9 +9,9 @@ const WIDE =
 
 // ponytail: no text measurement in Node; 0.6 em per code point, 1 em for East-Asian-wide ones.
 export const tw = (s: string) => {
-  const a = [...s];
-  const k = a.filter((c) => WIDE.test(c)).length;
-  return (a.length - k) * 7.2 + k * 12;
+  let k = 0;
+  for (const c of s) if (WIDE.test(c)) k++;
+  return base(s, 0) + k * 4.8;
 };
 const w = (s: string) => tw(s) + 8;
 const maxW = (a: readonly string[]) => a.reduce((m, s) => Math.max(m, w(s)), 0);

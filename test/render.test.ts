@@ -260,8 +260,8 @@ describe("titles, labels, tone", () => {
   it("sign and target tone, with tone words in the table", () => {
     const p = renderParts({ ...negative, colorBy: "sign" });
     expect(attr(p.svg, "data-tone")).toEqual(["good", "bad"]);
-    expect(p.table).toContain("(positive)");
-    expect(p.table).toContain("(negative)");
+    expect(p.table).toContain("(Positive)");
+    expect(p.table).toContain("(Negative)");
     expect(p.legend).toContain('data-maya="tone"');
     const t = renderParts({ ...simple, colorBy: { target: 20 } });
     expect(attr(t.svg, "data-tone")).toEqual(["bad", "good", "good"]);
