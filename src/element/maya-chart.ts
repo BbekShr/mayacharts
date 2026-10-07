@@ -128,7 +128,13 @@ export class MayaChart extends HTMLElement {
       );
     }
     this.#unlisten = [
-      listen(root, ["click", this.#click], ["keydown", this.#key]),
+      listen(
+        root,
+        ["click", this.#click],
+        ["keydown", this.#key],
+        ["pointerover", legend],
+        ["pointerout", legend],
+      ),
       // Orbit: the planets turn while a mouse is over the chart (touch and keyboard leave it at rest).
       listen(
         this,
@@ -233,6 +239,7 @@ export class MayaChart extends HTMLElement {
     c.removeAttribute("tabindex");
     for (const e of c.querySelectorAll("[data-active],[data-lit]"))
       (e.removeAttribute("data-active"), e.removeAttribute("data-lit"));
+    c.querySelector("[data-hot]")?.removeAttribute("data-hot");
     for (const e of c.querySelectorAll("[data-ghost],[data-maya=band]")) e.remove();
     const st = document.createElementNS("http://www.w3.org/2000/svg", "style");
     st.textContent = `${css}.maya-svg{${decl}}`;
@@ -355,9 +362,15 @@ export class MayaChart extends HTMLElement {
     try {
       if (!this.#drawn && !box.querySelector("svg"))
         try {
-          // Title and controls depend only on the spec: place them first, measure once. No
-          // measuring here: reading the box now would force a layout that is thrown away.
-          this.#slots(root, renderParts({ ...spec, data: [] }, { width: 640, height: 320 }));
+          // Title, controls and legend depend only on the spec and its series names: place them
+          // first (one row per series stands for the data), measure once. No measuring here:
+          // reading the box now would force a layout that is thrown away.
+          const f = spec.series;
+          // ponytail: series seen in the first 1000 rows; a later one costs the second draw below.
+          const first = new Map<unknown, unknown>();
+          if (f) for (const r of spec.data.slice(0, 1000)) first.has(r[f]) || first.set(r[f], r);
+          const rows = [...first.values()] as typeof spec.data;
+          this.#slots(root, renderParts({ ...spec, data: rows }, { width: 640, height: 320 }));
         } catch {} // the real draw reports the error
       parts = draw();
       // ponytail: a multi-series legend needs the data, so it still costs a second draw.
@@ -463,6 +476,15 @@ export class MayaChart extends HTMLElement {
     root.querySelectorAll<HTMLElement>(sel)[+i!]?.focus({ preventScroll: true });
   }
 }
+
+/** Legend hover: custom properties on .maya dim the other series (theme.ts), no `:has(:hover)`. */
+const legend = (e: Event) => {
+  const b = (e.target as Element).closest(".maya-legend [data-s]"),
+    on = e.type === "pointerover",
+    s = (b?.closest(".maya") as HTMLElement | undefined)?.style;
+  s?.setProperty("--d", on ? ".25" : "");
+  s?.setProperty("--h" + b?.getAttribute("data-s"), on ? "1" : "");
+};
 
 const SLOTS: [keyof Parts, string][] = [
   ["title", ".maya-title"],

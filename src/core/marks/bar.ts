@@ -112,6 +112,7 @@ export const bar: Mark = {
     let brk = "";
     const wf = spec.type === "waterfall";
     const tags: [Item, number, number, number, number, Record<string, any>][] = [];
+    const grid: (typeof tags)[] = [];
     for (const c of items(spec, shaped)) {
       const k = shaped.visible.indexOf(c.si);
       const full = spec.stack || spec.type === "waterfall" ? cat.bandwidth : inner.bandwidth;
@@ -182,15 +183,30 @@ export const bar: Mark = {
         height: r(h),
       });
       hits += hit(d, x, y, w, h);
+      // A clipped Other bar would otherwise show its total only on hover: print it at the break.
+      if (cut !== null && cname === OTHER && !spec.labels)
+        ctx.label(
+          hz ? cut - 20 : x + w,
+          hz ? y + h / 2 : cut + 28,
+          ctx.fmt(spec.y, c.v),
+          "end",
+          d["data-key"],
+        );
       tags.push([c, x, y, w, h, d]);
+      // 128 px column buckets by left edge + MAX_BAR (bars are at most that wide): a plain label only meets the bars in the
+      // columns it spans.
+      // (A label left of the svg is dropped anyway, so a negative slice start costs nothing.)
+      (grid[(x + MAX_BAR) >> 7] ??= []).push(tags.at(-1)!);
     }
     if (spec.labels && tags.length) {
       // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
       // step label must fit inside its own column or it is dropped.
       // ponytail: no thinning to a subset of steps: a label wider than its column is dropped.
-      const [first, last] = [tags[0]!, tags.at(-1)!];
+      const first = tags[0]!;
+      const last = tags.at(-1)!;
       for (const t of wf ? new Set([first, last, ...tags]) : tags) {
         const [c, x, y, w, h, d] = t;
+        const dk = d["data-key"];
         // Inside when it fits, else outside the bar end (collisions are dropped by ctx.label).
         const text = ctx.fmt(spec.y, c.v);
         const est = tw(text);
@@ -207,20 +223,20 @@ export const bar: Mark = {
               ? ""
               : null;
         if (est <= w && h >= (hz ? 14 : 16))
-          labels += inText(cx, cy, text, { "data-ink": ink, "data-key": d["data-key"] });
+          labels += inText(cx, cy, text, { "data-ink": ink, "data-key": dk });
         else if (hz) {
           // Outside the bar end when it fits (a negative one keeps clear of the axis labels), else inside the end.
           if (
             !(
               (!neg || x - 4 - est >= ctx.plot.x) &&
-              ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start", d["data-key"])
+              ctx.label(neg ? x - 4 : x + w + 4, cy, text, neg ? "end" : "start", dk)
             ) &&
             est + 8 <= w &&
             h >= 10
           )
             labels += inText(neg ? x + 4 : x + w - 4, cy, text, {
               "data-ink": ink,
-              "data-key": d["data-key"],
+              "data-key": dk,
               "text-anchor": neg ? "start" : "end",
             });
         } else {
@@ -230,19 +246,24 @@ export const bar: Mark = {
           const edge = wf && (end || t === first);
           const ax = edge ? (end ? x + w : x) : cx;
           const l0 = edge ? (end ? ax - est : ax) : cx - est / 2;
-          const [t0, t1] = neg ? [ey + 3, ey + 16] : [ey - 16, ey - 3];
+          const t0 = neg ? ey + 3 : ey - 16; // the label's band is 13 px tall
           // One scan of the column's neighbours. Not an edge tag: a taller neighbour under the label
           // drops it. An edge tag clears a neighbour poking into its band by sitting beyond its end.
           let e = ey;
           let over = false;
-          for (const [, bx, by, bw, bh] of tags)
-            if (bx !== x && l0 < bx + bw && l0 + est > bx) {
-              over ||= t0 < by + bh && t1 > by;
-              if (neg ? by + bh > e && by < e + 16 : by < e && by + bh > e - 16)
-                e = neg ? by + bh : by;
-            }
-          if (edge) ctx.label(ax, neg ? e + 9 : e - 9, text, end ? "end" : "start", d["data-key"]);
-          else if (!over) ctx.label(cx, ey, text, neg ? "below" : "above", d["data-key"]);
+          // some() skips the empty buckets, copies nothing and stops at the first cover of a plain tag.
+          grid.slice(l0 >> 7, ((l0 + est + MAX_BAR) >> 7) + 1).some((g) =>
+            g.some(([, bx, by, bw, bh]) => {
+              if (bx !== x && l0 < bx + bw && l0 + est > bx) {
+                over ||= t0 < by + bh && t0 + 13 > by;
+                const g = neg ? e : e - 16; // the 16 px band the label would occupy
+                if (by + bh > g && by < g + 16) e = neg ? by + bh : by;
+              }
+              return over && !edge;
+            }),
+          );
+          if (edge) ctx.label(ax, neg ? e + 9 : e - 9, text, end ? "end" : "start", dk);
+          else if (!over) ctx.label(cx, ey, text, neg ? "below" : "above", dk);
         }
       }
     }

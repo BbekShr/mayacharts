@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mayaCharts at scale</title>
+    <meta
+      name="description"
+      content="mayaCharts drawing 10 thousand to 1 million rows in your browser, with the draw time measured on your machine."
+    />
+    <link rel="stylesheet" href="./site.css" />
+    <!-- Apply the saved theme before first paint; theme.ts keeps the button in step. -->
+    <script>
+      try {
+        const m = localStorage.getItem("maya-theme");
+        if (m === "light" || m === "dark") document.documentElement.style.colorScheme = m;
+      } catch {}
+    </script>
+  </head>
+  <body class="wide">
+    <header class="site">
+      <h1>Scale</h1>
+      <p class="tagline">
+        Eleven charts drawn from up to a million rows, generated in this tab. The numbers under each
+        chart are measured on your machine.
+      </p>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="./builder.html">Builder</a>
+        <a href="./gallery.html">Gallery</a>
+        <a href="./scale.html" aria-current="page">Scale</a>
+        <a href="./compare.html">Compare</a>
+        <a href="./errors.html">Errors</a>
+        <a href="https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md">Non-features</a>
+        <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
+        <button id="theme" type="button">Theme: auto</button>
+      </nav>
+    </header>
+    <main>
+      <div class="toolbar">
+        <div id="rows" role="group" aria-label="Rows">
+          <button type="button" data-rows="10000">10k</button>
+          <button type="button" data-rows="100000">100k</button>
+          <button type="button" data-rows="500000">500k</button>
+          <button type="button" data-rows="1000000">1M</button>
+        </div>
+        <output id="status" role="status"></output>
+      </div>
+      <p id="sample-note">
+        Every row is one synthetic order line: a timestamp, a channel, a region, a product family, a
+        SKU, a unit price and an order value, drawn from a fixed seed. Nothing is fetched. Charts
+        generate and draw one after another as they scroll into view, so the page stays usable while
+        a million rows load. Hover, the legend and zoom all work at every size.
+      </p>
+      <div class="tiles" id="tiles"></div>
+      <section id="notes">
+        <h2>What this takes</h2>
+        <p>
+          A chart never draws more than 10,000 marks, whatever the row count. A line on a time axis
+          keeps about one point per 2 px. Scatter and beeswarm switch to density cells, coloured by
+          how many rows each holds. Bar, boxplot, sunburst and sankey combine rows into categories
+          first, so a million rows over thirty-six categories is thirty-six bars.
+        </p>
+        <p>
+          A bar chart over many categories keeps the largest and folds the rest into Other; set
+          <code>limit</code> to choose how many stay. Aggregating on a server before the browser
+          sees the rows is faster than any of this.
+        </p>
+        <p id="heap-note">
+          The rows themselves are the main cost. A million row objects take about 100 MB of
+          JavaScript heap (95 MB measured here in Chromium), and this page keeps one copy that every
+          chart reads.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="./scale.ts"></script>
+  </body>
+</html>

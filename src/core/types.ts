@@ -104,7 +104,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Order categories by total across all series (hidden ones too). Default: data order.
    * @example sort: "desc" */
   sort?: "asc" | "desc";
-  /** Keep the top N categories by total; the rest roll up into a final "Other".
+  /** Keep the top N categories by total; the rest roll up into a final "Other". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`.
    * @example limit: 10 */
   limit?: number;
 
@@ -414,8 +414,10 @@ export interface Shaped {
   time: number[] | null;
   /** Downsampled: [categories kept, categories before]; null when nothing was dropped. */
   reduced: [kept: number, total: number] | null;
-  /** Time axis: each category's index in the time-ordered list before window and reduction (view.window's space); null otherwise. */
+  /** Each category's index in the list before window and reduction (view.window's space): time axis, or a categorical line thinned past MAX_POINTS; null otherwise. */
   index: number[] | null;
+  /** A bar with more categories than fit kept the top N and rolled the rest into Other: [N, categories before]; null otherwise. */
+  capped: [kept: number, total: number] | null;
 }
 
 export interface BandScale {

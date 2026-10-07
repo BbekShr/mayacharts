@@ -1,4 +1,4 @@
-import { cbField, el, nameId, esc, key, r } from "../svg.ts";
+import { cbField, el, memo, nameId, esc, key, r } from "../svg.ts";
 import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
 
@@ -12,55 +12,110 @@ interface Pt {
   row: Row;
 }
 
-const memo = new WeakMap<Shaped, Pt[]>(); // axes() and draw() share one pass
+/** The rows with a numeric x and y as typed columns, once per data array (a resize or legend toggle reuses them). */
+function columns(spec: ResolvedSpec, shaped: Shaped) {
+  return memo(spec.data, `c${JSON.stringify([spec.x, spec.y, spec.series])}`, () => {
+    const rows = spec.data;
+    const [at, xs, ys, si] = [
+      new Int32Array(rows.length),
+      new Float64Array(rows.length),
+      new Float64Array(rows.length),
+      new Int32Array(rows.length),
+    ];
+    const sIdx = new Map(shaped.series.map((k, j) => [k, j]));
+    let n = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]!;
+      const [x, y] = [row[spec.x], row[spec.y]];
+      if (typeof x !== "number" || typeof y !== "number") continue;
+      at[n] = i;
+      xs[n] = x;
+      ys[n] = y;
+      si[n++] = spec.series === null ? 0 : sIdx.get(String(row[spec.series]))!;
+    }
+    return { n, at, xs, ys, si };
+  });
+}
+
+const picks = new WeakMap<Shaped, { n: number; k: Int32Array; c: ReturnType<typeof columns> }>(); // axes() and draw() share one pass
 
 /**
- * Visible points, in row order. Rows with a null/non-numeric x or y, hidden series, and points
- * outside an explicit xDomain/yDomain are skipped (domains clip; they never draw off-plot).
- * A 4-element view.window (scatter zoom box) clips the same way as the domains.
+ * Visible points as positions into the typed columns, in row order. Rows with a null/non-numeric
+ * x or y, hidden series, and points outside an explicit xDomain/yDomain are skipped (domains
+ * clip; they never draw off-plot). A 4-element view.window (scatter zoom box) clips the same way
+ * as the domains.
  */
-export function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
-  const hit = memo.get(shaped);
+function pick(spec: ResolvedSpec, shaped: Shaped) {
+  const hit = picks.get(shaped);
   if (hit) return hit;
+  const c = columns(spec, shaped);
+  const k = new Int32Array(c.n);
+  let n = 0;
+  const vis = new Uint8Array(shaped.series.length);
+  for (const j of shaped.visible) vis[j] = 1;
+  const [xd, yd, w] = [spec.xDomain, spec.yDomain, spec.window];
+  for (let i = 0; i < c.n; i++) {
+    const [x, y] = [c.xs[i]!, c.ys[i]!];
+    if (xd && (x < xd[0] || x > xd[1])) continue;
+    if (yd && (y < yd[0] || y > yd[1])) continue;
+    if (w && (x < w[0] || x > w[1] || y < w[2] || y > w[3])) continue;
+    if (vis[c.si[i]!]) k[n++] = i;
+  }
+  const out = { n, k, c };
+  picks.set(shaped, out);
+  return out;
+}
+
+/** The visible points as objects, in row order. */
+export function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
+  const { n, k, c } = pick(spec, shaped);
   const out: Pt[] = [];
-  memo.set(shaped, out);
-  const sIdx = new Map(shaped.series.map((k, j) => [k, j]));
-  const vis = new Set(shaped.visible);
-  const xd = spec.xDomain;
-  const yd = spec.yDomain;
-  const w = spec.window;
-  spec.data.forEach((row, i) => {
-    const x = row[spec.x];
-    const y = row[spec.y];
-    if (typeof x !== "number" || typeof y !== "number") return;
-    if (xd && (x < xd[0] || x > xd[1])) return;
-    if (yd && (y < yd[0] || y > yd[1])) return;
-    if (w && (x < w[0] || x > w[1] || y < w[2] || y > w[3])) return;
-    const si = sIdx.get(spec.series === null ? "" : String(row[spec.series]))!;
-    if (!vis.has(si)) return;
+  for (let m = 0; m < n; m++) {
+    const i = k[m]!;
+    const row = spec.data[c.at[i]!]!;
     const sv = spec.size === null ? null : row[spec.size];
     const nv = spec.name === null ? null : row[spec.name];
     out.push({
-      i,
-      x,
-      y,
+      i: c.at[i]!,
+      x: c.xs[i]!,
+      y: c.ys[i]!,
       sz: typeof sv === "number" ? sv : null,
-      si,
+      si: c.si[i]!,
       name: nv == null ? null : String(nv),
       row,
     });
-  });
+  }
   return out;
+}
+
+/** Ramp step 0..9 of a cell holding n of at most max points: log, so one point and a thousand read differently on a heavy plot. */
+export const level = (n: number, max: number) =>
+  max < 2 ? 0 : Math.min(9, Math.floor((10 * Math.log(n)) / Math.log(max)));
+
+/** The density ramp legend and note for a grid of cell counts (scatter's cells, beeswarm's columns). The ramp is log, so its middle is the geometric mean of 1 and the maximum. */
+export function ramp(ctx: MarkCtx, grid: Map<number, number>) {
+  const vals = [...grid.values()];
+  const [min, max] = [Math.min(...vals), Math.max(...vals)];
+  const mid = Math.round(Math.sqrt(max));
+  const f = (n: number) => `<span>${esc(ctx.fmt("", n))}</span>`;
+  return {
+    legend:
+      `<div class="maya-legend" data-maya="ramp" data-d><b>${esc(ctx.t("perCell"))}</b>${f(1)}<i></i>` +
+      (mid > 1 && mid < max ? `${f(mid)}<i></i>` : "") +
+      f(max) +
+      "</div>",
+    note: ctx.t("density", ...[grid.size, min, max].map((v) => ctx.fmt("", v))) + ".",
+  };
 }
 
 /**
  * Density cells for more than MAX_MARKS visible points: a grid over the plot (cells >= 6 px, at
- * most MAX_MARKS of them), non-empty cells only, ramp by sqrt(count). The grid is a function of
+ * most MAX_MARKS of them), non-empty cells only, ramp by log(count). The grid is a function of
  * the axis domains and the plot size, so the same window gives the same cells.
  * ponytail: square cells, series merged (no per-series colour), no size or name; hexes and
  * per-series stacks if anyone needs them.
  */
-function bins(ctx: MarkCtx, pts: Pt[]) {
+function bins(ctx: MarkCtx, sel: ReturnType<typeof pick>) {
   const { spec, plot } = ctx;
   const [sx, sy] = [ctx.x as LinearScale, ctx.y as LinearScale];
   const cell = Math.max(6, Math.sqrt((plot.w * plot.h) / MAX_MARKS));
@@ -70,11 +125,14 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
   const [cw, ch] = [plot.w / nx, plot.h / ny];
   const at = (v: number, s: LinearScale, o: number, c: number, n: number) =>
     Math.min(n - 1, Math.max(0, Math.floor((s.of(v) - o) / c)));
-  const grid = new Map<number, number>();
-  for (const p of pts) {
-    const k = at(p.x, sx, plot.x, cw, nx) * ny + at(p.y, sy, plot.y, ch, ny);
-    grid.set(k, (grid.get(k) ?? 0) + 1);
+  // Counted in a typed array (a Map of a million increments costs ~60 ms), kept as a Map of the non-empty cells.
+  const counts = new Uint32Array(nx * ny);
+  for (let m = 0; m < sel.n; m++) {
+    const i = sel.k[m]!;
+    counts[at(sel.c.xs[i]!, sx, plot.x, cw, nx) * ny + at(sel.c.ys[i]!, sy, plot.y, ch, ny)]!++;
   }
+  const grid = new Map<number, number>();
+  counts.forEach((n, k) => n && grid.set(k, n));
   const max = Math.max(...grid.values());
   const ti = (f: string) => spec.titles.get(f) ?? f;
   // Pixel to data, from the scale's own endpoints.
@@ -102,24 +160,14 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
         "data-f": ctx.t(n === 1 ? "point" : "points", ctx.fmt("", n)),
         "data-gx": gx,
         "data-gy": gy,
-        "data-q": Math.min(9, Math.ceil(Math.sqrt(n / max) * 10) - 1),
+        "data-q": level(n, max),
         x: r(x + 0.5),
         y: r(y + 0.5),
         width: r(cw - 1),
         height: r(ch - 1),
       });
     });
-  // The ramp is sqrt, so the middle of the gradient is a quarter of the maximum.
-  const mid = Math.round(max / 4);
-  const f = (n: number) => `<span>${esc(ctx.fmt("", n))}</span>`;
-  const legend =
-    `<div class="maya-legend" data-maya="ramp" data-d><b>${esc(ctx.t("perCell"))}</b>${f(1)}<i></i>` +
-    (mid > 1 && mid < max ? `${f(mid)}<i></i>` : "") +
-    f(max) +
-    "</div>";
-  const note =
-    ctx.t("density", ...[grid.size, Math.min(...grid.values()), max].map((v) => ctx.fmt("", v))) +
-    ".";
+  const { legend, note } = ramp(ctx, grid);
   return { marks, hits: "", cross: cross(ctx), legend, note };
 }
 
@@ -141,11 +189,13 @@ export const scatter: Mark = {
     let x1 = -Infinity;
     let y0 = Infinity;
     let y1 = -Infinity;
-    for (const p of points(spec, shaped)) {
-      x0 = Math.min(x0, p.x);
-      x1 = Math.max(x1, p.x);
-      y0 = Math.min(y0, p.y);
-      y1 = Math.max(y1, p.y);
+    const { n, k, c } = pick(spec, shaped);
+    for (let m = 0; m < n; m++) {
+      const i = k[m]!;
+      x0 = Math.min(x0, c.xs[i]!);
+      x1 = Math.max(x1, c.xs[i]!);
+      y0 = Math.min(y0, c.ys[i]!);
+      y1 = Math.max(y1, c.ys[i]!);
     }
     if (x0 > x1) ((x0 = x1 = 0), (y0 = y1 = 0));
     // Bubbles: pad 6% so the largest radius stays inside the plot.
@@ -162,8 +212,9 @@ export const scatter: Mark = {
     const { spec, shaped, plot } = ctx;
     const sx = ctx.x as { of(v: number): number };
     const sy = ctx.y as { of(v: number): number };
+    const sel = pick(spec, shaped);
+    if (sel.n > MAX_MARKS) return bins(ctx, sel);
     const pts = points(spec, shaped);
-    if (pts.length > MAX_MARKS) return bins(ctx, pts);
     let max = ctx.sizeMax ?? 0;
     if (ctx.sizeMax === null)
       for (const p of pts) if (p.sz !== null) max = Math.max(max, Math.abs(p.sz));

@@ -25,8 +25,8 @@ import { cbField, clip, el, esc, key, nameId, r, tw } from "./core/svg.ts";
 import type { Mark } from "./core/types.ts";
 
 // ponytail: the nearest-neighbour search is O(n^2) and the measure columns are standardised in
-// memory, so a constellation stops at 500 rows and 12 measures.
-const MAX_ROWS = 500;
+// memory, so a constellation stops at 2000 rows and 12 measures.
+const MAX_ROWS = 2000;
 const MAX_MEASURES = 12;
 const K = 3;
 const PAD = 14;
@@ -144,15 +144,22 @@ export const constellation: Mark = {
       });
 
     // Nearest neighbours in the full standardised space.
-    const near = rows.map((_, i) =>
-      rows
-        .map((__, j) => [j, z.reduce((a, c) => a + (c[i]! - c[j]!) ** 2, 0)] as const)
-        .filter(([j]) => j !== i)
-        .sort((a, b) => a[1] - b[1] || a[0] - b[0])
-        .slice(0, K)
-        .map(([j]) => j),
-    );
-    const by = rows.map((_, j) => near.flatMap((a, i) => (a.includes(j) ? [i] : [])));
+    const all = [...rows.keys()];
+    // Keep the K best per row as the scan goes (stable sort: ties keep the lower index); no pair list.
+    const near = rows.map((_, i) => {
+      const b: number[][] = [];
+      for (let j = 0; j < n; j++) {
+        let s = 0;
+        for (const c of z) s += (c[i]! - c[j]!) ** 2;
+        if (j !== i && s < (b[K - 1]?.[1] ?? Infinity)) {
+          b.push([j, s]);
+          b.sort((p, q) => p[1]! - q[1]!).splice(K);
+        }
+      }
+      return b.map((e) => e[0]!);
+    });
+    const by: number[][] = rows.map(() => []);
+    near.forEach((a, i) => a.forEach((j) => by[j]!.push(i)));
 
     const seen = new Map<string, number>();
     const ids = rows.map((row, i) =>
@@ -172,7 +179,7 @@ export const constellation: Mark = {
     });
 
     let marks = "";
-    [...rows.keys()]
+    all
       .sort((a, b) => rad[b]! - rad[a]! || a - b) // big stars first, small ones stay on top
       .forEach((i) => {
         const row = rows[i]!;
@@ -209,15 +216,15 @@ export const constellation: Mark = {
     // (a name must not read as another star's), and that ctx.label accepts. A group of identical
     // rows is one name "First +2".
     // ponytail: greedy, 5 names.
-    const named: number[] = [];
-    const dist = (i: number) =>
-      Math.min(...named.map((j) => Math.hypot(px[i]! - px[j]!, py[i]! - py[j]!)));
-    const todo = new Set([...rows.keys()].filter((i) => group[i] === i));
-    while (named.length < 5 && todo.size) {
-      const i = [...todo].reduce((m, c) =>
-        (named.length ? dist(c) - dist(m) : val[c]! - val[m]!) > 0 ? c : m,
-      );
+    let named = 0;
+    // dist[i]: distance to the nearest named star, updated as names are taken.
+    const dist = rows.map(() => Infinity);
+    const todo = new Set(all.filter((i) => group[i] === i));
+    while (named < 5 && todo.size) {
+      let [i = 0] = todo;
+      for (const c of todo) if ((named ? dist[c]! - dist[i]! : val[c]! - val[i]!) > 0) i = c;
       todo.delete(i);
+      const mine = all.filter((j) => group[j] === i);
       const txt = names[i]! + (size[i]! > 1 ? ` +${size[i]! - 1}` : "");
       // A group is judged as one star of its ring's outer radius.
       const [x, y, w] = [px[i]!, py[i]!, tw(txt)];
@@ -238,14 +245,17 @@ export const constellation: Mark = {
             Math.max(0, Math.abs(px[j]! - a) - w / 2),
             Math.max(0, Math.abs(py[j]! - b) - 7),
           ) - rad[j]!;
-        const own = Math.min(...[...rows.keys()].filter((j) => group[j] === i).map(gap));
+        const own = Math.min(...mine.map(gap));
         return (
           b + 22 <= plot.y + plot.h - hintH &&
-          [...rows.keys()].every((j) => group[j] === i || (gap(j) > 1 && own + 4 < gap(j))) &&
+          all.every((j) => group[j] === i || (gap(j) > 1 && own + 4 < gap(j))) &&
           ctx.label(lx, b, txt, pl, key("c", ids[i]))
         );
       });
-      if (ok) named.push(i);
+      if (ok) {
+        named++;
+        for (const j of todo) dist[j] = Math.min(dist[j]!, Math.hypot(px[j]! - x, py[j]! - y));
+      }
     }
 
     const hintEl =

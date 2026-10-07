@@ -107,13 +107,16 @@ function draw(ctx: MarkCtx) {
   }
 
   // ponytail: sparkline needs 28px; with a target bullet and a short box the bullet wins.
+  // A long series arrives thinned (shape.ts): x positions come from the kept categories' own indexes.
+  const total = shaped.reduced?.[1] ?? cats.length;
+  const at = (ci: number) => shaped.index?.[ci] ?? ci;
   if (cats.length >= 3 && bottom - top >= 28) {
     const vs = live.map((c) => c.value!);
     const lo = vs.reduce((a, b) => Math.min(a, b)); // not Math.min(...vs): that throws on long series
     const span = vs.reduce((a, b) => Math.max(a, b)) - lo || 1;
-    const n = cats.length - 1;
+    const n = total - 1;
     const step = (W - 2 * PAD) / n;
-    const px = (i: number) => r(PAD + i * step);
+    const px = (i: number) => r(PAD + at(i) * step);
     const py = (v: number) => r(bottom - ((v - lo) / span) * (bottom - top - 4) - 2);
     const shown = thin([cells.map((c) => c.value)], Math.floor((W - 2 * PAD) / PX)).map(
       (k) => cells[k]!,

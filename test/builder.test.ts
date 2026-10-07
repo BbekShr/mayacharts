@@ -276,7 +276,7 @@ describe("paste", () => {
 
     const rows = (n: number) => "v\n" + "1\n".repeat(n);
     expect(ok(rows(LIMITS.rows)).rows).toHaveLength(LIMITS.rows);
-    expect(err(rows(LIMITS.rows + 1))).toMatch(/5,001 rows. The builder previews up to 5,000/);
+    expect(err(rows(LIMITS.rows + 1))).toMatch(/10,001 rows. The builder previews up to 10,000/);
     expect(err(JSON.stringify(Array.from({ length: LIMITS.rows + 1 }, () => ({ v: 1 }))))).toMatch(
       /rows/,
     );

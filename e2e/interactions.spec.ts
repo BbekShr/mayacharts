@@ -498,3 +498,233 @@ test.describe("units form control", () => {
     expect(await keys()).toEqual(before);
   });
 });
+
+// Tooltips of the signature charts: pointer position -> tooltip text, and the anchor near the mark.
+test.describe("tooltips: weave, units, boxplot", () => {
+  const read = (page: Page, id: string) =>
+    page.evaluate((i) => {
+      const r = document.getElementById(i)!.shadowRoot!;
+      const t = r.querySelector<HTMLElement>(".maya-tip")!;
+      const p = r.querySelector(".maya-probe")!.getBoundingClientRect();
+      const b = t.getBoundingClientRect();
+      return {
+        open: t.classList.contains("maya-open"),
+        head: t.querySelector("b")?.textContent ?? "",
+        rows: [...t.children].slice(1).map((c) => c.textContent ?? ""),
+        probe: { x: p.x + p.width / 2, y: p.y + p.height / 2, h: p.height },
+        box: { top: b.top, bottom: b.bottom, left: b.left, right: b.right },
+        active: [...r.querySelectorAll("[data-active]")].map((e) => e.getAttribute("data-key")),
+        hot: r.querySelector("[data-hot]") !== null,
+      };
+    }, id);
+  const marks = (page: Page, id: string, sel = "[data-maya=mark]") =>
+    page.evaluate(
+      ([i, s]) =>
+        [...document.getElementById(i!)!.shadowRoot!.querySelectorAll(s!)].map((e) => {
+          const r = e.getBoundingClientRect();
+          return { key: e.getAttribute("data-key")!, x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        }),
+      [id, sel],
+    );
+  // Pointer (or finger) on the first `sel` of chart `id` until the tooltip shows on `key`. The point is read afresh
+  // each try: late layout shifts and the scroll they cause close a tooltip, and WebKit delivers events a beat late.
+  const hover = async (page: Page, id: string, sel: string, key?: string, tap = false) => {
+    let p = { x: 0, y: 0 };
+    await expect
+      .poll(
+        async () => {
+          const q = await page.evaluate(
+            ([i, s]) => {
+              const e = document.getElementById(i!)!.shadowRoot!.querySelector(s!);
+              const r = e?.getBoundingClientRect();
+              return r && { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+            },
+            [id, sel],
+          );
+          if (!q) return false;
+          p = q;
+          if (tap) await page.touchscreen.tap(q.x, q.y);
+          else {
+            await page.mouse.move(q.x + 1, q.y + 1);
+            await page.mouse.move(q.x, q.y);
+          }
+          const t = await read(page, id);
+          return t.open && (key === undefined || t.active.includes(key));
+        },
+        { message: sel, timeout: 10_000, intervals: [100, 250, 500] },
+      )
+      .toBe(true);
+    return { ...(await read(page, id)), at: p };
+  };
+  const at = async (page: Page, id: string) => {
+    await open(page);
+    await page.locator(`#${id}`).scrollIntoViewIfNeeded();
+    await page.evaluate(() => scrollBy(0, -120)); // clear the sticky nav
+    await settle(page);
+  };
+  const inside = (b: { top: number; bottom: number; left: number; right: number }, page: Page) => {
+    const v = page.viewportSize()!;
+    expect(b.top).toBeGreaterThanOrEqual(-1);
+    expect(b.left).toBeGreaterThanOrEqual(-1);
+    expect(b.bottom).toBeLessThanOrEqual(v.height + 1);
+    expect(b.right).toBeLessThanOrEqual(v.width + 1);
+  };
+
+  test("weave: every dot lists its period's leaderboard under the dot's column", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "hover");
+    await at(page, "weave");
+    for (const m of await marks(page, "weave", "circle[data-maya=mark]")) {
+      const t = await hover(page, "weave", `circle[data-key="${m.key}"]`, m.key);
+      expect(t.active).toEqual([m.key]);
+      expect(t.rows).toHaveLength(6); // all six series, ranked
+      expect(Math.abs(t.probe.x - t.at.x)).toBeLessThan(2);
+      inside(t.box, page);
+    }
+  });
+
+  test("weave: between the dots the nearest period answers, the tooltip never closes", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "hover");
+    await at(page, "weave");
+    // Walk from one slot's dot to the next period's, 14 px below the line: open all the way, then on the nearer period.
+    await expect
+      .poll(
+        async () => {
+          const [a, b] = (await marks(page, "weave", "circle[data-maya=mark]")).filter(
+            (_, i) => i === 0 || i === 6,
+          ); // the same slot in two neighbouring periods
+          const seen: boolean[] = [];
+          for (const f of [0.1, 0.3, 0.45, 0.6, 0.8]) {
+            await page.mouse.move(a!.x + (b!.x - a!.x) * f, a!.y + 14);
+            seen.push((await read(page, "weave")).open);
+          }
+          const t = await read(page, "weave");
+          return seen.every(Boolean) && Math.abs(t.probe.x - b!.x) < 2;
+        },
+        { timeout: 10_000 },
+      )
+      .toBe(true);
+  });
+
+  test("units: a dot shows its own row in every form, anchored on the dot", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "hover");
+    await at(page, "units");
+    const radios = page.locator("#units [data-maya=form] [role=radio]");
+    for (let f = 0; f < 3; f++) {
+      if (f) {
+        await radios.nth(f).click();
+        await settle(page);
+        await page.mouse.move(2, 2);
+      }
+      const all = await marks(page, "units", "circle[data-maya=mark]");
+      for (const m of all.filter((_, i) => i % Math.ceil(all.length / 30) === 0)) {
+        const t = await hover(page, "units", `circle[data-key="${m.key}"]`, m.key);
+        expect(t.active).toEqual([m.key]);
+        expect(t.rows).toHaveLength(2); // the region, then the spend
+        expect(Math.hypot(t.probe.x - t.at.x, t.probe.y - t.at.y)).toBeLessThan(3);
+        inside(t.box, page);
+      }
+    }
+  });
+
+  test("boxplot: the whole box and whisker span answer, dots and lines included", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "hover");
+    await at(page, "boxplot");
+    for (const sel of ['circle[data-key^="d~"]', 'line[data-key^="ws~"]', 'line[data-key^="m~"]']) {
+      const t = await hover(page, "boxplot", sel, "b~~Outerwear");
+      expect(t.active[0], sel).toMatch(/^b~/);
+      expect(t.rows).toHaveLength(6); // max, q3, median, q1, min, rows
+    }
+  });
+
+  test("boxplot: an outlier shows its own value only, and the box clears its whiskers", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "hover");
+    await at(page, "boxplot");
+    await page.evaluate(() => {
+      const el = document.getElementById("boxplot") as any;
+      const s = structuredClone(el.spec);
+      s.data.push({ family: "Tops", item: "Odd, X", margin: 0.9 });
+      el.spec = s;
+    });
+    await settle(page);
+    const o = await hover(page, "boxplot", "circle[data-maya=mark][data-last]");
+    expect(o.head).toBe("Tops");
+    expect(o.rows).toEqual(["Odd, X90%"]);
+    const b = await hover(page, "boxplot", 'rect[data-key^="b~"][data-key$="Tops"]', "b~~Tops");
+    await expect.poll(async () => (await read(page, "boxplot")).head).toBe("Tops");
+    expect(b.rows).toHaveLength(6);
+    // The tooltip clears the outlier it belongs with (above, or below the box when there is no room).
+    await page.waitForTimeout(300); // the glide between the two tooltips
+    const c = (await read(page, "boxplot")).box;
+    expect(o.at.x >= c.left && o.at.x <= c.right && o.at.y >= c.top && o.at.y <= c.bottom).toBe(
+      false,
+    );
+  });
+
+  test("a category with many series caps its rows", async ({ page, isMobile }) => {
+    test.skip(isMobile, "hover");
+    await open(page);
+    await page.evaluate(() => {
+      const el = document.createElement("maya-chart") as any;
+      el.id = "many";
+      document.body.prepend(el);
+      el.spec = {
+        type: "bar",
+        x: "c",
+        y: "v",
+        series: "s",
+        data: Array.from({ length: 30 }, (_, i) => ({ c: "A", s: "S" + i, v: i + 1 })),
+      };
+    });
+    await expect(page.locator("#many [data-maya=mark]").first()).toBeAttached();
+    await settle(page);
+    const t = await hover(page, "many", "[data-maya=mark]");
+    expect(t.rows).toHaveLength(13); // 12 series rows and "+18"
+    expect(t.rows.at(-1)).toBe("+18");
+    inside(t.box, page);
+  });
+
+  test("touch: a tap on a unit dot, a weave dot and a box opens the right tooltip", async ({
+    browser,
+    browserName,
+    baseURL,
+  }) => {
+    test.skip(browserName === "firefox", "Firefox lacks isMobile");
+    const ctx = await browser.newContext({
+      hasTouch: true,
+      isMobile: true,
+      baseURL: baseURL!,
+      viewport: { width: 390, height: 844 },
+    });
+    const page = await ctx.newPage();
+    await open(page);
+    for (const [id, sel, rows] of [
+      ["units", "circle[data-maya=mark]", 2],
+      ["weave", "circle[data-maya=mark]", 6],
+      ["boxplot", 'rect[data-maya=mark][data-key^="b~"]', 6],
+    ] as const) {
+      await page.locator(`#${id}`).scrollIntoViewIfNeeded();
+      await settle(page);
+      const m = (await marks(page, id, sel))[3]!;
+      const t = await hover(page, id, `[data-key="${m.key}"]`, m.key, true);
+      expect(t.rows, id).toHaveLength(rows);
+      inside(t.box, page);
+      await page.touchscreen.tap(2, 2);
+    }
+    await ctx.close();
+  });
+});

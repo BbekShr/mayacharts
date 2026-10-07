@@ -15,3 +15,6 @@ site/ssr.html
 .claude/tokens.json
 eval/results-*.json
 e2e/compare/.build/
+
+# /brag launch-video output
+brag-output*/

@@ -1,34 +1,46 @@
-import { cbField, OTHER } from "./svg.ts";
+import { cbField, memo, OTHER } from "./svg.ts";
 import { toTime } from "./ticks.ts";
-import { MAX_POINTS } from "./validate.ts";
+import { MAX_MARKS, MAX_POINTS } from "./validate.ts";
 import type { Aggregate, Cell, ResolvedSpec, Shaped, View } from "./types.ts";
 
-/** Reducer for one aggregate; shared with hierarchy.ts. Empty: null (count: 0). */
-export function agg(kind: Aggregate): { add(v: number): void; value(): number | null } {
-  let n = 0;
-  let acc = 0;
-  return {
-    add(v) {
-      acc =
-        n === 0 || kind === "sum" || kind === "mean"
-          ? acc + v
-          : kind === "min"
-            ? Math.min(acc, v)
-            : kind === "max"
-              ? Math.max(acc, v)
-              : acc;
-      n++;
-    },
-    value: () => (kind === "count" ? n : n === 0 ? null : kind === "mean" ? acc / n : acc),
-  };
+/** Reducer for one aggregate; shared with hierarchy.ts. Empty: null (count: 0). A class: a million categories hold a million of these. */
+class Reducer {
+  n = 0;
+  acc = 0;
+  kind: Aggregate;
+  constructor(kind: Aggregate) {
+    this.kind = kind;
+  }
+  add(v: number) {
+    const k = this.kind;
+    this.acc =
+      this.n++ === 0 || k === "sum" || k === "mean"
+        ? this.acc + v
+        : k === "min"
+          ? Math.min(this.acc, v)
+          : k === "max"
+            ? Math.max(this.acc, v)
+            : this.acc;
+  }
+  value(): number | null {
+    return this.kind === "count"
+      ? this.n
+      : this.n === 0
+        ? null
+        : this.kind === "mean"
+          ? this.acc / this.n
+          : this.acc;
+  }
 }
+export const agg = (kind: Aggregate): Reducer => new Reducer(kind);
 
-type R = readonly [si: number, v: unknown, v2?: unknown];
 interface Cat {
   label: string;
-  rows: R[];
   vals: (number | null)[];
   y2?: number | null;
+  /** Mean only: the count behind each value and behind y2, so the Other bucket can merge. */
+  ns?: number[];
+  n2?: number;
   /** UTC ms on a time axis. */
   t?: number;
   /** Position in the time-ordered list, before window and reduction. */
@@ -47,16 +59,18 @@ export function shape(
   { hidden = [], window, plotWidth = Infinity }: Opts = {},
 ): Shaped {
   const series: string[] = [];
-  const si = new Map<string, number>();
   const shown = () => series.flatMap((k, j) => (hidden.includes(k) ? [] : [j]));
   if (s.type === "scatter" || s.type === "units") {
     // Marks draw from rows: only the series list (and which are visible) is shared.
-    if (s.series !== null)
-      for (const row of s.data) {
-        const sk = String(row[s.series]);
-        if (!si.has(sk)) si.set(sk, series.push(sk) - 1);
-      }
-    else if (s.data.length) series.push("");
+    if (s.series !== null) {
+      const f = s.series;
+      const keys = memo(s.data, `k${f}`, () => {
+        const u = new Set<string>();
+        for (const row of s.data) u.add(String(row[f]));
+        return [...u];
+      });
+      for (const k of keys) series.push(k);
+    } else if (s.data.length) series.push("");
     return {
       categories: [],
       totals: [],
@@ -68,17 +82,24 @@ export function shape(
       time: null,
       reduced: null,
       index: null,
+      capped: null,
     };
   }
   // Points a time axis keeps per chart: one per 2 px, at most MAX_POINTS, shared by the series.
+  // The width term steps by 50 (past 100) so a resize drag mostly reuses the cached reduction.
+  const fit = Math.floor(Math.min(plotWidth, 1e6) / 2);
   const target = (n: number) =>
-    Math.max(2, Math.min(MAX_POINTS, Math.floor(plotWidth / 2), Math.floor(4000 / Math.max(1, n))));
+    Math.max(2, ~~Math.min(MAX_POINTS, fit - (fit < 100 ? 0 : fit % 50), 4000 / Math.max(1, n)));
   let cats: Cat[];
   let isTime = false;
   let reduced: Shaped["reduced"] = null;
+  let capped: Shaped["capped"] = null;
+  let index: number[] | null = null;
   const wf = s.type === "waterfall";
   const spans = new Map<Cat, [number, number]>();
-  const fast = fastTime(s, window, target(1));
+  // The row pass (grouping, aggregation, time parse) is cached per data array: key = the fields it reads.
+  const rk = JSON.stringify([s.x, s.y, s.y2, s.series, s.aggregate, s.xType]);
+  const fast = fastTime(s, window, target(1), rk);
   if (fast) {
     ({ cats, reduced } = fast);
     isTime = true;
@@ -89,43 +110,9 @@ export function shape(
     cats = s.measures.map((m) => {
       const a = agg(s.aggregate);
       for (const row of s.data) if (typeof row[m] === "number") a.add(row[m]);
-      return { label: m, rows: [], vals: [a.value()] };
+      return { label: m, vals: [a.value()] };
     });
   } else {
-    const ci = new Map<string, Cat>();
-    for (const row of s.data) {
-      if (s.xType === "time" && row[s.x] == null) continue; // String(null) is a label, not a date
-      const c = String(row[s.x]);
-      const sk = s.series === null ? "" : String(row[s.series]);
-      let j = si.get(sk);
-      if (j === undefined) si.set(sk, (j = series.push(sk) - 1));
-      let cat = ci.get(c);
-      if (!cat) ci.set(c, (cat = { label: c, rows: [], vals: [] }));
-      cat.rows.push([j, row[s.y], s.y2 === null ? undefined : row[s.y2]]);
-    }
-    // aggregate: one reducer per (category, series); pairs with no row stay null.
-    const reduce = (rows: readonly R[]) => {
-      const rs = new Map<number, ReturnType<typeof agg>>();
-      for (const [j, v] of rows) {
-        let r = rs.get(j);
-        if (!r) rs.set(j, (r = agg(s.aggregate)));
-        if (typeof v === "number") r.add(v);
-      }
-      return series.map((_, j) => rs.get(j)?.value() ?? null);
-    };
-    // y2: one reducer over every row of the category, whatever the series.
-    const reduce2 = (c: Cat) => {
-      const a = agg(s.aggregate);
-      for (const [, , v] of c.rows) if (typeof v === "number") a.add(v);
-      c.y2 = a.value();
-    };
-    cats = [...ci.values()];
-    for (const c of cats) {
-      c.vals = reduce(c.rows);
-      reduce2(c);
-    }
-    const total = (c: Cat) => c.vals.reduce<number>((a, v) => a + (v ?? 0), 0);
-
     // time axis: every label is ISO 8601 (xType "time" also takes epoch ms); sorted by time.
     const time =
       s.xType === "time" ||
@@ -134,41 +121,50 @@ export function shape(
         !s.horizontal &&
         !s.sort &&
         s.limit === null);
-    if (time && cats.length) {
-      const ts = cats.map((c) => when(s, c.label));
-      if (ts.every((v) => v !== null)) {
-        isTime = true;
-        cats.forEach((c, i) => (c.t = ts[i]!));
-        cats.sort((a, b) => a.t! - b.t!);
-        cats.forEach((c, i) => (c.i = i));
-      }
-    }
-
-    if (s.sort) {
-      const d = s.sort === "asc" ? 1 : -1;
-      cats = cats
-        .map((c) => [c, total(c)] as const)
-        .sort((a, b) => d * (a[1] - b[1]))
-        .map((p) => p[0]);
-    }
-    if (s.limit !== null && cats.length > s.limit) {
-      const top = new Set(
-        cats
-          .map((c) => [c, total(c)] as const)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, s.limit)
-          .map((p) => p[0]),
+    const base = memo(s.data, `b${rk}${time}`, () => group(s, time));
+    for (const k of base.series) series.push(k);
+    isTime = base.time;
+    cats = base.cats;
+    const total = (c: Cat) => c.vals.reduce<number>((a, v) => a + (v ?? 0), 0);
+    // ponytail: a bar with more categories than MAX_MARKS keeps the top N (N from the plot width,
+    // in steps of 10 so a resize does not recompute) and rolls the rest into Other; NON-FEATURES.
+    let lim = s.limit;
+    if (lim === null && s.type === "bar" && !isTime && cats.length * series.length > MAX_MARKS) {
+      lim = Math.max(
+        1,
+        Math.min(
+          10 * Math.floor(Math.max(40, plotWidth) / 40),
+          Math.floor(MAX_MARKS / series.length) - 1,
+        ),
       );
-      const rest = cats.filter((c) => !top.has(c));
-      const other: Cat = {
-        label: OTHER,
-        rows: rest.flatMap((c) => c.rows),
-        vals: [],
-      };
-      other.vals = reduce(other.rows);
-      reduce2(other);
-      cats = [...cats.filter((c) => top.has(c)), other];
+      capped = [lim, cats.length];
     }
+    if (s.sort || (lim !== null && cats.length > lim))
+      cats = memo(base.cats, `s${s.sort}${lim}`, () => {
+        // Category totals and their sorted copy come once per row pass; a new limit (a resize
+        // across a 40 px step) is then a selection and a merge, no row pass.
+        const { tot, asc } = memo(base.cats, "t", () => {
+          const tot = Float64Array.from(base.cats, total);
+          return { tot, asc: Float64Array.from(tot).sort() };
+        });
+        const d = s.sort === "asc" ? 1 : -1;
+        const by = (ix: number[]) => (s.sort ? ix.sort((a, b) => d * (tot[a]! - tot[b]!)) : ix);
+        const all = Array.from(base.cats.keys());
+        if (lim === null || cats.length <= lim) return by(all).map((i) => base.cats[i]!);
+        // The top `lim` by total, ties in category order: everything above the cut-off, then ties.
+        const cut = asc[asc.length - lim]!;
+        let ties = lim - asc.reduce((n, v) => n + +(v > cut), 0);
+        const top = all.filter((i) => tot[i]! > cut || (tot[i] === cut && ties-- > 0));
+        const kept = new Set(top);
+        return [
+          ...by(top).map((i) => base.cats[i]!),
+          other(
+            s,
+            base.series,
+            base.cats.filter((_, i) => !kept.has(i)),
+          ),
+        ];
+      });
 
     // waterfall spans use running totals over every category, before the window.
     if (wf) {
@@ -179,16 +175,35 @@ export function shape(
       }
     }
     const [i0, i1] = span(cats.length, window);
-    cats = cats.slice(i0, i1 + 1);
+    const all = cats;
+    if (i0 > 0 || i1 < cats.length - 1) cats = cats.slice(i0, i1 + 1);
 
     const catTarget = target(series.length);
-    if (isTime && (s.type === "line" || s.type === "area") && cats.length > catTarget) {
+    // A kpi sparkline draws one point per 4 px (kpi.ts thins to the same budget, so it keeps all
+    // of these); a line or area thins past its width budget on a time axis, past MAX_POINTS on a
+    // category axis.
+    const kpi = s.type === "kpi";
+    const budget = kpi
+      ? Math.max(3, Math.floor((Math.min(plotWidth, 1e6) + 32) / 4) - 2)
+      : catTarget;
+    if (
+      (kpi || s.type === "line" || s.type === "area") &&
+      cats.length > (kpi || !isTime ? Math.max(budget, MAX_POINTS) : budget)
+    ) {
       const before = cats.length;
-      const keep = reduceTime(
-        cats.map((c) => c.t!),
-        series.map((_, j) => cats.map((c) => c.vals[j] ?? null)),
-        catTarget,
-      );
+      const sub = cats;
+      const keep = memo(all, `r${i0},${i1},${budget},${isTime}`, () => {
+        const k = reduceTime(
+          isTime ? sub.map((c) => c.t!) : sub.map((_, i) => i),
+          series.map((_, j) => sub.map((c) => c.vals[j] ?? null)),
+          budget,
+        );
+        if (!kpi) return k;
+        // The headline and its delta read the last two values: keep them (a null there is kept as a gap edge).
+        const live = [sub.length - 2, sub.length - 1];
+        return [...new Set([...k, ...live])].sort((x, y) => x - y);
+      });
+      if (!isTime) index = keep.map((k) => i0 + k);
       cats = keep.map((i) => cats[i]!);
       reduced = [cats.length, before];
     }
@@ -236,8 +251,103 @@ export function shape(
     y2: s.y2 === null ? [] : cats.map((c) => c.y2 ?? null),
     time: isTime ? cats.map((c) => c.t!) : null,
     reduced,
-    index: isTime ? cats.map((c) => c.i!) : null,
+    index: isTime ? cats.map((c) => c.i!) : index,
+    capped,
   };
+}
+
+/** The Other bucket from the rolled-up categories' aggregates (a mean is weighted by its counts). */
+function other(s: ResolvedSpec, series: string[], rest: Cat[]): Cat {
+  const k = s.aggregate;
+  const fold = (get: (c: Cat) => number | null, w: (c: Cat) => number) => {
+    let acc: number | null = null;
+    let n = 0;
+    for (const c of rest) {
+      const v = get(c);
+      if (v === null) continue;
+      const m = k === "mean" ? w(c) : 1;
+      acc =
+        acc === null
+          ? v * m
+          : k === "min"
+            ? Math.min(acc, v)
+            : k === "max"
+              ? Math.max(acc, v)
+              : acc + v * m;
+      n += m;
+    }
+    return acc === null ? null : k === "mean" ? acc / n : acc;
+  };
+  return {
+    label: OTHER,
+    vals: series.map((_, j) =>
+      fold(
+        (c) => c.vals[j] ?? null,
+        (c) => c.ns![j]!,
+      ),
+    ),
+    y2:
+      s.y2 === null
+        ? null
+        : fold(
+            (c) => c.y2 ?? null,
+            (c) => c.n2!,
+          ),
+  };
+}
+
+/**
+ * The row pass: one reducer per (category, series) and one for y2 per category; pairs with no row
+ * stay null. A time axis (when every label parses) is sorted by time.
+ */
+function group(s: ResolvedSpec, time: boolean) {
+  const series: string[] = [];
+  const si = new Map<string, number>();
+  const ci = new Map<string, number>();
+  const cats: Cat[] = [];
+  const acc: { rs: ReturnType<typeof agg>[]; a2: ReturnType<typeof agg> | undefined }[] = [];
+  for (const row of s.data) {
+    if (s.xType === "time" && row[s.x] == null) continue; // String(null) is a label, not a date
+    const c = String(row[s.x]);
+    const sk = s.series === null ? "" : String(row[s.series]);
+    let j = si.get(sk);
+    if (j === undefined) si.set(sk, (j = series.push(sk) - 1));
+    let k = ci.get(c);
+    if (k === undefined) {
+      ci.set(c, (k = cats.push({ label: c, vals: [] }) - 1));
+      acc.push({ rs: [], a2: s.y2 === null ? undefined : agg(s.aggregate) });
+    }
+    const a = acc[k]!;
+    const r = (a.rs[j] ??= agg(s.aggregate));
+    const v = row[s.y];
+    if (typeof v === "number") r.add(v);
+    if (s.y2 !== null) {
+      const v2 = row[s.y2];
+      if (typeof v2 === "number") a.a2!.add(v2);
+    }
+  }
+  cats.forEach((c, k) => {
+    c.vals = series.map((_, j) => acc[k]!.rs[j]?.value() ?? null);
+    c.y2 = acc[k]!.a2?.value() ?? null;
+    if (s.aggregate === "mean")
+      ((c.ns = series.map((_, j) => acc[k]!.rs[j]?.n ?? 0)), (c.n2 = acc[k]!.a2?.n ?? 0));
+  });
+  let isTime = false;
+  if (time && cats.length) {
+    const ts: number[] = [];
+    for (const c of cats) {
+      const v = when(s, c.label);
+      if (v === null) break;
+      ts.push(v);
+    }
+    if (ts.length === cats.length) {
+      isTime = true;
+      cats.forEach((c, i) => (c.t = ts[i]!));
+      cats.sort((a, b) => a.t! - b.t!);
+      cats.forEach((c, i) => (c.i = i));
+    }
+  }
+  return { cats, series, time: isTime };
 }
 
 /** Inclusive index range of `n` categories inside view.window ([i0, i1]; other lengths ignored). */
@@ -257,6 +367,7 @@ function fastTime(
   s: ResolvedSpec,
   window: View["window"],
   target: number,
+  rk: string,
 ): { cats: Cat[]; reduced: Shaped["reduced"] } | null {
   if (
     (s.type !== "line" && s.type !== "area") ||
@@ -269,38 +380,43 @@ function fastTime(
   )
     return null;
   const rows = s.data;
-  const t = new Float64Array(rows.length);
-  const v = new Float64Array(rows.length); // NaN: no value
-  const at = new Int32Array(rows.length); // row of each category
-  let m = 0;
-  for (let i = 0; i < rows.length; i++) {
-    const x = rows[i]![s.x];
-    if (x == null && s.xType === "time") continue;
-    const tm = when(s, String(x));
-    const y = rows[i]![s.y];
-    // A NaN number is not a gap: general path.
-    if (tm === null || !Number.isFinite(tm) || (m && tm <= t[m - 1]!) || y !== y) return null;
-    t[m] = tm;
-    v[m] =
-      typeof y === "number"
-        ? s.aggregate === "count"
-          ? 1
-          : y + 0
-        : s.aggregate === "count"
-          ? 0
-          : NaN;
-    at[m++] = i;
-  }
-  if (!m) return null;
-  const [i0, i1] = span(m, window);
-  const ts = t.subarray(i0, i1 + 1);
-  const vs = v.subarray(i0, i1 + 1);
+  const col = memo(rows, `f${rk}`, () => {
+    const t = new Float64Array(rows.length);
+    const v = new Float64Array(rows.length); // NaN: no value
+    const at = new Int32Array(rows.length); // row of each category
+    let m = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const x = rows[i]![s.x];
+      if (x == null && s.xType === "time") continue;
+      const tm = when(s, String(x));
+      const y = rows[i]![s.y];
+      // A NaN number is not a gap: general path.
+      if (tm === null || !Number.isFinite(tm) || (m && tm <= t[m - 1]!) || y !== y) return null;
+      t[m] = tm;
+      v[m] =
+        typeof y === "number"
+          ? s.aggregate === "count"
+            ? 1
+            : y + 0
+          : s.aggregate === "count"
+            ? 0
+            : NaN;
+      at[m++] = i;
+    }
+    return m ? { t: t.subarray(0, m), v: v.subarray(0, m), at } : null;
+  });
+  if (!col) return null;
+  const [i0, i1] = span(col.t.length, window);
+  const ts = col.t.subarray(i0, i1 + 1);
+  const vs = col.v.subarray(i0, i1 + 1);
   const before = ts.length;
-  const keep = before > target ? reduceTime(ts, [vs], target) : Array.from(ts, (_, k) => k);
+  const keep =
+    before > target
+      ? memo(rows, `k${rk},${i0},${i1},${target}`, () => reduceTime(ts, [vs], target))
+      : Array.from(ts, (_, k) => k);
   return {
     cats: keep.map((k) => ({
-      label: String(rows[at[i0 + k]!]![s.x]),
-      rows: [],
+      label: String(rows[col.at[i0 + k]!]![s.x]),
       vals: [vs[k]! === vs[k]! ? vs[k]! : null],
       t: ts[k]!,
       i: i0 + k,
@@ -359,20 +475,27 @@ function reduceTime(
   const per = Math.max(3, Math.floor(catTarget / vs.length));
   const t0 = t[0]!;
   const dt = t[len - 1]! - t0 || 1;
-  const xs = Float64Array.from(t, (v) => (v - t0) / dt);
+  const xs = new Float64Array(len); // a loop: Float64Array.from with a callback is 10x slower
+  for (let i = 0; i < len; i++) xs[i] = (t[i]! - t0) / dt;
   const ys = new Float64Array(len);
   const keep = new Set<number>([0, len - 1]);
   const pin = new Set<number>([0, len - 1]); // first, last and each series' min and max survive
   for (const v of vs) {
-    const has = (i: number) => Number.isFinite(v[i]);
+    // Finite numbers only (null and NaN are gaps): x - x is 0 for those and NaN for the rest.
+    const has = (i: number) => {
+      const x = v[i];
+      return x !== null && x! - x! === 0;
+    };
     let lo = -1;
     let hi = -1;
+    let [vl, vh] = [Infinity, -Infinity];
     let n = 0;
     for (let i = 0; i < len; i++) {
-      if (!has(i)) continue;
+      const x = v[i];
+      if (x === null || x! - x! !== 0) continue;
       n++;
-      if (lo < 0 || v[i]! < v[lo]!) lo = i;
-      if (hi < 0 || v[i]! > v[hi]!) hi = i;
+      if (x! < vl) ((vl = x!), (lo = i));
+      if (x! > vh) ((vh = x!), (hi = i));
     }
     if (!n) continue;
     keep.add(lo).add(hi);

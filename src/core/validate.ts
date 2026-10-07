@@ -31,6 +31,7 @@
  */
 import { CORE_TYPES, MODULE_OF, MODULES, types } from "./registry.ts";
 import { TEXT } from "./strings.ts";
+import { memo } from "./svg.ts";
 import { toTime } from "./ticks.ts";
 import type {
   ChartSpec,
@@ -57,7 +58,7 @@ export class MayaSpecError extends Error {
 }
 
 // ponytail: hard cap instead of virtualisation; suggest limit/aggregate.
-export const MAX_MARKS = 5000;
+export const MAX_MARKS = 10000;
 /** Most distinct `frame` values (every render shapes every frame). */
 export const MAX_FRAMES = 200;
 // ponytail: fixed downsampling target; a time axis keeps at most this many categories (LTTB).
@@ -377,15 +378,19 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (!Array.isArray(s.data))
     fail("data-not-array", "data", `spec.data must be an array of rows, received ${ty(s.data)}.`);
   const rows = s.data as Record<string, unknown>[];
-  rows.forEach((r, i) => {
-    if (!isObj(r))
-      fail(
-        "row-not-object",
-        `data[${i}]`,
-        `spec.data[${i}] must be an object, received ${ty(r)}.`,
-        `Received: ${show(r)}`,
-      );
-  });
+  // Row checks run once per data array and the fields they read (memo): a re-render of the same
+  // array skips them; a mutated array needs a new identity.
+  memo(rows, "v1", () =>
+    rows.forEach((r, i) => {
+      if (!isObj(r))
+        fail(
+          "row-not-object",
+          `data[${i}]`,
+          `spec.data[${i}] must be an object, received ${ty(r)}.`,
+          `Received: ${show(r)}`,
+        );
+    }),
+  );
   if (
     s[need] === undefined &&
     t !== "kpi" &&
@@ -593,117 +598,138 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   for (const [hit, k, headline, detail] of pairs)
     if (hit) fail("option-unsupported", k, headline, detail ?? "");
 
-  if (rows.length) {
-    // The key list is only built on the error path; the check itself stops at the first row.
-    const has = (f: string) => rows.some((r) => Object.hasOwn(r, f));
-    const unk = (p: string, headline: string, f: string, use: string) => {
-      const found = [...new Set(rows.flatMap((r) => Object.keys(r)))];
-      return fail(
-        "unknown-field",
-        p,
-        headline,
-        `Fields found: ${found.slice(0, 20).join(", ")}.`,
-        dym(f, found),
-        use,
-      );
-    };
-    const ys = typeof y === "string" ? [y] : (y as string[]);
-    const arr = (o: string, a: string[]): [string, string][] => a.map((f, i) => [`${o}[${i}]`, f]);
-    const fields: [string, unknown][] = [
-      ["x", s.x],
-      ...(typeof y === "string" ? [["y", y] as [string, string]] : arr("y", ys)),
-      ["series", s.series],
-      ["y2", s.y2],
-      ["was", s.was],
-      ["size", s.size],
-      ["name", s.name],
-      ...arr("path", (path as string[] | undefined) ?? []),
-      ["colorBy", colorBy === "sign" ? undefined : colorBy],
-      ["frame", s.frame],
-    ];
-    for (const [p, f] of fields) {
-      if (typeof f !== "string" || has(f)) continue;
-      const opt = p.replace(/\[.*/, "");
-      unk(
-        p,
-        `spec.${p} = ${show(f)} is not a field in spec.data.`,
-        f,
-        `spec.${opt} names the field used for ${USE[opt]}.`,
-      );
-    }
-    for (const opt of ["format", "titles"])
-      if (isObj(s[opt]))
-        for (const f of Object.keys(s[opt] as object))
-          if (!has(f))
-            unk(
-              `${opt}.${f}`,
-              `spec.${opt} key "${f}" is not a field in spec.data.`,
-              f,
-              `spec.${opt} keys name fields, for ${USE[opt]}.`,
-            );
-    if (colorBy === "sign" && has("sign"))
-      fail(
-        "invalid-option",
-        "colorBy",
-        'spec.colorBy = "sign" colours by the sign of y, but spec.data also has a field named "sign".',
-      );
-
-    // Callbacks build the data[i].field path themselves, only when a row fails.
-    const scan = (f: string, g: (v: unknown, i: number) => void) =>
-      rows.forEach((r, i) => g(r[f], i));
-    const numeric = (f: string, code: ErrorCode, opt: string) =>
-      scan(f, (v, i) => {
-        if (v == null || (typeof v === "number" && Number.isFinite(v))) return;
-        const p = `data[${i}].${f}`;
-        fail(
-          code,
+  const vk = JSON.stringify(
+    [
+      t,
+      s.x,
+      s.y,
+      s.series,
+      s.y2,
+      s.was,
+      s.size,
+      s.name,
+      s.path,
+      s.colorBy,
+      s.frame,
+      s.xType,
+      s.format,
+      s.titles,
+    ],
+    (_, v) => (typeof v === "bigint" ? String(v) : v),
+  );
+  if (rows.length)
+    memo(rows, `v2${vk}`, () => {
+      // The key list is only built on the error path; the check itself stops at the first row.
+      const has = (f: string) => rows.some((r) => Object.hasOwn(r, f));
+      const unk = (p: string, headline: string, f: string, use: string) => {
+        const found = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+        return fail(
+          "unknown-field",
           p,
-          `spec.${p} is ${show(v)} (a ${ty(v)}), but spec.${opt} requires numbers.`,
-          typeof v === "string" && v.trim() && Number.isFinite(Number(v))
-            ? `Convert first: data.map(r => ({ ...r, ${f}: Number(r.${f}) }))`
-            : "Use null for a gap in the data.",
+          headline,
+          `Fields found: ${found.slice(0, 20).join(", ")}.`,
+          dym(f, found),
+          use,
         );
-      });
-    for (const f of ys) numeric(f, "non-numeric-y", "y");
-    if (typeof s.size === "string") numeric(s.size, "non-numeric-field", "size");
-    for (const k of ["y2", "was"])
-      if (typeof s[k] === "string") numeric(s[k] as string, "non-numeric-field", k);
-    if (t === "dumbbell" && typeof s.series === "string") {
-      const n = new Set(rows.map((r) => String(r[s.series as string]))).size;
-      if (n !== 2)
+      };
+      const ys = typeof y === "string" ? [y] : (y as string[]);
+      const arr = (o: string, a: string[]): [string, string][] =>
+        a.map((f, i) => [`${o}[${i}]`, f]);
+      const fields: [string, unknown][] = [
+        ["x", s.x],
+        ...(typeof y === "string" ? [["y", y] as [string, string]] : arr("y", ys)),
+        ["series", s.series],
+        ["y2", s.y2],
+        ["was", s.was],
+        ["size", s.size],
+        ["name", s.name],
+        ...arr("path", (path as string[] | undefined) ?? []),
+        ["colorBy", colorBy === "sign" ? undefined : colorBy],
+        ["frame", s.frame],
+      ];
+      for (const [p, f] of fields) {
+        if (typeof f !== "string" || has(f)) continue;
+        const opt = p.replace(/\[.*/, "");
+        unk(
+          p,
+          `spec.${p} = ${show(f)} is not a field in spec.data.`,
+          f,
+          `spec.${opt} names the field used for ${USE[opt]}.`,
+        );
+      }
+      for (const opt of ["format", "titles"])
+        if (isObj(s[opt]))
+          for (const f of Object.keys(s[opt] as object))
+            if (!has(f))
+              unk(
+                `${opt}.${f}`,
+                `spec.${opt} key "${f}" is not a field in spec.data.`,
+                f,
+                `spec.${opt} keys name fields, for ${USE[opt]}.`,
+              );
+      if (colorBy === "sign" && has("sign"))
         fail(
           "invalid-option",
-          "series",
-          `spec.series on "dumbbell" needs exactly 2 values, found ${n}.`,
+          "colorBy",
+          'spec.colorBy = "sign" colours by the sign of y, but spec.data also has a field named "sign".',
         );
-    }
-    if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
-    if (s.xType === "time" && typeof s.x === "string")
-      scan(s.x, (v, i) => {
-        if (v == null || toTime(v) !== null) return;
-        const p = `data[${i}].${s.x}`;
-        fail(
-          "invalid-date",
-          p,
-          `spec.${p} is ${show(v)}, but spec.xType = "time" needs ISO 8601 dates or epoch ms.`,
-        );
-      });
-    if (typeof colorBy === "string" && colorBy !== "sign")
-      numeric(colorBy, "non-numeric-field", "colorBy");
-    if (isPath || t === "funnel")
-      for (const f of ys)
+
+      // Callbacks build the data[i].field path themselves, only when a row fails.
+      const scan = (f: string, g: (v: unknown, i: number) => void) =>
+        rows.forEach((r, i) => g(r[f], i));
+      const numeric = (f: string, code: ErrorCode, opt: string) =>
         scan(f, (v, i) => {
-          if (typeof v === "number" && (v < 0 || (isPath && v === 0))) {
-            const p = `data[${i}].${f}`;
-            fail(
-              "non-positive-value",
-              p,
-              `spec.${p} is ${v}, but ${t} ${isPath ? "sizes must be positive" : "values cannot be negative"}.`,
-              `Filter first: data.filter(r => r.${f} ${isPath ? ">" : ">="} 0), or chart the signed values with "bar".`,
-            );
-          }
+          if (v == null || (typeof v === "number" && Number.isFinite(v))) return;
+          const p = `data[${i}].${f}`;
+          fail(
+            code,
+            p,
+            `spec.${p} is ${show(v)} (a ${ty(v)}), but spec.${opt} requires numbers.`,
+            typeof v === "string" && v.trim() && Number.isFinite(Number(v))
+              ? `Convert first: data.map(r => ({ ...r, ${f}: Number(r.${f}) }))`
+              : "Use null for a gap in the data.",
+          );
         });
-  }
+      for (const f of ys) numeric(f, "non-numeric-y", "y");
+      if (typeof s.size === "string") numeric(s.size, "non-numeric-field", "size");
+      for (const k of ["y2", "was"])
+        if (typeof s[k] === "string") numeric(s[k] as string, "non-numeric-field", k);
+      if (t === "dumbbell" && typeof s.series === "string") {
+        const n = new Set(rows.map((r) => String(r[s.series as string]))).size;
+        if (n !== 2)
+          fail(
+            "invalid-option",
+            "series",
+            `spec.series on "dumbbell" needs exactly 2 values, found ${n}.`,
+          );
+      }
+      if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
+      if (s.xType === "time" && typeof s.x === "string")
+        scan(s.x, (v, i) => {
+          if (v == null || toTime(v) !== null) return;
+          const p = `data[${i}].${s.x}`;
+          fail(
+            "invalid-date",
+            p,
+            `spec.${p} is ${show(v)}, but spec.xType = "time" needs ISO 8601 dates or epoch ms.`,
+          );
+        });
+      if (typeof colorBy === "string" && colorBy !== "sign")
+        numeric(colorBy, "non-numeric-field", "colorBy");
+      if (isPath || t === "funnel")
+        for (const f of ys)
+          scan(f, (v, i) => {
+            if (typeof v === "number" && (v < 0 || (isPath && v === 0))) {
+              const p = `data[${i}].${f}`;
+              fail(
+                "non-positive-value",
+                p,
+                `spec.${p} is ${v}, but ${t} ${isPath ? "sizes must be positive" : "values cannot be negative"}.`,
+                `Filter first: data.filter(r => r.${f} ${isPath ? ">" : ">="} 0), or chart the signed values with "bar".`,
+              );
+            }
+          });
+    });
   MODULES.get(t)?.check?.(spec as unknown as ChartSpec, fail);
 }
 

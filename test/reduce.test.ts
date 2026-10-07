@@ -77,15 +77,25 @@ describe("time downsampling", () => {
     expect(ms).toBeLessThan(400 * CI);
     expect(svg.split('<circle data-maya="mark"').length - 1).toBeLessThanOrEqual(1000);
   });
-  it("categorical x is never reduced", () => {
-    const data = Array.from({ length: 6000 }, (_, i) => ({ x: "c" + i, v: i }));
-    expect(sh({ type: "line", x: "x", y: "v", data } as ChartSpec).reduced).toBeNull();
-    try {
-      render({ type: "line", x: "x", y: "v", data } as never);
-      expect.unreachable();
-    } catch (e) {
-      expect((e as MayaSpecError).code).toBe("too-many-marks");
-    }
+  it("categorical x is thinned past MAX_POINTS, up to any size", () => {
+    const data = Array.from({ length: 11000 }, (_, i) => ({
+      x: "c" + i,
+      v: i === 5000 ? 1e6 : i % 9,
+    }));
+    const s = sh({ type: "line", x: "x", y: "v", data } as ChartSpec);
+    expect(s.reduced).toEqual([s.categories.length, 11000]);
+    expect(s.categories.length).toBeLessThanOrEqual(MAX_POINTS);
+    expect(s.time).toBeNull();
+    // Kept categories carry their position in the full list (zoom windows and hover use it).
+    expect(s.index!.length).toBe(s.categories.length);
+    expect(s.categories.map((c) => +c.slice(1))).toEqual(s.index);
+    expect(s.categories).toContain("c5000");
+    expect(s.categories[0]).toBe("c0");
+    expect(s.categories.at(-1)).toBe("c10999");
+    // At or under MAX_POINTS nothing is dropped.
+    expect(
+      sh({ type: "line", x: "x", y: "v", data: data.slice(0, 1000) } as ChartSpec).reduced,
+    ).toBeNull();
   });
 });
 

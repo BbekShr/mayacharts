@@ -123,7 +123,9 @@
               <td>number</td>
               <td>-</td>
               <td>
-                Keep top N categories by signed total; rest roll up into "Other" with re-aggregation
+                Keep top N categories by signed total; rest roll up into "Other" with
+                re-aggregation. A bar with more categories than fit (past 10000 marks) does this on
+                its own when limit is unset, and says so in warnings
               </td>
             </tr>
           </tbody>
@@ -466,14 +468,28 @@
       <section>
         <h2>Large data</h2>
         <p>
-          Line and area charts on a time axis automatically reduce long time series to about one
-          point per 2 px of plot width (at most 1000 categories, and 4000 shared between series)
-          using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each
-          series' first, last, minimum and maximum points so trends and extremes remain visible. The
-          data table and screen reader description indicate how many points are displayed. Scatter
-          charts above 5000 visible points are drawn as density cells to reduce rendering cost;
-          bars, tables and categorical lines still enforce a hard cap of 5000 marks and suggest
-          using <code>limit</code> or <code>aggregate</code> when exceeded.
+          A chart handles up to a million rows wherever the chart makes sense, by reducing what it
+          draws. Line and area charts reduce long series to about one point per 2 px of plot width
+          (at most 1000 categories, and 4000 shared between series) using the LTTB (Largest Triangle
+          Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and
+          maximum points so trends and extremes remain visible. A time axis reduces whenever it has
+          more points than that budget; a category axis reduces past 1000 categories, over the
+          category index. A kpi thins its sparkline the same way. The data table and screen reader
+          description indicate how many points are displayed. A bar with more categories than fit
+          (past 10000 marks) and no <code>limit</code> keeps the top N by total, N being 10 per 40
+          px of plot width, and rolls the rest into "Other". Scatter charts above 10000 visible
+          points are drawn as density cells. A table draws the rows that fit its height, and its
+          hidden data table lists the first 1000. The bar roll-up also adds a sentence to
+          <code>renderParts(...).warnings</code>. Charts that cannot reduce without changing meaning
+          (waterfall, dumbbell, parallel and the module charts) fail with
+          <code>too-many-marks</code>, naming the mark count, the 10000 cap and the row count, and
+          suggest <code>limit</code> or <code>aggregate</code>.
+        </p>
+        <p>
+          The row pass (grouping, aggregation, time parsing, validation) is cached per
+          <code>data</code> array: a resize, legend toggle, zoom or view change re-renders without
+          walking the rows again. The cache is keyed by the array's identity and length, so after
+          changing rows in place, assign a new array (<code>chart.data = [...rows]</code>).
         </p>
       </section>
 

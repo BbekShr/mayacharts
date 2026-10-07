@@ -3,8 +3,14 @@ const L =
 const D = "--maya-fg:#1f2328;--maya-fg-muted:#656d76;--maya-bg:#fff";
 const N = "--maya-fg:#e6edf3;--maya-fg-muted:#9198a1;--maya-bg:#0d1117";
 const rng = (n: number, from = 0) => Array.from({ length: n }, (_, i) => i + from);
+// Legend hover: dim the other series' marks. Speed: a `:has()` on an ancestor of a mark is
+// checked once per mark, and `:has(:hover)` on .maya restyled the whole chart on every pointer
+// move (13 ms at 10000 marks; WebKit does not invalidate it through a sibling combinator, so no
+// :has on the legend either). The element sets inherited custom properties on .maya instead
+// (--d legend hover, --h<slot> the hovered slot; --o selection on the marks group) and each
+// mark reads them in one declaration.
 const S = rng(8)
-  .map((n) => `[data-s="${n}"]{--c:var(--maya-series-${n + 1})}`)
+  .map((n) => `[data-s="${n}"]{--c:var(--maya-series-${n + 1});--h:var(--h${n})}`)
   .join("");
 // Area fill: the slot's baseline-fading gradient (render.ts defs), flat tint if the reference fails.
 const A = rng(8)
@@ -16,16 +22,6 @@ const A = rng(8)
 // Ramp: 10 steps, 20% floor (about 32% in dark mode, see --b). ponytail: only steps >= 8 reach 3:1; values are also text everywhere.
 const Q = rng(10)
   .map((n) => `[data-q="${n}"]{--q:${Math.round(35 + (n * 65) / 9)}%}`)
-  .join("");
-// Legend hover: dim the other series' marks (slot match; :has needs no JS). Speed: a `:has()` on
-// an ancestor of a mark is checked once per mark (~0.4 ms per rule per 1000 marks), so dimming
-// is set as inherited custom properties on one ancestor (--d legend hover, --h<slot> the hovered
-// slot, --o selection on the marks group) and each mark reads them in one declaration.
-const H = rng(8)
-  .map(
-    (n) =>
-      `.maya:has(.maya-legend [data-s="${n}"]:hover){--h${n}:1;--d:.25}[data-s="${n}"]{--h:var(--h${n})}`,
-  )
   .join("");
 // Sliding indicator of .maya-ctl: data-n = options (2..4; ponytail: more options need more rules), data-i = checked index (set by the element).
 const C =
@@ -46,7 +42,7 @@ const RADIAL =
 const MEKKO =
   "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}[data-maya=labels] [data-ink=b]{fill:var(--maya-bg)}[data-maya=labels] [data-ink=t]{fill:light-dark(#12161c,#fff)}" +
   "[data-maya=labels] [data-ax]{stroke:none;font-size:11px}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
-  "[data-maya=marks]:has([data-active]) [data-mm]:not([data-active],[data-lit]){opacity:.62}";
+  "[data-maya=marks][data-hot] [data-mm]:not([data-active],[data-lit]){opacity:.62}";
 
 // flow
 // Sankey and chord: the outer column is one neutral (`data-neu`, no `data-s`), links take a
@@ -56,8 +52,8 @@ const MEKKO =
 const FLOW =
   (
     "[data-maya=link]{opacity:.45;fill:var(--c)}" +
-    "M:has([data-active]) [data-maya=link]{opacity:.08}" +
-    "M [data-maya=link]:is([data-active],[data-lit]){opacity:.85}M:has([data-maya=link][data-active]) [data-n]{opacity:1}"
+    "M[data-hot] [data-maya=link]{opacity:.08}" +
+    "M [data-maya=link]:is([data-active],[data-lit]){opacity:.85}"
   ).replaceAll("M", "[data-maya=marks]") +
   "rect[data-n]{rx:4px}" +
   "path[data-maya][data-arc]{stroke:var(--c);stroke-width:4;stroke-linejoin:round}path[data-arc][data-active]{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 12%)}" +
@@ -83,13 +79,16 @@ const DENS = (p: string) => `color-mix(in oklab,var(--maya-accent),var(--maya-fg
 // carries data-dense: the group's fill strength --p drops from 58% to 30% for every point.
 const P = (c: string) =>
   `fill:color-mix(in oklab,${c} var(--p),transparent);stroke:color-mix(in oklab,${c} 70%,var(--maya-fg))`;
+const LOW = "color-mix(in oklab,var(--maya-bg) 30%,var(--maya-accent))";
 const OWN = ':is([data-tone],[data-q],[data-s]:not([data-s="0"]))';
 const SCATTER =
   `${SCAT}[data-maya=marks]{--p:58%;stroke-width:1.25;${P("var(--maya-series-1)")}}${SCAT}[data-maya=marks]:has(>[data-dense]){--p:30%}` +
   `${SCAT}circle[data-maya=mark]{fill:inherit;stroke:inherit;transform-origin:center}` +
   `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))")}}` +
-  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}${SCAT}rect[data-maya=mark][data-q],circle[data-key^="c~"][data-q]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 35%)*1.15)))")}}` +
-  `[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,var(--maya-accent),${DENS("37%")})}[data-d] i~i{width:40px;background:linear-gradient(90deg,${DENS("37%")},${DENS("75%")})}` +
+  `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}circle[data-key^="c~"][data-q]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 35%)*1.15)))")}}` +
+  // Density cells (scatter and beeswarm bins, key b~): page tint to accent over steps 0-4, accent to ink over 5-9.
+  `rect[data-key^="b~"][data-q]{--c:color-mix(in oklab,var(--maya-bg) max(0%,calc(30% - (var(--q) - 35%)*.94)),${DENS("min(75%,max(0%,calc((var(--q) - 67%)*2.3)))")})}` +
+  `[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${LOW},var(--maya-accent))}[data-d] i~i{width:40px;background:linear-gradient(90deg,var(--maya-accent),${DENS("75%")})}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
@@ -97,6 +96,9 @@ const SCATTER =
   "[data-maya=cross] line[data-g]{stroke-dasharray:3 3;stroke-opacity:.7}" +
   "[data-maya=cross] text,[data-maya=rules] text{font-size:11px;font-weight:600;fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:4;stroke-linejoin:round}";
 
+// [data-pt] points are hidden (fill-opacity 0); an opacity on each would only cost WebKit a paint group apiece.
+const DIM =
+  ":not([data-active],[data-lit],text,:is(rect,path)[data-q],[data-kpi=fill],[data-pt] circle:not([data-last],[data-selected]))";
 // orbit
 // Planets orbit a sun: the theme rotates g[data-v] about the sun (its origin); names are static, at the rest angle.
 // The chart is a still, trails included, unless motion is allowed and not `data-still`: then it spins while the pointer is over it.
@@ -105,7 +107,7 @@ const ORBIT =
   "g[data-v]{transform-box:view-box;transform-origin:0 0}" +
   "[data-trail]{fill:none;stroke:var(--c);stroke-width:3;stroke-linecap:round}" +
   "g[data-s] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1.5}g[data-s] circle[data-maya=mark]:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2}" +
-  "[data-maya=marks]:has([data-active]) g[data-s]:not([data-lit],:has([data-active])) g[data-up],[data-maya=marks]:has([data-active]) g[data-s]:not([data-lit],:has([data-active])) [data-trail]{opacity:.4}" +
+  "[data-maya=marks][data-hot] g[data-s]:not([data-lit],:has([data-active])) :is(g[data-up],[data-trail]){opacity:.4}" +
   "g[data-s] circle[data-below]{fill-opacity:.45;stroke:var(--c)}[data-up] text{font-size:11px;font-weight:600}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
   "@media (prefers-reduced-motion:no-preference){@keyframes maya-orbit{to{transform:rotate(360deg)}}" +
   [80, 52, 36, 24, 16].map((s, i) => `g[data-v="${i + 1}"]{--p:${s}s}`).join("") +
@@ -115,7 +117,7 @@ const ORBIT =
   ".maya:not([data-still]) g[data-up]{transition:opacity .25s}.maya[data-spin] g[data-up]{opacity:0!important}" +
   "}" +
   // Weave threads and halos: dim with legend hover, selection and the lit thread.
-  "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks]:has([data-active]) [data-w]:not([data-lit]){opacity:.18}" +
+  "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks][data-hot] [data-w]:not([data-lit]){opacity:.18}" +
   // Memory ghost (bar `was`): the previous value, behind its bar.
   "[data-past]{fill:var(--maya-fg);fill-opacity:.12;stroke:var(--maya-fg);stroke-opacity:.3;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}";
 
@@ -181,28 +183,27 @@ export const css =
   "svg:not([data-stack]) [data-maya=area][data-ridge]{fill:color-mix(in oklab,var(--c) 40%,var(--maya-bg))}[data-maya=grid] circle{fill:none;shape-rendering:auto}" +
   "[data-maya=marks] text{fill:var(--maya-fg)}" +
   "[data-maya=sort]{cursor:pointer}[data-maya=sort] rect{fill:transparent}[data-maya=sort] text{font-weight:600}[data-maya=sort]:focus-visible{outline:2px solid var(--maya-focus)}" +
-  ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks]:has(path[data-active]) path[data-maya=line]:not([data-active]){opacity:.25}" +
+  ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks][data-hot=p] path[data-maya=line]:not([data-active]){opacity:.25}" +
   // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
   // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.
   "circle[data-depth][data-maya]{fill:none;stroke:color-mix(in oklab,var(--c) var(--t,100%),var(--maya-bg));transition:stroke .5s}" +
   '[data-tint="2"]{--t:70%}[data-tint="3"]{--t:48%}' +
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
-  "[data-maya=marks]:has([data-active]) [data-maya=mark]:not([data-active],[data-lit],text,:is(rect,path)[data-q],[data-kpi=fill]){opacity:.4}" +
+  `[data-maya=marks][data-hot] [data-maya=mark]${DIM}{opacity:.4}svg[data-still] [data-hot] [data-maya=mark]${DIM}{opacity:1;fill-opacity:.4;stroke-opacity:.4}` +
   // A dimmed mark fades toward the page: its in-bar label flips to the page ink (tooltip.ts dim()).
   ".maya-svg [data-maya=labels] [data-in][data-dim]{fill:var(--maya-fg)}" +
-  '[data-maya=marks]:has(circle[data-depth="0"][data-active]) [data-depth]{opacity:1}' +
+  "[data-maya=marks][data-hot=r] [data-depth]{opacity:1!important}" +
   'svg[data-drill] :is([data-maya=mark],[data-maya=hit]),circle[data-depth="0"][data-s]{cursor:pointer}' +
   "[data-maya=marks]:has([data-selected]){--o:.35}" +
   "[data-selected]{stroke:var(--maya-fg);stroke-width:2;--o:1}" +
-  H +
   "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}[data-maya=rules],[data-maya=brush],[data-ghost],[data-brk],text[data-total]{pointer-events:none}[data-maya=rules] line{stroke:var(--maya-fg);stroke-dasharray:3 3}[data-maya=cross],[data-maya=band]{opacity:0;transition:opacity .2s}" +
   "[data-on]:is([data-maya=cross],[data-maya=band]){opacity:1;transition:opacity .2s,transform .25s var(--maya-ease)}[data-maya=band]{fill:var(--maya-fg);fill-opacity:.05;rx:6px}" +
   "[data-maya=labels] text,[data-up] text{fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:3;stroke-linejoin:round}[data-maya=labels] [data-in]{stroke:none}[data-maya=labels] [data-dark]{fill:light-dark(#12161c,var(--maya-bg))}" +
   "[data-maya=cross] line{stroke:var(--maya-fg-muted);stroke-opacity:.55}" +
   "[data-maya=brush]{fill:var(--maya-accent);fill-opacity:.12;stroke:var(--maya-accent);vector-effect:non-scaling-stroke}" +
   ".maya-svg:focus{outline:none}.maya-svg:focus-visible{outline:2px solid var(--maya-focus)}" +
-  ".maya-sr caption{position:absolute;clip-path:inset(50%)}.maya-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}" +
+  ".maya-sr caption{position:absolute;clip-path:inset(50%)}.maya-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}table.maya-sr{table-layout:fixed}.maya-sr :is(td,th){overflow:hidden}" +
   ".maya-probe{position:absolute;width:0;height:0;pointer-events:none;anchor-name:--maya-probe}" +
   ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
   "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}.maya-tip[data-side]{position-area:inline-end span-block-end;position-try-fallbacks:flip-inline;margin:0 12px}}" +
@@ -233,4 +234,6 @@ export const css =
   "@media (prefers-reduced-motion:no-preference){[data-maya=mark],[data-maya=link]{transition:opacity .25s var(--maya-ease),fill .2s}[data-maya=labels] [data-in]{transition:fill .25s var(--maya-ease)}" +
   `${SCAT}circle[data-maya=mark]{transition:opacity .25s var(--maya-ease),fill .2s,stroke-width .2s,transform .2s var(--maya-ease)}` +
   "[data-pt] circle[data-maya=mark]{transition:fill-opacity .15s,stroke-opacity .15s}}" +
+  // WebKit paints each per-element opacity as its own group: dense dumbbell connectors dim through the stroke.
+  "[data-still] [data-hot] line[data-maya=link]{opacity:1;stroke-opacity:.08}" +
   "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}";

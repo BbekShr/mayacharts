@@ -129,8 +129,9 @@ for (const [name, path] of [
         ),
       ),
     );
-    // CSSOM writes: tooltip probe and card, crosshair, hover band, bloom origin of the marks group.
-    const allowed = /maya-probe|\[cross\]|maya-tip|\[band\]|\[marks\]/;
+    // CSSOM writes: tooltip probe and card, crosshair, hover band, bloom origin of the marks group,
+    // and the legend hover's custom properties on .maya.
+    const allowed = /maya-probe|\[cross\]|maya-tip|\[band\]|\[marks\]|^div\.maya\[\]/;
     expect(
       styled.filter((s) => !allowed.test(s)),
       "unexpected [style] elements",

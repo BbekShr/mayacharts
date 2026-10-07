@@ -20,7 +20,7 @@
  *   transition:opacity .25s}[data-maya=marks]:has([data-active]) [data-w]:not([data-lit]){opacity:.18}
  */
 import { register } from "./core/registry.ts";
-import { clip, el, esc, key, r } from "./core/svg.ts";
+import { clip, el, esc, key, plotHit, r } from "./core/svg.ts";
 import type { BandScale, Cell, Mark, Shaped } from "./core/types.ts";
 
 /**
@@ -136,7 +136,7 @@ export const weave: Mark = {
     }
 
     let dots = "";
-    let hits = "";
+    let hits = plotHit(ctx.plot); // under the dot hits: between dots the nearest period answers, no flicker
     let end = "";
     const last = new Map<number, [number, number, number]>(); // si -> [ci, slot, x] of the last point
     R.forEach((P, ci) => {

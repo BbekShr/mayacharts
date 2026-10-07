@@ -227,7 +227,7 @@ export const units: Mark = {
         return el("circle", {
           "data-maya": "mark",
           "data-key": d.k,
-          "data-c": d.ci,
+          "data-c": i, // unique per dot: the tooltip rows are this dot's; the group lights through data-a
           "data-s": d.ci % 8,
           "data-n": "g" + d.ci,
           "data-a": "g" + d.ci,

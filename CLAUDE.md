@@ -19,10 +19,10 @@ Owner: Bibek Shrestha (GitHub BbekShr). MIT, forever. See STABILITY.md for what 
 - `npm run build` - eight Vite lib builds (index, element, hierarchy, flow, geo, radial, stats, global IIFE) then `tsc` declarations.
 - `npm run size` - gzip budgets from `package.json` `mayaSize`; CI fails when over. Also checks the license banner and that the global build has no top-level `var maya`.
 - `npm run e2e` - Playwright on chromium, firefox, webkit, mobile-webkit (interactions only). Builds and serves `site/` itself.
-- `npm run dev` - demo site (`/` and `/gallery.html`).
+- `npm run dev` - demo site (`/`, `/gallery.html` and `/scale.html`, the million-row page).
 - `npx prettier --check .` runs in CI. No ESLint by design.
 
-Screenshot baselines live in `e2e/__screenshots__/{darwin,linux}/<browser>/`. CI runs in `mcr.microsoft.com/playwright:v1.63.0-noble`; regenerate Linux baselines in that image:
+Stress scripts live in `bench/` (`node bench/million.mjs` after a build times 1M-row charts in Chromium; `bench/stress.ts` sweeps every type in Node). Screenshot baselines live in `e2e/__screenshots__/{darwin,linux}/<browser>/`. CI runs in `mcr.microsoft.com/playwright:v1.63.0-noble`; regenerate Linux baselines in that image:
 `docker run --rm --ipc=host -v "$PWD":/work -w /work mcr.microsoft.com/playwright:v1.63.0-noble bash -c "npm ci >/dev/null && npm run build >/dev/null && npx playwright test e2e/charts.spec.ts e2e/global.spec.ts --project=chromium --update-snapshots"` then `npm ci` on the host.
 
 ## Where things are
@@ -33,7 +33,7 @@ Screenshot baselines live in `e2e/__screenshots__/{darwin,linux}/<browser>/`. CI
 - `src/hierarchy.ts`, `flow.ts`, `geo.ts`, `radial.ts`, `stats.ts` - optional modules (treemap/sunburst/marimekko/waffle, sankey/chord, US hexmap, radial bars, boxplot/funnel). They may import only `registry.ts`, `svg.ts`, `scale.ts`, `ticks.ts` and types; never render/validate/shape/format (they are bundled separately).
 - `src/element/` - `maya-chart.ts` (element, events, `view`/`selected`, keydown dispatcher), `animate.ts` (key diff, WAAPI entrance/update/exit, stagger, path morph), `tooltip.ts`, `html.ts` (Trusted Types policy `mayacharts`), and the interactions `measure.ts`, `drill.ts`, `select.ts`, `zoom.ts` as pure reducers plus `mount(host)` handlers.
 - `src/styles/theme.ts` - the whole stylesheet as one string (budget 4 KB gzip). Tokens `--maya-*`.
-- `site/` - demo and gallery (synthetic data in `site/data.ts`; never copy data from elsewhere). `docs/spec.html`, `site/errors.html` (one anchor per error code; error messages link here).
+- `site/` - demo, gallery and the Scale page (synthetic data in `site/data.ts`; never copy data from elsewhere). `docs/spec.html`, `site/errors.html` (one anchor per error code; error messages link here).
 - `schema.json`, `llms.txt` - kept in sync with `types.ts` by `test/schema.test.ts`.
 
 ## Rules

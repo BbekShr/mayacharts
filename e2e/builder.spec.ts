@@ -24,7 +24,7 @@ const drawn = async (page: Page) => {
   await expect.poll(async () => (await state(page)).marks).toBeGreaterThan(0);
   expect((await state(page)).err).toBe("");
 };
-// Sets the textarea like a paste does. Playwright's fill() types a 5,000-line string in about 20 s.
+// Sets the textarea like a paste does. Playwright's fill() types a 10,000-line string in about 20 s.
 const put = (page: Page, text: string) =>
   page.locator("#paste").evaluate((a, v) => {
     (a as HTMLTextAreaElement).value = v;
@@ -226,14 +226,14 @@ test("paste limits: over each limit nothing changes, at each limit it works", as
     await drawn(page);
   };
   await over("v\n" + "x".repeat(1_000_001), /takes up to 1,000 KB/);
-  await over("v\n" + "1\n".repeat(5001), /5,001 rows/);
+  await over("v\n" + "1\n".repeat(10001), /10,001 rows/);
   const cols = (n: number) =>
     Array.from({ length: n }, (_, i) => `c${i}`).join(",") + "\n" + Array(n).fill(1).join(",");
   await over(cols(51), /51 columns/);
 
-  await put(page, "v\n" + "1\n".repeat(5000));
+  await put(page, "v\n" + "1\n".repeat(10000));
   await expect(err).toBeHidden();
-  await expect(page.locator("#meter")).toHaveText(/5,000 rows/);
+  await expect(page.locator("#meter")).toHaveText(/10,000 rows/);
   await put(page, cols(50));
   await expect(err).toBeHidden();
   await expect(page.locator("#meter")).toHaveText(/1 rows, 50 columns/);

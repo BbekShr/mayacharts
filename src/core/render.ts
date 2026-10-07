@@ -60,7 +60,25 @@
  *   and one marker per gap), after the window; a union still over the target is thinned to
  *   first, last and evenly spaced indexes. Kept categories keep their keys; Shaped.reduced
  *   = [kept, before], and the description says so. view.window indexes the time-ordered list
- *   before reduction. Scatter is exempt from the pre-draw mark cap (it bins its own rows).
+ *   before reduction. A line or area on a category axis thins the same way, but only past
+ *   MAX_POINTS categories; its kept categories carry their position in the full list in
+ *   Shaped.index (data-i). A kpi with more than MAX_POINTS categories is thinned in shape to
+ *   floor((plot width + 32) / 4) - 2 points plus its last two live values (kpi.ts reads the
+ *   kept categories' x from Shaped.index and the full count from Shaped.reduced).  Auto roll-up: a bar (not a waterfall) with
+ *   categories x series above MAX_MARKS and no spec.limit keeps the top N by total, N =
+ *   10 * floor(plot width / 40) (at most MAX_MARKS / series - 1), and sums the rest into Other
+ *   (Shaped.capped = [N, before]; a time axis never rolls up); a warning says so. Every other
+ *   chart that still has more than MAX_MARKS marks throws too-many-marks, naming the count,
+ *   the cap and the row count. A table is exempt (it draws the rows that fit the height).
+ *   Row-pass cache (svg.ts memo): shape's grouping and aggregation, the time parse, the sorted
+ *   and limited category list, a reduction, validate's row scan, scatter's typed columns and the
+ *   table's groups are computed once per (data array identity, the fields they read, array
+ *   length) and kept in a WeakMap while the array lives, 256 keys per array, least recently
+ *   used out (a page of charts shares one array). A resize, legend toggle, zoom or view change re-renders without another pass
+ *   over the rows; hidden, window and plot width apply after the cache. A host that edits the
+ *   array in place must pass a new array (only a length change is noticed). Cached results are
+ *   shared: never mutate them.
+ *   Scatter is exempt from the pre-draw mark cap (it bins its own rows).
  *   Scatter's and units' Shaped has empty categories and cells: their marks draw from rows.
  *   Thinning in the mark (kpi, ridgeline; shape.thin): above one hover target per 4 px (kpi
  *   sparkline) or 6 px (ridgeline plot width) the mark draws only the kept categories, picked
@@ -68,7 +86,7 @@
  *   per run, each series' minimum and maximum and every gap edge, at most the target. Points and dots exist for kept categories only; the kpi headline, delta and the data table use all rows.
  *   Both skip the pre-draw category cap (only the post-draw mark count applies). Beeswarm and
  *   parallel draw one mark per row (parallel: one per row and measure), so they keep the
- *   5000-mark error; a reduction would be a different chart (bin with scatter, or limit).
+ *   10000-mark error; a reduction would be a different chart (bin with scatter, or limit).
  *
  * Marks: `CORE[type] ?? MODULES.get(type)`. CORE is the static map below; modules
  *   (hierarchy, flow, geo, radial, stats, weave, units, orbit, constellation) call
@@ -421,11 +439,13 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     fail(
       "too-many-marks",
       "data",
-      `${n} marks exceed the limit of ${MAX_MARKS}.`,
+      `${n} marks exceed the limit of ${MAX_MARKS} (${s.data.length} rows).`,
       "Use spec.limit to keep the top N categories, or aggregate the rows first.",
     );
-  // Scatter draws from rows and bins past MAX_MARKS; kpi and ridgeline thin their own points.
-  if (!["scatter", "kpi", "ridgeline"].includes(s.type)) cap(shaped.cells.length);
+  // Scatter and beeswarm draw from rows and bin past MAX_MARKS; kpi and ridgeline thin their own
+  // points; a table draws the rows that fit.
+  if (!["scatter", "beeswarm", "kpi", "ridgeline", "table"].includes(s.type))
+    cap(shaped.cells.length);
 
   // Formatters are cached per (field, step): marks call fmt once per value.
   const fmts = new Map<string, (v: unknown) => string>();
@@ -696,6 +716,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       "data-stack": s.stack || null,
       // A line path: its point circles are hidden until active (one search, not a CSS :has).
       "data-pt": body.includes('data-maya="line"') || null,
+      // ponytail: over 500 marks the svg is data-still: hover dim and glide are instant (theme.ts, NON-FEATURES.md).
+      "data-still": body.split('data-maya="mark"').length > 501 || null,
       // A click can drill further (pointer cursor on marks).
       "data-drill": (s.drill && s.path.length > (s.type === "sankey" ? 2 : 1)) || null,
     },
@@ -803,7 +825,13 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     title: s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`,
     style,
     vars,
-    warnings: [],
+    warnings: [
+      ...(shaped.capped
+        ? [
+            `${s.type}: ${shaped.capped[1]} categories: the top ${shaped.capped[0]} are drawn, the rest are in Other. Set spec.limit to choose.`,
+          ]
+        : []),
+    ],
     ...(fr && { frame: [fr[2], fr[1].length] as const }),
   };
 }

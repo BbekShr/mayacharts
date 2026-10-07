@@ -16,6 +16,7 @@ The following are covered by semantic versioning:
 - Spec: chart types `boxplot`, `funnel`, `weave`, `units`, `orbit` and `constellation`, and `stack: "percent"`
 - Class names: `.maya-*` available for host styling
 - Exported functions: `render`, `renderShell`, `renderParts`, `validateSpec`
+- Data identity: the row pass is cached per `spec.data` array, so a host that changes rows in place (same length) must pass a new array to see the change; a different length is noticed. `Parts.warnings` lists what the chart did on its own (the bar roll-up into Other)
 
 ## Not public
 

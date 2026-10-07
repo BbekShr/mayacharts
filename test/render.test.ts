@@ -321,17 +321,34 @@ describe("frame", () => {
 });
 
 describe("limits and projection", () => {
-  it("throws too-many-marks past MAX_MARKS", () => {
-    const rows = Array.from({ length: 5001 }, (_, i) => ({ m: "c" + i, v: 1 }));
-    expect(() => render({ type: "bar", x: "m", y: "v", data: rows })).toThrowError(
-      /exceed the limit/,
-    );
+  it("throws too-many-marks past MAX_MARKS, naming the rows and the limit", () => {
+    // A waterfall keeps every step in order, so it cannot roll up or thin.
+    const rows = Array.from({ length: 10001 }, (_, i) => ({ m: "c" + i, v: 1 }));
+    const spec = { type: "waterfall", x: "m", y: "v", data: rows } as const;
+    expect(() => render(spec)).toThrowError(/10001 marks exceed the limit of 10000 \(10001 rows\)/);
     try {
-      render({ type: "bar", x: "m", y: "v", data: rows });
+      render(spec);
     } catch (e) {
       expect((e as { code: string }).code).toBe("too-many-marks");
+      expect((e as Error).message).toContain("spec.limit");
     }
     expect(() => render({ type: "bar", x: "m", y: "v", limit: 20, data: rows })).not.toThrow();
+  });
+  it("a bar past MAX_MARKS keeps the top N and rolls the rest into Other, with a warning", () => {
+    const rows = Array.from({ length: 12000 }, (_, i) => ({ m: "c" + i, v: i === 777 ? 1e6 : 1 }));
+    const p = renderParts({ type: "bar", x: "m", y: "v", data: rows }, { width: 640 });
+    expect(p.warnings).toHaveLength(1);
+    expect(p.warnings[0]).toMatch(/^bar: 12000 categories: the top 140 are drawn/);
+    expect(p.svg).toContain('data-x="c777"');
+    expect(p.svg).toContain('data-x="Other"');
+    expect(p.svg.match(/data-maya="mark"/g)).toHaveLength(141);
+    // Other is the sum of the rest: 11860 ones.
+    expect(p.svg).toContain('data-y="11860"');
+    // An explicit limit is the user's choice: no warning.
+    expect(renderParts({ type: "bar", x: "m", y: "v", limit: 5, data: rows }).warnings).toEqual([]);
+    expect(renderParts({ type: "bar", x: "m", y: "v", data: rows.slice(0, 50) }).warnings).toEqual(
+      [],
+    );
   });
   it("caps the a11y table at 1000 rows with a caption", () => {
     const rows = Array.from({ length: 1500 }, (_, i) => ({ m: "c" + i, v: i + 1 }));

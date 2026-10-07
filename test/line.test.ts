@@ -247,3 +247,24 @@ describe("yDomain narrower than the data", () => {
     });
   });
 });
+
+describe("thinned series", () => {
+  it("do not break into pieces at the thinning's wide steps", () => {
+    const data = Array.from({ length: 60000 }, (_, i) => ({
+      t: Date.UTC(2025, 0, 1) + (i >> 1) * 6e4,
+      s: i & 1 ? "A" : "B",
+      v: Math.sin(i / 300) * 40 + (i % 17),
+    }));
+    const svg = renderParts({
+      type: "line",
+      x: "t",
+      xType: "time",
+      y: "v",
+      series: "s",
+      data,
+    } as never).svg;
+    const paths = svg.match(/<path data-maya="line"[^>]* d="[^"]*"/g) ?? [];
+    expect(paths).toHaveLength(2);
+    for (const p of paths) expect(p.match(/M/g)).toHaveLength(1);
+  });
+});

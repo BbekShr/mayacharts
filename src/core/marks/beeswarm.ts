@@ -1,5 +1,15 @@
-import { cbField, el, nameId, key, r } from "../svg.ts";
-import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
+import { cbField, el, esc, memo, nameId, key, r } from "../svg.ts";
+import type {
+  Axis,
+  BandScale,
+  LinearScale,
+  Mark,
+  MarkCtx,
+  ResolvedSpec,
+  Shaped,
+} from "../types.ts";
+import { MAX_MARKS } from "../validate.ts";
+import { level, ramp } from "./scatter.ts";
 
 interface Pt {
   i: number;
@@ -14,7 +24,12 @@ interface Pt {
  * One point per row with a numeric y, a visible series and (when x is set) a kept category.
  * An explicit yDomain clips; points outside it are skipped.
  */
-function points(spec: ResolvedSpec, shaped: Shaped): Pt[] {
+const memoKey = (spec: ResolvedSpec, shaped: Shaped) =>
+  `${spec.x}|${spec.y}|${spec.series}|${spec.name}|${spec.yDomain}|${shaped.visible}|${shaped.categories.length}`;
+// Kept per data array: axes(), draw() and every re-render of the same rows share one pass.
+const points = (spec: ResolvedSpec, shaped: Shaped): Pt[] =>
+  memo(spec.data, `bs|${memoKey(spec, shaped)}`, () => scan(spec, shaped));
+function scan(spec: ResolvedSpec, shaped: Shaped): Pt[] {
   const out: Pt[] = [];
   const cats = new Map(shaped.categories.map((c, ci) => [c, ci]));
   const yd = spec.yDomain;
@@ -66,6 +81,76 @@ function dodge(xs: number[], rad: number, limit: number): number[] {
   return out;
 }
 
+/**
+ * Past MAX_MARKS points: a violin of cells per band. Each band is cut along the value axis into
+ * columns (about 6 px) and each non-empty column is one rect centred on the band, as tall as its
+ * count (against the busiest column of all bands, so bands compare), coloured on scatter's ramp.
+ * ponytail: series merged and no name, like scatter's cells; per-series violins if anyone asks.
+ */
+function bins(ctx: MarkCtx, pts: Pt[]) {
+  // Values sorted per band, once per data array: a column's count is then two binary searches.
+  const sorted = memo(ctx.spec.data, `bsv|${memoKey(ctx.spec, ctx.shaped)}`, () => {
+    const by: number[][] = ctx.shaped.categories.map(() => []);
+    for (const p of pts) (by[p.ci] ??= []).push(p.v);
+    return by.map((v) => Float64Array.from(v).sort());
+  });
+  const { spec, shaped, plot } = ctx;
+  const sx = ctx.x as LinearScale;
+  const band = ctx.y as BandScale | null;
+  const bh = band ? band.bandwidth : plot.h;
+  const bands = Math.max(1, shaped.categories.length);
+  const nx = Math.max(1, Math.min(Math.floor(plot.w / 6), Math.floor(MAX_MARKS / bands)));
+  const cw = plot.w / nx;
+  const [d0, d1] = sx.domain;
+  const grid = new Map<number, number>();
+  sorted.forEach((a, ci) => {
+    let from = 0;
+    for (let i = 0; i < nx; i++) {
+      let to = a.length; // the last column takes the rest, as the first took everything below it
+      if (i < nx - 1) {
+        const e = d0 + ((i + 1) * cw * (d1 - d0)) / plot.w;
+        for (let lo = from, hi = a.length; (to = lo) < hi;) {
+          const m = (lo + hi) >> 1;
+          a[m]! < e ? (lo = m + 1) : (hi = m);
+        }
+      }
+      if (to > from) grid.set(ci * nx + i, to - from);
+      from = to;
+    }
+  });
+  const vals = [...grid.values()];
+  const max = Math.max(...vals);
+  const edge = Array.from({ length: nx + 1 }, (_, i) =>
+    ctx.fmt(spec.y, d0 + (i * cw * (d1 - d0)) / plot.w),
+  );
+  const ti = spec.titles.get(spec.y) ?? spec.y;
+  let marks = "";
+  [...grid]
+    .sort((a, b) => a[0] - b[0])
+    .forEach(([k, n], c) => {
+      const [ci, i] = [Math.floor(k / nx), k % nx];
+      const h = Math.max(2, bh * 0.9 * (n / max));
+      const mid = band ? band.at(ci) + bh / 2 : plot.y + plot.h / 2;
+      const gx = ctx.t("range", edge[i]!, edge[i + 1]!);
+      marks += el("rect", {
+        "data-maya": "mark",
+        "data-key": key("b", ci, i),
+        "data-c": c,
+        "data-s": 0,
+        "data-x": `${band ? ctx.fmt(spec.x, shaped.categories[ci]) + ", " : ""}${ti} ${gx}`,
+        "data-y": n,
+        "data-f": ctx.t(n === 1 ? "point" : "points", ctx.fmt("", n)),
+        "data-q": level(n, max),
+        x: r(plot.x + i * cw + 0.5),
+        y: r(mid - h / 2),
+        width: r(cw - 1),
+        height: r(h),
+      });
+    });
+  const { legend, note } = ramp(ctx, grid);
+  return { marks, hits: "", legend, note };
+}
+
 /** Dots dodged off a shared value axis: y = value (bottom axis), x = optional row category (left band). */
 export const beeswarm: Mark = {
   noun: "Beeswarm",
@@ -83,6 +168,7 @@ export const beeswarm: Mark = {
     const sx = ctx.x as LinearScale;
     const band = ctx.y as BandScale | null;
     const pts = points(spec, shaped);
+    if (pts.length > MAX_MARKS) return bins(ctx, pts);
     const bh = band ? band.bandwidth : plot.h;
     const groups = new Map<number, Pt[]>();
     for (const p of pts) (groups.get(p.ci) ?? groups.set(p.ci, []).get(p.ci)!).push(p);

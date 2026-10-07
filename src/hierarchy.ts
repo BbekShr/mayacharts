@@ -1,7 +1,7 @@
 // treemap + sunburst. Importing this file registers both types.
 import { register } from "./core/registry.ts";
 import { DEG } from "./core/scale.ts";
-import { OTHER, cbField, el, esc, hit, key, r } from "./core/svg.ts";
+import { OTHER, cbField, el, esc, hit, key, memo, r } from "./core/svg.ts";
 import type { Aggregate, Mark, MarkCtx, MarkOut, Row } from "./core/types.ts";
 
 interface Node {
@@ -25,8 +25,9 @@ export function tree(
   agg: Reduce,
   cb: string | null = null,
 ): Node {
-  type Raw = { kids: Map<string, Raw>; ys: number[]; cs: number[] };
-  const mk = (): Raw => ({ kids: new Map(), ys: [], cs: [] });
+  // Leaves dominate row counts, so a node allocates its Map and colour list only when used.
+  type Raw = { kids: Map<string, Raw> | null; ys: number[]; cs: number[] | null };
+  const mk = (): Raw => ({ kids: null, ys: [], cs: null });
   const top = mk();
   for (const row of rows) {
     const v = row[y];
@@ -34,20 +35,21 @@ export function tree(
     let n = top;
     for (const f of path) {
       const k = String(row[f]);
-      n = n.kids.get(k) ?? n.kids.set(k, mk()).get(k)!;
+      const m = (n.kids ??= new Map());
+      n = m.get(k) ?? m.set(k, mk()).get(k)!;
     }
     n.ys.push(v);
     const c = cb === null ? null : row[cb];
-    if (typeof c === "number") n.cs.push(c);
+    if (typeof c === "number") (n.cs ??= []).push(c);
   }
   const build = (raw: Raw, name: string, depth: number, parts: string[]): Node => {
-    const children = [...raw.kids].map(([k, c]) => build(c, k, depth + 1, [...parts, k]));
+    const children = [...(raw.kids ?? [])].map(([k, c]) => build(c, k, depth + 1, [...parts, k]));
     return {
       name,
       children,
       depth,
       parts,
-      cv: raw.cs.length ? agg(raw.cs) : null,
+      cv: raw.cs ? agg(raw.cs) : null,
       value: children.length ? children.reduce((s, c) => s + c.value, 0) : (agg(raw.ys) ?? 0),
     };
   };
@@ -98,21 +100,27 @@ function squarify(nodes: Node[], x: number, y: number, w: number, h: number) {
 /** Validate values, build the tree, and compute attributes shared by both marks. */
 function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null) {
   const { spec } = ctx;
-  spec.data.forEach((row, i) => {
-    const v = row[spec.y];
-    if (typeof v === "number" && !(v > 0))
-      ctx.fail(
-        "non-positive-value",
-        `data[${i}].${spec.y}`,
-        `Value ${v} is not positive.`,
-        "Treemaps and sunbursts size shapes by value, so every value must be above zero.",
-        'To show negative values use a bar chart with colorBy: "sign".',
-      );
-  });
   const cb = cbField(spec);
-  const root = tree(spec.data, spec.path, spec.y, ctx.agg(spec.aggregate as Aggregate), cb);
+  // The validation pass and the tree are kept per data array: a re-render of the same rows (resize, hover, drill) skips them.
+  const whole = memo(spec.data, `tree|${spec.path}|${spec.y}|${cb}|${spec.aggregate}`, () => {
+    spec.data.forEach((row, i) => {
+      const v = row[spec.y];
+      if (typeof v === "number" && !(v > 0))
+        ctx.fail(
+          "non-positive-value",
+          `data[${i}].${spec.y}`,
+          `Value ${v} is not positive.`,
+          "Treemaps and sunbursts size shapes by value, so every value must be above zero.",
+          'To show negative values use a bar chart with colorBy: "sign".',
+        );
+    });
+    return tree(spec.data, spec.path, spec.y, ctx.agg(spec.aggregate as Aggregate), cb);
+  });
+  // The tree is shared between renders: drilling flattens a copy.
+  const root = flat
+    ? { ...whole, children: whole.children.map((n) => ({ ...n, children: [] })) }
+    : whole;
   // Drilling: draw only the next level; a click pushes it, so each click goes one level deeper.
-  if (flat) for (const n of root.children) n.children = [];
   let c = 0;
   // Colour slots follow size (the drawn order), so neighbours differ until the palette wraps.
   const tops = [...root.children].sort(big);

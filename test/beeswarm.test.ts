@@ -123,4 +123,27 @@ describe("beeswarm", () => {
     );
     expect(ms).toBeLessThan(200 * CI);
   });
+
+  it("past MAX_MARKS draws a violin of cells per band whose counts sum to the rows", () => {
+    const big = Array.from({ length: 30000 }, (_, i) => ({
+      region: regions[i % 3]!,
+      sales: 100 + ((i * 7919) % 1000) / 10,
+    }));
+    const out = renderParts({ type: "beeswarm", x: "region", y: "sales", data: big });
+    const rects = [...out.svg.matchAll(/<rect data-maya="mark"[^>]*>/g)].map((m) => m[0]);
+    expect(dots(out.svg)).toHaveLength(0);
+    expect(rects.length).toBeGreaterThan(0);
+    expect(rects.length).toBeLessThanOrEqual(10000);
+    expect(rects.reduce((t, r) => t + num(r, "data-y"), 0)).toBe(30000);
+    expect(rects[0]).toMatch(/data-x="East, sales [^"]+ to [^"]+"/);
+    expect(rects[0]).toMatch(/data-f="[\d,]+ points?"/);
+    expect(out.svg).toContain("density cells");
+    expect(out.legend).toContain('data-maya="ramp"');
+  });
+
+  it("one band with no x past the cap draws a single violin", () => {
+    const big = Array.from({ length: 12000 }, (_, i) => ({ sales: (i * 31) % 997 }));
+    const out = svg({ type: "beeswarm", y: "sales", data: big });
+    expect(out).toContain("<rect");
+  });
 });

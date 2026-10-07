@@ -119,9 +119,9 @@ describe("constellation", () => {
     expect(render(spec(rows(20)))).toMatch(/Closer points are more alike across a, b, c/);
   });
 
-  it("fails clearly above 500 rows or 12 measures", () => {
-    expect(() => render(spec(rows(501)))).toThrow(/mayacharts/);
-    expect(() => render(spec(rows(501)))).toThrow(/at most 500/);
+  it("fails clearly above 2000 rows or 12 measures", () => {
+    expect(() => render(spec(rows(2001)))).toThrow(/mayacharts/);
+    expect(() => render(spec(rows(2001)))).toThrow(/at most 2000/);
     const d = rows(5).map((r) => ({
       ...r,
       ...Object.fromEntries("defghijklmn".split("").map((k, i) => [k, i])),
@@ -129,7 +129,7 @@ describe("constellation", () => {
     const y = ["a", "b", "c", ..."defghijklmn".split("")];
     expect(y).toHaveLength(14);
     expect(() => render(spec(d, { y }))).toThrow(/at most 12/);
-    expect(stars(render(spec(rows(500))))).toHaveLength(500);
+    expect(stars(render(spec(rows(2000))))).toHaveLength(2000);
   });
 
   it("is pure core: imports with window and document deleted", async () => {
