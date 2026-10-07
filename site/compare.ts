@@ -1,4 +1,12 @@
 /// <reference types="vite/client" />
+import "mayacharts/element";
+import "mayacharts/constellation";
+import "mayacharts/units";
+import "mayacharts/orbit";
+import "mayacharts/weave";
+import { makeData } from "./data.ts";
+import { show } from "./show.ts";
+import { signature } from "./signature.ts";
 import { theme } from "./theme.ts";
 import json from "./compare.json";
 
@@ -540,7 +548,8 @@ function sideBySide(): HTMLElement {
 
 const host = document.getElementById("tables")!;
 const sum = summary();
-host.append(sum, sideBySide(), ...dims.map(render));
+host.append(sum, sideBySide(), document.getElementById("signature")!, ...dims.map(render));
+for (const [id, spec] of Object.entries(signature(makeData(7)))) show(id, spec);
 const absent = [!size && "bundle size", !ease && "ease of writing", !looks && "looks"]
   .filter(Boolean)
   .join(" and ");

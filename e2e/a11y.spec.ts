@@ -149,7 +149,7 @@ test("keyboard: Tab reaches the chart, ArrowRight activates and announces", asyn
   await expect(host.locator("[data-maya=live]")).not.toBeEmpty({ timeout: 400 });
 });
 
-// compare.html has no charts: one page-level axe run per scheme.
+// compare.html draws the five signature charts live: one page-level axe run per scheme.
 for (const scheme of ["light", "dark"] as const) {
   test(`axe WCAG 2.x AA: compare.html ${scheme}`, async ({ page }) => {
     test.skip(!existsSync("site/compare.html"), "no compare page");
