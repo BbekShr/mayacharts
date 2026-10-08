@@ -4,7 +4,9 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
-## 0.11.0 - 2026-10-08
+## 0.11.1 - 2026-10-08
+
+The 0.11.0 tag failed its release run before publishing (the exported `VERSION` was not bumped), so 0.11.0 was never on npm. 0.11.1 carries everything below.
 
 ### Fixed
 
