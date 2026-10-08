@@ -58,8 +58,9 @@ test("scale: changing the row count redraws every chart", async ({ page }) => {
   await page.locator("[data-rows='10000']").click();
   await expect(page.locator("[data-rows='10000']")).toHaveAttribute("aria-pressed", "true");
   await page.locator("#line-1").scrollIntoViewIfNeeded();
-  await expect(page.locator("#line-1 [data-k=rows]")).toHaveText("10,000");
-  await expect(page.locator("#line-1 [data-k=resize]")).toContainText("ms");
+  // The tiles still in view at the bottom draw first, each after its entrance.
+  await expect(page.locator("#line-1 [data-k=rows]")).toHaveText("10,000", { timeout: 60_000 });
+  await expect(page.locator("#line-1 [data-k=resize]")).toContainText("ms", { timeout: 60_000 });
 });
 
 test("scale: density charts match their baselines", async ({ page }) => {
