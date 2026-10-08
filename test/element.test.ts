@@ -574,6 +574,29 @@ describe("review fixes", () => {
     spy.mockRestore();
   });
 
+  it("a resize frame at the drawn size does not re-render or cut the entrance", async () => {
+    let ro!: () => void;
+    globalThis.ResizeObserver = class {
+      constructor(f: () => void) {
+        ro = f;
+      }
+      observe() {}
+      disconnect() {}
+    } as never;
+    // A host connects the element, the box gets its size (a resize frame is queued), then the spec lands.
+    const el = await mount(() => {});
+    Object.defineProperty(live(el).querySelector(".maya-box")!, "clientWidth", { value: 500 });
+    ro();
+    const cancel = vi.spyOn(Animation.prototype, "cancel");
+    let renders = 0;
+    el.addEventListener("maya-render", () => renders++);
+    el.spec = spec();
+    await frame();
+    expect(renders).toBe(1);
+    expect(cancel).not.toHaveBeenCalled();
+    cancel.mockRestore();
+  });
+
   it("tooltip:false keeps the keyboard: Arrow then Enter selects", async () => {
     const el = await mount((e) => (e.spec = spec(rows, { tooltip: false, select: true })));
     const got: unknown[] = [];

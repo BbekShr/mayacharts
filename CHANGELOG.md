@@ -4,6 +4,17 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- A resize frame queued before a chart's first draw no longer re-renders it at the same size. Every chart drew twice on mount, and the second draw cancelled the entrance animation.
+
+### Changed
+
+- Boxplot's row pass is about twice as fast at millions of rows.
+- The Scale page waits for each tile's entrance before timing its resize, so a million-row entrance plays without a stall, and a new row count stops the previous count's queued draws.
+
 ## 0.10.0 - 2026-10-07
 
 ### Added
