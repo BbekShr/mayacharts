@@ -192,8 +192,15 @@ $("install").addEventListener("click", () => {
     () => done("Copied npm i mayacharts"),
     () => done("Copy failed; select the text instead"),
   );
-  $("install").dataset.copied = "";
-  setTimeout(() => delete $("install").dataset.copied, 1600);
+  // Swap the label in place: the span's min-width keeps the button from growing and wrapping.
+  const btn = $("install");
+  const label = btn.querySelector(".copy")!;
+  btn.dataset.copied = "";
+  label.textContent = "Copied";
+  setTimeout(() => {
+    delete btn.dataset.copied;
+    label.textContent = "Copy";
+  }, 1600);
 });
 
 theme();

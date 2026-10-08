@@ -989,9 +989,6 @@ header.site .tagline {
 .btn.install[data-copied] .copy {
   color: var(--accent);
 }
-.btn.install[data-copied] .copy::before {
-  content: "Copied ";
-}
 .hero-chart {
   margin: 0;
   padding: 20px 20px 12px;
