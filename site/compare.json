@@ -1,7 +1,7 @@
 {
   "generated": "2026-10-08",
   "versions": {
-    "commit": "4373c5b",
+    "commit": "b554f75",
     "maya": null,
     "chartjs": "4.5.1",
     "echarts": "6.1.0",
@@ -83,7 +83,7 @@
             "right": 0.38328993055555555
           }
         },
-        "ttfpMs": 20.2
+        "ttfpMs": 17.2
       },
       "grouped": {
         "supported": true,
@@ -113,7 +113,7 @@
             "right": 0.2684461805555556
           }
         },
-        "ttfpMs": 24.1
+        "ttfpMs": 19.8
       },
       "stacked": {
         "supported": true,
@@ -143,7 +143,7 @@
             "right": 0.34453125
           }
         },
-        "ttfpMs": 23.7
+        "ttfpMs": 22.2
       },
       "horizontal": {
         "supported": true,
@@ -173,7 +173,7 @@
             "right": 0.11341145833333334
           }
         },
-        "ttfpMs": 20.9
+        "ttfpMs": 17.7
       },
       "line": {
         "supported": true,
@@ -203,7 +203,7 @@
             "right": 0.017881944444444443
           }
         },
-        "ttfpMs": 24.5
+        "ttfpMs": 19.7
       },
       "multiline": {
         "supported": true,
@@ -233,7 +233,7 @@
             "right": 0.02651909722222222
           }
         },
-        "ttfpMs": 25.6
+        "ttfpMs": 23.2
       },
       "area": {
         "supported": true,
@@ -263,7 +263,7 @@
             "right": 0.32026909722222224
           }
         },
-        "ttfpMs": 25.6
+        "ttfpMs": 21.4
       },
       "scatter": {
         "supported": true,
@@ -293,7 +293,7 @@
             "right": 0.08033854166666667
           }
         },
-        "ttfpMs": 28.8
+        "ttfpMs": 25.6
       },
       "bubble": {
         "supported": true,
@@ -323,7 +323,7 @@
             "right": 0.044422743055555554
           }
         },
-        "ttfpMs": 22.4
+        "ttfpMs": 24.7
       },
       "heatmap": {
         "supported": true,
@@ -353,7 +353,7 @@
             "right": 0.2588107638888889
           }
         },
-        "ttfpMs": 29.1
+        "ttfpMs": 23.6
       },
       "treemap": {
         "supported": true,
@@ -383,7 +383,7 @@
             "right": 0.9077473958333333
           }
         },
-        "ttfpMs": 22.5
+        "ttfpMs": 20.1
       },
       "sankey": {
         "supported": true,
@@ -413,7 +413,7 @@
             "right": 0.31592881944444445
           }
         },
-        "ttfpMs": 20.8
+        "ttfpMs": 18.9
       }
     },
     "chartjs": {
@@ -2501,148 +2501,148 @@
       "scatter": {
         "1000": {
           "normal": {
-            "firstPaintMs": 36.9,
-            "loadPaintMs": 46.5,
-            "updateP50Ms": 16,
-            "updateP95Ms": 34.5,
+            "firstPaintMs": 32.8,
+            "loadPaintMs": 41.3,
+            "updateP50Ms": 16.1,
+            "updateP95Ms": 29.1,
             "heapMB": 2.4,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 157.8,
-            "loadPaintMs": 194.9,
-            "updateP50Ms": 65.1,
-            "updateP95Ms": 79,
+            "firstPaintMs": 132.4,
+            "loadPaintMs": 163.6,
+            "updateP50Ms": 48,
+            "updateP95Ms": 121.5,
             "heapMB": 4.2,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 171,
-            "loadPaintMs": 181.5,
-            "updateP50Ms": 131.9,
-            "updateP95Ms": 163.2,
+            "firstPaintMs": 140.7,
+            "loadPaintMs": 149.1,
+            "updateP50Ms": 112.2,
+            "updateP95Ms": 133.9,
             "heapMB": 22.2,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 677.7,
-            "loadPaintMs": 719.4,
-            "updateP50Ms": 551.7,
-            "updateP95Ms": 717.9,
-            "heapMB": 7.8,
-            "runs": 4
+            "firstPaintMs": 559.1,
+            "loadPaintMs": 592,
+            "updateP50Ms": 442,
+            "updateP95Ms": 580.3,
+            "heapMB": 9.6,
+            "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 106.1,
-            "loadPaintMs": 115.6,
-            "updateP50Ms": 50.8,
-            "updateP95Ms": 75.3,
+            "firstPaintMs": 90,
+            "loadPaintMs": 97.3,
+            "updateP50Ms": 40.1,
+            "updateP95Ms": 64,
             "heapMB": 7.1,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 392.8,
-            "loadPaintMs": 434.1,
-            "updateP50Ms": 190.3,
-            "updateP95Ms": 272.2,
+            "firstPaintMs": 349.8,
+            "loadPaintMs": 382.7,
+            "updateP50Ms": 166.9,
+            "updateP95Ms": 260.5,
             "heapMB": 7.1,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 218.3,
-            "loadPaintMs": 228.3,
-            "updateP50Ms": 146.4,
-            "updateP95Ms": 271.1,
+            "firstPaintMs": 198.2,
+            "loadPaintMs": 206.2,
+            "updateP50Ms": 136.2,
+            "updateP95Ms": 323.8,
             "heapMB": 50.3,
-            "runs": 4
+            "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 789.7,
-            "loadPaintMs": 828.5,
-            "updateP50Ms": 555.7,
-            "updateP95Ms": 695.1,
+            "firstPaintMs": 710,
+            "loadPaintMs": 744.4,
+            "updateP50Ms": 535.9,
+            "updateP95Ms": 643.2,
             "heapMB": 50.8,
-            "runs": 1
+            "runs": 2
           }
         }
       },
       "line": {
         "1000": {
           "normal": {
-            "firstPaintMs": 32.9,
-            "loadPaintMs": 44.3,
-            "updateP50Ms": 15.9,
-            "updateP95Ms": 16.7,
+            "firstPaintMs": 30.7,
+            "loadPaintMs": 38.1,
+            "updateP50Ms": 16,
+            "updateP95Ms": 16.3,
             "heapMB": 2.5,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 137.3,
-            "loadPaintMs": 172.9,
-            "updateP50Ms": 28.6,
-            "updateP95Ms": 60.6,
+            "firstPaintMs": 132.9,
+            "loadPaintMs": 168.2,
+            "updateP50Ms": 24.2,
+            "updateP95Ms": 48.8,
             "heapMB": 2.5,
             "runs": 5
           }
         },
         "10000": {
           "normal": {
-            "firstPaintMs": 38.9,
-            "loadPaintMs": 47.4,
-            "updateP50Ms": 10.7,
-            "updateP95Ms": 16.9,
+            "firstPaintMs": 33.9,
+            "loadPaintMs": 41.9,
+            "updateP50Ms": 12.1,
+            "updateP95Ms": 15.2,
             "heapMB": 3.2,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 148.3,
-            "loadPaintMs": 186.4,
-            "updateP50Ms": 39.3,
-            "updateP95Ms": 54.3,
+            "firstPaintMs": 125.8,
+            "loadPaintMs": 161.2,
+            "updateP50Ms": 31.7,
+            "updateP95Ms": 60.3,
             "heapMB": 3.2,
             "runs": 5
           }
         },
         "100000": {
           "normal": {
-            "firstPaintMs": 65.5,
-            "loadPaintMs": 74.5,
-            "updateP50Ms": 23.2,
-            "updateP95Ms": 33.1,
+            "firstPaintMs": 59.8,
+            "loadPaintMs": 67.2,
+            "updateP50Ms": 20.4,
+            "updateP95Ms": 28.6,
             "heapMB": 75.8,
             "runs": 5
           },
           "throttled": {
-            "firstPaintMs": 213.1,
-            "loadPaintMs": 250.5,
-            "updateP50Ms": 96.2,
-            "updateP95Ms": 136.1,
-            "heapMB": 53.5,
+            "firstPaintMs": 187.1,
+            "loadPaintMs": 222.1,
+            "updateP50Ms": 86.7,
+            "updateP95Ms": 121.7,
+            "heapMB": 60.8,
             "runs": 5
           }
         },
         "1000000": {
           "normal": {
-            "firstPaintMs": 205.9,
-            "loadPaintMs": 215.7,
-            "updateP50Ms": 159.2,
-            "updateP95Ms": 202.3,
+            "firstPaintMs": 189.2,
+            "loadPaintMs": 196.4,
+            "updateP50Ms": 144.6,
+            "updateP95Ms": 193.6,
             "heapMB": 74.5,
             "runs": 4
           },
           "throttled": {
-            "firstPaintMs": 730.4,
-            "loadPaintMs": 769.4,
-            "updateP50Ms": 623.4,
-            "updateP95Ms": 796.8,
+            "firstPaintMs": 683.2,
+            "loadPaintMs": 717.4,
+            "updateP50Ms": 552.2,
+            "updateP95Ms": 681,
             "heapMB": 74.6,
-            "runs": 1
+            "runs": 2
           }
         }
       }
