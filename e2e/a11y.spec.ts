@@ -101,6 +101,7 @@ for (const path of PAGES) {
   });
 
   test(`RTL: ${path} y-axis labels sit left of the plot`, async ({ page }) => {
+    test.setTimeout(120_000); // the scale page draws its eleven charts one after another
     await open(page, path);
     await page.evaluate(() => (document.documentElement.dir = "rtl"));
     await page.waitForTimeout(100);
