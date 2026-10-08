@@ -335,6 +335,17 @@ export class MayaChart extends HTMLElement {
       if (document.readyState === "loading") (this.#readJson(), this.#schedule(true));
       return;
     }
+    // A resize frame queued before the first draw (the box going from 0 to its size) arrives
+    // after it: the chart is already this size, so there is nothing to draw and no entrance to cut.
+    if (
+      fromRaf &&
+      this.#drawn &&
+      Math.abs(box.clientWidth - this.#size[0]!) <= 1 &&
+      Math.abs(box.clientHeight - this.#size[1]!) <= 1
+    ) {
+      this.#resized = false;
+      return;
+    }
     if (spec !== this.#seen) {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };

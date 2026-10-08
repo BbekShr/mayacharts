@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, renderParts } from "../src/core/render.ts";
 import { MAX_MARKS, MayaSpecError } from "../src/core/validate.ts";
+import "../src/stats.ts";
 
 // Shared CI runners are 2 to 4 times slower than a laptop; the envelopes double there.
 const CI = process.env.CI ? 2 : 1;
@@ -257,6 +258,16 @@ describe("1M rows", () => {
         x: "t",
         y: "v",
         data: rows((i) => ({ t: "d" + i, v: (i * 7919) % 1000 })),
+      }),
+      null,
+    ],
+    [
+      "boxplot of 1M rows over 6 categories",
+      () => ({
+        type: "boxplot",
+        x: "g",
+        y: "v",
+        data: rows((i) => ({ g: "g" + (i % 6), v: (i * 7919) % 1000 })),
       }),
       null,
     ],

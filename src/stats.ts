@@ -9,6 +9,8 @@ interface Box {
   si: number;
   /** Row indices: a million rows must not become a million objects. */
   pts: number[];
+  /** Their values, read in the row pass (a mapped Float64Array.from is slow at millions of rows). */
+  vs: number[];
 }
 
 /** Raw rows by (category, series): the shaped cells are sums, a box plot needs the rows. */
@@ -29,11 +31,13 @@ function rowPass(spec: ResolvedSpec, shaped: Shaped) {
     const si = sj.get(spec.series === null ? "" : String(row[spec.series]));
     if (ci === undefined || si === undefined) return;
     const id = ci * shaped.series.length + si;
-    (by[id] ??= { ci, si, pts: [] }).pts.push(i);
+    const b = (by[id] ??= { ci, si, pts: [], vs: [] });
+    b.pts.push(i);
+    b.vs.push(v);
   });
   const all = by.filter(Boolean);
   // Sorted once per box (typed sort is numeric, no comparator); the extent, label width and loop share it.
-  const vals = all.map((b) => Float64Array.from(b.pts, (i) => spec.data[i]![spec.y] as number));
+  const vals = all.map((b) => Float64Array.from(b.vs));
   return { all, vals, sorted: vals.map((v) => v.slice().sort()) };
 }
 
