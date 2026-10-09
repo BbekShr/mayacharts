@@ -10,6 +10,11 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 - A time axis drops a tick more than 4 px outside the data instead of clamping it to the plot edge. A bar chart of Jan to Dec no longer prints "Jan 2026" under the last bars.
 - A bar chart with 8 or fewer categories no longer cuts labels to stubs like "Al…" when the cut would keep fewer than 3 characters. It thins every other label at full length instead.
+- Treemap and sunburst colour slots follow the first appearance of each top-level name instead of its size, so a branch keeps its colour when an update changes the ranking. A `colors` array now maps to first-appearance order. Drawing order still follows size.
+- Treemap names that do not fit are cut with an ellipsis instead of dropped.
+- A sankey column whose nodes each have one parent keeps them under their parent, so ribbons no longer cross the chart.
+- An orbit name that collides at full width retries the short value-only form before it is dropped.
+- A KPI tooltip shows the value once instead of three times.
 
 ## 0.12.0 - 2026-10-08
 
