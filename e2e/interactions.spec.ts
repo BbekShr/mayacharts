@@ -755,6 +755,29 @@ test.describe("tooltip", () => {
     await page.evaluate(() => scrollBy(0, 1500));
     await expect(tip).toHaveCount(0);
   });
+
+  test("a clamped keyboard tooltip closes on scroll even while its mark is on screen", async ({
+    browser,
+    baseURL,
+  }) => {
+    const ctx = await browser.newContext({
+      baseURL: baseURL!,
+      viewport: { width: 360, height: 900 },
+    });
+    const page = await ctx.newPage();
+    await open(page);
+    await page.locator("#boxplot").scrollIntoViewIfNeeded();
+    await settle(page);
+    await page.locator("#boxplot svg.maya-svg").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    const tip = page.locator("#boxplot .maya-tip.maya-open");
+    await expect(tip).toBeVisible();
+    expect(await tip.evaluate((t) => getComputedStyle(t).position)).toBe("fixed");
+    await page.evaluate(() => scrollBy(0, 120));
+    await expect(tip).toHaveCount(0);
+    await ctx.close();
+  });
 });
 
 test.describe("update", () => {

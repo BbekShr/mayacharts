@@ -533,7 +533,7 @@ export function tooltip(
       "scroll",
       () => {
         const r = cur?.getBoundingClientRect();
-        (kb && r && r.bottom > 0 && r.top < innerHeight) || hide();
+        (kb && !clamped && r && r.bottom > 0 && r.top < innerHeight) || hide();
       },
       { capture: true, passive: true },
     ]),
