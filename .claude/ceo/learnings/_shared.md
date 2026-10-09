@@ -53,6 +53,10 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 **Process**
 
+- Probe load jank with per-frame viewBox and animation-clock logs in chromium and webkit before blaming the library: the 2026-10-08 Scale jerk was the demo's own resize timer.
+- Editors in one tree race on `git commit` (staged files get swept into another's commit, and the token hook restages README): give concurrent editors separate worktrees.
+- Regenerate baselines with `--update-snapshots=all`; plain `--update-snapshots` rewrote 1 of 20 changed images.
+
 - The builder's ThoughtSpot code tab was built from public ThoughtSpot docs only (owner, 2026-10-06). Do not re-flag it as employer knowledge; flag only new host-specific content.
 
 - In gallery runs, let critics walk a worktree pinned to the run branch; editors' live edits reload Vite mid-probe (2026-10-06).
