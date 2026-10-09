@@ -756,7 +756,7 @@ test.describe("tooltip", () => {
     await expect(tip).toHaveCount(0);
   });
 
-  test("a clamped keyboard tooltip closes on scroll even while its mark is on screen", async ({
+  test("a clamped keyboard tooltip fades on scroll even while its mark is on screen", async ({
     browser,
     baseURL,
   }) => {

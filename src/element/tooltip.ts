@@ -528,12 +528,15 @@ export function tooltip(
     ),
     listen(document, ["pointerdown", outside, { capture: true }]),
     // Focusing the chart can scroll it into view; that must not close a keyboard tooltip.
-    // A keyboard tooltip stays while its mark is on screen; a clamped one would float over other charts.
+    // A keyboard tooltip stays while its mark is on screen; a clamped one would float over other
+    // charts, so it fades but keeps its mark active (Enter still drills after a focus scroll).
     listen(window, [
       "scroll",
       () => {
         const r = cur?.getBoundingClientRect();
-        (kb && !clamped && r && r.bottom > 0 && r.top < innerHeight) || hide();
+        kb && r && r.bottom > 0 && r.top < innerHeight
+          ? clamped && tip.classList.remove("maya-open")
+          : hide();
       },
       { capture: true, passive: true },
     ]),
