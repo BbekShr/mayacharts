@@ -151,7 +151,7 @@ export const css =
   ".maya-err{margin:0;padding:8px;color:var(--maya-bad);white-space:pre-wrap;font:12px monospace}" +
   ".maya-box{flex:1;min-height:0;position:relative}" +
   ".maya-box svg{display:block;width:100%;height:100%;overflow:visible}" +
-  ".maya-svg{direction:ltr;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums}" +
+  ".maya-svg{direction:ltr;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}" +
   ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:11px}" +
   "[data-maya=grid] *{stroke:var(--maya-grid);shape-rendering:crispEdges}" +
   S +
