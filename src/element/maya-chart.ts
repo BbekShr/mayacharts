@@ -433,8 +433,9 @@ export class MayaChart extends HTMLElement {
       box.insertAdjacentHTML("afterend", html(parts.table));
     };
     // Without requestIdleCallback (Safari) a timer well after the entrance.
-    if ("requestIdleCallback" in globalThis) requestIdleCallback(late, { timeout: 2000 });
-    else setTimeout(late, 1600);
+    (globalThis.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1600)))(late, {
+      timeout: 2000,
+    });
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
     for (const k of this.#vars)

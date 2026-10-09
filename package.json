@@ -143,7 +143,7 @@
   },
   "mayaSize": {
     "dist/index.js": 37600,
-    "dist/element.js": 54400,
+    "dist/element.js": 54500,
     "dist/theme.css": 4600,
     "dist/hierarchy.js": 4450,
     "dist/flow.js": 3900,

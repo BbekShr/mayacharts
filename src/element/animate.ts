@@ -186,18 +186,16 @@ function seed(e: Element, g: Box, origin?: Box): Box {
   const neg = e.hasAttribute("data-neg");
   // A stack grows as one column: every segment starts at the baseline (the outer edge of its
   // column's non-negative segments), not at its own edge.
-  if (!neg && (e.hasAttribute("data-mm") || e.closest("svg[data-stack]"))) {
-    const hz = !!e.closest("[data-dir=h]"),
-      c = e.getAttribute("data-c");
-    let b = hz ? x : y + h;
-    for (const s of e.parentNode!.children)
-      if (s.localName === "rect" && s.getAttribute("data-c") === c && !s.hasAttribute("data-neg")) {
-        const q = geo(s)!;
-        b = hz ? Math.min(b, q[0]) : Math.max(b, q[1] + q[3]);
-      }
-    return hz ? [b, y, 0, h] : [x, b, w, 0];
-  }
-  return e.closest("[data-dir=h]") ? [neg ? x + w : x, y, 0, h] : [x, neg ? y : y + h, w, 0];
+  const hz = !!e.closest("[data-dir=h]");
+  let b = hz ? (neg ? x + w : x) : neg ? y : y + h;
+  if (!neg && (e.hasAttribute("data-mm") || e.closest("svg[data-stack]")))
+    for (const s of e.parentNode!.querySelectorAll(
+      `rect[data-c="${e.getAttribute("data-c")}"]:not([data-neg])`,
+    )) {
+      const q = geo(s)!;
+      b = hz ? Math.min(b, q[0]) : Math.max(b, q[1] + q[3]);
+    }
+  return hz ? [b, y, 0, h] : [x, b, w, 0];
 }
 
 function fade(e: Element, out: boolean, then?: () => void, o = DATA): void {
