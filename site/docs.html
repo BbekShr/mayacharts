@@ -524,8 +524,9 @@
         <p>
           The row pass (grouping, aggregation, time parsing, validation) is cached per
           <code>data</code> array: a resize, legend toggle, zoom or view change re-renders without
-          walking the rows again. The cache is keyed by the array's identity and length, so after
-          changing rows in place, assign a new array (<code>chart.data = [...rows]</code>).
+          walking the rows again. The cache is keyed by the array's identity, length, first row and
+          last row, so a push, a shift or a replaced last row is noticed; after editing any other
+          row in place, assign a new array (<code>chart.data = [...rows]</code>).
         </p>
       </section>
 
