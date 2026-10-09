@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, renderParts, renderShell } from "../src/index.ts";
+import { tw } from "../src/core/layout.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 const months = ["Jan", "Feb", "Mar"];
@@ -546,5 +547,27 @@ describe("row-pass cache", () => {
     expect(render(spec)).toContain('data-x="d"');
     d[2] = { c: "e", v: 4 };
     expect(render(spec)).toContain('data-x="e"');
+  });
+});
+
+describe("thinned x labels", () => {
+  const long = "Northwest Territories and Greater Metropolitan Distribution Region ";
+  const data = Array.from({ length: 40 }, (_, i) => ({ r: long + (i + 1), v: i + 1 }));
+  it.each([600, 360])("stay inside the svg at width %i", (width) => {
+    {
+      const svg = render({ type: "bar", data, x: "r", y: "v" } as ChartSpec, {
+        width,
+        height: 300,
+      }) as string;
+      const g = svg.match(/data-maya="axis-x"[^]*?<\/g>/)![0];
+      const ts = [...g.matchAll(/<text x="([\d.]+)"[^>]*>([^<]*)/g)];
+      expect(ts.length).toBeGreaterThan(0);
+      for (const [, x, t] of ts) {
+        const half = tw(t!) / 2;
+        expect(+x! - half).toBeGreaterThanOrEqual(0);
+        expect(+x! + half).toBeLessThanOrEqual(width);
+        expect(t!.endsWith("…")).toBe(true);
+      }
+    }
   });
 });
