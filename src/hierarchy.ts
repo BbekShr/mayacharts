@@ -1,7 +1,7 @@
 // treemap + sunburst. Importing this file registers both types.
 import { register } from "./core/registry.ts";
 import { DEG } from "./core/scale.ts";
-import { OTHER, cbField, el, esc, hit, key, memo, r } from "./core/svg.ts";
+import { OTHER, cbField, clip, el, esc, hit, key, memo, r } from "./core/svg.ts";
 import type { Aggregate, Mark, MarkCtx, MarkOut, Row } from "./core/types.ts";
 
 interface Node {
@@ -179,22 +179,20 @@ const treemap: Mark = {
         });
         // No data-depth on the hit: [data-depth] strokes would outline every grown target.
         hits += hit({ ...a, "data-depth": null }, bx, by, bw, bh);
-        // Name over value when both fit, else "name · value" on one line, else the value.
-        const [lx, ly, f, one] = [
-          bx + bw / 2,
-          by + bh / 2,
-          a["data-f"],
-          `${n.name} · ${a["data-f"]}`,
-        ];
+        // Name over value when both fit (the name cut with an ellipsis, never dropped), else "name · value", else the value.
+        const [lx, ly, f] = [bx + bw / 2, by + bh / 2, a["data-f"]];
+        const cap = Math.floor((bw - 4) / 7.2);
         if (spec.labels === false || bh < 16) return; // names on unless turned off
-        if (bh >= 34 && text(n.name) <= bw && text(f) <= bw)
-          ctx.label(lx, ly - 8, n.name, "center") && ctx.label(lx, ly + 8, f, "center");
-        else if (text(one) <= bw) ctx.label(lx, ly, one, "center");
+        if (bh >= 34 && cap >= 3)
+          ctx.label(lx, ly - 8, clip(n.name, cap), "center") &&
+            text(f) <= bw &&
+            ctx.label(lx, ly + 8, f, "center");
+        else if (text(`${n.name} · ${f}`) <= bw) ctx.label(lx, ly, `${n.name} · ${f}`, "center");
         else if (text(f) <= bw) ctx.label(lx, ly, f, "center");
         return;
       }
-      if (n.depth === 1 && text(n.name) <= bw && bh >= 30)
-        ctx.label(bx + bw / 2, by + 9, n.name, "center");
+      if (n.depth === 1 && bw >= 28 && bh >= 30)
+        ctx.label(bx + bw / 2, by + 9, clip(n.name, Math.floor((bw - 4) / 7.2)), "center");
       for (const [c, cx, cy, cw, ch] of squarify(n.children, bx, by, bw, bh))
         walk(c, cx, cy, cw, ch);
     };
