@@ -50,6 +50,7 @@ export class MayaChart extends HTMLElement {
   #vars = new Set<string>();
   #err = "";
   #drawn = false;
+  #intro = 0; // performance.now() of the animated first draw
   #tbl = 0;
 
   get spec(): ChartSpec | undefined {
@@ -346,6 +347,13 @@ export class MayaChart extends HTMLElement {
       this.#resized = false;
       return;
     }
+    // A resize frame must not cut the entrance short (bars snap, axes keep fading): wait it out,
+    // the old svg scales through its viewBox meanwhile. A spec change renders from a microtask and animates.
+    const wait = this.#intro + 1100 - performance.now(); // 760 ms + stagger, or the 1100 ms wipe
+    if (fromRaf && this.#resized && wait > 0) {
+      setTimeout(() => this.#schedule(true), wait);
+      return;
+    }
     if (spec !== this.#seen) {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
@@ -447,6 +455,7 @@ export class MayaChart extends HTMLElement {
       instant: resized,
     });
     this.#zoom = undefined;
+    if (intro && !still) this.#intro = performance.now();
     this.#drawn = true;
     this.#restore(focus);
     for (const h of Object.values(this.#ix ?? {})) h.painted?.();
