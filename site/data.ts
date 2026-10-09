@@ -474,29 +474,33 @@ export function makeGrowth(seed: number) {
   }));
 }
 
-/** Weave ranks: six product lines over ten quarters. Most hold their place; Cedar and Ember climb, Atlas falls, so each quarter has a crossing or two. */
+/** Weave ranks: six product lines over ten quarters. Most hold their place; one pair climbs and one falls, so each quarter has a crossing or two. The seed deals the lines to different roles, so a re-roll swaps ranks. */
 export function makeRanks(seed: number) {
   const rng = mulberry32(seed);
-  // [line, start value, ramp from quarter, ramp to quarter, change over the ramp]
-  const lines: [string, number, number, number, number][] = [
-    ["Atlas", 116, 5, 8, -40],
-    ["Birch", 102, 0, 0, 0],
-    ["Cedar", 92, 0, 3, 20],
-    ["Delta", 82, 0, 0, 0],
-    ["Ember", 70, 4, 8, 26],
-    ["Flint", 60, 0, 0, 0],
+  const names = ["Atlas", "Birch", "Cedar", "Delta", "Ember", "Flint"];
+  const deal = Math.floor(rng() * names.length);
+  // [start value, ramp from quarter, ramp to quarter, change over the ramp]
+  const roles: [number, number, number, number][] = [
+    [116, 5, 8, -40],
+    [102, 0, 0, 0],
+    [92, 0, 3, 20],
+    [82, 0, 0, 0],
+    [70, 4, 8, 26],
+    [60, 0, 0, 0],
   ];
   const quarters = Array.from(
     { length: 10 },
     (_, q) => `Q${((q + 1) % 4) + 1} ${24 + Math.floor((q + 1) / 4)}`,
   );
-  return lines.flatMap(([line, base, q0, q1, dv]) =>
-    quarters.map((quarter, q) => {
+  // Rows stay in name order, so a line keeps its colour and key whatever role it is dealt.
+  return names.flatMap((line, j) => {
+    const [base, q0, q1, dv] = roles[(j + deal) % roles.length]!;
+    return quarters.map((quarter, q) => {
       const t = q1 > q0 ? Math.min(1, Math.max(0, (q - q0) / (q1 - q0))) : 0;
       const sales = base + dv * t * t * (3 - 2 * t) + (rng() - 0.5) * 2;
       return { quarter, line, sales: Math.round(sales * 10) / 10 };
-    }),
-  );
+    });
+  });
 }
 
 /** A seed derived from the dataset so a re-roll redraws the synthetic points too. */
