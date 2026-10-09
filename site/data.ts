@@ -393,7 +393,7 @@ export function makeLive(seed: number, n = 300) {
 export function makeAccounts(seed: number) {
   const rng = mulberry32(seed);
   const first = [
-    "Acme",
+    "Alderway",
     "Nordwind",
     "Bluepine",
     "Harbor",
