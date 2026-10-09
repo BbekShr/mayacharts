@@ -200,6 +200,27 @@ describe("sankey", () => {
     expect(y("Z")).toBeLessThan(y("A")); // Z follows Big, not alphabet or insertion order
   });
 
+  it("keeps a single-parent column grouped under its parents when the next column pulls the other way", () => {
+    // Small's child "s" links to the biggest sink, which a backward sweep would use to drag it above Big's children.
+    const s = render(
+      spec(
+        [
+          { a: "Big", b: "b1", c: "A", v: 10 },
+          { a: "Big", b: "b2", c: "A", v: 1 },
+          { a: "Big", b: "b2", c: "B", v: 9 },
+          { a: "Small", b: "s", c: "A", v: 2 },
+        ],
+        { path: ["a", "b", "c"] },
+      ),
+      { width: 500, height: 300 },
+    );
+    const y = (n: string) =>
+      +at(
+        tags(s, "mark").find((t) => at(t, "data-x") === n && at(t, "data-depth") === "1")!,
+        "y",
+      )!;
+    expect(y("b2")).toBeLessThan(y("s")); // s sits under Small, below Big's children
+  });
   it("200k distinct nodes fail as too-many-marks, not RangeError", () => {
     const big = Array.from({ length: 200000 }, (_, i) => ({ a: "s" + i, b: "M", c: "P", v: 1 }));
     expect(() => render(spec(big))).toThrow(expect.objectContaining({ code: "too-many-marks" }));

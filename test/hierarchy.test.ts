@@ -173,7 +173,7 @@ describe("sunburst", () => {
       "A › Other (999)",
     ]);
   });
-  it("colour slots follow size, so the drawn order cycles the palette", () => {
+  it("colour slots follow first appearance, so a rank change keeps every colour", () => {
     const rows = [
       { g: "small", n: "x", v: 1 },
       { g: "big", n: "x", v: 9 },
@@ -181,14 +181,14 @@ describe("sunburst", () => {
     const s = tags(renderParts({ ...sb, data: rows }).svg, "circle");
     const top = s.filter((c) => at(c, "data-depth") === "1");
     expect(top.map((c) => [at(c, "data-x"), at(c, "data-s")])).toEqual([
-      ["big", "0"],
-      ["small", "1"],
+      ["big", "1"],
+      ["small", "0"],
     ]);
     const d = tags(
       renderParts({ ...sb, data: rows, drill: true }, { view: { drill: ["small"] } }).svg,
       "circle",
     );
-    expect(d.every((c) => at(c, "data-s") === "1")).toBe(true);
+    expect(d.every((c) => at(c, "data-s") === "0")).toBe(true);
   });
   it("a name runs along the arc, upright, cut to what fits", () => {
     // Twelve 30 degree slices in a 400 px box: the arc holds about 8 characters.
