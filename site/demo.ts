@@ -89,8 +89,9 @@ let b = values();
 let twoSeries = false;
 
 function liveSpec(): ChartSpec {
-  const rows: Row[] = cats.map((cat, i) => ({ cat, series: "A", value: a[i] ?? 0 }));
-  if (twoSeries) rows.push(...cats.map((cat, i) => ({ cat, series: "B", value: b[i] ?? 0 })));
+  const rows: Row[] = cats.map((cat, i) => ({ cat, series: "This week", value: a[i] ?? 0 }));
+  if (twoSeries)
+    rows.push(...cats.map((cat, i) => ({ cat, series: "Last week", value: b[i] ?? 0 })));
   // Always a series field: A keeps its keys when B comes and goes, so the bars stay and B enters.
   return { type: "bar", title: "Live data", x: "cat", y: "value", series: "series", data: rows };
 }
