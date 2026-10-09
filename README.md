@@ -325,7 +325,7 @@ The [Scale page](https://bbekshr.github.io/mayacharts/scale.html) draws eleven c
 
 A chart handles up to a million rows wherever the chart makes sense, by reducing what it draws, never by dropping the data table or hiding the reduction. Line and area charts reduce long series to about one point per 2 px of plot width (at most 1000 categories, and 4000 shared between series) using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. A time axis reduces whenever it has more points than that budget; a category axis reduces past 1000 categories, over the category index. A kpi thins its sparkline the same way. The data table and screen reader description indicate how many points are displayed. A bar with more categories than fit (past 10000 marks) and no `limit` keeps the top N by total, N being 10 per 40 px of plot width, and rolls the rest into "Other". The automatic cut ranks by absolute total, so a large negative bar stays; an explicit `limit` ranks by signed total. Scatter charts above 10000 visible points are drawn as density cells. A table draws the rows that fit its height, and its hidden data table lists the first 1000. The bar roll-up also puts a sentence in `renderParts(...).warnings`. Charts that cannot reduce without changing meaning (waterfall, dumbbell, parallel and the module charts) fail with `too-many-marks`, naming the mark count, the 10000 cap and the row count, and suggest `limit` or `aggregate`.
 
-The row pass (grouping, aggregation, time parsing, validation) is cached per `data` array: a resize, legend toggle, zoom or view change re-renders without walking the rows again, so at a million rows a re-render of a line, bar, scatter or kpi costs tens of milliseconds. The cache is keyed by the array's identity and length, so after changing rows in place, assign a new array (`chart.data = [...rows]`).
+The row pass (grouping, aggregation, time parsing, validation) is cached per `data` array: a resize, legend toggle, zoom or view change re-renders without walking the rows again, so at a million rows a re-render of a line, bar, scatter or kpi costs tens of milliseconds. The cache is keyed by the array's identity, length, first row and last row, so a push, a shift or a replaced last row is noticed; after editing any other row in place, assign a new array (`chart.data = [...rows]`).
 
 ## Canonical examples
 
@@ -1041,15 +1041,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 12,664 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 12,686 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,157,203,220 total, 2,477,641 output
-- claude-sonnet-5-5: 569,397,535 total, 82,153 output
+- claude-opus-5-5: 1,158,392,579 total, 2,477,707 output
+- claude-sonnet-5-5: 570,421,222 total, 82,285 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 26,369,445 total, 1,089 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,949,863,443 total, 2,996,111 output
+- all: 1,952,076,489 total, 2,996,309 output
 
 <!-- tokens:end -->
 
