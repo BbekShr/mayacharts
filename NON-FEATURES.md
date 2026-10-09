@@ -16,6 +16,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 ## Known ceilings
 
+- **Value magnitude**: a numeric field (y, y2, size, was, colorBy, scatter x) must stay within 1e300 in absolute value; past it validation fails with the field's numeric error and the hint "Scale the value first". Sums of values that large overflow the scale and layout arithmetic to NaN, so the ceiling is checked per value, not per total (two 1e300 values still sum safely).
 - **Tooltip rows**: a tooltip shows at most 12 rows (a `+N` row counts the rest); a category with more series shows a window around the hovered one. Units: ArrowUp and ArrowDown do nothing because each dot is its own group, and during a form flight the pointer picks dots by where they will land. A boxplot outlier has no category group, so ArrowLeft and ArrowRight from it jump to the first box.
 - **Module row-pass cache**: sunburst, treemap, sankey, chord, boxplot and beeswarm cache their row pass by data array identity, length, first row and last row, so a middle row edited in place needs a new array.
 - **Beeswarm density edges**: density counts use a binary search over each band's sorted values, so a value exactly on a column edge can land one column over from the pixel computation.

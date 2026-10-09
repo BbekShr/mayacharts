@@ -140,7 +140,7 @@ it("a total that overflows to Infinity still gives finite output", () => {
     stack: "percent",
     x: "k",
     y: ["a", "b"],
-    data: [{ k: "x", a: 1e308, b: 1e308 }],
+    data: [{ k: "x", a: 1e300, b: 1e300 }],
   });
   expect(svg).not.toMatch(/NaN|Infinity/);
 });

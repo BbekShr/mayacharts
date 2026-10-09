@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { render } from "../src/index.ts";
 import { register } from "../src/core/registry.ts";
 import {
   fail,
@@ -703,5 +704,15 @@ describe("0.9 contracts: weave, units, orbit, constellation, was", () => {
   it("hints and aliases", () => {
     expect(err({ ...base, previous: "x" }).message).toContain('Use was: "<field>"');
     expect(err({ ...base, type: "bump" }).message).toContain('Use type: "weave"');
+  });
+});
+
+describe("value magnitude ceiling", () => {
+  it("rejects |y| above 1e300 with the numeric error and a scale hint", () => {
+    const run = () => render({ type: "bar", x: "c", y: "v", data: [{ c: "a", v: 1.7e308 }] });
+    expect(run).toThrow(/Scale the value first/);
+    expect(() =>
+      render({ type: "bar", x: "c", y: "v", data: [{ c: "a", v: 1e300 }] }),
+    ).not.toThrow();
   });
 });
