@@ -252,13 +252,7 @@ function exit(e: Element, origin?: Box): void {
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, true);
   if (f) run(e, [arc(e, true), f], { ...ZOOM, fill: "forwards" }, done);
-  else if (z)
-    run(
-      e,
-      [{}, { opacity: 0, offset: 0.35 }, { transform: z, opacity: 0 }],
-      { ...ZOOM, fill: "forwards" },
-      done,
-    );
+  else if (z) run(e, [{}, { transform: z, opacity: 0 }], { ...ZOOM, fill: "forwards" }, done);
   else if (g)
     run(e, [{ transform: "none" }, { transform: tf(g, seed(e, g, origin)), opacity: 0 }], o, done);
   else if (e.localName === "path" && !e.matches("[data-maya=line],[data-maya=area]"))
