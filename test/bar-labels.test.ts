@@ -68,3 +68,24 @@ describe("bar breaks and waterfall start", () => {
     expect(svg.match(/<rect data-maya="mark"[^>]*data-total/g)?.length).toBe(2);
   });
 });
+
+describe("stacked segment labels", () => {
+  it("drop a value that does not fit inside its segment instead of landing on the neighbour", () => {
+    const svg = render(
+      {
+        type: "bar",
+        x: "k",
+        y: "v",
+        series: "s",
+        stack: true,
+        labels: true,
+        data: [
+          { k: "a", s: "big", v: 1000 },
+          { k: "a", s: "tiny", v: 1 },
+        ],
+      } as ChartSpec,
+      { width: 600, height: 300 },
+    );
+    expect(svg.slice(svg.indexOf('data-maya="labels"')).match(/<text/g)).toHaveLength(1);
+  });
+});

@@ -52,6 +52,7 @@ show("grouped", {
   x: "quarter",
   y: "sales",
   series: "region",
+  labels: true,
   data: grouped,
 });
 
@@ -63,6 +64,7 @@ show("stacked", {
   y: "sales",
   series: "region",
   stack: true,
+  labels: true,
   data: [
     ...grouped,
     ...quarters.map((quarter, i) => ({ quarter, region: "Returns", sales: returns[i] ?? 0 })),

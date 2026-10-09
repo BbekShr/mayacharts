@@ -105,15 +105,18 @@ export function repel(ys: number[], lo: number, hi: number, g: number): number[]
   return ys;
 }
 
-const MEMO = new WeakMap<object, Map<string, unknown>>();
+const MEMO = new WeakMap<object, [unknown, unknown, Map<string, unknown>]>();
 /**
  * The row pass of `data`, computed once per (array, key, length) and kept while the array lives.
- * Hosts that edit the array in place must pass a new array (a length change is noticed). Each
+ * A changed length, first row or last row drops the entries (a shift/push ring buffer or a
+ * replaced last row heals); an edit of a middle row needs a new array. Each
  * array keeps its 256 most recently used keys (a page of charts shares one array; a drag adds a few small ones); a result is shared, so callers must not mutate it.
  */
 export function memo<T>(data: readonly unknown[], key: string, make: () => T): T {
-  let m = MEMO.get(data);
-  if (!m) MEMO.set(data, (m = new Map()));
+  let e = MEMO.get(data);
+  const [a, z] = [data[0], data[data.length - 1]];
+  if (!e || e[0] !== a || e[1] !== z) MEMO.set(data, (e = [a, z, new Map()]));
+  const m = e[2];
   const k = `${key}\0${data.length}`;
   let v = m.get(k) as T;
   if (m.has(k))

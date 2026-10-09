@@ -48,7 +48,8 @@
  *   origin of data starting Jan 1 00:18). If the pixel gap would still drop a label the count
  *   falls by one until none does, so ticks stay evenly spaced. Sub-day ticks at UTC midnight and
  *   the first tick show the date. No vertical grid. Line and area paths break where the gap to
- *   the previous non-null point exceeds 5x the series' median gap (fixed factor). The svg
+ *   the previous non-null point exceeds 5x the series' median gap (fixed factor); a thinned series breaks where kept points sit more
+ *   than 6 mean steps apart (line.ts). The svg
  *   carries data-t (empty) beside data-n; line and area points and bar marks (y2 points too)
  *   carry data-i, the category's index in the time-ordered list before window and reduction
  *   (the index space of view.window). Without spec.format for x, labels use a preset from
@@ -64,7 +65,7 @@
  *   MAX_POINTS categories; its kept categories carry their position in the full list in
  *   Shaped.index (data-i). A kpi with more than MAX_POINTS categories is thinned in shape to
  *   floor((plot width + 32) / 4) - 2 points plus its last two live values (kpi.ts reads the
- *   kept categories' x from Shaped.index and the full count from Shaped.reduced).  Auto roll-up: a bar (not a waterfall) with
+ *   kept categories' x from Shaped.index and the full count from Shaped.reduced). Auto roll-up: a bar (not a waterfall) with
  *   categories x series above MAX_MARKS and no spec.limit keeps the top N by total, N =
  *   10 * floor(plot width / 40) (at most MAX_MARKS / series - 1), and sums the rest into Other
  *   (Shaped.capped = [N, before]; a time axis never rolls up); a warning says so. Every other
@@ -74,10 +75,13 @@
  *   and limited category list, a reduction, validate's row scan, scatter's typed columns and the
  *   table's groups are computed once per (data array identity, the fields they read, array
  *   length) and kept in a WeakMap while the array lives, 256 keys per array, least recently
- *   used out (a page of charts shares one array). A resize, legend toggle, zoom or view change re-renders without another pass
- *   over the rows; hidden, window and plot width apply after the cache. A host that edits the
- *   array in place must pass a new array (only a length change is noticed). Cached results are
- *   shared: never mutate them.
+ *   used out (a page of charts shares one array). The modules use the same memo: hierarchy
+ *   (treemap, sunburst) its tree, flow (sankey, chord) its graph, stats (boxplot) and beeswarm
+ *   their scans. A resize, legend toggle, zoom or view change re-renders without another pass
+ *   over the rows; hidden, window and plot width apply after the cache. A changed length,
+ *   first row or last row also drops the entries (shift/push ring buffers and a replaced last
+ *   row heal); a host that edits a middle row in place must pass a new array. Cached results
+ *   are shared: never mutate them.
  *   Scatter is exempt from the pre-draw mark cap (it bins its own rows).
  *   Scatter's and units' Shaped has empty categories and cells: their marks draw from rows.
  *   Thinning in the mark (kpi, ridgeline; shape.thin): above one hover target per 4 px (kpi

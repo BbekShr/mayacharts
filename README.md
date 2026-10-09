@@ -323,9 +323,9 @@ Dates in x values are automatically detected and placed on a proportional time a
 
 The [Scale page](https://bbekshr.github.io/mayacharts/scale.html) draws eleven charts from up to a million rows generated in your browser and shows the rows in, the marks drawn and the draw times measured on your machine.
 
-A chart handles up to a million rows wherever the chart makes sense, by reducing what it draws, never by dropping the data table or hiding the reduction. Line and area charts reduce long series to about one point per 2 px of plot width (at most 1000 categories, and 4000 shared between series) using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. A time axis reduces whenever it has more points than that budget; a category axis reduces past 1000 categories, over the category index. A kpi thins its sparkline the same way. The data table and screen reader description indicate how many points are displayed. A bar with more categories than fit (past 10000 marks) and no `limit` keeps the top N by total, N being 10 per 40 px of plot width, and rolls the rest into "Other". Scatter charts above 10000 visible points are drawn as density cells. A table draws the rows that fit its height, and its hidden data table lists the first 1000. The bar roll-up also puts a sentence in `renderParts(...).warnings`. Charts that cannot reduce without changing meaning (waterfall, dumbbell, parallel and the module charts) fail with `too-many-marks`, naming the mark count, the 10000 cap and the row count, and suggest `limit` or `aggregate`.
+A chart handles up to a million rows wherever the chart makes sense, by reducing what it draws, never by dropping the data table or hiding the reduction. Line and area charts reduce long series to about one point per 2 px of plot width (at most 1000 categories, and 4000 shared between series) using the LTTB (Largest Triangle Three Buckets) downsampling algorithm, keeping each series' first, last, minimum and maximum points so trends and extremes remain visible. A time axis reduces whenever it has more points than that budget; a category axis reduces past 1000 categories, over the category index. A kpi thins its sparkline the same way. The data table and screen reader description indicate how many points are displayed. A bar with more categories than fit (past 10000 marks) and no `limit` keeps the top N by total, N being 10 per 40 px of plot width, and rolls the rest into "Other". The automatic cut ranks by absolute total, so a large negative bar stays; an explicit `limit` ranks by signed total. Scatter charts above 10000 visible points are drawn as density cells. A table draws the rows that fit its height, and its hidden data table lists the first 1000. The bar roll-up also puts a sentence in `renderParts(...).warnings`. Charts that cannot reduce without changing meaning (waterfall, dumbbell, parallel and the module charts) fail with `too-many-marks`, naming the mark count, the 10000 cap and the row count, and suggest `limit` or `aggregate`.
 
-The row pass (grouping, aggregation, time parsing, validation) is cached per `data` array: a resize, legend toggle, zoom or view change re-renders without walking the rows again, so at a million rows a re-render of a line, bar, scatter or kpi costs tens of milliseconds. The cache is keyed by the array's identity and length, so after changing rows in place, assign a new array (`chart.data = [...rows]`).
+The row pass (grouping, aggregation, time parsing, validation) is cached per `data` array: a resize, legend toggle, zoom or view change re-renders without walking the rows again, so at a million rows a re-render of a line, bar, scatter or kpi costs tens of milliseconds. The cache is keyed by the array's identity, length, first row and last row, so a push, a shift or a replaced last row is noticed; after editing any other row in place, assign a new array (`chart.data = [...rows]`).
 
 ## Canonical examples
 
@@ -1041,15 +1041,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 12,342 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 13,195 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,143,169,735 total, 2,449,174 output
-- claude-sonnet-5-5: 559,286,614 total, 79,694 output
+- claude-opus-5-5: 1,225,475,523 total, 2,587,232 output
+- claude-sonnet-5-5: 592,660,374 total, 84,856 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
-- claude-haiku-4-5-20251001: 26,122,384 total, 1,063 output
+- claude-haiku-4-5-20251001: 26,970,632 total, 1,108 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 1,925,471,976 total, 2,965,159 output
+- all: 2,041,999,772 total, 3,108,424 output
 
 <!-- tokens:end -->
 

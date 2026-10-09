@@ -100,8 +100,10 @@ export function tooltip(
     if (k.startsWith("h~"))
       for (const [p, e] of byKey) if (k.startsWith(p + "~") && p !== "h") peers.push(e);
     // Box plot: whiskers, median and outliers share the box's key tail (b~SERIES~CATEGORY, ws~..., d~...~ROW), so they light with it and the tooltip clears them.
-    if (m && spec()?.type === "boxplot")
-      peers.push(...box.querySelectorAll(`[data-key*="${k.slice(1)}"]`));
+    if (m && spec()?.type === "boxplot") {
+      const t = k.slice(1);
+      peers.push(...box.querySelectorAll(`[data-key$="${t}"],[data-key*="${t}~"]`));
+    }
     // Flows: a node lights every link and node on a path through it (their data-a lists it).
     if (m?.hasAttribute("data-n"))
       peers.push(...box.querySelectorAll(`[data-a~="${a(m, "data-n")}"]`));

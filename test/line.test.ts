@@ -268,3 +268,22 @@ describe("thinned series", () => {
     for (const p of paths) expect(p.match(/M/g)).toHaveLength(1);
   });
 });
+
+describe("thinned time series", () => {
+  it("still breaks on real gaps (20k points, two holes, three runs)", () => {
+    const data = [];
+    for (let i = 0; i < 20000; i++) {
+      const t = i < 7000 ? i : i < 14000 ? i + 3000 : i + 6000; // two holes of 3000 steps
+      data.push({ t: 1.7e12 + t * 60000, v: 50 + 20 * Math.sin(i / 300) });
+    }
+    const svg = renderParts({
+      type: "line",
+      x: "t",
+      y: "v",
+      xType: "time",
+      data,
+    } as ChartSpec).svg;
+    const d = svg.match(/<path data-maya="line"[^>]* d="([^"]*)"/)![1]!;
+    expect(d.match(/M/g)).toHaveLength(3);
+  });
+});

@@ -4,6 +4,7 @@ import { patch } from "../src/element/animate.ts";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import { renderParts } from "../src/core/render.ts";
 import "../src/flow.ts";
+import "../src/stats.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 vi.mock("../src/core/render.ts", async (orig) => {
@@ -193,6 +194,26 @@ describe("<maya-chart>", () => {
     await frame();
     hover();
     expect(tip.querySelector("div")!.textContent).toMatch(/^Bee/);
+  });
+
+  it("boxplot hover lights the hovered box's parts, not boxes whose name starts with it", async () => {
+    const data = ["Men", "Mens"].flatMap((g) =>
+      [1, 2, 3, 4, 5, 9].map((v) => ({ g, v, s: "a", n: g + v })),
+    );
+    const el = await mount(
+      (e) =>
+        (e.spec = { type: "boxplot", x: "g", y: "v", series: "s", name: "n", data } as ChartSpec),
+    );
+    const m = marks(el).find((x) => x.getAttribute("data-key") === "b~a~Men")!;
+    m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+    m.dispatchEvent(
+      Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    const lit = [...el.shadowRoot!.querySelectorAll("[data-lit]")].map((x) =>
+      x.getAttribute("data-key"),
+    );
+    expect(lit).toContain("ws~a~Men");
+    expect(lit.filter((k) => k?.includes("Mens"))).toEqual([]);
   });
 
   it("routes markup through the Trusted Types policy", async () => {
@@ -612,7 +633,7 @@ describe("review fixes", () => {
 
   it("a spec error removes the stale data table", async () => {
     const el = await mount((e) => (e.spec = spec()));
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 1700));
     expect(live(el).querySelector("table.maya-sr")).toBeTruthy();
     el.spec = { type: "bar" } as never;
     await new Promise((r) => setTimeout(r, 50));

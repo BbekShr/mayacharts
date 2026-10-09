@@ -224,6 +224,8 @@ export const bar: Mark = {
               : null;
         if (est <= w && h >= (hz ? 14 : 16))
           labels += inText(cx, cy, text, { "data-ink": ink, "data-key": dk });
+        else if (spec.stack && !neg)
+          continue; // ponytail: a positive segment too small for its value drops it (outside lands on its neighbour); a negative one keeps its label below, assuming one negative series
         else if (hz) {
           // Outside the bar end when it fits (a negative one keeps clear of the axis labels), else inside the end.
           if (
@@ -234,7 +236,8 @@ export const bar: Mark = {
             est + 8 <= w &&
             h >= 10
           )
-            labels += inText(neg ? x + 4 : x + w - 4, cy, text, {
+            labels += inText(neg ? x + 4 : x + w - (d["data-other"] ? 14 : 4), cy, text, {
+              // the roll-up bar is often cut: clear of its break mark
               "data-ink": ink,
               "data-key": dk,
               "text-anchor": neg ? "start" : "end",

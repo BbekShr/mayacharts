@@ -105,7 +105,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("waterfall", {
     type: "waterfall",
     title: "Monthly sales through the year",
-    titles: { delta: "Change ($)" },
+    titles: { delta: "Sales ($)" },
     x: "step",
     y: "delta",
     totals: ["Total"],
@@ -443,6 +443,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     y: "sales",
     series: "family",
     stack: "percent",
+    labels: true,
     data: FACTS,
   });
 

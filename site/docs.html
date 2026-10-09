@@ -513,9 +513,9 @@
           category index. A kpi thins its sparkline the same way. The data table and screen reader
           description indicate how many points are displayed. A bar with more categories than fit
           (past 10000 marks) and no <code>limit</code> keeps the top N by total, N being 10 per 40
-          px of plot width, and rolls the rest into "Other". Scatter charts above 10000 visible
-          points are drawn as density cells. A table draws the rows that fit its height, and its
-          hidden data table lists the first 1000. The bar roll-up also adds a sentence to
+          px of plot width, and rolls the rest into "Other". Scatter and beeswarm charts above 10000
+          visible points are drawn as density cells. A table draws the rows that fit its height, and
+          its hidden data table lists the first 1000. The bar roll-up also adds a sentence to
           <code>renderParts(...).warnings</code>. Charts that cannot reduce without changing meaning
           (waterfall, dumbbell, parallel and the module charts) fail with
           <code>too-many-marks</code>, naming the mark count, the 10000 cap and the row count, and
@@ -524,8 +524,9 @@
         <p>
           The row pass (grouping, aggregation, time parsing, validation) is cached per
           <code>data</code> array: a resize, legend toggle, zoom or view change re-renders without
-          walking the rows again. The cache is keyed by the array's identity and length, so after
-          changing rows in place, assign a new array (<code>chart.data = [...rows]</code>).
+          walking the rows again. The cache is keyed by the array's identity, length, first row and
+          last row, so a push, a shift or a replaced last row is noticed; after editing any other
+          row in place, assign a new array (<code>chart.data = [...rows]</code>).
         </p>
       </section>
 

@@ -147,3 +147,23 @@ describe("beeswarm", () => {
     expect(out).toContain("<rect");
   });
 });
+
+describe("beeswarm row-pass cache", () => {
+  it("a window change on one data array draws like a fresh array", () => {
+    const rows = () =>
+      ["a", "b", "c"].flatMap((g, k) =>
+        Array.from({ length: 8 }, (_, i) => ({ g, v: 1 + k * 50 + i })),
+      );
+    const mk = (data: object[]) =>
+      ({ type: "beeswarm", x: "g", y: "v", data }) as unknown as ChartSpec;
+    const shared = rows();
+    for (const w of [
+      [1, 2],
+      [0, 1],
+      [1, 2],
+    ] as [number, number][])
+      expect(render(mk(shared), { view: { window: w } })).toBe(
+        render(mk(rows()), { view: { window: w } }),
+      );
+  });
+});

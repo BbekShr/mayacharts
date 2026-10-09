@@ -123,6 +123,42 @@ describe("theme css", () => {
         expect(rat(Y(rgb), Y(bg as unknown as number[])), `step ${n}`).toBeGreaterThanOrEqual(3);
       }
   });
+  it("unlabelled ramp marks carry a 3:1 outline (heatmap rect, hexes) and ghost bars a 3:1 stroke", () => {
+    expect(css).toContain("rect[data-hm]{stroke:var(--maya-accent)}");
+    expect(css).toContain("stroke:var(--maya-accent);stroke-width:1.5;stroke-linejoin:round");
+    const acc = toRgb(oklab(...oklch("accent")));
+    for (const bg of BGS) expect(rat(Y(acc), Y(bg))).toBeGreaterThanOrEqual(3);
+    const op = +css.match(/\[data-past\]\{[^}]*stroke-opacity:([.\d]+)/)![1]!;
+    // Alpha blends in gamma space: mix the hex channels, then linearise.
+    for (const [bg, fg] of [
+      ["#ffffff", "#1f2328"],
+      ["#0d1117", "#e6edf3"],
+    ] as const) {
+      const hex = (h: string, i: number) => parseInt(h.slice(i, i + 2), 16);
+      const m = [1, 3, 5].map((i) => hex(fg, i) * op + hex(bg, i) * (1 - op));
+      const c = "#" + m.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+      expect(ratio(c, bg)).toBeGreaterThanOrEqual(3);
+    }
+  });
+  it("density cells: every step reaches 3:1 against the page", () => {
+    const acc = toLab(toRgb(oklab(...oklch("accent"))));
+    const [bgShare, slope] = css
+      .match(/max\(0%,calc\((\d+)% - \(var\(--q\) - 35%\)\*([.\d]+)\)\)/)!
+      .slice(1)
+      .map(Number) as [number, number];
+    const mix = (a: number[], b: number[], p: number) =>
+      a.map((v, i) => (v * p) / 100 + b[i]! * (1 - p / 100));
+    for (const [bg, fg] of [
+      [lin("#ffffff"), lin("#1f2328")],
+      [lin("#0d1117"), lin("#e6edf3")],
+    ] as const)
+      for (let n = 0; n < 10; n++) {
+        const q = Math.round(35 + (n * 65) / 9);
+        const ink = Math.min(75, Math.max(0, (q - 67) * 2.3));
+        const c = mix(toLab(bg), mix(toLab(fg), acc, ink), Math.max(0, bgShare - (q - 35) * slope));
+        expect(rat(Y(toRgb(c)), Y(bg)), `step ${n}`).toBeGreaterThanOrEqual(3);
+      }
+  });
   it("has the hooks, forced-colors, contrast and motion blocks", () => {
     for (const h of [
       "[data-tone=good]",
@@ -149,8 +185,8 @@ describe("theme css", () => {
       expect(css, h).toContain(h);
     expect(css).not.toContain("style=");
   });
-  it("gzips under 4560 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(4560);
+  it("gzips under 4600 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(4600);
   });
   it("narrow containers compact the legend, never hide it", () => {
     expect(css).toContain("@container (max-width:320px){.maya-legend{font-size:11px");
@@ -176,7 +212,6 @@ describe("orbit and ghost rules", () => {
     expect(css).toContain("[data-maya=ramp] span{unicode-bidi:plaintext}");
   });
   it("heatmap cells use the generic ramp and its legend and ink match", () => {
-    expect(css).not.toContain("[data-hm]");
     expect(css).toContain("[data-maya=labels] [data-ink=t]{fill:light-dark(#12161c,#fff)}");
     expect(css).toContain(
       "[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b))",

@@ -324,7 +324,12 @@ export function frame(
       const every = few ? 1 : Math.max(1, Math.ceil(maxW(bLab) / (plot.w / bLab.length)));
       bLab.forEach((c, i) => {
         if (i % every) return;
-        const t = few ? clip(c, plot.w / bLab.length - 8) : c;
+        // Each label owns `every` slots but must also stay inside the svg (first and last sit near the edges).
+        const cx = b.at(i) + b.bandwidth / 2;
+        const t = clip(
+          c,
+          Math.min((every * plot.w) / bLab.length - 8, 2 * Math.min(cx, W - cx) - 8),
+        );
         ax += el(
           "text",
           {

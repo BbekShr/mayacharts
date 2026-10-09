@@ -4,6 +4,15 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- A y, size, y2, was, colorBy or scatter x value beyond 1e300 is rejected (`non-numeric-y` or `non-numeric-field`, hint "Scale the value first") instead of drawing NaN coordinates.
+- The row-pass cache also notices a changed first or last row, so a shift/push ring buffer and a replaced last row render the new data without a new array. A middle row edited in place still needs one.
+- The automatic bar roll-up into Other ranks categories by absolute total, so a large negative outlier is drawn instead of being hidden in Other. An explicit `limit` is unchanged.
+- The Scale page no longer narrows each chart by 8 px and back after its entrance to time a resize. That nudge drew every tile twice more and read as a jerk right after load; the Resize readout now fills when the window is actually resized.
+
 ## 0.11.1 - 2026-10-08
 
 The 0.11.0 tag failed its release run before publishing (the exported `VERSION` was not bumped), so 0.11.0 was never on npm. 0.11.1 carries everything below.
@@ -25,7 +34,7 @@ The 0.11.0 tag failed its release run before publishing (the exported `VERSION` 
 - Sunburst, treemap, sankey, chord, boxplot and beeswarm keep their row pass per data array, so a re-render of the same 1M rows drops from hundreds of ms to under 25 ms.
 - Charts handle up to 1M rows. A bar with more categories than fit keeps the top N and rolls the rest into Other, a line or area on a category axis thins past 1000 categories, a kpi thins its sparkline before drawing, a table draws the rows that fit, and beeswarm past 10000 points draws a violin of density cells per band on the scatter ramp (bin range and count on hover).
 - Re-renders of the same `data` array (resize, legend toggle, zoom) skip the row pass: shape, validation, scatter columns and table groups are cached per array. Assign a new array after editing rows in place.
-- `renderParts().warnings` reports roll-ups and thinning, and the `too-many-marks` message gives the mark count, the cap and the row count.
+- `renderParts().warnings` reports the bar roll-up into Other (thinning is described in the data table and description, not in `warnings`), and the `too-many-marks` message gives the mark count, the cap and the row count.
 - Scale page (`site/scale.html`): eleven charts drawn from up to a million generated rows, with rows in, marks drawn and draw times measured in your browser.
 - A new home page for the site: a live shapeshifter hero that cycles its forms while on screen (still under reduced motion), the four other signature charts and a bundle-size chart that draw as they scroll into view, the enterprise checklist and a builder call to action. The spec walkthrough stays, with each spec behind a Spec toggle.
 - README reorganised: a centred header with the site links, an animated shapeshifter in light and dark, the type cost table and the 27 canonical specs behind toggles, and a Reference index above the spec.

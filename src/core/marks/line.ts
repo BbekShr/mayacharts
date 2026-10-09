@@ -52,8 +52,10 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     const gaps = ts
       .flatMap((v, i) => (i && v > ts[i - 1]! ? [v - ts[i - 1]!] : []))
       .sort((a, b) => a - b);
-    // ponytail: a thinned series skips the rule (its kept points are far apart by design; nulls still break).
-    const hole = shaped.reduced ? Infinity : (gaps[gaps.length >> 1] ?? Infinity) * 5;
+    // ponytail: a thinned series' median step is the thinning's, not the data's; its kept points sit at most 3 mean steps apart, so a hole of 6 mean steps (about 6 px) breaks it. Smaller real gaps do not show.
+    const hole = shaped.reduced
+      ? ((ts.at(-1) ?? 0) - (ts[0] ?? 0)) * (6 / (ts.length || 1))
+      : (gaps[gaps.length >> 1] ?? Infinity) * 5;
     let prev = -Infinity;
     const path = cells.flatMap((c) =>
       c.value === null ? [] : [[px(c.ci), val.of(c.y1)] as const],

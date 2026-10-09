@@ -50,6 +50,7 @@ export class MayaChart extends HTMLElement {
   #vars = new Set<string>();
   #err = "";
   #drawn = false;
+  #intro = 0; // performance.now() of the animated first draw
   #tbl = 0;
 
   get spec(): ChartSpec | undefined {
@@ -346,6 +347,13 @@ export class MayaChart extends HTMLElement {
       this.#resized = false;
       return;
     }
+    // A resize frame must not cut the entrance short (bars snap, axes keep fading): wait it out,
+    // the old svg scales through its viewBox meanwhile. A spec change renders from a microtask and animates.
+    const wait = this.#intro + 1100 - performance.now(); // 760 ms + stagger, or the 1100 ms wipe
+    if (fromRaf && this.#resized && wait > 0) {
+      setTimeout(() => this.#schedule(true), wait);
+      return;
+    }
     if (spec !== this.#seen) {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
@@ -424,8 +432,10 @@ export class MayaChart extends HTMLElement {
       root.querySelector("table.maya-sr")?.remove();
       box.insertAdjacentHTML("afterend", html(parts.table));
     };
-    // Without requestIdleCallback (Safari) the options coerce to a 0 ms timeout: the next task.
-    (globalThis.requestIdleCallback ?? setTimeout)(late, { timeout: 2000 } as never);
+    // Without requestIdleCallback (Safari) a timer well after the entrance.
+    (globalThis.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1600)))(late, {
+      timeout: 2000,
+    });
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
     for (const k of this.#vars)
@@ -440,6 +450,8 @@ export class MayaChart extends HTMLElement {
     // First draw plays an entrance, unless the chart arrived server-rendered (already on screen).
     const intro: Intro | undefined =
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
+    // A drill zoom moves marks under the pointer: no hover mark (its stroke would scale with the zoom) until it lands.
+    if (this.#zoom) this.#tip?.hide();
     patch(box, parts.svg, (this.#drawn || !!intro) && !still, {
       intro,
       zoom: this.#zoom,
@@ -447,6 +459,7 @@ export class MayaChart extends HTMLElement {
       instant: resized,
     });
     this.#zoom = undefined;
+    if (intro && !still) this.#intro = performance.now();
     this.#drawn = true;
     this.#restore(focus);
     for (const h of Object.values(this.#ix ?? {})) h.painted?.();
