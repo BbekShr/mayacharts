@@ -531,3 +531,20 @@ describe("units form control", () => {
     expect(renderParts({ ...u, text: { swarm: "Schwarm" } }).controls).toContain("Schwarm");
   });
 });
+
+describe("row-pass cache", () => {
+  it("renders a shifted and pushed ring buffer and a replaced last row", () => {
+    const d = [
+      { c: "a", v: 1 },
+      { c: "b", v: 2 },
+      { c: "c", v: 3 },
+    ];
+    const spec = { type: "bar", x: "c", y: "v", data: d } as const;
+    render(spec);
+    d.shift();
+    d.push({ c: "d", v: 9 });
+    expect(render(spec)).toContain('data-x="d"');
+    d[2] = { c: "e", v: 4 };
+    expect(render(spec)).toContain('data-x="e"');
+  });
+});

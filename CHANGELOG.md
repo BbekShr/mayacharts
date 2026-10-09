@@ -8,6 +8,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Fixed
 
+- The row-pass cache also notices a changed first or last row, so a shift/push ring buffer and a replaced last row render the new data without a new array. A middle row edited in place still needs one.
 - The automatic bar roll-up into Other ranks categories by absolute total, so a large negative outlier is drawn instead of being hidden in Other. An explicit `limit` is unchanged.
 - The Scale page no longer narrows each chart by 8 px and back after its entrance to time a resize. That nudge drew every tile twice more and read as a jerk right after load; the Resize readout now fills when the window is actually resized.
 
