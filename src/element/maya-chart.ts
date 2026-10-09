@@ -432,8 +432,9 @@ export class MayaChart extends HTMLElement {
       root.querySelector("table.maya-sr")?.remove();
       box.insertAdjacentHTML("afterend", html(parts.table));
     };
-    // Without requestIdleCallback (Safari) the options coerce to a 0 ms timeout: the next task.
-    (globalThis.requestIdleCallback ?? setTimeout)(late, { timeout: 2000 } as never);
+    // Without requestIdleCallback (Safari) a timer well after the entrance.
+    if ("requestIdleCallback" in globalThis) requestIdleCallback(late, { timeout: 2000 });
+    else setTimeout(late, 1600);
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
     for (const k of this.#vars)
@@ -448,6 +449,8 @@ export class MayaChart extends HTMLElement {
     // First draw plays an entrance, unless the chart arrived server-rendered (already on screen).
     const intro: Intro | undefined =
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
+    // A drill zoom moves marks under the pointer: no hover mark (its stroke would scale with the zoom) until it lands.
+    if (this.#zoom) this.#tip?.hide();
     patch(box, parts.svg, (this.#drawn || !!intro) && !still, {
       intro,
       zoom: this.#zoom,

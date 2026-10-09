@@ -58,7 +58,6 @@ const zoomed = (e: Element, g: Box | undefined, leaving: boolean): string | unde
 };
 
 const EASE = "cubic-bezier(.22,1,.36,1)"; // ease-out-quint: fast start, long soft landing
-const POP = "cubic-bezier(.34,1.5,.64,1)"; // slight overshoot for points
 const SWEEP = "cubic-bezier(.65,0,.35,1)";
 const DATA: KeyframeAnimationOptions = { duration: 520, easing: EASE };
 const INTRO: KeyframeAnimationOptions = { duration: 760, easing: EASE };
@@ -185,6 +184,19 @@ function seed(e: Element, g: Box, origin?: Box): Box {
   const [x, y, w, h] = g;
   if (e.localName === "circle") return [x + w / 2, y + h / 2, 0, 0];
   const neg = e.hasAttribute("data-neg");
+  // A stack grows as one column: every segment starts at the baseline (the outer edge of its
+  // column's non-negative segments), not at its own edge.
+  if (!neg && (e.hasAttribute("data-mm") || e.closest("svg[data-stack]"))) {
+    const hz = !!e.closest("[data-dir=h]"),
+      c = e.getAttribute("data-c");
+    let b = hz ? x : y + h;
+    for (const s of e.parentNode!.children)
+      if (s.localName === "rect" && s.getAttribute("data-c") === c && !s.hasAttribute("data-neg")) {
+        const q = geo(s)!;
+        b = hz ? Math.min(b, q[0]) : Math.max(b, q[1] + q[3]);
+      }
+    return hz ? [b, y, 0, h] : [x, b, w, 0];
+  }
   return e.closest("[data-dir=h]") ? [neg ? x + w : x, y, 0, h] : [x, neg ? y : y + h, w, 0];
 }
 
@@ -208,18 +220,13 @@ function enter(e: Element, origin?: Box, o = DATA): void {
   moved = true;
   const g = geo(e);
   // Funnel connectors wait for their stages to pop.
-  const at = { ...o, delay: e.hasAttribute("data-total") ? Number(o.duration) * 0.6 : delay(e) };
+  const at = { ...o, delay: e.matches("path[data-total]") ? Number(o.duration) * 0.6 : delay(e) };
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, false);
   if (f) run(e, [f, arc(e)], ZOOM);
   else if (z) run(e, [{ transform: z, opacity: 0 }, { transform: "none" }], ZOOM);
   else if (g) {
-    const c = e.localName === "circle";
-    run(
-      e,
-      [{ transform: tf(g, seed(e, g, origin)), opacity: 0 }, { transform: "none" }],
-      c && !origin ? { ...at, easing: POP } : at,
-    );
+    run(e, [{ transform: tf(g, seed(e, g, origin)), opacity: 0 }, { transform: "none" }], at);
   } else if (e.matches("path[data-maya=line]")) {
     e.setAttribute("pathLength", "1");
     const d = (o: string) => ({ strokeDasharray: "1", strokeDashoffset: o });
@@ -651,7 +658,7 @@ function ghost(g: Element): void {
 /** The first draw: scaffolding fades in, marks enter by `kind`, labels and numbers follow. */
 function intro(svg: Element, kind: Intro): void {
   const part = (k: string) => svg.querySelector(`:scope > [data-maya=${k}]`);
-  for (const k of ["grid", "axis-y", "axis-x"]) {
+  for (const k of ["grid", "axis-y", "axis-x", "rules"]) {
     const g = part(k);
     if (g) fade(g, false, undefined, { ...UI, duration: 480 });
   }
@@ -719,6 +726,11 @@ function intro(svg: Element, kind: Intro): void {
       else enter(e, undefined, INTRO);
     }
   for (const t of m.querySelectorAll("text[data-maya=mark]")) count(t, "", INTRO);
+  // WebKit starts each clock at animate(), and a page of charts draws in one task: begin every
+  // entrance at its first painted frame instead (the orbit's CSS rotation keeps its clock).
+  requestAnimationFrame(() =>
+    svg.getAnimations?.({ subtree: true }).forEach((a) => orbiting(a) || (a.currentTime = 0)),
+  );
   // Orbit: each planet sweeps in its own direction, further the faster it is, and settles at rest.
   for (const g of m.querySelectorAll("g[data-v]")) {
     const a = (70 + 50 * +g.getAttribute("data-v")!) * (g.hasAttribute("data-neg") ? 1 : -1);
@@ -751,7 +763,8 @@ export function patch(
   const many = !wm || wm.childElementCount > MAX || (om?.childElementCount ?? 0) > MAX;
   if (!animate || !o || !om || !wm || many) {
     box.replaceChildren(w);
-    if (animate && opts.intro && wm && !many) {
+    // A wipe or bloom animates one clip on the group, whatever the mark count.
+    if (animate && opts.intro && wm && (!many || opts.intro !== "marks")) {
       lag = spread(wm);
       intro(box.firstElementChild!, opts.intro);
     }

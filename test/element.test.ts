@@ -633,7 +633,7 @@ describe("review fixes", () => {
 
   it("a spec error removes the stale data table", async () => {
     const el = await mount((e) => (e.spec = spec()));
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 1700));
     expect(live(el).querySelector("table.maya-sr")).toBeTruthy();
     el.spec = { type: "bar" } as never;
     await new Promise((r) => setTimeout(r, 50));
