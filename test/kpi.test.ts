@@ -51,6 +51,13 @@ describe("kpi", () => {
       ),
     ).toBeNull();
   });
+  it("the hit covers the sparkline band only and the dots come before the headline", () => {
+    const s = svg(base);
+    const hit = s.match(/<rect data-maya="hit"[^>]*y="([\d.]+)"[^>]*height="([\d.]+)"/)!;
+    expect(+hit[1]!).toBeGreaterThan(40);
+    expect(+hit[1]! + +hit[2]!).toBeLessThan(220);
+    expect(s.indexOf("<circle")).toBeLessThan(s.indexOf('data-key="v"'));
+  });
   it("sparkline only with 3 or more categories", () => {
     const s = svg(base);
     expect(s).toContain('data-maya="line"');
