@@ -583,12 +583,12 @@ describe("narrow bar labels", () => {
     [
       ...(/data-maya="axis-x">(.*?)<\/g>/.exec(svg)?.[1] ?? "").matchAll(/<text[^>]*>([^<]*)</g),
     ].map((m) => m[1]!);
-  it("thins instead of cutting a label to a stub when a slot is under 48 px", () => {
-    const t = texts(render(spec(8), { width: 360 }));
+  it("thins instead of cutting a label to a stub when a cut would keep under 3 characters", () => {
+    const t = texts(render(spec(8), { width: 260 }));
     expect(t.length).toBeLessThan(8);
     for (const s of t) expect(s).not.toContain("…");
   });
-  it("still cuts to the slot when the slot is wide enough", () => {
+  it("still cuts to the slot when 3 or more characters survive", () => {
     expect(texts(render(spec(5, "Category number "), { width: 360 })).join()).toContain("…");
   });
 });

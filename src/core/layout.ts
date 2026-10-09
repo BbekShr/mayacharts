@@ -322,9 +322,11 @@ export function frame(
       });
     } else {
       const b = x as { at(i: number): number; bandwidth: number };
-      // Up to 8 categories are cut to their slot instead of thinned, unless a slot is under 48 px
-      // (a stub like "Al…" names nothing; thin and keep labels whole).
-      const few = bLab.length <= 8 && plot.w / bLab.length >= 48;
+      // Up to 8 categories are cut to their slot instead of thinned, unless a cut would keep fewer than
+      // 3 characters (a stub like "Al…" names nothing; thin and keep labels whole).
+      const slot = plot.w / bLab.length - 8;
+      // 3 characters and the ellipsis need about 27 px.
+      const few = bLab.length <= 8 && (slot >= 27 || maxW(bLab) - 8 <= slot);
       const every = few ? 1 : Math.max(1, Math.ceil(maxW(bLab) / (plot.w / bLab.length)));
       bLab.forEach((c, i) => {
         if (i % every) return;
