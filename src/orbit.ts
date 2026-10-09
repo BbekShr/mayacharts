@@ -116,27 +116,31 @@ export const orbit: Mark = {
         const p = ps[k]!;
         const { rr, px, py, pr } = g[k]!;
         const nm = short(ctx.fmt(spec.x, p.name));
-        const sub = fv(p.v) + (p.g === null || !wide ? "" : " \u00b7 " + grow(p.g));
-        const [w, h] = [
-          Math.max([...nm].length, [...sub].length - (sub.includes("\u2066") ? 2 : 0)) * 6.8,
-          24,
-        ];
-        const [ux, uy] = [px / rr, py / rr];
-        // Exact distance along the outward ray from the planet's edge to the box's near edge.
-        const D = pr + 3 + Math.min(w / 2 / Math.abs(ux), h / 2 / Math.abs(uy));
-        const [x, y] = [r(px + ux * D), r(py + uy * D)];
-        const b = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
-        if (
-          b[0]! < -plot.w / 2 ||
-          b[2]! > plot.w / 2 ||
-          b[1]! < -plot.h / 2 ||
-          b[3]! > plot.h / 2 ||
-          boxes.some((o) => b[0]! < o[2]! && b[2]! > o[0]! && b[1]! < o[3]! && b[3]! > o[1]!) ||
-          g.some((d, i) => i !== k && near(d, b))
-        )
-          return;
-        boxes.push(b);
-        named.set(k, [nm, sub, x, y]);
+        // Wide: "value · growth"; if that collides, retry with the value alone before dropping the name.
+        for (const full of wide ? [true, false] : [false]) {
+          const sub = fv(p.v) + (p.g === null || !full ? "" : " \u00b7 " + grow(p.g));
+          const [w, h] = [
+            Math.max([...nm].length, [...sub].length - (sub.includes("\u2066") ? 2 : 0)) * 6.8,
+            24,
+          ];
+          const [ux, uy] = [px / rr, py / rr];
+          // Exact distance along the outward ray from the planet's edge to the box's near edge.
+          const D = pr + 3 + Math.min(w / 2 / Math.abs(ux), h / 2 / Math.abs(uy));
+          const [x, y] = [r(px + ux * D), r(py + uy * D)];
+          const b = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
+          if (
+            b[0]! < -plot.w / 2 ||
+            b[2]! > plot.w / 2 ||
+            b[1]! < -plot.h / 2 ||
+            b[3]! > plot.h / 2 ||
+            boxes.some((o) => b[0]! < o[2]! && b[2]! > o[0]! && b[1]! < o[3]! && b[3]! > o[1]!) ||
+            g.some((d, i) => i !== k && near(d, b))
+          )
+            continue;
+          boxes.push(b);
+          named.set(k, [nm, sub, x, y]);
+          break;
+        }
       });
     let marks = "";
     let names = ""; // labels, drawn after every planet so no trail crosses a name
