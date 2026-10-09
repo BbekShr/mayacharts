@@ -26,7 +26,8 @@ const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export interface Tooltip {
   off(): void;
-  hide(): void;
+  /** Close it; `hold` ms of pointer movement are then ignored (a zoom is moving the marks). */
+  hide(hold?: number): void;
   /** The mark the tooltip is showing (hover, tap or keyboard). */
   active(): Element | undefined;
   /** The mark a pointer event stands for: the mark, a hit's mark, or the nearest point. */
@@ -200,7 +201,9 @@ export function tooltip(
     b.setAttribute("data-on", "");
   };
 
-  const hide = () => {
+  let mute = 0;
+  const hide = (hold = 0) => {
+    if (hold) mute = performance.now() + hold;
     cur?.removeAttribute("data-active");
     cur?.closest("[data-maya=marks]")?.removeAttribute("data-hot");
     light(undefined);
@@ -442,7 +445,7 @@ export function tooltip(
 
   const move = (e: Event) => {
     kb = false;
-    if (!on() || (e as PointerEvent).pointerType !== "mouse") return;
+    if (!on() || (e as PointerEvent).pointerType !== "mouse" || performance.now() < mute) return;
     const m = markOf(e.target, e);
     if (!m) hide();
     else if (m !== cur) show(m);

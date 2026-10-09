@@ -160,6 +160,20 @@ test.describe("drill", () => {
     await expect(crumbs).toHaveCount(0);
   });
 
+  test("no hover mark or tooltip while a drill zoom moves the marks", async ({ page }) => {
+    await open(page);
+    await page.locator("#treemap").scrollIntoViewIfNeeded();
+    await settle(page);
+    await clickMark(page, page.locator("#treemap [data-maya=mark]").first());
+    await page.waitForTimeout(250);
+    await expect(page.locator("#treemap .maya-tip.maya-open")).toHaveCount(0);
+    await expect(page.locator("#treemap [data-active]")).toHaveCount(0);
+    await settle(page);
+    const { x, y } = await center(page.locator("#treemap [data-maya=mark]").first());
+    await page.mouse.move(x + 2, y + 2);
+    await expect(page.locator("#treemap .maya-tip.maya-open")).toBeVisible();
+  });
+
   test("Enter after an arrow key mid-zoom drills the arrowed mark", async ({ page }) => {
     await open(page);
     await page.locator("#treemap svg").focus();
