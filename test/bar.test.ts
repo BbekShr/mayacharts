@@ -7,6 +7,15 @@ const labels = (svg: string) =>
 const num = (tag: string, re: RegExp) => Number(tag.match(re)![1]);
 
 describe("bar", () => {
+  it("auto roll-up keeps a large negative category by magnitude", () => {
+    const data = Array.from({ length: 12000 }, (_, i) => ({
+      c: `c${i}`,
+      v: i === 5 ? -1e6 : i % 100,
+    }));
+    const svg = renderParts({ type: "bar", x: "c", y: "v", data }).svg;
+    expect(svg).toContain('data-x="c5"');
+  });
+
   it("keeps the Other roll-up out of the value domain and clips it at the plot edge", () => {
     const data = [10, 9, 8, ...Array.from({ length: 30 }, () => 5)].map((v, i) => ({
       c: `c${i}`,

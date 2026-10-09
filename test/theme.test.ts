@@ -123,6 +123,25 @@ describe("theme css", () => {
         expect(rat(Y(rgb), Y(bg as unknown as number[])), `step ${n}`).toBeGreaterThanOrEqual(3);
       }
   });
+  it("density cells: every step reaches 3:1 against the page", () => {
+    const acc = toLab(toRgb(oklab(...oklch("accent"))));
+    const [bgShare, slope] = css
+      .match(/max\(0%,calc\((\d+)% - \(var\(--q\) - 35%\)\*([.\d]+)\)\)/)!
+      .slice(1)
+      .map(Number) as [number, number];
+    const mix = (a: number[], b: number[], p: number) =>
+      a.map((v, i) => (v * p) / 100 + b[i]! * (1 - p / 100));
+    for (const [bg, fg] of [
+      [lin("#ffffff"), lin("#1f2328")],
+      [lin("#0d1117"), lin("#e6edf3")],
+    ] as const)
+      for (let n = 0; n < 10; n++) {
+        const q = Math.round(35 + (n * 65) / 9);
+        const ink = Math.min(75, Math.max(0, (q - 67) * 2.3));
+        const c = mix(toLab(bg), mix(toLab(fg), acc, ink), Math.max(0, bgShare - (q - 35) * slope));
+        expect(rat(Y(toRgb(c)), Y(bg)), `step ${n}`).toBeGreaterThanOrEqual(3);
+      }
+  });
   it("has the hooks, forced-colors, contrast and motion blocks", () => {
     for (const h of [
       "[data-tone=good]",

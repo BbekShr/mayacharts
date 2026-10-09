@@ -79,7 +79,7 @@ const DENS = (p: string) => `color-mix(in oklab,var(--maya-accent),var(--maya-fg
 // carries data-dense: the group's fill strength --p drops from 58% to 30% for every point.
 const P = (c: string) =>
   `fill:color-mix(in oklab,${c} var(--p),transparent);stroke:color-mix(in oklab,${c} 70%,var(--maya-fg))`;
-const LOW = "color-mix(in oklab,var(--maya-bg) 30%,var(--maya-accent))";
+const LOW = "color-mix(in oklab,var(--maya-bg) 13%,var(--maya-accent))";
 const OWN = ':is([data-tone],[data-q],[data-s]:not([data-s="0"]))';
 const SCATTER =
   `${SCAT}[data-maya=marks]{--p:58%;stroke-width:1.25;${P("var(--maya-series-1)")}}${SCAT}[data-maya=marks]:has(>[data-dense]){--p:30%}` +
@@ -87,7 +87,7 @@ const SCATTER =
   `${SCAT}circle${OWN}{${P("var(--c,var(--maya-series-1))")}}` +
   `${SCAT}rect[data-maya=mark]{rx:0;stroke:none}circle[data-key^="c~"][data-q]{--c:${DENS("min(75%,max(0%,calc((var(--q) - 35%)*1.15)))")}}` +
   // Density cells (scatter and beeswarm bins, key b~): page tint to accent over steps 0-4, accent to ink over 5-9.
-  `rect[data-key^="b~"][data-q]{--c:color-mix(in oklab,var(--maya-bg) max(0%,calc(30% - (var(--q) - 35%)*.94)),${DENS("min(75%,max(0%,calc((var(--q) - 67%)*2.3)))")})}` +
+  `rect[data-key^="b~"][data-q]{--c:color-mix(in oklab,var(--maya-bg) max(0%,calc(13% - (var(--q) - 35%)*.36)),${DENS("min(75%,max(0%,calc((var(--q) - 67%)*2.3)))")})}` +
   `[data-d] i:has(~i){width:40px;background:linear-gradient(90deg,${LOW},var(--maya-accent))}[data-d] i~i{width:40px;background:linear-gradient(90deg,var(--maya-accent),${DENS("75%")})}` +
   `${SCAT}circle[data-maya=mark][data-q]{fill:color-mix(in oklab,var(--c) 85%,transparent)}` +
   `${SCAT}circle[data-maya=mark][data-active]{fill:color-mix(in oklab,var(--c,var(--maya-series-1)) 85%,transparent);stroke:var(--maya-fg);stroke-width:2;transform:scale(1.3);filter:none}` +
