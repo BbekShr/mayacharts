@@ -43,9 +43,9 @@
  *   When every time is a UTC month start (so quarter and year starts too), centres follow the
  *   calendar month index instead of ms: even spacing, a missing month leaves one empty slot.
  *   Epoch ms beyond +-8.64e15 are invalid-date. Ticks are calendar-aligned (timeTicks), about
- *   plot.w / 80 of them (min 2); a year, quarter or month boundary less than half an interval
- *   outside the data is kept and clamped to the first or last centre (so "Jan 2025" labels the
- *   origin of data starting Jan 1 00:18). If the pixel gap would still drop a label the count
+ *   plot.w / 80 of them (min 2); a tick more than 4 px outside the first or last band centre is
+ *   dropped (it would label the wrong bar); one within 4 px stays at its time (so "Jan 2025"
+ *   labels the origin of data starting Jan 1 00:18). If the pixel gap would still drop a label the count
  *   falls by one until none does, so ticks stay evenly spaced. Sub-day ticks at UTC midnight and
  *   the first tick show the date. No vertical grid. Line and area paths break where the gap to
  *   the previous non-null point exceeds 5x the series' median gap (fixed factor); a thinned series breaks where kept points sit more

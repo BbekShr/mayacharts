@@ -84,6 +84,7 @@ export function signature({ FACTS }: Pick<Dataset, "FACTS">): Record<string, Cha
       tickets: "Tickets",
       nps: "NPS",
     },
+    text: { alike: "Closer points behave more alike" },
     x: "account",
     y: ["revenue", "growth", "margin", "tickets", "nps"],
     size: "revenue",

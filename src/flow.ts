@@ -54,7 +54,7 @@ const lines = (
   room: (top: number, bottom: number) => boolean,
 ) => {
   const at = { x: r(x), "text-anchor": anchor, "dominant-baseline": "middle" };
-  if (room(cy - 16, cy + 16))
+  if (room(cy - 14, cy + 15))
     return (
       el("text", { ...at, y: r(cy - 7), "data-nm": true }, esc(clip(name, cap))) +
       el("text", { ...at, y: r(cy + 8), "data-v": true }, esc(val))
@@ -203,9 +203,8 @@ export const sankey: Mark = {
     // of their single level-1 ancestor (several different ones: neutral). A branching tree (several
     // roots, every column-1 node with one parent) colours by root instead: colour follows the branch.
     const roots = nodes.filter((n) => n.lv === 0);
-    const tree =
-      roots.length > 1 &&
-      nodes.every((n) => n.lv !== 1 || ls.filter((l) => l.t === n).length === 1);
+    const one = (n: N) => ls.filter((l) => l.t === n).length === 1; // a single parent
+    const tree = roots.length > 1 && nodes.every((n) => n.lv !== 1 || one(n));
     tree ? roots.forEach((n, j) => (n.s = j % 8)) : neutral(roots);
     let slot = 0;
     for (let lv = 1; lv < cols; lv++)
@@ -236,7 +235,8 @@ export const sankey: Mark = {
       order[lv]!.sort((a, b) => a.a - b.a || b.v - a.v || a.i - b.i);
     };
     for (let lv = 1; lv < cols; lv++) sweep(lv, lv - 1);
-    for (let lv = cols - 2; lv > 0; lv--) sweep(lv, lv + 1);
+    // A column of single-parent nodes stays grouped under its parents: a backward pass would split families.
+    for (let lv = cols - 2; lv > 0; lv--) order[lv]!.every(one) || sweep(lv, lv + 1);
 
     // Label room: the last column always keeps its labels beside it, clear of the flows; the first
     // does too on a wide tile, else its labels ride in the gap, over the flows, behind a halo.

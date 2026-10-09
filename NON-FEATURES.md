@@ -79,7 +79,6 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Flow node labels**: node labels that would collide with a larger node's label are dropped (the tooltip still names them).
 - **Radial tip values**: a bar's total shows at its tip only when it fits (wedge arc of 11 px or more, 40 categories or fewer); otherwise it is in the tooltip.
 - **Sunburst slivers**: once a slice would be under 4 px across, it and its smaller siblings draw as one grey "Other (n)" slice that does not drill; its rows are only in the data table. Slices under 2 px of outer arc are not drawn, nor their children. Rotated names skip the label overlap scan; each is fitted to its own ring instead.
-- **Hierarchy colours by size**: treemap and sunburst colour slots follow each top-level branch's total, largest first. A drilled branch keeps its colour by ranking summed `y`, so with a non-sum `aggregate` a branch can change colour on drill.
 - **Entrance**: the first draw animates once; server-rendered charts never replay it.
 - **Measure toggle up to 4 options**: a `y` array works with more measures, but the sliding indicator is styled for 2 to 4.
 - **kpi in a short box**: the sparkline needs about 28 px of free height; with a target bullet and too little room, the bullet stays and the sparkline is dropped.
@@ -109,6 +108,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Version constant**: `version` is written by hand in `registry.ts` and a test fails when it differs from `package.json`.
 - **Beeswarm dodge**: each point checks only the 50 most recently placed neighbours, so a very dense tie cluster can overlap a little; the swarm is clamped to its row past about 25 points anyway.
 - **Sunburst names**: a name runs straight along its arc, upright, cut so its chord stays inside the ring; it is never curved, and a slice too short for 4 characters has no name (the tooltip names it).
+- **Drilled treemap tints**: a drilled treemap tints its tiles by size rank in three steps: the largest full, the second lighter, every other tile the lightest.
 - **Treemap ramp ink**: treemap tiles coloured by a `colorBy` ramp use dark ink on every step, so the darkest steps can fall under 4.5 to 1.
 - **Sunburst of slivers**: a ring of hundreds of equal slices shows its largest as a thin slice and the rest as "Other (n)"; drill or filter to see them.
 - **Sankey narrow labels**: a label slides only within its own node's height; small nodes crowded beside a bigger one lose their label (the tooltip still names them).

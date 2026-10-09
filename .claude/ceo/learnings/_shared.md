@@ -47,6 +47,9 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Size budgets are the human's call: report an overage with the cut that would fix it. Ponytail trims of repeated code save almost nothing in gzip; quote the feature's real cost instead.
 - Haiku docs drafts invent plausible facts (0.4: claimed a bare year "2024" is a date, labelled `data-t` as tone, added a second CHANGELOG section). Diff every Haiku doc against the source before committing.
 - Give an agent that needs its own build `isolation: "worktree"`; everyone else shares the tree and never builds.
+- A worktree editor runs `npm ci`, never a node_modules symlink: `.gitignore` used to match directories only, a symlink got committed, and merging it replaced the main tree's node_modules with a self-loop (2026-10-09).
+- Repeat a timing-sensitive e2e 15 times with 6 workers on the branch and on main before calling a failure a flake: the clamped-tooltip fix failed 3 of 30 there and 0 of 60 on main.
+- A fade that ends early on one side of a crossfade needs the other side on the same clock, or the frame washes out (zoomed exits at 0.35, 2026-10-09).
 - `isolation: "worktree"` branches from `main`, not the run branch: tell a worktree editor to `git reset --hard <run branch>` as its first step when the run branch has commits.
 - Before any e2e run, free port 4173 (`lsof -i :4173`): Playwright reuses a running preview server, so a stale one silently tests an old build.
 - Two editors that each need `theme.ts` in separate worktrees still collide on its rules: read both theme diffs together when folding (2026-10-05: one set light-mode ink dark, the other light, for the same hexmap steps).

@@ -188,6 +188,16 @@ describe("drill in <maya-chart>", () => {
     await frame();
     expect(el.view?.drill).toEqual(["West"]);
   });
+  it("the second click of a double click does nothing", async () => {
+    const el = await mount(spec());
+    click(byCat(el, "West"));
+    await frame();
+    el.shadowRoot!.querySelector(".maya-svg")!.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true, detail: 2 }),
+    );
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+  });
   it("line: a click on the plot drills the nearest category", async () => {
     const el = await mount(spec({ type: "line" }));
     // The plot-wide hit stands for the point nearest the pointer (x 0: the first category).

@@ -78,7 +78,7 @@ const DENS = (p: string) => `color-mix(in oklab,var(--maya-accent),var(--maya-fg
 // points); other slots, tones and ramp steps (OWN) mix their own --c. A dense plot's first point
 // carries data-dense: the group's fill strength --p drops from 58% to 30% for every point.
 const P = (c: string) =>
-  `fill:color-mix(in oklab,${c} var(--p),transparent);stroke:color-mix(in oklab,${c} 70%,var(--maya-fg))`;
+  `fill:color-mix(in oklab,${c} var(--p),transparent);stroke:color-mix(in oklab,${c} 64%,var(--maya-fg))`;
 const LOW = "color-mix(in oklab,var(--maya-bg) 13%,var(--maya-accent))";
 const OWN = ':is([data-tone],[data-q],[data-s]:not([data-s="0"]))';
 const SCATTER =

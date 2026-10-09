@@ -1,7 +1,7 @@
 // treemap + sunburst. Importing this file registers both types.
 import { register } from "./core/registry.ts";
 import { DEG } from "./core/scale.ts";
-import { OTHER, cbField, el, esc, hit, key, memo, r } from "./core/svg.ts";
+import { OTHER, cbField, clip, el, esc, hit, key, memo, r } from "./core/svg.ts";
 import type { Aggregate, Mark, MarkCtx, MarkOut, Row } from "./core/types.ts";
 
 interface Node {
@@ -122,11 +122,10 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
     : whole;
   // Drilling: draw only the next level; a click pushes it, so each click goes one level deeper.
   let c = 0;
-  // Colour slots follow size (the drawn order), so neighbours differ until the palette wraps.
-  const tops = [...root.children].sort(big);
+  // Colour slots follow first appearance, not size: a rank change on update keeps every branch its colour.
   const attrs = (n: Node, other = false) => {
     const parts = [...spec.drilled, ...n.parts];
-    const s = hue ?? tops.findIndex((t) => t.name === n.parts[0]);
+    const s = hue ?? root.children.findIndex((t) => t.name === n.parts[0]);
     return {
       "data-maya": "mark",
       // The "Other (n)" lump is keyed by the sentinel, not its count, so a new count still sweeps.
@@ -142,7 +141,7 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
       "data-depth": n.depth,
     };
   };
-  return { root, tops, attrs };
+  return { root, attrs };
 }
 
 const text = (s: string) => s.length * 7.2 + 4;
@@ -168,7 +167,8 @@ const treemap: Mark = {
         if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
         const a = attrs(n);
         // A drilled branch is one hue: its tiles step through three tints in size order.
-        const tint = spec.drilled.length ? 1 + (a["data-c"] % 3) : null;
+        // ponytail: three tints by size rank; every tile past the second largest shares the lightest.
+        const tint = spec.drilled.length ? 1 + Math.min(a["data-c"], 2) : null;
         marks += el("rect", {
           ...a,
           "data-tint": tint,
@@ -179,22 +179,20 @@ const treemap: Mark = {
         });
         // No data-depth on the hit: [data-depth] strokes would outline every grown target.
         hits += hit({ ...a, "data-depth": null }, bx, by, bw, bh);
-        // Name over value when both fit, else "name · value" on one line, else the value.
-        const [lx, ly, f, one] = [
-          bx + bw / 2,
-          by + bh / 2,
-          a["data-f"],
-          `${n.name} · ${a["data-f"]}`,
-        ];
+        // Name over value when both fit (the name cut with an ellipsis, never dropped), else "name · value", else the value.
+        const [lx, ly, f] = [bx + bw / 2, by + bh / 2, a["data-f"]];
+        const cap = Math.floor((bw - 4) / 7.2);
         if (spec.labels === false || bh < 16) return; // names on unless turned off
-        if (bh >= 34 && text(n.name) <= bw && text(f) <= bw)
-          ctx.label(lx, ly - 8, n.name, "center") && ctx.label(lx, ly + 8, f, "center");
-        else if (text(one) <= bw) ctx.label(lx, ly, one, "center");
+        if (bh >= 34 && cap >= 3)
+          ctx.label(lx, ly - 8, clip(n.name, cap), "center") &&
+            text(f) <= bw &&
+            ctx.label(lx, ly + 8, f, "center");
+        else if (text(`${n.name} · ${f}`) <= bw) ctx.label(lx, ly, `${n.name} · ${f}`, "center");
         else if (text(f) <= bw) ctx.label(lx, ly, f, "center");
         return;
       }
-      if (n.depth === 1 && text(n.name) <= bw && bh >= 30)
-        ctx.label(bx + bw / 2, by + 9, n.name, "center");
+      if (n.depth === 1 && bw >= 28 && bh >= 30)
+        ctx.label(bx + bw / 2, by + 9, clip(n.name, Math.floor((bw - 4) / 7.2)), "center");
       for (const [c, cx, cy, cw, ch] of squarify(n.children, bx, by, bw, bh))
         walk(c, cx, cy, cw, ch);
     };

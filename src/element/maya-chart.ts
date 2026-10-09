@@ -451,7 +451,7 @@ export class MayaChart extends HTMLElement {
     const intro: Intro | undefined =
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
     // A drill zoom moves marks under the pointer: no hover mark (its stroke would scale with the zoom) until it lands.
-    if (this.#zoom) this.#tip?.hide();
+    if (this.#zoom) this.#tip?.hide(still ? 0 : 640);
     patch(box, parts.svg, (this.#drawn || !!intro) && !still, {
       intro,
       zoom: this.#zoom,
