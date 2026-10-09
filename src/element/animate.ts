@@ -174,7 +174,8 @@ function mend(o: Element, w: Element): void {
 function sync(o: Element, w: Element): void {
   // `style` holds element-owned CSSOM writes (bloom origin), never markup: keep it.
   for (const a of [...o.attributes])
-    if (!w.hasAttribute(a.name) && !/^(style|data-active)$/.test(a.name)) o.removeAttribute(a.name);
+    if (!w.hasAttribute(a.name) && !/^(style|data-active|tabindex)$/.test(a.name))
+      o.removeAttribute(a.name);
   for (const a of [...w.attributes]) o.setAttribute(a.name, a.value);
 }
 
@@ -607,9 +608,9 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   }
   for (const p of pool.values()) if (fadeable(p)) (ghosts.push(p), out.push(p));
   // Reconcile in place: re-inserting the marks group would restart every CSS animation in it (the orbit).
+  for (const c of [...o.children]) out.includes(c) || c.remove();
   let ref = o.firstChild;
   for (const c of out) c === ref ? (ref = ref.nextSibling) : o.insertBefore(c, ref);
-  for (let n; ref; ref = n) ((n = ref.nextSibling), ref.remove());
   // Start every fade after the swap: animations on template children stay pending forever in
   // WebKit and Firefox, and a ghost removed synchronously would be re-inserted by the swap.
   for (const g of ghosts) ghost(g);

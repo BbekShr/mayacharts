@@ -728,3 +728,31 @@ test.describe("tooltips: weave, units, boxplot", () => {
     await ctx.close();
   });
 });
+
+test.describe("update", () => {
+  test("a changed description keeps the marks group and focus on a mark", async ({ page }) => {
+    await open(page);
+    await page.locator("#hbar").scrollIntoViewIfNeeded();
+    await settle(page);
+    const same = await page.evaluate(async () => {
+      const el = document.getElementById("hbar") as any;
+      const r = el.shadowRoot as ShadowRoot;
+      const g = r.querySelector("[data-maya=marks]")!;
+      const m = g.firstElementChild as HTMLElement;
+      m.setAttribute("tabindex", "-1");
+      m.focus();
+      const d = r.querySelector("desc")?.textContent;
+      el.spec = {
+        ...el.spec,
+        data: el.spec.data.map((x: any) => ({ ...x, sales: x.sales * 1.7 })),
+      };
+      await new Promise((f) => setTimeout(f, 100));
+      return {
+        desc: d !== r.querySelector("desc")?.textContent,
+        group: r.querySelector("[data-maya=marks]") === g,
+        focus: r.activeElement === m,
+      };
+    });
+    expect(same).toEqual({ desc: true, group: true, focus: true });
+  });
+});
