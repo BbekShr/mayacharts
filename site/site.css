@@ -149,6 +149,16 @@ body.wide header.site {
   margin-left: auto;
   flex: none;
 }
+/* On a phone the build status gets its own line, reserved empty, so the page does not jump. */
+@media (max-width: 520px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  #status {
+    flex: 1 0 100%;
+    min-height: 1.4em;
+  }
+}
 #sample-note {
   color: var(--muted);
   font-size: 0.92rem;
@@ -169,6 +179,20 @@ body.wide header.site {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 540px), 1fr));
   gap: 20px;
+}
+/* Reserve the Scale page's eleven tiles before scale.ts appends them (measured; CLS 0.20 otherwise). */
+#tiles:empty {
+  min-height: 6960px;
+}
+@media (min-width: 521px) {
+  #tiles:empty {
+    min-height: 6100px;
+  }
+}
+@media (min-width: 1130px) {
+  #tiles:empty {
+    min-height: 3370px;
+  }
 }
 .tiles section {
   padding: 16px;
