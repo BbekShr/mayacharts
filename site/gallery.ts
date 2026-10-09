@@ -227,7 +227,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   const tree = rollup(FACTS, ["region", "family", "item"], { sales: sum("sales") }) as Row[];
   tile("treemap", {
     type: "treemap",
-    title: "Sales by region, family and item",
+    title: "Sales by region, drill to family and item",
     titles: { sales: "Sales ($)" },
     path: ["region", "family", "item"],
     y: "sales",
