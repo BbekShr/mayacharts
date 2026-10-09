@@ -122,11 +122,10 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
     : whole;
   // Drilling: draw only the next level; a click pushes it, so each click goes one level deeper.
   let c = 0;
-  // Colour slots follow size (the drawn order), so neighbours differ until the palette wraps.
-  const tops = [...root.children].sort(big);
+  // Colour slots follow first appearance, not size: a rank change on update keeps every branch its colour.
   const attrs = (n: Node, other = false) => {
     const parts = [...spec.drilled, ...n.parts];
-    const s = hue ?? tops.findIndex((t) => t.name === n.parts[0]);
+    const s = hue ?? root.children.findIndex((t) => t.name === n.parts[0]);
     return {
       "data-maya": "mark",
       // The "Other (n)" lump is keyed by the sentinel, not its count, so a new count still sweeps.
@@ -142,7 +141,7 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
       "data-depth": n.depth,
     };
   };
-  return { root, tops, attrs };
+  return { root, attrs };
 }
 
 const text = (s: string) => s.length * 7.2 + 4;
