@@ -33,8 +33,8 @@ function draw(ctx: MarkCtx) {
   const period = spec.x ? ctx.fmt(spec.x, cats[ci]) : "";
   const f = ctx.fmt(spec.y, value);
   const fs = r(Math.max(16, Math.min(H * 0.32, 72, (W - 2 * PAD) / (f.length * 0.62))));
+  // No data-c: the headline and bullet are not the last sparkline dot's tooltip group.
   const payload = {
-    "data-c": ci,
     "data-s": 0,
     "data-x": period,
     "data-y": value,

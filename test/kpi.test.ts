@@ -18,7 +18,7 @@ describe("kpi", () => {
   it("headline is the last category", () => {
     const h = headline(svg(base));
     expect(h[0]).toContain('data-y="110"');
-    expect(h[0]).toContain('data-c="3"');
+    expect(h[0]).not.toContain("data-c");
     expect(h[0]).toContain('data-x="Apr"');
   });
   it("without x it aggregates all rows", () => {
