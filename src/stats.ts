@@ -16,7 +16,7 @@ interface Box {
 /** Raw rows by (category, series): the shaped cells are sums, a box plot needs the rows. */
 function boxes(spec: ResolvedSpec, shaped: Shaped) {
   // Kept per data array: a re-render of the same rows (resize, hover, hide) skips the row pass and the sorts.
-  const k = `box|${spec.x}|${spec.y}|${spec.series}|${shaped.visible}|${shaped.categories.length}`;
+  const k = `box|${spec.x}|${spec.y}|${spec.series}|${shaped.visible}|${shaped.categories.join("\0")}`;
   return memo(spec.data, k, () => rowPass(spec, shaped));
 }
 

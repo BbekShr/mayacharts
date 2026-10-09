@@ -25,7 +25,7 @@ interface Pt {
  * An explicit yDomain clips; points outside it are skipped.
  */
 const memoKey = (spec: ResolvedSpec, shaped: Shaped) =>
-  `${spec.x}|${spec.y}|${spec.series}|${spec.name}|${spec.yDomain}|${shaped.visible}|${shaped.categories.length}`;
+  `${spec.x}|${spec.y}|${spec.series}|${spec.name}|${spec.yDomain}|${shaped.visible}|${shaped.categories.join("\0")}`;
 // Kept per data array: axes(), draw() and every re-render of the same rows share one pass.
 const points = (spec: ResolvedSpec, shaped: Shaped): Pt[] =>
   memo(spec.data, `bs|${memoKey(spec, shaped)}`, () => scan(spec, shaped));
