@@ -236,7 +236,8 @@ export const bar: Mark = {
             est + 8 <= w &&
             h >= 10
           )
-            labels += inText(neg ? x + 4 : x + w - 4, cy, text, {
+            labels += inText(neg ? x + 4 : x + w - (d["data-other"] ? 14 : 4), cy, text, {
+              // the roll-up bar is often cut: clear of its break mark
               "data-ink": ink,
               "data-key": dk,
               "text-anchor": neg ? "start" : "end",

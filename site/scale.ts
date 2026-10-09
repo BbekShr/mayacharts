@@ -120,7 +120,16 @@ const TILES: Tile[] = [
     id: "kpi",
     title: "Latest revenue",
     note: "A headline number and a sparkline thinned to what fits, computed from every row.",
-    spec: { type: "kpi", x: "t", y: "v", titles, format: { ...money, t: "datetime" } },
+    spec: {
+      type: "kpi",
+      x: "t",
+      y: "v",
+      titles,
+      format: {
+        ...money,
+        t: { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" },
+      },
+    },
   },
   {
     id: "scatter",
@@ -151,6 +160,7 @@ const TILES: Tile[] = [
       sort: "desc",
       limit: 15,
       horizontal: true,
+      labels: true,
       titles,
       format: money,
     },
@@ -158,13 +168,21 @@ const TILES: Tile[] = [
   {
     id: "bar-ids",
     title: "Largest orders",
-    note: "One distinct category per row, no limit set. The biggest are kept and the rest become one Other bar.",
-    spec: { type: "bar", x: "i", y: "o", sort: "desc", titles, format: money },
+    note: "One distinct category per row, no limit set. The biggest are kept and the rest become one Other bar. Hover a bar for its order.",
+    spec: {
+      type: "bar",
+      x: "i",
+      y: "o",
+      sort: "desc",
+      xAxis: false,
+      titles,
+      format: money,
+    },
   },
   {
     id: "sunburst",
     title: "Region, family and SKU",
-    note: "A million rows folded into a three level tree. Click a slice to drill in.",
+    note: "Every row folded into a three level tree. Click a slice to drill in.",
     spec: { type: "sunburst", path: ["a", "b", "c"], y: "v", drill: true, titles, format: money },
   },
   {
