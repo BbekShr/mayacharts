@@ -571,3 +571,24 @@ describe("thinned x labels", () => {
     }
   });
 });
+
+describe("narrow bar labels", () => {
+  const spec = (n: number, name = "Category"): ChartSpec => ({
+    type: "bar",
+    x: "m",
+    y: "v",
+    data: Array.from({ length: n }, (_, i) => ({ m: `${name}${i}`, v: i + 1 })),
+  });
+  const texts = (svg: string) =>
+    [
+      ...(/data-maya="axis-x">(.*?)<\/g>/.exec(svg)?.[1] ?? "").matchAll(/<text[^>]*>([^<]*)</g),
+    ].map((m) => m[1]!);
+  it("thins instead of cutting a label to a stub when a slot is under 48 px", () => {
+    const t = texts(render(spec(8), { width: 360 }));
+    expect(t.length).toBeLessThan(8);
+    for (const s of t) expect(s).not.toContain("…");
+  });
+  it("still cuts to the slot when the slot is wide enough", () => {
+    expect(texts(render(spec(5, "Category number "), { width: 360 })).join()).toContain("…");
+  });
+});

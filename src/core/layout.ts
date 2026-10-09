@@ -321,8 +321,9 @@ export function frame(
       });
     } else {
       const b = x as { at(i: number): number; bandwidth: number };
-      // Up to 8 categories are never thinned: each label is cut to its slot instead.
-      const few = bLab.length <= 8;
+      // Up to 8 categories are cut to their slot instead of thinned, unless a slot is under 48 px
+      // (a stub like "Al…" names nothing; thin and keep labels whole).
+      const few = bLab.length <= 8 && plot.w / bLab.length >= 48;
       const every = few ? 1 : Math.max(1, Math.ceil(maxW(bLab) / (plot.w / bLab.length)));
       bLab.forEach((c, i) => {
         if (i % every) return;

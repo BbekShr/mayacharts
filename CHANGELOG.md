@@ -9,6 +9,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 ### Fixed
 
 - A time axis drops a tick more than a day outside the data instead of clamping it to the plot edge. A bar chart of Jan to Dec no longer prints "Jan 2026" under the last bars.
+- A bar chart with 8 or fewer categories no longer cuts labels to stubs like "Al…" when a slot is under 48 px. It thins every other label at full length instead.
 
 ## 0.12.0 - 2026-10-08
 
