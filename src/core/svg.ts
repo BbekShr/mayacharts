@@ -22,7 +22,12 @@ export const tw = (s: string, pad = 4) => [...s].length * 7.2 + pad;
 /** `s` cut to `n` code points, the last one an ellipsis; `n` below 2 keeps one character. */
 export const clip = (s: string, n: number) => {
   const c = [...s];
-  return c.length > n ? c.slice(0, Math.max(1, n - 1)).join("") + "…" : s;
+  return c.length > n
+    ? c
+        .slice(0, Math.max(1, n - 1))
+        .join("")
+        .trimEnd() + "…"
+    : s;
 };
 
 export function el(
