@@ -129,6 +129,14 @@ const graph = (ctx: MarkCtx, what: string) => {
     const node = (lv: number, name: string): N => {
       let n = byLv[lv]!.get(name);
       if (!n) {
+        // ponytail: render's cap counts marks after layout, which is quadratic here; stop at MAX_MARKS (10000) nodes.
+        if (nodes.length >= 1e4)
+          ctx.fail(
+            "too-many-marks",
+            "data",
+            `${what} has more than 10000 nodes.`,
+            "Filter the rows or group the small nodes into one before charting.",
+          );
         n = { lv, name, i: nodes.length, in: 0, out: 0, v: 0, y: 0, s: 0, a: 0 };
         byLv[lv]!.set(name, n);
         nodes.push(n);
@@ -237,7 +245,7 @@ export const sankey: Mark = {
     const room = (lv: number) =>
       Math.min(
         plot.w * (wide ? 0.22 : 0.28),
-        Math.max(0, ...order[lv]!.map((n) => Math.min(20, [...n.name].length) * CH)) + 16, // 4 px over the cap's 12: no float round-down
+        order[lv]!.reduce((m, n) => Math.max(m, Math.min(20, [...n.name].length) * CH), 0) + 16, // 4 px over the cap's 12: no float round-down
       );
     const [padL, padR] = [wide ? room(0) : 0, room(cols - 1)];
     const gap = (plot.w - padL - padR - W) / (cols - 1);
@@ -246,7 +254,7 @@ export const sankey: Mark = {
     // Inset 8 px (half a label) so edge nodes keep their labels; padding shrinks so it never
     // takes more than a quarter of the height, then the scale is what is left over.
     const [top, avail] = [plot.y + 8, Math.max(0, plot.h - 16)];
-    const most = Math.max(...order.map((c) => c.length));
+    const most = order.reduce((m, c) => Math.max(m, c.length), 0);
     const pad = most > 1 ? Math.min(PAD, avail / 4 / (most - 1)) : 0;
     let k = Infinity;
     for (const c of order) {

@@ -199,4 +199,9 @@ describe("sankey", () => {
       )!;
     expect(y("Z")).toBeLessThan(y("A")); // Z follows Big, not alphabet or insertion order
   });
+
+  it("200k distinct nodes fail as too-many-marks, not RangeError", () => {
+    const big = Array.from({ length: 200000 }, (_, i) => ({ a: "s" + i, b: "M", c: "P", v: 1 }));
+    expect(() => render(spec(big))).toThrow(expect.objectContaining({ code: "too-many-marks" }));
+  });
 });
