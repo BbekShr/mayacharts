@@ -143,25 +143,20 @@ export function shape(
       cats = memo(base.cats, `s${s.sort}${lim}${capped ? "a" : ""}`, () => {
         // Category totals and their sorted copy come once per row pass; a new limit (a resize
         // across a 40 px step) is then a selection and a merge, no row pass.
-        const { tot, asc } = memo(base.cats, "t", () => {
+        // An auto roll-up ranks by magnitude, so a large negative bar is not hidden in Other.
+        const { tot, r, asc } = memo(base.cats, capped ? "ta" : "t", () => {
           const tot = Float64Array.from(base.cats, total);
-          return { tot, asc: Float64Array.from(tot).sort() };
+          const r = capped ? tot.map(Math.abs) : tot;
+          return { tot, r, asc: Float64Array.from(r).sort() };
         });
         const d = s.sort === "asc" ? 1 : -1;
         const by = (ix: number[]) => (s.sort ? ix.sort((a, b) => d * (tot[a]! - tot[b]!)) : ix);
         const all = Array.from(base.cats.keys());
         if (lim === null || cats.length <= lim) return by(all).map((i) => base.cats[i]!);
         // The top `lim` by total, ties in category order: everything above the cut-off, then ties.
-        // An auto roll-up ranks by magnitude, so a large negative bar is not hidden in Other.
-        const [rt, ra] = capped
-          ? memo(base.cats, "ta", () => {
-              const a = tot.map(Math.abs);
-              return [a, Float64Array.from(a).sort()] as const;
-            })
-          : ([tot, asc] as const);
-        const cut = ra[ra.length - lim]!;
-        let ties = lim - ra.reduce((n, v) => n + +(v > cut), 0);
-        const top = all.filter((i) => rt[i]! > cut || (rt[i] === cut && ties-- > 0));
+        const cut = asc[asc.length - lim]!;
+        let ties = lim - asc.reduce((n, v) => n + +(v > cut), 0);
+        const top = all.filter((i) => r[i]! > cut || (r[i] === cut && ties-- > 0));
         const kept = new Set(top);
         return [
           ...by(top).map((i) => base.cats[i]!),

@@ -134,8 +134,8 @@ const graph = (ctx: MarkCtx, what: string) => {
           ctx.fail(
             "too-many-marks",
             "data",
-            `${what} has more than 10000 nodes.`,
-            "Filter the rows or group the small nodes into one before charting.",
+            `${what} has over 10000 nodes.`,
+            "Group the small nodes first.",
           );
         n = { lv, name, i: nodes.length, in: 0, out: 0, v: 0, y: 0, s: 0, a: 0 };
         byLv[lv]!.set(name, n);

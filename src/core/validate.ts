@@ -680,14 +680,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       const numeric = (f: string, code: ErrorCode, opt: string) =>
         scan(f, (v, i) => {
           // ponytail: |v| above 1e300 is rejected, scale and layout arithmetic overflows to NaN past it; NON-FEATURES.
-          const big = typeof v === "number" && Math.abs(v) > 1e300 && Number.isFinite(v);
-          if (v == null || (typeof v === "number" && Number.isFinite(v) && !big)) return;
+          if (v == null || (typeof v === "number" && Math.abs(v) <= 1e300)) return;
           const p = `data[${i}].${f}`;
           fail(
             code,
             p,
-            `spec.${p} is ${show(v)} (a ${ty(v)}), but spec.${opt} requires ${big ? "numbers within 1e300" : "numbers"}.`,
-            big
+            `spec.${p} is ${show(v)} (a ${ty(v)}), but spec.${opt} requires numbers.`,
+            Number.isFinite(v)
               ? "Scale the value first, e.g. divide by 1e9."
               : typeof v === "string" && v.trim() && Number.isFinite(Number(v))
                 ? `Convert first: data.map(r => ({ ...r, ${f}: Number(r.${f}) }))`
