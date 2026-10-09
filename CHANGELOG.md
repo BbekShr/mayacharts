@@ -4,6 +4,13 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- A time axis drops a tick more than 4 px outside the data instead of clamping it to the plot edge. A bar chart of Jan to Dec no longer prints "Jan 2026" under the last bars.
+- A bar chart with 8 or fewer categories no longer cuts labels to stubs like "Al…" when the cut would keep fewer than 3 characters. It thins every other label at full length instead.
+
 ## 0.12.0 - 2026-10-08
 
 ### Fixed

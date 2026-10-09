@@ -275,7 +275,8 @@ export function frame(
   if (spec.xAxis && bx) {
     const ty = r(plot.y + plot.h + 16);
     if (tt && bx.kind === "time") {
-      // Ticks sit at their time, clamped to the first and last band centres. If the pixel gap would
+      // Ticks sit at their time; one more than 4 px outside the first and last band centres is dropped
+      // (it would label the wrong bar). If the pixel gap would
       // still drop a label, retry with one tick fewer (down to 2) so the ticks stay evenly spaced.
       const sc = x as TimeScale;
       const [lo, hi] = [sc.of(bx.t[0] ?? 0), sc.of(bx.t.at(-1) ?? 0)];
@@ -286,22 +287,24 @@ export function frame(
         let out = "";
         let dropped = false;
         t.values.forEach((v, i) => {
-          const px = Math.min(hi, Math.max(lo, sc.of(v)));
+          const px = sc.of(v);
+          if (px < lo - 4 || px > hi + 4) return;
           const half = w(t.labels[i]!) / 2;
           if (px - half < right) return void (dropped = true);
           right = px + half;
           out += el("text", { x: r(px), y: ty, "text-anchor": "middle" }, esc(t.labels[i]!));
         });
-        ax += out;
+        if (dropped && target > 2) {
+          target--;
+          continue;
+        }
         // Narrow plot: fewer than 2 ticks survived, so label the first and last point at the plot edges.
-        if (target <= 2 && out.split("<text").length < 3 && bx.t.length > 1)
-          ax =
-            ax.slice(0, ax.length - out.length) +
-            el("text", { x: r(lo), y: ty, "text-anchor": "start" }, esc(t.end(bx.t[0]!, true))) +
-            el("text", { x: r(hi), y: ty, "text-anchor": "end" }, esc(t.end(bx.t.at(-1)!)));
-        if (!dropped || target <= 2) break;
-        ax = ax.slice(0, ax.length - out.length);
-        target--;
+        ax +=
+          target <= 2 && out.split("<text").length < 3 && bx.t.length > 1
+            ? el("text", { x: r(lo), y: ty, "text-anchor": "start" }, esc(t.end(bx.t[0]!, true))) +
+              el("text", { x: r(hi), y: ty, "text-anchor": "end" }, esc(t.end(bx.t.at(-1)!)))
+            : out;
+        break;
       }
     } else if (bt) {
       // Linear ticks are thinned like band labels when they would overlap.
@@ -319,8 +322,11 @@ export function frame(
       });
     } else {
       const b = x as { at(i: number): number; bandwidth: number };
-      // Up to 8 categories are never thinned: each label is cut to its slot instead.
-      const few = bLab.length <= 8;
+      // Up to 8 categories are cut to their slot instead of thinned, unless a cut would keep fewer than
+      // 3 characters (a stub like "Al…" names nothing; thin and keep labels whole).
+      const slot = plot.w / bLab.length - 8;
+      // 3 characters and the ellipsis need about 27 px.
+      const few = bLab.length <= 8 && (slot >= 27 || maxW(bLab) - 8 <= slot);
       const every = few ? 1 : Math.max(1, Math.ceil(maxW(bLab) / (plot.w / bLab.length)));
       bLab.forEach((c, i) => {
         if (i % every) return;
