@@ -133,7 +133,9 @@ export const mount = (host: Host): Handlers => {
   const click = (e: Event) => {
     const el = e.target as Element | null;
     const crumb = el?.closest(".maya-crumbs [data-depth]");
-    ptr = (e as MouseEvent).detail > 0; // 0: a keyboard-activated crumb button
+    const { detail } = e as MouseEvent; // 0: a keyboard-activated crumb button; a double click acts once
+    if (detail > 1) return;
+    ptr = detail > 0;
     if (crumb) pop(Number(crumb.getAttribute("data-depth")));
     else {
       const m = host.mark(e); // a link never drills (sankey and chord links are not keyboard-reachable)

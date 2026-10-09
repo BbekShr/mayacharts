@@ -160,6 +160,20 @@ test.describe("drill", () => {
     await expect(crumbs).toHaveCount(0);
   });
 
+  test("no hover mark or tooltip while a drill zoom moves the marks", async ({ page }) => {
+    await open(page);
+    await page.locator("#treemap").scrollIntoViewIfNeeded();
+    await settle(page);
+    await clickMark(page, page.locator("#treemap [data-maya=mark]").first());
+    await page.waitForTimeout(250);
+    await expect(page.locator("#treemap .maya-tip.maya-open")).toHaveCount(0);
+    await expect(page.locator("#treemap [data-active]")).toHaveCount(0);
+    await settle(page);
+    const { x, y } = await center(page.locator("#treemap [data-maya=mark]").first());
+    await page.mouse.move(x + 2, y + 2);
+    await expect(page.locator("#treemap .maya-tip.maya-open")).toBeVisible();
+  });
+
   test("Enter after an arrow key mid-zoom drills the arrowed mark", async ({ page }) => {
     await open(page);
     await page.locator("#treemap svg").focus();
@@ -726,5 +740,47 @@ test.describe("tooltips: weave, units, boxplot", () => {
       await page.touchscreen.tap(2, 2);
     }
     await ctx.close();
+  });
+});
+
+test.describe("tooltip", () => {
+  test("a keyboard tooltip closes when its chart scrolls away", async ({ page }) => {
+    await open(page);
+    await page.locator("#waffle").scrollIntoViewIfNeeded();
+    await settle(page);
+    await page.locator("#waffle svg.maya-svg").focus();
+    await page.keyboard.press("ArrowRight");
+    const tip = page.locator("#waffle .maya-tip.maya-open");
+    await expect(tip).toBeVisible();
+    await page.evaluate(() => scrollBy(0, 1500));
+    await expect(tip).toHaveCount(0);
+  });
+});
+
+test.describe("update", () => {
+  test("a changed description keeps the marks group and focus on a mark", async ({ page }) => {
+    await open(page);
+    await page.locator("#hbar").scrollIntoViewIfNeeded();
+    await settle(page);
+    const same = await page.evaluate(async () => {
+      const el = document.getElementById("hbar") as any;
+      const r = el.shadowRoot as ShadowRoot;
+      const g = r.querySelector("[data-maya=marks]")!;
+      const m = g.firstElementChild as HTMLElement;
+      m.setAttribute("tabindex", "-1");
+      m.focus();
+      const d = r.querySelector("desc")?.textContent;
+      el.spec = {
+        ...el.spec,
+        data: el.spec.data.map((x: any) => ({ ...x, sales: x.sales * 1.7 })),
+      };
+      await new Promise((f) => setTimeout(f, 100));
+      return {
+        desc: d !== r.querySelector("desc")?.textContent,
+        group: r.querySelector("[data-maya=marks]") === g,
+        focus: r.activeElement === m,
+      };
+    });
+    expect(same).toEqual({ desc: true, group: true, focus: true });
   });
 });
