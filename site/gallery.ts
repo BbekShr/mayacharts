@@ -461,11 +461,11 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   // 25. Bar with a second axis: sales as bars, units as the right axis.
   tile("bar-y2", {
     type: "bar",
-    title: "Sales and units by family",
-    x: "family",
+    title: "Monthly sales and units",
+    x: "monthMs",
     y: "sales",
     y2: "units",
-    format: { sales: "compact", units: "compact" },
+    format: { monthMs: "month", sales: "compact", units: "compact" },
     titles: { sales: "Sales ($)", units: "Units" },
     data: FACTS,
   });
