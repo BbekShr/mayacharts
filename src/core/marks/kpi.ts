@@ -122,12 +122,13 @@ function draw(ctx: MarkCtx) {
       (k) => cells[k]!,
     );
     let d = "";
+    let dots = ""; // before the headline and bullet in the DOM: a keyboard walk starts on the first dot
     let gap = true;
     shown.forEach((c) => {
       if (c.value === null) return void (gap = true);
       d += `${gap ? "M" : "L"}${px(c.ci)} ${py(c.value)}`;
       gap = false;
-      marks += el("circle", {
+      dots += el("circle", {
         "data-maya": "mark",
         "data-key": key("", cats[c.ci]),
         "data-c": c.ci,
@@ -137,6 +138,7 @@ function draw(ctx: MarkCtx) {
         "data-f": ctx.fmt(spec.y, c.value),
         "data-neg": c.value < 0,
         "data-last": c === last,
+        "data-tone": ctx.tone(c.value),
         r: 3,
         cx: px(c.ci),
         cy: py(c.value),
@@ -159,8 +161,9 @@ function draw(ctx: MarkCtx) {
         pathLength: 1,
         d: d || null,
       }) +
+      dots +
       marks;
-    hits = plotHit({ x: 0, y: 0, w: W, h: H });
+    hits = plotHit({ x: 0, y: top, w: W, h: bottom - top });
     // The headline's period names the sparkline's last point: right-aligned above it.
     if (period)
       labels += el(
