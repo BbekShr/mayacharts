@@ -909,9 +909,9 @@ export function snippets(spec: ChartSpec): Record<Tab, File[]> {
 <!-- Pin this file: add integrity="sha384-..." and crossorigin="anonymous" from the release summary at https://github.com/BbekShr/mayacharts/releases -->
 <script src="${CDN}"></script>
 <script>
-  const chart = document.getElementById("chart");
-  chart.style.height = "360px"; // a style attribute needs unsafe-inline under a strict CSP; this does not
-  chart.spec = ${literal(spec, "  ")};
+  // A style attribute needs unsafe-inline under a strict CSP; a CSSOM write does not.
+  document.getElementById("chart").style.height = "360px";
+  document.getElementById("chart").spec = ${literal(spec, "  ")};
 </script>
 `,
       },
