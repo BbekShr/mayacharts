@@ -275,7 +275,8 @@ export function frame(
   if (spec.xAxis && bx) {
     const ty = r(plot.y + plot.h + 16);
     if (tt && bx.kind === "time") {
-      // Ticks sit at their time, clamped to the first and last band centres. If the pixel gap would
+      // Ticks sit at their time, clamped to the first and last band centres; a boundary more than a day
+      // outside the data is dropped, not clamped (it would label the wrong bar). If the pixel gap would
       // still drop a label, retry with one tick fewer (down to 2) so the ticks stay evenly spaced.
       const sc = x as TimeScale;
       const [lo, hi] = [sc.of(bx.t[0] ?? 0), sc.of(bx.t.at(-1) ?? 0)];
@@ -286,6 +287,7 @@ export function frame(
         let out = "";
         let dropped = false;
         t.values.forEach((v, i) => {
+          if (v < bx.t[0]! - 864e5 || v > bx.t.at(-1)! + 864e5) return;
           const px = Math.min(hi, Math.max(lo, sc.of(v)));
           const half = w(t.labels[i]!) / 2;
           if (px - half < right) return void (dropped = true);

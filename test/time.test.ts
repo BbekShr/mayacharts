@@ -207,6 +207,28 @@ describe("time axis review fixes", () => {
     expect(labels(svg)[0]).toBe("Jan 2025");
   });
 
+  it("bars never label a boundary outside the data", () => {
+    const run = (n: number, width: number) =>
+      labels(
+        render(
+          {
+            type: "bar",
+            x: "x",
+            y: "v",
+            data: rows(
+              Array.from({ length: n }, (_, i) => `2025-${String(i + 1).padStart(2, "0")}-01`),
+            ),
+          } as never,
+          { width },
+        ),
+      );
+    for (const w of [360, 1280]) {
+      expect(run(12, w).join()).not.toMatch(/2026/);
+      expect(run(2, w).join()).not.toMatch(/Mar|2026/);
+      for (const l of run(1, w)) expect(l).toMatch(/Jan.*2025/);
+    }
+  });
+
   it("month-start bars are evenly spaced; a missing month is one empty slot", () => {
     const months = Array.from(
       { length: 12 },
