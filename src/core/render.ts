@@ -48,7 +48,8 @@
  *   origin of data starting Jan 1 00:18). If the pixel gap would still drop a label the count
  *   falls by one until none does, so ticks stay evenly spaced. Sub-day ticks at UTC midnight and
  *   the first tick show the date. No vertical grid. Line and area paths break where the gap to
- *   the previous non-null point exceeds 5x the series' median gap (fixed factor). The svg
+ *   the previous non-null point exceeds 5x the series' median gap (fixed factor); a thinned series breaks where kept points sit more
+ *   than 6 mean steps apart (line.ts). The svg
  *   carries data-t (empty) beside data-n; line and area points and bar marks (y2 points too)
  *   carry data-i, the category's index in the time-ordered list before window and reduction
  *   (the index space of view.window). Without spec.format for x, labels use a preset from

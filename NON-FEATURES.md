@@ -74,6 +74,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Animation cap**: updates with more than 1500 marks are drawn without animation.
 - **Path morph browsers**: line and area updates morph only where the browser interpolates CSS `d` (Chromium, Firefox) and the path keeps its command sequence; Safari, and paths that gain or lose points, crossfade instead.
 - **Gradient ids in standalone SVG**: area fills reference `#maya-a0`..`#maya-a7`. Several `render()` SVGs inlined in one page share those ids, so a chart with custom `colors` may show another chart's gradient colours (the element's shadow root scopes them; the flat fallback tint is used if the reference fails).
+- **Stacked bar labels**: a positive stacked segment too short for its value drops the label rather than printing it over its neighbour; a negative segment keeps its label below the bar, which assumes one negative series per column.
 - **Bar width**: bars stop growing at 72 px and sit centred in their slot.
 - **Flow node labels**: node labels that would collide with a larger node's label are dropped (the tooltip still names them).
 - **Radial tip values**: a bar's total shows at its tip only when it fits (wedge arc of 11 px or more, 40 categories or fewer); otherwise it is in the tooltip.
