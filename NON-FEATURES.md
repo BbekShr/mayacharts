@@ -108,6 +108,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Version constant**: `version` is written by hand in `registry.ts` and a test fails when it differs from `package.json`.
 - **Beeswarm dodge**: each point checks only the 50 most recently placed neighbours, so a very dense tie cluster can overlap a little; the swarm is clamped to its row past about 25 points anyway.
 - **Sunburst names**: a name runs straight along its arc, upright, cut so its chord stays inside the ring; it is never curved, and a slice too short for 4 characters has no name (the tooltip names it).
+- **Drilled treemap tints**: a drilled treemap tints its tiles by size rank in three steps: the largest full, the second lighter, every other tile the lightest.
 - **Treemap ramp ink**: treemap tiles coloured by a `colorBy` ramp use dark ink on every step, so the darkest steps can fall under 4.5 to 1.
 - **Sunburst of slivers**: a ring of hundreds of equal slices shows its largest as a thin slice and the rest as "Other (n)"; drill or filter to see them.
 - **Sankey narrow labels**: a label slides only within its own node's height; small nodes crowded beside a bigger one lose their label (the tooltip still names them).

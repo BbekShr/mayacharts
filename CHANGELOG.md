@@ -14,7 +14,14 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - Treemap names that do not fit are cut with an ellipsis instead of dropped.
 - A sankey column whose nodes each have one parent keeps them under their parent, so ribbons no longer cross the chart.
 - An orbit name that collides at full width retries the short value-only form before it is dropped.
-- A KPI tooltip shows the value once instead of three times.
+- A KPI tooltip shows the value once instead of three times. Its hover area is the sparkline band, so pointing at the headline no longer shows another month; every point says whether it is above or below target, and the keyboard walk runs Jan to Dec without repeating the last point.
+- A data update that changes the chart description no longer re-inserts every group: heatmap colour transitions play, CSS animations do not restart, and keyboard focus stays on its mark.
+- A keyboard tooltip closes when its mark scrolls off screen, and a tooltip clamped to the viewport fades on scroll instead of floating over the next chart.
+- A double click on a drillable mark drills one level instead of in and straight back out.
+- No hover mark or tooltip appears while a drill zoom moves the marks under a still pointer.
+- On a data update, value labels whose text changed appear after their marks land.
+- A drilled treemap tints its tiles by size rank instead of repeating every third tint.
+- Cut labels no longer keep a space before the ellipsis.
 
 ## 0.12.0 - 2026-10-08
 

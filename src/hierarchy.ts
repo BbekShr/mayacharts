@@ -167,6 +167,7 @@ const treemap: Mark = {
         if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
         const a = attrs(n);
         // A drilled branch is one hue: its tiles step through three tints in size order.
+        // ponytail: three tints by size rank; every tile past the second largest shares the lightest.
         const tint = spec.drilled.length ? 1 + Math.min(a["data-c"], 2) : null;
         marks += el("rect", {
           ...a,

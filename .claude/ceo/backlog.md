@@ -4,6 +4,12 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Needs a decision from the human
 
+- **Size headroom is gone** (2026-10-09 gallery run): global has 3 B left, element about 45 B, index about 60 B. Every further fix in those bundles needs a trim or a budget raise. Owner: human.
+- **Line and area end values below 400 px** (design critic M1, 2026-10-09): built and screenshotted, value-only end labels in a value-wide gutter, legend names the series. Costs +43 index, +50 element, +48 global (gzip B). Commit 4c62430 on branch `worktree-agent-ae47df098c2c7faee`. Owner: human (budget), then chart designer.
+- **Diverging bars label all inside or all outside** (design critic L5): built, +39/+38/+41 B. Commit 6074b96 on the same branch. Owner: human (budget).
+- **Line charts anchored at zero** (design critic M7): a deliberate ceiling (`line.ts`); FT and Datawrapper nice-pad a line's extent and keep zero for area. About +20 B core and a default change (docs too). Owner: human.
+- **Percent labels mix precision in one chart** ("10%" beside "15.9%", share bar and marimekko): the formatter is per value; one precision per chart needs the data or a fixed decimal. Contract question. Owner: human, then core engineer.
+
 - **`frame: "<field>"` playback** (2026-10-06 showcase): folds the 21 to 23 line host loop of each motion tile into one spec line. About +200 B index, +500 B element and global. Needs a budget decision and the SSR frame choice (audit suggests the last frame). Owner: human, then core and element engineers.
 - **New types in an opt-in `mayacharts/stat` module**: donut, funnel, then box plot and histogram (about 400 to 600 B each, own budget). 100% stack (`stack: "percent"`, about 100 B core) and per-field `aggregate` / `cumulative: true` (50 to 70 B) also wait on budget. Owner: human.
 - **Bar race label placement**: values centred in one-colour bars read as a default; a Flourish-style race needs value-at-tip labels. Owner: human, then chart designer.
@@ -32,7 +38,7 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 - **First full compare run after the dependency move** (`compare/package.json`): only `compare:bundle` and `compare:size` were run. Watch the next `compare.yml` run. Owner: core engineer.
 - **Waffle share change**: cells keyed by name slide through each other (about 8% overlap mid-flight); key by grid position and let the fill transition carry the change. Owner: chart designer.
-- **Treemap rank swaps**: tiles that change order cross mid-flight (15 to 36% overlap). Keep order stable or record a ceiling. Owner: chart designer.
+- **Treemap rank swaps**: tiles that change order cross mid-flight (15 to 36% overlap); colours are now stable (first-appearance slots, 2026-10-09), positions still re-pack by size. Keep order stable or record a ceiling. Owner: chart designer.
 
 - **Design critic deferrals** (2026-10-08 deep): orbit labels sit on the trails (the halo covers glyph edges only) and "+x%" is dropped at 360; chord labels collide at 1280 and two vanish at 360; parallel axes all start at zero so close values meet in one point; heatmap at 360 rounds labels into false ties; line value labels float between points with no marker; funnel weakest step is colour only (1.4.1); empty space and an extra nice step (calendar tile height, drift x to 800K, beeswarm from 10%); KPI end label brushes its final dot. Owner: chart designer.
 - **Grouped bars at 320 drop labels unevenly** (2026-10-08): home grouped shows North and some West values, no South. An all-or-nothing rule per series would read cleaner. Owner: chart designer.
@@ -42,3 +48,6 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 - **Number format edges** (core review 2026-10-08): ticks mix scientific and plain around 1e-6 and 1e21 (decide per axis); kpi delta with a tiny previous value prints a 400-character percent. Owner: core engineer (kpi: chart designer).
 - **Scatter columns memo key** omits the series list; stale only if the series set changes on the same array and spec fields. Ridgeline accepts negatives and draws circles outside the svg (add a check). Owner: chart designer.
 - **Contributor agreement** (security LOW): CLAUDE.md requires one before outside contributions; no CONTRIBUTING, CLA or PR template exists. Owner: human.
+
+- **Gallery run leftovers** (2026-10-09): ridgeline tile reads as flat slabs and peak labels sit in the next ridge (a shared min-to-max rescale was tried and squashed Northeast under Midwest; rejected), owner chart designer; hbar drill exit ghost at 270 ms (the early exit fade washed treemap drills to 40% coverage and was reverted; fade the entrance on the same short clock, about +35 B), owner element engineer; waterfall "Tot…" at 360 and heatmap column cuts ("Oute…"), owner core engineer; time-line at 360 falls back to first and last date while time-bar gets month ticks, owner core engineer; hierarchy's two local cuts keep a space before the ellipsis (+12 B hierarchy), active ring on dumbbell, beeswarm, units and dense-scatter cells (+16 B), `.maya-err` overflow at 360, owner chart designer; KPI keyboard tooltip on the first point covers the headline, owner element engineer; orbit short-form retry has no unit test, owner chart designer.
+- **E2E flakes under full-suite load** (2026-10-09, both pass 3 of 3 alone): firefox "units form control flies the dots" and webkit "paste limits". Owner: element engineer.
