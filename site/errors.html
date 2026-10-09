@@ -85,7 +85,9 @@
         <h2><code>non-numeric-y</code></h2>
         <p>
           The y field must hold finite numbers. null and undefined are allowed and draw a gap.
-          Numeric strings are rejected, so convert them first. A number beyond 1e300 in either direction is rejected too, because the scale arithmetic overflows past it: scale the value first.
+          Numeric strings are rejected, so convert them first. A number beyond 1e300 in either
+          direction is rejected too, because the scale arithmetic overflows past it: scale the value
+          first.
         </p>
         <pre><code>data.map(r => ({ ...r, revenue: Number(r.revenue) }))</code></pre>
       </section>
