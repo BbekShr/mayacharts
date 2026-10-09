@@ -905,11 +905,13 @@ export function snippets(spec: ChartSpec): Record<Tab, File[]> {
     HTML: [
       {
         name: "chart.html",
-        code: `<maya-chart id="chart" style="display: block; height: 360px"></maya-chart>
+        code: `<maya-chart id="chart"></maya-chart>
 <!-- Pin this file: add integrity="sha384-..." and crossorigin="anonymous" from the release summary at https://github.com/BbekShr/mayacharts/releases -->
 <script src="${CDN}"></script>
 <script>
-  document.getElementById("chart").spec = ${literal(spec, "  ")};
+  const chart = document.getElementById("chart");
+  chart.style.height = "360px"; // a style attribute needs unsafe-inline under a strict CSP; this does not
+  chart.spec = ${literal(spec, "  ")};
 </script>
 `,
       },
@@ -952,7 +954,7 @@ const spec = ${lit};
 
 // React 19 passes spec to the element as a property.
 export function Chart() {
-  return <maya-chart spec={spec} style={{ display: "block", height: 360 }} />;
+  return <maya-chart spec={spec} style={{ height: 360 }} />;
 }
 `,
       },
@@ -967,7 +969,7 @@ const spec = ${lit};
 </script>
 
 <template>
-  <maya-chart :spec.prop="spec" style="display: block; height: 360px" />
+  <maya-chart :spec.prop="spec" :style="{ height: '360px' }" />
 </template>
 `,
       },
@@ -982,7 +984,7 @@ const spec = ${lit};
   const spec = ${literal(spec, "  ")};
 </script>
 
-<maya-chart {spec} style="display: block; height: 360px"></maya-chart>
+<maya-chart {spec} style:height="360px"></maya-chart>
 `,
       },
     ],
@@ -994,7 +996,7 @@ ${imports}
 @Component({
   selector: "app-chart",
   standalone: true,
-  template: \`<maya-chart [spec]="spec" style="display: block; height: 360px"></maya-chart>\`,
+  template: \`<maya-chart [spec]="spec" [style.height.px]="360"></maya-chart>\`,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class ChartComponent {
