@@ -4,6 +4,12 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- The Scale page no longer narrows each chart by 8 px and back after its entrance to time a resize. That nudge drew every tile twice more and read as a jerk right after load; the Resize readout now fills when the window is actually resized.
+
 ## 0.11.1 - 2026-10-08
 
 The 0.11.0 tag failed its release run before publishing (the exported `VERSION` was not bumped), so 0.11.0 was never on npm. 0.11.1 carries everything below.

@@ -21,8 +21,7 @@ async function drawn(page: Page, rows: number) {
   await page.goto(`scale.html?rows=${rows}`);
   for (const id of IDS) {
     await page.locator(`#${id}`).scrollIntoViewIfNeeded();
-    // The resize readout is the last one filled, after the first draw and the 8 px nudge.
-    await expect(page.locator(`#${id} [data-k=resize]`)).toContainText("ms", {
+    await expect(page.locator(`#${id} [data-k=draw]`)).toContainText("ms", {
       timeout: rows > 1e5 ? 300_000 : 60_000,
     });
   }
@@ -42,7 +41,7 @@ for (const rows of process.env.SCALE_1M ? [100000, 1000000] : [100000]) {
         id,
       ).toBe(false);
       await expect(tile.locator("[data-k=rows]")).toHaveText(rows.toLocaleString("en-US"));
-      for (const k of ["marks", "draw", "resize"]) {
+      for (const k of ["marks", "draw"]) {
         await expect(tile.locator(`[data-k=${k}]`)).toHaveText(/^[\d,.]+( ms)?$/);
       }
       const marks = Number((await tile.locator("[data-k=marks]").innerText()).replace(/,/g, ""));
@@ -60,7 +59,18 @@ test("scale: changing the row count redraws every chart", async ({ page }) => {
   await page.locator("#line-1").scrollIntoViewIfNeeded();
   // The tiles still in view at the bottom draw first, each after its entrance.
   await expect(page.locator("#line-1 [data-k=rows]")).toHaveText("10,000", { timeout: 60_000 });
-  await expect(page.locator("#line-1 [data-k=resize]")).toContainText("ms", { timeout: 60_000 });
+});
+
+test("scale: a window resize redraws and times it, without a nudge on load", async ({ page }) => {
+  test.setTimeout(120_000);
+  await drawn(page, 100000);
+  // Nothing resizes a chart on its own: the readout waits for a real resize.
+  await expect(page.locator("#sankey [data-k=resize]")).toHaveText("-");
+  const vp = page.viewportSize()!;
+  await page.setViewportSize({ width: vp.width - 60, height: vp.height });
+  await expect(page.locator("#sankey [data-k=resize]")).toHaveText(/^[\d.]+ ms$/, {
+    timeout: 30_000,
+  });
 });
 
 test("scale: density charts match their baselines", async ({ page }) => {
