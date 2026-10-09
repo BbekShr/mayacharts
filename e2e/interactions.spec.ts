@@ -729,6 +729,20 @@ test.describe("tooltips: weave, units, boxplot", () => {
   });
 });
 
+test.describe("tooltip", () => {
+  test("a keyboard tooltip closes when its chart scrolls away", async ({ page }) => {
+    await open(page);
+    await page.locator("#waffle").scrollIntoViewIfNeeded();
+    await settle(page);
+    await page.locator("#waffle svg.maya-svg").focus();
+    await page.keyboard.press("ArrowRight");
+    const tip = page.locator("#waffle .maya-tip.maya-open");
+    await expect(tip).toBeVisible();
+    await page.evaluate(() => scrollBy(0, 1500));
+    await expect(tip).toHaveCount(0);
+  });
+});
+
 test.describe("update", () => {
   test("a changed description keeps the marks group and focus on a mark", async ({ page }) => {
     await open(page);

@@ -525,7 +525,15 @@ export function tooltip(
     ),
     listen(document, ["pointerdown", outside, { capture: true }]),
     // Focusing the chart can scroll it into view; that must not close a keyboard tooltip.
-    listen(window, ["scroll", () => kb || hide(), { capture: true, passive: true }]),
+    // A keyboard tooltip stays while its mark is on screen; a clamped one would float over other charts.
+    listen(window, [
+      "scroll",
+      () => {
+        const r = cur?.getBoundingClientRect();
+        (kb && r && r.bottom > 0 && r.top < innerHeight) || hide();
+      },
+      { capture: true, passive: true },
+    ]),
   ];
   return {
     off: () => (hide(), clearTimeout(timer), offs.forEach((f) => f())),
