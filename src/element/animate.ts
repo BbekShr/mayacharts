@@ -598,7 +598,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
     else if (p && !zoom && !zm && /^(labels|axis-[xy])$/.test(id(c))) {
-      follow(p, c, { ...UI, delay: 160 }, id(c) === "labels");
+      follow(p, c, id(c) === "labels" ? late : { ...UI, delay: 160 }, id(c) === "labels");
       out.push(p);
     } else {
       if (p && fadeable(p)) (ghosts.push(p), out.push(p));
