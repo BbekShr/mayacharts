@@ -19,7 +19,7 @@ const A = rng(8)
       `svg:not([data-stack]) [data-maya=area][data-s="${n}"]{fill:url(#maya-a${n}) color-mix(in oklab,var(--c) 18%,transparent)}`,
   )
   .join("");
-// Ramp: 10 steps, 20% floor (about 32% in dark mode, see --b). ponytail: only steps >= 8 reach 3:1; values are also text everywhere.
+// Ramp: 10 steps, 20% floor (about 32% in dark mode, see --b). ponytail: only steps >= 8 reach 3:1 as fill (3:1 needs about 80% accent, no range left), so heatmap cells and hexes carry an accent outline (3.9:1 light, 4.8:1 dark), which is the 1.4.11 mark.
 const Q = rng(10)
   .map((n) => `[data-q="${n}"]{--q:${Math.round(35 + (n * 65) / 9)}%}`)
   .join("");
@@ -63,7 +63,7 @@ const FLOW =
 // Hexes: stronger ramp (36% floor), same-colour round-join stroke for soft corners, ring on hover.
 const HEX = 'path[data-key^="g~"]';
 const HEXMAP =
-  `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--c);stroke-width:1.5;stroke-linejoin:round}` +
+  `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--maya-accent);stroke-width:1.5;stroke-linejoin:round}` +
   `${HEX}:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2.5}` +
   "[data-maya=grid] [data-none]{stroke-opacity:.7;shape-rendering:auto}" +
   "[data-hex] i{width:120px;height:10px}";
@@ -119,7 +119,7 @@ const ORBIT =
   // Weave threads and halos: dim with legend hover, selection and the lit thread.
   "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks][data-hot] [data-w]:not([data-lit]){opacity:.18}" +
   // Memory ghost (bar `was`): the previous value, behind its bar.
-  "[data-past]{fill:var(--maya-fg);fill-opacity:.12;stroke:var(--maya-fg);stroke-opacity:.3;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}";
+  "[data-past]{fill:var(--maya-fg);fill-opacity:.12;stroke:var(--maya-fg);stroke-opacity:.55;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}";
 
 export const css =
   L +
@@ -159,6 +159,7 @@ export const css =
   "[data-tone=good]{--c:var(--maya-good)}[data-tone=bad]{--c:var(--maya-bad)}" +
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
+  "rect[data-hm]{stroke:var(--maya-accent)}" +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
   "[data-stack] rect[data-maya=mark],:not(circle)[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
   // Active mark: an ink ring, fill untouched, so in-mark labels keep their contrast.

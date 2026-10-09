@@ -123,6 +123,23 @@ describe("theme css", () => {
         expect(rat(Y(rgb), Y(bg as unknown as number[])), `step ${n}`).toBeGreaterThanOrEqual(3);
       }
   });
+  it("unlabelled ramp marks carry a 3:1 outline (heatmap rect, hexes) and ghost bars a 3:1 stroke", () => {
+    expect(css).toContain("rect[data-hm]{stroke:var(--maya-accent)}");
+    expect(css).toContain("stroke:var(--maya-accent);stroke-width:1.5;stroke-linejoin:round");
+    const acc = toRgb(oklab(...oklch("accent")));
+    for (const bg of BGS) expect(rat(Y(acc), Y(bg))).toBeGreaterThanOrEqual(3);
+    const op = +css.match(/\[data-past\]\{[^}]*stroke-opacity:([.\d]+)/)![1]!;
+    // Alpha blends in gamma space: mix the hex channels, then linearise.
+    for (const [bg, fg] of [
+      ["#ffffff", "#1f2328"],
+      ["#0d1117", "#e6edf3"],
+    ] as const) {
+      const hex = (h: string, i: number) => parseInt(h.slice(i, i + 2), 16);
+      const m = [1, 3, 5].map((i) => hex(fg, i) * op + hex(bg, i) * (1 - op));
+      const c = "#" + m.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+      expect(ratio(c, bg)).toBeGreaterThanOrEqual(3);
+    }
+  });
   it("density cells: every step reaches 3:1 against the page", () => {
     const acc = toLab(toRgb(oklab(...oklch("accent"))));
     const [bgShare, slope] = css
@@ -195,7 +212,6 @@ describe("orbit and ghost rules", () => {
     expect(css).toContain("[data-maya=ramp] span{unicode-bidi:plaintext}");
   });
   it("heatmap cells use the generic ramp and its legend and ink match", () => {
-    expect(css).not.toContain("[data-hm]");
     expect(css).toContain("[data-maya=labels] [data-ink=t]{fill:light-dark(#12161c,#fff)}");
     expect(css).toContain(
       "[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b))",
