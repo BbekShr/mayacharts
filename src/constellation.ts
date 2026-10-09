@@ -21,7 +21,7 @@
  *   - No hits: the element's nearest-point pick (scatter's) is the intended hit model.
  */
 import { register } from "./core/registry.ts";
-import { cbField, clip, el, esc, key, nameId, r, tw } from "./core/svg.ts";
+import { cbField, el, esc, key, nameId, r, tw } from "./core/svg.ts";
 import type { Mark } from "./core/types.ts";
 
 // ponytail: the nearest-neighbour search is O(n^2) and the measure columns are standardised in
@@ -258,13 +258,16 @@ export const constellation: Mark = {
       }
     }
 
+    // Too long for the plot: whole measures, then an ellipsis, not a word cut mid-way.
+    const cap = ((plot.w - 8) / 6) | 0;
+    const hint = ctx.t("alike", ms.map(ti).join(", "));
     const hintEl =
       plot.w < 99
         ? ""
         : el(
             "text",
             { x: r(plot.x + 4), y: r(plot.y + plot.h - 4), "data-v": true },
-            esc(clip(ctx.t("alike", ms.map(ti).join(", ")), Math.floor((plot.w - 8) / 6))),
+            esc(hint[cap] ? hint.slice(0, hint.lastIndexOf(", ", cap) + 1 || cap) + "…" : hint),
           );
     return { marks, hits: "", grid, labels: hintEl, note };
   },
