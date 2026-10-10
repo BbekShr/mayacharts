@@ -221,6 +221,14 @@ describe("sankey", () => {
       )!;
     expect(y("b2")).toBeLessThan(y("s")); // s sits under Small, below Big's children
   });
+  it("a node's labels carry the node's key, so they glide with it on a drill", () => {
+    const s = render(spec(rows));
+    const nodeKeys = tags(s, "mark").map((t) => at(t, "data-key")!);
+    const labelKeys = [...s.matchAll(/<text [^>]*data-key="([^"]+)"/g)].map((m) => m[1]!);
+    expect(labelKeys.length).toBeGreaterThan(0);
+    for (const k of labelKeys) expect(nodeKeys).toContain(k.replace(/~v$/, ""));
+    expect(new Set(labelKeys).size).toBe(labelKeys.length);
+  });
   it("200k distinct nodes fail as too-many-marks, not RangeError", () => {
     const big = Array.from({ length: 200000 }, (_, i) => ({ a: "s" + i, b: "M", c: "P", v: 1 }));
     expect(() => render(spec(big))).toThrow(expect.objectContaining({ code: "too-many-marks" }));
