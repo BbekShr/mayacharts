@@ -4,7 +4,7 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Needs a decision from the human
 
-- **Size headroom is gone** (2026-10-09 gallery run): global has 3 B left, element about 45 B, index about 60 B. Every further fix in those bundles needs a trim or a budget raise. Owner: human.
+- **Size headroom** (measured 2026-10-09 after the 0.14.0 raise): index about 390 B, element about 400 B, global about 520 B, theme about 30 B. The two built-and-waiting items below may now fit everywhere except theme; re-measure before merging them. Owner: human.
 - **Line and area end values below 400 px** (design critic M1, 2026-10-09): built and screenshotted, value-only end labels in a value-wide gutter, legend names the series. Costs +43 index, +50 element, +48 global (gzip B). Commit 4c62430 on branch `worktree-agent-ae47df098c2c7faee`. Owner: human (budget), then chart designer.
 - **Diverging bars label all inside or all outside** (design critic L5): built, +39/+38/+41 B. Commit 6074b96 on the same branch. Owner: human (budget).
 - **Line charts anchored at zero** (design critic M7): a deliberate ceiling (`line.ts`); FT and Datawrapper nice-pad a line's extent and keep zero for area. About +20 B core and a default change (docs too). Owner: human.
@@ -21,6 +21,10 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 - **Columnar input past 4M rows** (2026-10-08): at 10M nine-field rows the host's row objects take about 7 GB, more than a browser tab gets, so the limit is the data, not the chart. Typed arrays per field is the only change that moves it, and it is a spec change. Measured: 1M 1.5 GB, 2M 2.6 GB, 3M 3.9 GB, 5M 4.4 GB, 10M 7 GB peak RSS (Node, eleven Scale specs). Wait for a real user. Owner: human, then core engineer.
 
 ## Open
+
+- **Hand-written counts and sizes rot every release** (2026-10-09 docs run): "Twenty-six types" and "53 KB" survived the 0.14.0 release in README and site/index.html. A `test/docs-facts.test.ts` that counts types from the registry or llms.txt and checks the README and home headlines (and the README size tables against `dist/` after a build) would catch it. Owner: core engineer.
+- **Docs and README gaps for 0.14.0**: no worked example of kpi goals or gauge in site/docs.html (copy the gallery specs), no gauge picture in the README gallery grid (needs `scripts/readme-shots.mjs`). Owner: chart designer.
+- **Inline theme script in site/docs.html:9** (security LOW): demo only, but a copied page needs a nonce or `unsafe-inline`. Move it to a module or comment it. Owner: chart designer.
 
 - **High-cardinality bar row pass** (2026-10-08; motion critic measured a 5.6 s main-thread freeze on the Scale bar-ids tile at 1M in chromium, 0.73 s in webkit): a bar with one category per row costs about 5 objects per category in `group()` (`core/shape.ts`), so first draw is 1.3 s at 1M, 2.8 s at 2M, 4.0 s at 3M, 62 s at 10M, mostly GC. Typed-array totals when there is no series and no y2 should be 2 to 3 times faster. Its resize refolds the rolled-up categories into Other (300 to 450 ms at 3M); running totals over the sorted order would make that a lookup. Scatter's first resize at 10M (10 s) was not profiled. Tried and no gain: a numeric-key cache in `group()`, a plain loop for bar totals. Owner: core engineer.
 
