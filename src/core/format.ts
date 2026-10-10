@@ -12,7 +12,7 @@ const INTL = new Map<string, F>();
 // month date and a time with " at ", these say ", " in every engine. Exponents, non-finite
 // numbers and years outside 1000..9999 go to Intl, built on first use.
 // ponytail: en-US only; another locale pays the ICU load once per page.
-const NUM = /^{"maximumFractionDigits":(\d)}$/;
+const NUM = /^{"maximumFractionDigits":(\d)(,"signDisplay":"negative")?}$/;
 const DATE =
   /^{"timeZone":"UTC"(?=,)(?:(,"month":"short"(,"day":"numeric")?)?(,"year":"numeric")?(,"hour":"numeric","minute":"2-digit"(,"second":"2-digit")?)?|(,"dateStyle":"medium")?(,"timeStyle":"short")?)}$/;
 const intl = (C: new (l: string, o: object) => F, locale: string, raw: object) => {
@@ -43,7 +43,7 @@ const intl = (C: new (l: string, o: object) => F, locale: string, raw: object) =
           [i, d] = [r.slice(0, r.length - k), r.slice(r.length - k).replace(/0+$/, "")];
         }
         if (i.length > 3) i = i.replace(/\B(?=(\d{3})+$)/g, ",");
-        return (1 / +v < 0 ? "-" : "") + i + (d && "." + d);
+        return (1 / +v < 0 && (!n[2] || +i || d) ? "-" : "") + i + (d && "." + d);
       },
     };
   } else if (g) {
@@ -136,6 +136,7 @@ export function formatter(
                     maximumFractionDigits: step !== undefined && step >= 1 ? 0 : Math.max(d, 2),
                   }
                 : { maximumFractionDigits: Math.max(d, 2) };
+    o.signDisplay = "negative"; // a value that rounds to zero prints "0", not "-0"
     num = nf(locale, o);
     auto = preset === "auto";
     // Step-less, a value under 0.05 gets 2 significant digits (they win over fraction digits),

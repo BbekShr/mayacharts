@@ -248,3 +248,15 @@ describe("tiny and huge values", () => {
     expect(f({ v: { maximumFractionDigits: 2 } })(1e-7)).toBe("0");
   });
 });
+
+describe("negative values that round to zero print no sign", () => {
+  it("integer, percent and de-DE currency", () => {
+    expect(f("integer")(-0.4)).toBe("0");
+    expect(f("integer")(-3.6)).toBe("-4");
+    expect(f("percent", "v", 0.1)(-0.00001)).toBe("0%");
+    expect(f("percent", "v", 0.1)(-0.25)).toBe("-25%");
+    const eur = f("currency", "v", undefined, { locale: "de-DE", currency: "EUR" });
+    expect(eur(-0.001)).toMatch(/^0,00\s€$/);
+    expect(f({ v: { maximumFractionDigits: 0 } })(-0.4)).toBe("-0"); // user options are Intl's own
+  });
+});
