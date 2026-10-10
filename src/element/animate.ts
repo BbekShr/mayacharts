@@ -327,26 +327,25 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   // Count from the old number, rescaled to the new decimals; never from zero except on entrance.
   // A wider old number (1234 to 999) lends its template, so the count has the digits to start there.
   const fd = f ? dg(f[0]) : "";
-  const tok = f && fd.length > dg(num).length && dp(f[0]) === dp(num) ? f[0] : num;
+  const nd = dg(num);
+  const tok = f && fd.length > nd.length && dp(f[0]) === dp(num) ? f[0] : num;
   const ds = dg(tok);
   if (ds.length > 15) return;
   const ls = sep(tok);
   const [head, tail] = [to.slice(0, m.index), to.slice(m.index + num.length)];
   const fh = f ? from.slice(0, f.index) : "";
   // The sign ends the head and counts as part of the number, so -5 to 3 passes through 0.
-  const SG = /[-−+]\s*$/;
-  const sn = (h: string) => SG.exec(h)?.[0] ?? "";
-  const neg = (h: string) => /[-−]/.test(sn(h));
+  const SG = /[-−+]\s*$/,
+    N = /[-−]/;
+  const [hs, fs] = [head, fh].map((h) => SG.exec(h)?.[0] ?? "");
+  const base = head.replace(SG, "");
   const a = Math.min(
     10 ** ds.length - 1,
     Math.round((+fd || 0) * 10 ** (dp(num) - (f ? dp(f[0]) : 0))),
   );
-  const [A, B] = [neg(fh) ? -a : a, neg(head) ? -dg(num) : +dg(num)];
+  const [A, B] = [N.test(fs) ? -a : a, N.test(hs) ? -nd : +nd];
   if (A === B) return;
-  if (
-    f &&
-    (fh.replace(SG, "") !== head.replace(SG, "") || from.slice(f.index + f[0].length) !== tail)
-  ) {
+  if (f && (fh.replace(SG, "") !== base || from.slice(f.index + f[0].length) !== tail)) {
     // Another unit (K to M) would contradict the number: swap once the mark has landed.
     e.textContent = from;
     setTimeout(() => e.textContent === from && (e.textContent = to), Number(o.duration));
@@ -357,8 +356,13 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
     let i = 0;
     const t = tok.replace(/\d/g, () => s[i++]!);
     const [int, dec] = ls < 0 ? [t, ""] : [t.slice(0, ls), t.slice(ls)];
-    const sign = k < 0 ? sn([head, fh].find(neg) ?? "-") : k && !neg(head) ? sn(head) : "";
-    return head.replace(SG, "") + sign + int.replace(/^[0\D]+(?=\d)/, "") + dec + tail;
+    return (
+      base +
+      (k < 0 ? (N.test(hs) ? hs : fs) : k && !N.test(hs) ? hs : "") +
+      int.replace(/^[0\D]+(?=\d)/, "") +
+      dec +
+      tail
+    );
   };
   const ms = Number(tally(o).duration),
     t0 = performance.now() + Number(o.delay ?? 0);
@@ -637,12 +641,10 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
       out.push(p);
     } else {
       if (p && fadeable(p)) {
+        // A ghost never carries ids: WebKit drops the gradient while two defs share one.
+        p.querySelector("defs")?.remove();
         ghosts.push(p);
         out.push(p);
-        // A ghost never carries ids (WebKit drops the gradient while two defs share one): the
-        // new group reuses an equal defs, else the old one goes.
-        const [d0, d1] = [p, c].map((g) => g.querySelector("defs"));
-        d0 && (d1 && d0.outerHTML === d1.outerHTML ? d1.replaceWith(d0) : d0.remove());
       }
       out.push(c);
       if (p && fadeable(c)) fadeIn.push(c);
