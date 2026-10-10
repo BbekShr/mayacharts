@@ -226,15 +226,19 @@ export const bar: Mark = {
               : null;
         if (est <= w && h >= (hz ? 14 : 16)) {
           // At the bar's end, where the eye reads a value; a stack segment keeps its middle.
-          const pin = !spec.stack && (hz ? est + 8 <= w : h >= 22);
+          // A bar cut at the plot edge keeps the middle, clear of its break slashes.
+          const pl = ctx.plot;
+          const pin =
+            !spec.stack &&
+            (hz ? x + w < pl.x + pl.w - 0.5 && est + 16 <= w : y > pl.y + 0.5 && h >= 22);
           labels += inText(
-            pin && hz ? (neg ? x + 4 : x + w - 4) : cx,
+            pin && hz ? (neg ? x + 8 : x + w - 8) : cx,
             pin && !hz ? (neg ? y + h - 10 : y + 10) : cy,
             text,
             {
               "data-ink": ink,
               "data-key": dk,
-              "text-anchor": pin && hz ? (neg ? "start" : "end") : null,
+              "text-anchor": pin && hz ? (neg ? "start" : "end") : "middle",
             },
           );
         } else if (spec.stack && !neg)

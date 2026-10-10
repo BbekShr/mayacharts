@@ -74,7 +74,10 @@ describe("bar", () => {
   });
 
   it("a value label sits at the bar's end; a stack segment keeps its middle", () => {
-    const data = [{ c: "alpha", v: 100 }];
+    const data = [
+      { c: "alpha", v: 60 },
+      { c: "beta", v: 100 },
+    ];
     const num = (t: string, k: string) => +t.match(new RegExp(` ${k}="([\\d.]+)"`))![1]!;
     const draw = (extra = {}) => {
       const s = renderParts(
@@ -92,6 +95,6 @@ describe("bar", () => {
     expect(num(t2, "y")).toBeCloseTo(num(r2, "y") + num(r2, "height") / 2, 0);
     const [r3, t3] = draw({ horizontal: true });
     expect(t3).toContain('text-anchor="end"');
-    expect(num(t3, "x")).toBeCloseTo(num(r3, "x") + num(r3, "width") - 4, 0);
+    expect(num(t3, "x")).toBeCloseTo(num(r3, "x") + num(r3, "width") - 8, 0);
   });
 });

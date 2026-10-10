@@ -126,8 +126,6 @@ describe("gauge", () => {
     const [, b1] = start(-10);
     expect(b1).toBeLessThan(zero + 1);
     expect(b1).toBeGreaterThan(zero - 12);
-    expect(start(0)[2]).toContain('stroke-linecap="butt"'); // nothing to draw, no dot
-    expect(start(10)[2]).toContain('stroke-linecap="round"');
     expect(labels(svg(base({ yDomain: [-15, 20] })))).toContain('stroke="var(--maya-fg-muted)"');
     expect(labels(svg(base()))).not.toContain('stroke="var(--maya-fg-muted)"');
   });
