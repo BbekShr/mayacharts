@@ -175,7 +175,7 @@ describe("fuzz: validateSpec and renderParts", () => {
       }
       if (!ok) continue;
       try {
-        renderParts(s as never);
+        expect(renderParts(s as never).svg, JSON.stringify(s)).not.toContain("∞");
         rendered++;
       } catch (e) {
         if (notImpl(e)) continue;
@@ -215,7 +215,7 @@ describe("fuzz: validateSpec and renderParts", () => {
       try {
         validateSpec(s);
         okCount++;
-        renderParts(s as never);
+        expect(renderParts(s as never).svg, JSON.stringify(s)).not.toContain("∞");
       } catch (e) {
         if (notImpl(e)) continue;
         if (!(e instanceof MayaSpecError))

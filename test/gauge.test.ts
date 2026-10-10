@@ -10,6 +10,11 @@ const arc = (s: string) => s.match(/<circle data-maya="mark"[^>]*>/)![0];
 const labels = (s: string) => s.match(/<g data-maya="labels"[\s\S]*?<\/g>/)?.[0] ?? "";
 
 describe("gauge", () => {
+  it("rejects a target or warn beyond 1e300", () => {
+    expect(() => svg(base({ colorBy: { target: 1e308 } }))).toThrow(/colorBy/);
+    expect(() => svg(base({ colorBy: { target: 50, warn: -1e301 } }))).toThrow(/colorBy/);
+    expect(svg(base({ colorBy: { target: 50, warn: 40 } }))).not.toContain("∞");
+  });
   it("draws the value arc and a centre number", () => {
     const s = svg(base());
     expect(arc(s)).toContain('data-y="62"');

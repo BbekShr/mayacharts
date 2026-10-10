@@ -144,6 +144,7 @@ function scan(root: ParentNode, out: string[]) {
 function problems(html: string): string[] {
   const out: string[] = [];
   if (/<img/i.test(html)) out.push("raw <img");
+  if (html.includes("∞")) out.push("infinity glyph"); // a non-finite number reached a label
   const scripts = html.match(/<script/gi)?.length ?? 0;
   const allowed = html.includes('<script type="application/json">') ? 1 : 0;
   if (scripts !== allowed) out.push(`script count ${scripts}`);
