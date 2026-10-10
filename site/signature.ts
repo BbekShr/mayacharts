@@ -88,7 +88,7 @@ export function signature({ FACTS }: Pick<Dataset, "FACTS">): Record<string, Cha
     x: "account",
     y: ["revenue", "growth", "margin", "tickets", "nps"],
     size: "revenue",
-    colorBy: "growth",
+    series: "segment",
     select: true,
     data: makeAccounts(seedOf(FACTS)) as Row[],
   });

@@ -438,6 +438,7 @@ export function makeAccounts(seed: number) {
     const v = c.map((m, k) => Math.max(k === 1 ? -20 : k === 0 ? 0.6 : 1, m + gauss(rng) * sd[k]!));
     return {
       account: `${first[i % first.length]} ${last[(i * 3 + Math.floor(i / 20)) % last.length]}`,
+      segment: ["Enterprise", "Startup", "Mature"][i % 3]!,
       revenue: R2(v[0]!),
       growth: Math.round(v[1]!),
       margin: Math.round(v[2]!),

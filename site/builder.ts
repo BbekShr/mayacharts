@@ -49,7 +49,8 @@ import {
   type Role,
   type Tab,
 } from "./builder-kit.ts";
-import { theme } from "./theme.ts";
+import { chartTheme, theme, themePicker } from "./theme.ts";
+import { themes } from "../src/themes.ts";
 
 theme();
 
@@ -447,12 +448,32 @@ const reason = (el: HTMLElement, b: Block | null) => {
   el.hidden = !b;
 };
 
+// Options in four collapsible steps, by what they change. A key missing here lands in the last.
+const STEPS: [string, string[]][] = [
+  ["4. Text and labels", w("title description labels endLabels locale currency")],
+  ["5. Layout", w("horizontal stack sort limit aggregate xType")],
+  ["6. Show and hide", w("legend tooltip grid xAxis yAxis table")],
+  ["7. Interaction and motion", w("select drill drillOut zoom animate frame")],
+];
+function w(s: string): string[] {
+  return s.split(" ");
+}
+const stepOf = (k: string) => {
+  const i = STEPS.findIndex(([, keys]) => keys.includes(k));
+  return i < 0 ? STEPS.length - 1 : i;
+};
+const rank = (k: string) => STEPS[stepOf(k)]![1].indexOf(k);
+/** Which steps are open; kept across a type change, which rebuilds them. Text starts open. */
+const open = new Set([0]);
+
 function optionControls(): void {
   refreshers = [];
-  const text: HTMLElement[] = [];
-  const pick: HTMLElement[] = [];
-  const toggles: HTMLElement[] = [];
-  for (const c of CONTROLS) {
+  const pick: HTMLElement[][] = STEPS.map(() => []);
+  const toggles: HTMLElement[][] = STEPS.map(() => []);
+  const ordered = [...CONTROLS].sort(
+    (a, b) => stepOf(a.key) - stepOf(b.key) || rank(a.key) - rank(b.key),
+  );
+  for (const c of ordered) {
     if (!applies(c.key, spec.type)) continue;
     const id = `o-${c.key}`;
     const cur = (spec as unknown as Record<string, unknown>)[c.key];
@@ -482,7 +503,7 @@ function optionControls(): void {
         box.disabled = !!b;
         reason(why, b);
       });
-      toggles.push(row);
+      toggles[stepOf(c.key)]!.push(row);
       continue;
     }
     const el =
@@ -525,24 +546,47 @@ function optionControls(): void {
         el.disabled = all;
         reason(why, all ? blocks[0]! : null);
       });
-    (c.kind === "text" ? text : pick).push(row);
+    pick[stepOf(c.key)]!.push(row);
   }
   optionsBox.replaceChildren(
-    make("div", { className: "grid" }, ...text),
-    make("div", { className: "grid" }, ...pick),
-    make("div", { className: "toggles" }, ...toggles),
+    ...STEPS.flatMap(([name], i) => {
+      if (!pick[i]!.length && !toggles[i]!.length) return [];
+      const d = make(
+        "details",
+        { className: "step opt", open: open.has(i) },
+        make("summary", {}, name),
+        make("div", { className: "grid" }, ...pick[i]!),
+        make("div", { className: "toggles" }, ...toggles[i]!),
+      );
+      d.addEventListener("toggle", () => (d.open ? open.add(i) : open.delete(i)));
+      return [d];
+    }),
   );
 }
 
 // ---------------------------------------------------------------------------------------------
-// Accent colour: writes spec.theme so the copied code carries it.
+// Theme and accent colour: update() writes them into spec.theme so the copied code carries
+// them, and a type or data change keeps them. The accent picker overrides the theme's accent.
 
 const accent = $<HTMLInputElement>("accent");
-accent.addEventListener("input", () => set("theme", { accent: accent.value }));
-$("accent-reset").addEventListener("click", () => {
-  accent.value = "#3b82f6";
-  set("theme", undefined);
+let ownAccent = "";
+const themeTokens = () => ({
+  ...(chartTheme ? themes[chartTheme] : {}),
+  ...(ownAccent && { accent: ownAccent }),
 });
+const showAccent = () => {
+  accent.value = ownAccent || /#\w{6}/.exec(themeTokens().accent ?? "")?.[0] || "#3b82f6";
+  $("accent-reset").hidden = !ownAccent;
+};
+accent.addEventListener("input", () => {
+  ownAccent = accent.value;
+  update(false);
+});
+$("accent-reset").addEventListener("click", () => {
+  ownAccent = "";
+  update(false);
+});
+themePicker($("chart-theme"), () => update(false));
 
 // ---------------------------------------------------------------------------------------------
 // Preview errors: the element validates. The builder replaces its box with the problem in the
@@ -686,7 +730,7 @@ $("reset").addEventListener("click", () => {
   for (const r of document.querySelectorAll<HTMLInputElement>("input[name=source]"))
     r.checked = r.value === "sample";
   $("paste-box").hidden = true;
-  accent.value = "#3b82f6";
+  ownAccent = "";
   spec = sample("bar");
   update(true);
 });
@@ -713,6 +757,10 @@ function update(rebuild: boolean): void {
   formatControls(rebuild);
   refresh();
   rerollBtn.hidden = !!mine;
+  const { theme: _, ...rest } = spec;
+  const tokens = themeTokens();
+  spec = (Object.keys(tokens).length ? { ...rest, theme: tokens } : rest) as ChartSpec;
+  showAccent();
   chart.spec = spec;
   code();
 }

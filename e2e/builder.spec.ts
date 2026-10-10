@@ -30,6 +30,11 @@ const put = (page: Page, text: string) =>
     (a as HTMLTextAreaElement).value = v;
     a.dispatchEvent(new Event("input", { bubbles: true }));
   }, text);
+// Option steps start collapsed (all but the first); open them so their controls can be used.
+const openSteps = (page: Page) =>
+  page
+    .locator("details.opt")
+    .evaluateAll((ds) => ds.forEach((d) => ((d as HTMLDetailsElement).open = true)));
 const myData = async (page: Page, text: string) => {
   await page.locator("input[name=source][value=mine]").check({ force: true });
   await put(page, text);
@@ -80,6 +85,7 @@ test("pasted CSV maps to fields and draws; a broken mapping links its error", as
 test("options that cannot work are hidden, clashing ones disabled with the reason", async ({
   page,
 }) => {
+  await openSteps(page);
   await expect(page.locator('.field[data-key="drill"]')).toBeHidden(); // bar has no Levels here
   await pick(page, "treemap");
   await expect(page.locator("#o-drill")).toBeEnabled();
@@ -137,6 +143,7 @@ test("an i button by each control explains it; the controls themselves stay quie
   page,
 }) => {
   const tip = page.locator("#tip");
+  await openSteps(page);
   await page.locator('.field[data-key="select"] label').hover();
   await page.waitForTimeout(300);
   await expect(tip).toBeHidden(); // hovering the control itself shows nothing

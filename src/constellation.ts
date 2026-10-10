@@ -3,8 +3,10 @@
  * registry, svg, scale, ticks and types.
  *
  * Spec: x = name (one star per row), y = 2 or more measures (validate: too-few-measures; all
- * shown, no measure toggle, as parallel), optional size (star area, else the first measure) and
- * colorBy (a numeric field: ramp; "sign": tone of the first measure; none: the accent).
+ * shown, no measure toggle, as parallel), optional size (star area, else the first measure),
+ * series (a group: star colour and legend; a hidden group's stars leave the sky, which keeps its
+ * shape, and drop out of every neighbour list) and colorBy (a numeric field: ramp; "sign": tone
+ * of the first measure; none: the accent).
  * Algorithm:
  *   - Standardise each measure (z-scores); a constant measure is dropped from the PCA.
  *   - Deterministic 2-D PCA: 48 power iterations from a fixed start vector (the second component
@@ -15,7 +17,10 @@
  *   - Neighbours are measured in the full standardised space (what "alike" means), not on
  *     screen. A star's data-a lists the stars that count it among their 3 nearest, and its
  *     data-n is its own index, so the tooltip's flow lighting (`[data-a~=n]`) lights the 3 stars
- *     nearest to the one hovered. A thin line joins each star to its single nearest.
+ *     nearest to the one hovered (ringed), and the grid's `line[data-a]` from it to each of them
+ *     appears. A thin line always joins each star to its single nearest.
+ *   - Tooltip rows are "measure\tvalue\tz": z is the standardised value (clamped to 2.5), drawn
+ *     as a bar either side of the average, so a profile reads at a glance.
  *   - Up to 5 labels, spread over the sky, only where the box clears every star. Visible hint: text.alike.
  *   - Stars are `<circle data-maya="mark">` keyed `c~NAME` (svg.ts nameId for repeats).
  *   - No hits: the element's nearest-point pick (scatter's) is the intended hit model.
@@ -64,7 +69,7 @@ export const constellation: Mark = {
       );
   },
   draw(ctx) {
-    const { spec, plot } = ctx;
+    const { spec, plot, shaped } = ctx;
     const ms = spec.measures;
     const ti = (f: string) => spec.titles.get(f) ?? f;
     const rows = spec.data.filter((row) => ms.every((m) => typeof row[m] === "number"));
@@ -77,13 +82,18 @@ export const constellation: Mark = {
 
     // Standardise; a constant measure has no spread and is dropped.
     const raw = ms.map((m) => rows.map((row) => row[m] as number));
-    const z = raw
-      .map((c) => {
-        const mu = c.reduce((a, b) => a + b, 0) / n;
-        const sd = Math.sqrt(c.reduce((a, b) => a + (b - mu) ** 2, 0) / n);
-        return sd > 1e-12 ? c.map((v) => (v - mu) / sd) : null;
-      })
-      .filter((c): c is number[] => c !== null);
+    const zs = raw.map((c) => {
+      const mu = c.reduce((a, b) => a + b, 0) / n;
+      const sd = Math.sqrt(c.reduce((a, b) => a + (b - mu) ** 2, 0) / n);
+      return sd > 1e-12 ? c.map((v) => (v - mu) / sd) : null;
+    });
+    const z = zs.filter((c): c is number[] => c !== null);
+    // Group slot per row; a hidden group's stars are not drawn and are nobody's neighbour.
+    const sf = spec.series;
+    const si = rows.map((row) =>
+      sf === null ? 0 : Math.max(0, shaped.series.indexOf(String(row[sf]))),
+    );
+    const on = si.map((g) => sf === null || shaped.visible.includes(g));
     const d = z.length;
     const cov = z.map((a) => z.map((b) => a.reduce((s, v, t) => s + v * b[t]!, 0) / n));
     let p: number[][] = rows.map(() => [0, 0]);
@@ -144,11 +154,12 @@ export const constellation: Mark = {
       });
 
     // Nearest neighbours in the full standardised space.
-    const all = [...rows.keys()];
+    const all = [...rows.keys()].filter((i) => on[i]);
     // Keep the K best per row as the scan goes (stable sort: ties keep the lower index); no pair list.
     const near = rows.map((_, i) => {
       const b: number[][] = [];
-      for (let j = 0; j < n; j++) {
+      for (let j = 0; j < n && on[i]; j++) {
+        if (!on[j]) continue;
         let s = 0;
         for (const c of z) s += (c[i]! - c[j]!) ** 2;
         if (j !== i && s < (b[K - 1]?.[1] ?? Infinity)) {
@@ -177,6 +188,12 @@ export const constellation: Mark = {
       joined.add(id);
       grid += el("line", { x1: px[i], y1: py[i], x2: px[j], y2: py[j] });
     });
+    // Hover links: hidden until the star they start from is hovered (flow lighting, data-a).
+    near.forEach((a, i) =>
+      a.forEach((j) => {
+        grid += el("line", { x1: px[i], y1: py[i], x2: px[j], y2: py[j], "data-a": i });
+      }),
+    );
 
     let marks = "";
     all
@@ -193,8 +210,13 @@ export const constellation: Mark = {
           "data-a": by[i]!.join(" ") || null,
           "data-x": names[i],
           "data-y": raw[0]![i],
+          "data-s": sf === null ? null : si[i],
+          "data-series": sf === null ? null : String(row[sf]),
           "data-f": [
-            ...ms.map((m, q) => `${ti(m)}\t${ctx.fmt(m, raw[q]![i])}`),
+            ...ms.map(
+              (m, q) =>
+                `${ti(m)}\t${ctx.fmt(m, raw[q]![i])}\t${Math.round(Math.max(-2.5, Math.min(2.5, zs[q]?.[i] ?? 0)) * 100) / 100}`,
+            ),
             ...(near[i]!.length
               ? [`\t${ctx.t("nearest", near[i]!.map((j) => names[j]).join(", "))}`]
               : []),

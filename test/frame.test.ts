@@ -37,7 +37,7 @@ describe("frame", () => {
     const p = renderParts(race());
     expect(ys(p.svg)).toEqual([30, 60, 90]);
     expect(p.title).toBe('<div class="maya-title">GDP, 2003</div>');
-    expect(p.svg).toContain(">GDP, 2003</title>");
+    expect(p.svg).toContain('aria-label="GDP, 2003"');
     expect(desc(p.svg)).toMatch(/ Frame 3 of 3\.$/);
     expect(p.frame).toEqual([2, 3]);
     expect(p.controls).toBe(PLAY);

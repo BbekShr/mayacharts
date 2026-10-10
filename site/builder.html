@@ -30,7 +30,7 @@
         <a class="support" href="https://bbekshr.github.io/mayacharts/support/"
           ><span aria-hidden="true">♥</span> Support</a
         >
-        <button id="theme" type="button">Theme: auto</button>
+        <button id="theme" type="button">Light/dark: auto</button>
       </nav>
     </header>
     <header class="site">
@@ -39,77 +39,80 @@
         Pick a chart, bring your data, map the fields. Copy the code for your platform.
       </p>
     </header>
-    <main class="bld">
-      <form class="bld-form" id="form" novalidate>
-        <fieldset class="step">
-          <legend>1. Chart</legend>
-          <div id="types" class="types"></div>
-          <p id="type-help" class="type-help" aria-live="polite"></p>
-        </fieldset>
+    <main class="bld-page">
+      <div class="bld">
+        <form class="bld-form" id="form" novalidate>
+          <fieldset class="step">
+            <legend>1. Chart</legend>
+            <div id="types" class="types"></div>
+            <p id="type-help" class="type-help" aria-live="polite"></p>
+          </fieldset>
 
-        <fieldset class="step">
-          <legend>2. Data</legend>
-          <div class="seg">
-            <label><input type="radio" name="source" value="sample" checked /> Sample data</label>
-            <label><input type="radio" name="source" value="mine" /> My data</label>
-          </div>
-          <div id="paste-box" hidden>
-            <label for="paste">Paste CSV, TSV from a spreadsheet, or a JSON array of objects</label>
-            <textarea
-              id="paste"
-              rows="7"
-              spellcheck="false"
-              aria-describedby="meter paste-err"
-              placeholder="Month,Sales&#10;Jan,1200&#10;Feb,1350"
-            ></textarea>
-            <p id="meter" class="hint" aria-live="polite"></p>
-            <p id="paste-err" class="err" role="alert" hidden></p>
-            <p class="hint">
-              Up to 1 MB, 10,000 rows and 50 columns. Your data stays in this browser tab.
-            </p>
-          </div>
-          <ul id="cols" class="chips" aria-label="Columns"></ul>
-        </fieldset>
+          <fieldset class="step">
+            <legend>2. Data</legend>
+            <div class="seg">
+              <label><input type="radio" name="source" value="sample" checked /> Sample data</label>
+              <label><input type="radio" name="source" value="mine" /> My data</label>
+            </div>
+            <div id="paste-box" hidden>
+              <label for="paste"
+                >Paste CSV, TSV from a spreadsheet, or a JSON array of objects</label
+              >
+              <textarea
+                id="paste"
+                rows="7"
+                spellcheck="false"
+                aria-describedby="meter paste-err"
+                placeholder="Month,Sales&#10;Jan,1200&#10;Feb,1350"
+              ></textarea>
+              <p id="meter" class="hint" aria-live="polite"></p>
+              <p id="paste-err" class="err" role="alert" hidden></p>
+              <p class="hint">
+                Up to 1 MB, 10,000 rows and 50 columns. Your data stays in this browser tab.
+              </p>
+            </div>
+            <ul id="cols" class="chips" aria-label="Columns"></ul>
+          </fieldset>
 
-        <fieldset class="step">
-          <legend>3. Fields</legend>
-          <div id="fields" class="fields"></div>
-          <div id="formats" class="fields formats" hidden></div>
-        </fieldset>
+          <fieldset class="step">
+            <legend>3. Fields</legend>
+            <div id="fields" class="fields"></div>
+            <div id="formats" class="fields formats" hidden></div>
+          </fieldset>
 
-        <fieldset class="step">
-          <legend>4. Options</legend>
           <div id="options" class="options"></div>
-          <div class="field accent">
-            <label for="accent">Accent colour</label>
-            <input type="color" id="accent" value="#3b82f6" />
-            <button type="button" id="accent-reset">Default</button>
-          </div>
-        </fieldset>
 
-        <button type="button" id="reset" class="reset">Start over</button>
-      </form>
+          <button type="button" id="reset" class="reset">Start over</button>
+        </form>
 
-      <div class="bld-out">
-        <section class="bld-preview" aria-label="Preview">
-          <div class="preview-bar">
-            <button type="button" id="reroll">Re-roll data</button>
-          </div>
-          <maya-chart id="chart"></maya-chart>
-          <div id="chart-err" class="problem" role="alert" hidden></div>
-        </section>
-
-        <section class="bld-code" aria-label="Code">
-          <h2>Code</h2>
-          <div id="tabs" class="tabs" role="tablist" aria-label="Platform"></div>
-          <p id="cut-note" class="hint" hidden></p>
-          <p id="code-warn" class="err" hidden>
-            This code shows the same problem as the preview. Fix it above, then copy.
-          </p>
-          <div id="panel" role="tabpanel"></div>
-          <p id="live" class="sr-only" aria-live="polite"></p>
-        </section>
+        <div class="bld-out">
+          <section class="bld-preview" aria-label="Preview">
+            <div class="preview-bar">
+              <div id="chart-theme" class="swatches"></div>
+              <label class="accent" title="Accent colour: series 1 and colour ramps"
+                ><span class="sr-only">Accent colour</span
+                ><input type="color" id="accent" value="#3b82f6"
+              /></label>
+              <button type="button" id="accent-reset" hidden>Reset accent</button>
+              <button type="button" id="reroll">Re-roll data</button>
+            </div>
+            <maya-chart id="chart"></maya-chart>
+            <div id="chart-err" class="problem" role="alert" hidden></div>
+            <a class="get-code" href="#code">Get the code</a>
+          </section>
+        </div>
       </div>
+
+      <section class="bld-code" id="code" aria-label="Code">
+        <h2>Code</h2>
+        <div id="tabs" class="tabs" role="tablist" aria-label="Platform"></div>
+        <p id="cut-note" class="hint" hidden></p>
+        <p id="code-warn" class="err" hidden>
+          This code shows the same problem as the preview. Fix it above, then copy.
+        </p>
+        <div id="panel" role="tabpanel"></div>
+        <p id="live" class="sr-only" aria-live="polite"></p>
+      </section>
     </main>
     <div id="tip" class="tip" aria-hidden="true" hidden></div>
     <script type="module" src="./builder.ts"></script>

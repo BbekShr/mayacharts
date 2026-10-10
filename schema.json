@@ -114,7 +114,7 @@
     },
     "series": {
       "type": "string",
-      "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave."
+      "description": "Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required; constellation: colours the stars by group). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation."
     },
     "path": {
       "type": "array",
@@ -487,6 +487,8 @@
           "focus",
           "good",
           "bad",
+          "line",
+          "gridDash",
           "series1",
           "series2",
           "series3",

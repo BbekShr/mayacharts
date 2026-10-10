@@ -204,10 +204,9 @@ test("11. accessibility", async ({ page }) => {
   await open(page);
   const svg = page.locator("#simple svg");
   await expect(svg).toHaveAttribute("role", "img");
-  const text = await svg.evaluate((s) => {
-    const id = s.getAttribute("aria-labelledby")!;
-    return (s.getRootNode() as ShadowRoot).getElementById(id)?.textContent ?? "";
-  });
+  // Named by aria-label, with no root <title> (that pops the browser's own tooltip on hover).
+  const text = (await svg.getAttribute("aria-label")) ?? "";
+  expect(await svg.locator(":scope > title").count()).toBe(0);
   expect(text.trim().length).toBeGreaterThan(0);
   const table = page.locator("#simple table.maya-sr");
   await expect(table.locator("caption")).not.toBeEmpty();

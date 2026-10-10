@@ -95,7 +95,7 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar,orbit was:bar forms:units size:scatter,constellation name:scatter,beeswarm,boxplot,units path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap,units,orbit,constellation xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
+    `horizontal:bar,dumbbell y2:bar,orbit was:bar forms:units size:scatter,constellation name:scatter,beeswarm,boxplot,units path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap,units,orbit,constellation xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -111,7 +111,9 @@ const DATE = w(
 /** Format options holding any date key are Intl.DateTimeFormat options. */
 export const isDateOpts = (o: object): boolean => DATE.some((k) => Object.hasOwn(o, k));
 const TOKENS = [
-  ...w("font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good bad"),
+  ...w(
+    "font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good bad line gridDash",
+  ),
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => "series" + n),
 ];
 const USE: Record<string, string> = {

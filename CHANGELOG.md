@@ -4,6 +4,26 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## 0.13.0 - Unreleased
+
+### Added
+
+- `mayacharts/themes`: 18 ready-made `spec.theme` sets (classic, corporate, bright, ocean, arctic, royal, berry, sunset, retro, earth, spring, mint, lagoon, candy, aurora, pop, neon, synthwave), each ordered so neighbouring series stay apart for colourblind readers in light and dark. Plain data, not in the global build.
+- Theme tokens `line` (line width) and `gridDash` (grid dash array).
+- Constellation takes `series`: stars are coloured by group with a legend, and a hidden group leaves the sky without moving the other stars.
+- Constellation hover draws a line to each of the 3 closest stars and rings them, and the tooltip shows each measure as a bar either side of the average.
+- The gallery and the builder have a chart theme picker. The builder writes the picked theme into the copied spec, and the choice is remembered across both pages.
+
+### Fixed
+
+- Orbit planets turn all the time and stop where they are while the pointer is over the chart, the chart has keyboard focus or a planet is active. Before, they turned only while the pointer was over the chart and then glided back. Each name now rides its planet, counter-turned so it stays upright, instead of hiding while the orbit moves. Trails are thinner and lighter, so they read as tails, not orbits.
+- The constellation tooltip sits beside the hovered star and its three closest instead of over them.
+- A tooltip pushed back inside its chart near the edge of the screen no longer lands in the mirror-image spot, sometimes over the next chart. The anchor fallback flip was mirroring the clamped position.
+- Charts drawn by the element no longer show the browser's own title tooltip over the chart on hover. The svg is named by `aria-label` there, so the root `<title>` was a duplicate; standalone `render()` output keeps it.
+- `theme.accent` now recolours series 1, as documented. Before, the series 1 colour was resolved at the element host before the override applied, so the accent only reached the heatmap and hexmap ramps.
+
+- The chart follows the page's `color-scheme` instead of always tracking the OS. A plain page in OS dark mode no longer gets a dark chart (dark fills, light title, dark label halos) on its white background. Pages that want OS tracking set `color-scheme: light dark`.
+
 ## 0.12.1 - 2026-10-09
 
 ### Fixed

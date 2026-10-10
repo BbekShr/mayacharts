@@ -73,67 +73,57 @@ test.describe("units form control", () => {
 });
 
 test.describe("orbit", () => {
-  // Contract: at rest (sweep done) the planets stand still and the names show; a mouse over the
-  // chart spins them and hides the names; an active planet holds the spin; leaving glides home.
-  test("hover spins and hides the names, a planet pauses it, leaving glides home", async ({
+  // Contract: the planets turn on their own; a pointer over the chart stops them where they are,
+  // with the names still riding beside them, and leaving lets them carry on from there.
+  const read = (page: Page) =>
+    page.evaluate(() => {
+      const R = document.getElementById("orbit")!.shadowRoot!;
+      const gs = [...R.querySelectorAll("g[data-v]")];
+      const orbit = gs.flatMap((g) =>
+        g.getAnimations().filter((a) => (a as CSSAnimation).animationName === "maya-orbit"),
+      );
+      return {
+        play: [...new Set(orbit.map((a) => a.playState))],
+        angle: gs.map((g) => new DOMMatrix(getComputedStyle(g).transform).b.toFixed(3)).join(),
+        names: Math.min(
+          ...[...R.querySelectorAll("g[data-up]")].map((g) => +getComputedStyle(g).opacity),
+        ),
+      };
+    });
+
+  test("turns on its own, stops under the pointer, carries on after", async ({
     page,
     isMobile,
   }) => {
     test.skip(!!isMobile, "hover");
     const tile = await open(page, "orbit");
-    const read = () =>
-      page.evaluate(() => {
-        const R = document.getElementById("orbit")!.shadowRoot!;
-        const gs = [...R.querySelectorAll("g[data-v]")];
-        return {
-          spin: R.querySelector(".maya")!.hasAttribute("data-spin"),
-          play: [...new Set(gs.flatMap((g) => g.getAnimations().map((a) => a.playState)))],
-          turned: gs.some((g) => Math.abs(new DOMMatrix(getComputedStyle(g).transform).b) > 1e-4),
-          names: +getComputedStyle(R.querySelector("g[data-up]")!).opacity,
-        };
-      });
-    // The entrance sweep settles, then it is still and named.
-    await expect
-      .poll(read, { timeout: 5000 })
-      .toMatchObject({ turned: false, names: 1, play: ["paused"] });
-    const b = (await tile.boundingBox())!;
-    await page.mouse.move(b.x + 20, b.y + 60);
-    await expect.poll(read).toMatchObject({ spin: true, play: ["running"], names: 0 });
-    await expect.poll(async () => (await read()).turned).toBe(true);
-    await page.evaluate(() => {
-      const c = document
-        .getElementById("orbit")!
-        .shadowRoot!.querySelector("circle[data-maya=mark]")!;
-      c.dispatchEvent(
-        new PointerEvent("pointerover", { bubbles: true, composed: true, pointerType: "mouse" }),
-      );
-    });
-    await expect.poll(read).toMatchObject({ play: ["paused"] });
     await page.mouse.move(0, 0);
-    await expect
-      .poll(read, { timeout: 5000 })
-      .toMatchObject({ spin: false, turned: false, names: 1 });
-    expect((await read()).play).toEqual(["paused"]);
+    await expect.poll(() => flying(page, "orbit"), { timeout: 5000 }).toBe(0); // the entrance sweep is done
+    await expect.poll(async () => (await read(page)).play).toEqual(["running"]);
+    const a = (await read(page)).angle;
+    await expect.poll(async () => (await read(page)).angle).not.toBe(a);
+    const b = (await tile.boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await expect.poll(async () => (await read(page)).play).toEqual(["paused"]);
+    const held = (await read(page)).angle;
+    await page.waitForTimeout(400);
+    expect((await read(page)).angle).toBe(held);
+    expect((await read(page)).names).toBe(1);
+    await page.mouse.move(0, 0);
+    await expect.poll(async () => (await read(page)).play).toEqual(["running"]);
   });
 
-  // Keyboard focus never spins the orbit and never hides the names: a reader steps planet by
-  // planet with the names beside them, and the tooltip carries the active one.
-  test("keyboard focus keeps the orbit still and named", async ({ page }) => {
+  // Keyboard focus stops the turn: a reader steps planet by planet with the names beside them.
+  test("keyboard focus holds the orbit still and named", async ({ page }) => {
     await open(page, "orbit");
     await page.locator("#orbit svg.maya-svg").focus();
     await page.keyboard.press("ArrowRight");
-    const read = () =>
-      page.evaluate(() => {
-        const R = document.getElementById("orbit")!.shadowRoot!;
-        return [
-          R.querySelector(".maya")!.hasAttribute("data-spin"),
-          R.querySelector("g[data-v]")!.getAnimations()[0]!.playState,
-          Math.min(
-            ...[...R.querySelectorAll("g[data-up]")].map((g) => +getComputedStyle(g).opacity),
-          ) >= 0.4, // the others only dim behind the active one
-        ];
-      });
-    await expect.poll(read, { timeout: 5000 }).toEqual([false, "paused", true]);
+    await expect
+      .poll(async () => {
+        const r = await read(page);
+        return [r.play, r.names >= 0.4]; // the others only dim behind the active one
+      })
+      .toEqual([["paused"], true]);
   });
 
   test("planets are reachable by arrows and Enter selects", async ({ page, isMobile }) => {
@@ -178,8 +168,10 @@ test.describe("constellation", () => {
       page.evaluate((i) => {
         const r = document.getElementById("constellation")!.shadowRoot!;
         return [
-          [...r.querySelectorAll("[data-lit]")].map((e) => e.getAttribute("data-key")).sort(),
-          [...r.querySelectorAll(`[data-a~="${i}"]`)].map((e) => e.getAttribute("data-key")).sort(),
+          [...r.querySelectorAll("circle[data-lit]")].map((e) => e.getAttribute("data-key")).sort(),
+          [...r.querySelectorAll(`circle[data-a~="${i}"]`)]
+            .map((e) => e.getAttribute("data-key"))
+            .sort(),
         ];
       }, n);
     await expect.poll(async () => (await lit())[0]!.length).toBeGreaterThan(0);
@@ -187,6 +179,9 @@ test.describe("constellation", () => {
     // The star itself and every star that counts it among its 3 nearest.
     const self = await star.getAttribute("data-key");
     expect(on).toEqual([...new Set([...listed!, self!])].sort());
+    // And a link from the hovered star to each of its 3 nearest appears.
+    const links = await tile.locator(`line[data-a="${n}"][data-lit]`).count();
+    expect(links).toBe(3);
   });
 
   test("the pointer finds a star within a few pixels (no hit shapes)", async ({

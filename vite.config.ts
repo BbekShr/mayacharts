@@ -17,6 +17,7 @@ const modeToEntry = {
   units: "src/units.ts",
   orbit: "src/orbit.ts",
   constellation: "src/constellation.ts",
+  themes: "src/themes.ts",
   global: "src/global.ts",
 };
 
