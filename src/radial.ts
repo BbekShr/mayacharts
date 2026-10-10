@@ -1,4 +1,9 @@
-// mayacharts/radial: polar bars. Imports only registry, svg, scale, ticks and types.
+// mayacharts/radial: polar bars and the gauge. Imports only registry, svg, scale, ticks and types.
+//
+// gauge contract: one value, every row of spec.y combined by spec.aggregate (no x, no series, one
+// y). Dial range: spec.yDomain, else 0 to a nice max over the value, colorBy target and warn and
+// spec.was. Thresholds come resolved in spec.colorBy (target, warn, better; null when unset) and
+// ctx.tone(v) gives "good" | "warn" | "bad" | null for data-tone. spec.was is the previous value.
 import { register } from "./core/registry.ts";
 import { TAU } from "./core/scale.ts";
 import { clip, el, esc, key, OTHER, r } from "./core/svg.ts";
@@ -269,3 +274,25 @@ export const radial: Mark = {
 };
 
 register("radial", radial);
+
+// Stub until the gauge is drawn: the type validates and renders the no-data text.
+export const gauge: Mark = {
+  noun: "Gauge",
+  draw: (ctx) => ({
+    marks: "",
+    hits: "",
+    labels: el(
+      "text",
+      {
+        "data-maya": "empty",
+        x: r(ctx.width / 2),
+        y: r(ctx.height / 2),
+        "text-anchor": "middle",
+        "dominant-baseline": "middle",
+      },
+      esc(ctx.t("noData")),
+    ),
+  }),
+};
+
+register("gauge", gauge);

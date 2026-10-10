@@ -45,6 +45,7 @@ export const MODULE_OF: Readonly<Record<string, string>> = {
   sankey: "flow",
   chord: "flow",
   radial: "radial",
+  gauge: "radial",
   hexmap: "geo",
   boxplot: "stats",
   funnel: "stats",

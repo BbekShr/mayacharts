@@ -6,12 +6,12 @@ HTML: <maya-chart><script type="application/json">{spec}</script></maya-chart>
 JavaScript: chart.spec = {type: "bar", data, x: "month", y: "revenue"}; chart.data = newRows;
 SSR: import {render, renderShell} from "mayacharts"; render(spec, {width, height});
 Global: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script>
-Modules: import "mayacharts/hierarchy" (treemap, sunburst, marimekko, waffle); "mayacharts/flow" (sankey, chord); "mayacharts/radial" (radial); "mayacharts/geo" (hexmap); "mayacharts/stats" (boxplot, funnel); "mayacharts/weave" (weave); "mayacharts/units" (units); "mayacharts/orbit" (orbit); "mayacharts/constellation" (constellation).
+Modules: import "mayacharts/hierarchy" (treemap, sunburst, marimekko, waffle); "mayacharts/flow" (sankey, chord); "mayacharts/radial" (radial, gauge); "mayacharts/geo" (hexmap); "mayacharts/stats" (boxplot, funnel); "mayacharts/weave" (weave); "mayacharts/units" (units); "mayacharts/orbit" (orbit); "mayacharts/constellation" (constellation).
 
 SPEC FIELDS:
-type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial hexmap boxplot funnel weave units orbit constellation
+type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial gauge hexmap boxplot funnel weave units orbit constellation
 data: Row[] = required. Row objects with field values.
-y: field | field[] = required. Value field; array adds measure toggle (funnel without x: one stage per field).
+y: field | field[] = required. Value field; array adds measure toggle (funnel without x: one stage per field; kpi: one tile per field, shown together; gauge: one field only, no x, no series).
 x: field = "". Category field (scatter: numeric x; hexmap: state; boxplot: one box each; funnel: the stage, omitted when y lists the stages).
 xType: auto|category|time = auto. How x is spaced. "auto": time axis when every x is ISO 8601 date on line, area or vertical bar without sort/limit; else categories. "time" accepts epoch ms. Example: xType: "category"
 aggregate: sum|mean|count|min|max = sum. How rows sharing (category, series) combine. Not boxplot (it summarises raw rows).
@@ -25,18 +25,18 @@ totals: string[] = []. x values drawn as running-total bars. waterfall only.
 stack: boolean|"percent" = false. Stack series instead of grouping. bar area only. "percent": each category's visible values as shares of its total (axis 0 to 100%, hidden series renormalise; negatives are shares of the summed magnitudes, below 0). Labels, tooltips and the table show the share, not the raw value. y is formatted "percent" unless format sets it. Numeric rules are shares (0.5 = 50%); "mean" is the mean share of the drawn segments. Example: stack: "percent"
 horizontal: boolean = false. Categories on left axis. bar dumbbell.
 y2: field = null. Second value field drawn as line on right axis (vertical bar). orbit: growth, which sets each planet's speed and direction. bar orbit.
-was: field = null. Previous value: a dashed ghost bar at the old value over each bar, keyed in the legend by the was title, "was {value}" in the tooltip (text.was), a data table column, and a description sentence naming the 2 largest relative moves (text.since: "Since Last week: North +12%, West -10%."). bar; not with stack or a y array. Example: was: "lastWeek"
+was: field = null. Previous value: a dashed ghost bar at the old value over each bar, keyed in the legend by the was title, "was {value}" in the tooltip (text.was), a data table column, and a description sentence naming the 2 largest relative moves (text.since: "Since Last week: North +12%, West -10%."). kpi: a second comparison (e.g. same period last year); gauge: a marker at the old value. bar kpi gauge; not with stack or a y array. Example: was: "lastWeek"
 forms: ("waffle"|"bars"|"swarm")[] = all three. Forms a units chart switches between, first shown (view.form picks another); with 2 or more a form control appears. units only. Example: forms: ["waffle", "swarm"]
 frame: field = null. Playback: one frame per distinct value (data order, matched as strings, null skipped, at most 200 or too-many-marks). Renders one frame, the last by default (view.frame picks another); the title becomes "{title}, {frame value}" (text.frameOf, value formatted by format[frame]); value axes span every frame so they hold still. The element adds a Play button. bar line area scatter dumbbell. Example: frame: "year"
 format: preset|template|{[field]: preset|template|Intl} = auto. Per field or one string for all measures. Template: "{value:percent} gross". Example: format: {margin: "{value:percent} gross"}
 titles: {[field]: string} = {}. Display names everywhere (axis, tooltip, legend, table).
 labels: boolean = null. Formatted value on marks. heatmap: true at ≥24 px. treemap and sunburst: names, marimekko: shares, on unless false.
-text: {[key]: string} = {}. Localised UI strings with {0} placeholders. Keys: noData other back reset showing drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures crumbs positive negative above below vs sortedBy ascending descending ofTarget total shareOf fromTo reduced points point range density perCell mean rule play pause frameOf frame was since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3 median q1 min rows ofPrevious ofFirst.
+text: {[key]: string} = {}. Localised UI strings with {0} placeholders. Keys: noData other back reset showing drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures crumbs positive negative above below near onTrack atRisk offTrack vs change target sortedBy ascending descending ofTarget total shareOf fromTo reduced points point range density perCell mean rule play pause frameOf frame was since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3 median q1 min rows ofPrevious ofFirst.
 locale: BCP47 = en-US. Formatting locale.
 currency: ISO4217 = USD. Currency for "currency" preset.
 title: string = "". Visible heading and accessible name.
 description: string = "". Accessible description; auto-generated when omitted.
-yDomain: [min, max] = null. Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). Not with y array.
+yDomain: [min, max] = null. Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). kpi: the bullet scale; gauge: the dial range. Not with y array.
 xDomain: [min, max] = null. Fixed x domain. scatter only.
 rules: (number|"mean"|{y, label?})[] = []. Reference lines across the value axis, at most 4; label at most 40 characters. "mean" is the average of the visible values (stacked: of the category totals; stack "percent": of the segment shares); unlabelled it reads "Average". The line shows its formatted value after the label. Numbers widen the value axis; outside a yDomain they are not drawn. bar line area scatter. Example: rules: [{y: 100, label: "Target"}, "mean"]
 tooltip: boolean = true. Hover/keyboard tooltip.
@@ -48,8 +48,8 @@ select: true|"multi" = off. Click/Enter/legend selects marks; Escape clears. Not
 zoom: boolean = false. Drag to zoom. line area scatter. Reset, double-click, Escape restore.
 animate: boolean = true. Animate the first draw and every update (element only; off under reduced motion).
 colors: string[]|{[series]: color} = null. Max 8; slot assignment stable across updates.
-colorBy: "sign"|{target: n}|field = null. Tone by sign or target, or ramp by numeric field. Not with series. All types but heatmap and sankey.
-theme: {[token]: css} = {}. Theme token overrides (CSS values, allowlisted). Tokens: font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good bad line (line width) gridDash (grid dash array) series1..series8. Ready-made sets: import { themes } from "mayacharts/themes".
+colorBy: "sign"|{target?: n, warn?: n, better?: "higher"|"lower"}|{[y field]: {target?, warn?, better?}}|field = null. Tone by sign or target, or ramp by numeric field. Not with series. Target: at or past it is good, better "lower" flips it; types other than kpi and gauge need target and take no warn. kpi and gauge: any of target, warn, better; warn needs target and sits on the bad side (higher: warn < target; lower: warn > target); tones good, warn ("near target"), bad, status words onTrack/atRisk/offTrack. kpi with a y array: also keyed by y field. Example: colorBy: {target: 100, warn: 80}. bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation.
+theme: {[token]: css} = {}. Theme token overrides (CSS values, allowlisted). Tokens: font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line (line width) gridDash (grid dash array) series1..series8. Ready-made sets: import { themes } from "mayacharts/themes".
 grid: boolean = true. Grid lines perpendicular to value axis.
 xAxis: boolean = true. Bottom axis.
 yAxis: boolean = true. Left axis.
@@ -85,6 +85,8 @@ EXAMPLES:
 26. Constellation (import "mayacharts/constellation"): {type: "constellation", x: "account", y: ["revenue", "seats", "tickets"], data: [{account: "Acme", revenue: 120, seats: 40, tickets: 3}, {account: "Globex", revenue: 80, seats: 25, tickets: 9}, {account: "Initech", revenue: 95, seats: 30, tickets: 4}]}
 27. Box plot (import "mayacharts/stats"): {type: "boxplot", x: "region", y: "sales", name: "store", data: [{region: "North", store: "N1", sales: 120}, {region: "North", store: "N2", sales: 95}]}
 28. Funnel, wide, stages are fields (import "mayacharts/stats"): {type: "funnel", y: ["visits", "signups", "paid"], data: [{visits: 12000, signups: 2900, paid: 1100}]}
+29. KPI tiles with thresholds, lower is better for churn: {type: "kpi", x: "month", y: ["revenue", "churn"], colorBy: {revenue: {target: 60000, warn: 50000}, churn: {better: "lower"}}, data: [{month: "Apr", revenue: 50700, churn: 0.031}, {month: "May", revenue: 54500, churn: 0.028}]}
+30. Gauge (import "mayacharts/radial"): {type: "gauge", y: "nps", yDomain: [0, 100], colorBy: {target: 60, warn: 40}, data: [{nps: 52}]}
 
 ERROR CODES:
 spec-not-object: spec must be a plain object

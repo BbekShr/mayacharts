@@ -31,8 +31,20 @@ export const TEXT = {
   negative: "Negative",
   above: "above target",
   below: "below target",
+  /** Tone text for the warn band (colorBy { target, warn }). */
+  near: "near target",
+  /** kpi and gauge status word for the good tone. */
+  onTrack: "On track",
+  /** kpi and gauge status word for the warn tone. */
+  atRisk: "At risk",
+  /** kpi and gauge status word for the bad tone. */
+  offTrack: "Off track",
   /** kpi delta: {0} = signed change, {1} = previous period. */
   vs: "{0} vs {1}",
+  /** kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what it is compared with. */
+  change: "{0} {1} ({2}) vs {3}",
+  /** kpi comparison label for colorBy.target (the {3} of `change`). */
+  target: "target",
   /** Live region after a table header click: {0} = column title, {1} = ascending/descending. */
   sortedBy: "Sorted by {0}, {1}",
   ascending: "ascending",

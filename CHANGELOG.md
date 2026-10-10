@@ -4,6 +4,21 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Added
+
+- `colorBy` thresholds: `{ target?, warn?, better? }`. `better: "lower"` flips the test, so a value at or under the target is good (churn, cost, latency). kpi and gauge take any of the three keys, and `warn` (which needs a target and sits on the bad side of it) adds a third tone, `warn`, read as "near target". Other types still need `target` and take no `warn`.
+- A kpi with a `y` array shows every measure together instead of a measure toggle, and `colorBy` may key thresholds by y field: `{ revenue: { target: 1.8e6 }, churn: { better: "lower" } }`.
+- `was` works on kpi (a second comparison, such as the same period last year) and gauge.
+- `gauge` chart type in `mayacharts/radial`: one value on a dial whose range is `yDomain`.
+- Theme token `warn` (`--maya-warn`) and the `[data-tone=warn]` colour.
+- Text keys `near`, `onTrack`, `atRisk`, `offTrack`, `change` and `target`.
+
+### Changed
+
+- A kpi with a `y` array no longer has a measure toggle (breaking pre-1.0): every measure is shown.
+
 ## 0.13.0 - 2026-10-09
 
 ### Added

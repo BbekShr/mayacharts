@@ -82,14 +82,17 @@ describe("kpi", () => {
     expect(s).toContain('data-kpi="fill"');
     expect(s).not.toContain('data-maya="line"');
   });
-  it("y array toggles the measure", () => {
+  it("y array shows every measure together, never a measure toggle", () => {
     const spec: ChartSpec = {
       ...base,
       y: ["v", "w"],
       data: base.data.map((r) => ({ ...r, w: 7 })),
     };
-    expect(headline(svg(spec))[0]).toContain('data-y="110"');
-    expect(headline(svg(spec, { view: { measure: 1 } }))[0]).toContain('data-y="7"');
+    const p = renderParts(spec, { width: 300, height: 220 });
+    expect(p.controls).toBe("");
+    expect(headline(p.svg)[0]).toContain('data-y="110"');
+    // Contract: one table column per measure (shape gives each measure's cells, si = measure index).
+    expect(p.table).toContain("<th>v</th><th>w</th>");
   });
   it("all null shows no data", () => {
     const s = svg({ ...base, data: base.data.map((r) => ({ ...r, v: null })) });

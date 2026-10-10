@@ -10,6 +10,7 @@ export type {
   Field,
   FieldFormat,
   FormatPreset,
+  Goal,
   MayaErrorDetail,
   MayaSelectDetail,
   MayaViewDetail,

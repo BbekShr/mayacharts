@@ -104,6 +104,14 @@ describe("theme css", () => {
       expect(ratio(d, "#0d1117")).toBeGreaterThanOrEqual(3);
     }
   });
+  it("the warn tone (a var fallback, so theme.warn overrides it) reaches 4.5:1 in both modes", () => {
+    const m = css.match(
+      /\[data-tone=warn\]\{--c:var\(--maya-warn,light-dark\(#(\w{3}),#(\w{3})\)\)\}/,
+    );
+    const six = (h: string) => "#" + [...h].map((c) => c + c).join("");
+    expect(ratio(six(m![1]!), "#ffffff")).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(six(m![2]!), "#0d1117")).toBeGreaterThanOrEqual(4.5);
+  });
   it("ramp: 10 steps from a 35% floor; upper steps reach 3:1", () => {
     const q = [...css.matchAll(/\[data-q="(\d)"\]\{--q:(\d+)%\}/g)].map((m) => +m[2]!);
     expect(q).toHaveLength(10);

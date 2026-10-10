@@ -25,6 +25,7 @@ export type ChartType =
   | "marimekko"
   | "waffle"
   | "radial"
+  | "gauge"
   | "hexmap"
   | "boxplot"
   | "funnel"
@@ -70,6 +71,7 @@ export type ThemeToken =
   | "tooltipFg"
   | "focus"
   | "good"
+  | "warn"
   | "bad"
   | "line"
   | "gridDash"
@@ -81,6 +83,16 @@ export type ThemeToken =
   | "series6"
   | "series7"
   | "series8";
+
+/**
+ * colorBy thresholds. `better` says which way is good (default "higher"); `warn` sits on the bad
+ * side of `target` and marks the near band. Types other than kpi and gauge need `target` and take no `warn`.
+ */
+export interface Goal {
+  readonly target?: number;
+  readonly warn?: number;
+  readonly better?: "higher" | "lower";
+}
 
 /** Field names of row type `R` (autocompletes for typed rows; `string` for `Row`). */
 export type Field<R> = Extract<keyof R, string>;
@@ -94,7 +106,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Ignored; lets editors and LLMs find the JSON schema.
    * @example "$schema": "https://unpkg.com/mayacharts/schema.json" */
   $schema?: string;
-  /** Chart type. treemap/sunburst/marimekko/waffle need `mayacharts/hierarchy`, sankey/chord `flow`, radial `radial`, hexmap `geo`, boxplot/funnel `stats`; weave, units, orbit and constellation each need the module of the same name.
+  /** Chart type. treemap/sunburst/marimekko/waffle need `mayacharts/hierarchy`, sankey/chord `flow`, radial/gauge `radial`, hexmap `geo`, boxplot/funnel `stats`; weave, units, orbit and constellation each need the module of the same name.
    * @example type: "bar" */
   type: ChartType;
   /** Row objects.
@@ -116,7 +128,7 @@ export interface ChartSpec<R extends object = Row> {
   /** How x is spaced. "auto": a time axis when every x is an ISO 8601 date ("2024-03" or longer) on line, area or vertical bar without sort or limit; else categories. "time" also accepts epoch ms numbers. Default "auto".
    * @example xType: "category" */
   xType?: "auto" | "category" | "time";
-  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`).
+  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`; kpi: one tile each; gauge: one field only).
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
   /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required; constellation: colours the stars by group). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation.
@@ -146,8 +158,8 @@ export interface ChartSpec<R extends object = Row> {
   /** Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction.
    * @example y2: "units" */
   y2?: Field<R>;
-  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves. bar; not with `stack` or a `y` array.
-   * @example was: "lastWeek" */
+  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value). bar kpi gauge; not with `stack` or a `y` array.
+   * @example was: "lastYear" */
   was?: Field<R>;
   /** Forms a units chart switches between, first one shown (view.form picks another); the element adds a form control when there are 2 or more. Default all three. units only.
    * @example forms: ["waffle", "swarm"] */
@@ -177,7 +189,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Accessible description; auto-generated when omitted.
    * @example description: "Revenue doubled from January to December." */
   description?: string;
-  /** Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). Not allowed with a `y` array.
+  /** Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). kpi: the bullet scale; gauge: the dial range. Not allowed with a `y` array.
    * @example yDomain: [0, 100] */
   yDomain?: readonly [number, number];
   /** Fixed x domain. scatter only.
@@ -215,9 +227,9 @@ export interface ChartSpec<R extends object = Row> {
   /** Palette in series order (max 8), or colours by series value.
    * @example colors: { North: "#0b6", South: "oklch(.6 .17 30)" } */
   colors?: readonly string[] | Readonly<Record<string, string>>;
-  /** Tone by sign of y, by a target, or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi: target only, drawn as a bullet bar).
-   * @example colorBy: { target: 100 } */
-  colorBy?: "sign" | { readonly target: number } | Field<R>;
+  /** Tone by sign of y, by a target (good at or past it; `better: "lower"` flips it), or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi and gauge: thresholds only, any of target, warn and better, warn needs target and sits on the bad side; kpi with a `y` array: also keyed by y field).
+   * @example colorBy: { target: 100, warn: 80 } or colorBy: { revenue: { target: 1.8e6 }, churn: { better: "lower" } } */
+  colorBy?: "sign" | Goal | Readonly<Partial<Record<Field<R>, Goal>>> | Field<R>;
   /** Theme token overrides (CSS values, allowlisted). `line` is the line width, `gridDash` a grid dash array. Ready-made sets: mayacharts/themes.
    * @example theme: { accent: "#0b6", font: "'Inter', sans-serif", gridDash: "3 3" } */
   theme?: Readonly<Partial<Record<ThemeToken, string>>>;
@@ -380,8 +392,18 @@ export interface ResolvedSpec {
   table: boolean;
   animate: boolean;
   colors: readonly string[] | ReadonlyMap<string, string> | null;
-  colorBy: "sign" | { readonly target: number } | string | null;
+  /** "sign", a field (ramp), or the active measure's thresholds (null when a keyed colorBy has none for it). */
+  colorBy: "sign" | ResolvedGoal | string | null;
+  /** Thresholds per measure: the object form applies to every measure, the keyed form (kpi) to its keys. Empty otherwise. */
+  goals: ReadonlyMap<string, ResolvedGoal>;
   theme: Partial<Record<ThemeToken, string>>;
+}
+
+/** spec.colorBy thresholds with defaults: null when unset, better "higher". */
+export interface ResolvedGoal {
+  target: number | null;
+  warn: number | null;
+  better: "higher" | "lower";
 }
 
 /** One (category, series) value after grouping/stacking. */
@@ -402,7 +424,7 @@ export interface Shaped {
   categories: string[];
   /** Waterfall: true where the category is in `spec.totals`. Parallel to `categories`. */
   totals: boolean[];
-  /** Series keys in first-appearance order ([""] when there is no series field). */
+  /** Series keys in first-appearance order ([""] when there is no series field; kpi with a `y` array: the measures, so a cell's si is its measure index). */
   series: string[];
   /** Visible series only (excludes `view.hidden`), as indexes into `series`. */
   visible: number[];
@@ -494,6 +516,9 @@ export type Axis =
 
 export type Fail = (code: ErrorCode, path: string, headline: string, ...details: string[]) => never;
 
+/** A colorBy tone, written as data-tone. "warn" only with a warn threshold, "zero" only under "sign". */
+export type Tone = "good" | "warn" | "bad" | "zero";
+
 /** Where `ctx.label` places text relative to its anchor point. */
 export type LabelPlace = "center" | "above" | "below" | "start" | "end";
 
@@ -520,8 +545,8 @@ export interface MarkCtx {
   fmt(field: string, v: unknown, step?: number): string;
   /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. `key` = the data-key of the mark it labels. */
   label(x: number, y: number, text: string, place: LabelPlace, key?: string): boolean;
-  /** colorBy tone for a value: "good" | "bad" ("zero" for 0 under sign), or null when colorBy is not sign/target. */
-  tone(v: number): "good" | "bad" | "zero" | null;
+  /** colorBy tone for a value of `field` (default the active measure): "good" | "warn" | "bad" ("zero" for 0 under sign), or null without sign or a target for that field. */
+  tone(v: number, field?: string): Tone | null;
   /** colorBy ramp bucket 0..9 for a value of the colorBy field; null when colorBy is not a field. */
   q(v: number): number | null;
   /** Shared aggregation (same rules as shape: nulls skipped, count = non-null). */
