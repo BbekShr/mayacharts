@@ -33,3 +33,5 @@ You are the core engineer for **mayaCharts**. The core is a pure `render(spec) -
 ## Report
 
 What changed, every doc you synced (list them), test and size status, and any contract question you had to guess at (flag it, do not bury it).
+
+End with a short **First principles** section, only if something was non-obvious (otherwise write "none"): what you learned, the foundation that made it work or fail (browser primitive, math, perceptual rule), where else it applies, and how far it goes before it breaks. A sentence or two each.

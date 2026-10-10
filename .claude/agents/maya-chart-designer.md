@@ -39,3 +39,5 @@ A visual change also changes screenshot baselines (`e2e/global.spec.ts` types). 
 ## Report (your last message)
 
 What changed and why, before/after screenshot paths (light, dark, hover, narrow, edge case), test and size status, anything you need in a file you do not own (as a request), and every ceiling you added.
+
+End with a short **First principles** section, only if something was non-obvious (otherwise write "none"): what you learned, the foundation that made it work or fail (browser primitive, math, perceptual rule), where else it applies, and how far it goes before it breaks. A sentence or two each.

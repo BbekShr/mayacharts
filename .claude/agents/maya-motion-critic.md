@@ -24,3 +24,5 @@ A transition that works but jumps, lands from the wrong place, flashes, or plays
 ## Report format
 
 Findings ranked HIGH/MEDIUM/LOW with frame paths, the interaction, what is wrong, the cause at `file:line`, the fix, and owner. A **Probe** section listing the exact script steps so the CEO can re-run them after the fix. A **Rejected during verification** section.
+
+End with a short **First principles** section, only if something was non-obvious (otherwise write "none"): what you learned, the foundation that made it work or fail (browser primitive, math, perceptual rule), where else it applies, and how far it goes before it breaks. A sentence or two each.

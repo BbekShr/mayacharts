@@ -93,7 +93,7 @@ Always: `maya-security-engineer`, `maya-release-manager`. In `deep` and `gallery
 
 ### 2. Decide
 
-Merge findings, assign owners, rank. Caps: `light` 1 to 3 fixes; `deep`/`gallery` no cap, separate logical commits. `audit` stops here and writes the report. For `deep` and `gallery`, write the decomposition before any dispatch.
+Merge findings, assign owners, rank. Caps: `light` 1 to 3 fixes; `deep`/`gallery` no cap, separate logical commits. `audit` stops here, does the first principles pass on its findings, and writes the report. For `deep` and `gallery`, write the decomposition before any dispatch.
 
 ### 3. Delegate and implement
 
@@ -109,10 +109,24 @@ Branch `ceo/auto-YYYY-MM-DD` off `main`, commit per logical change, `gh pr creat
 
 ### 6. Report and remember
 
-- Board report to `.claude/ceo/reports/YYYY-MM-DD-<mode>.md`: shipped table (rank, owner, fix, commit), assessors, a `## Verification` table, a `## Size` table, screenshots for every visual change, and `notes_for_human`.
+- Board report to `.claude/ceo/reports/YYYY-MM-DD-<mode>.md`: shipped table (rank, owner, fix, commit), assessors, a `## Verification` table, a `## Size` table, screenshots for every visual change, a `## First principles` section, and `notes_for_human`.
 - Update `.claude/ceo/backlog.md`: delete resolved items, add deferrals with the reason.
 - Fold a durable lesson into `.claude/ceo/learnings/_shared.md` `## Active` as one short imperative bullet; keep `## Active` under ~40 lines.
 - CRITICAL security or policy findings go at the top of the report in plain words.
+
+## First principles (every run, every mode)
+
+After the work and before the report, break the run down to first principles. Do not stop at "fixed X". Pick the run's most important finding or change, plus any technique an agent used that surprised you. Answer only where the answer is non-obvious, and write "none" for a routine run rather than filler:
+
+1. **What did we learn?** The fact, stated without the chart or file it was found in. A durable answer becomes a learning.
+2. **What are the foundations?** The underlying mechanism that made it work or fail: the browser primitive, the math, the perceptual rule. Name it so it can be reused. A durable answer becomes a learning.
+3. **Can it do more than this?** Other chart types, modules or interactions where the same foundation applies. An actionable answer becomes a backlog item.
+4. **How far can it go?** Where it breaks: data size, browser, edge case, byte cost. That limit is a candidate `// ponytail:` ceiling or a backlog item.
+5. **What does it imply for the industry?** Only in `deep` and `gallery`, or when a finding challenges the thesis that the browser is the chart engine. Label speculation.
+
+Specialists end their reports with a short **First principles** section (or "none"); fold the best into yours. Output goes to the report's `## First principles` section.
+
+Review this section after three runs that used it: if it produced no learning, backlog item or ceiling, cut it and say so in `notes_for_human`.
 
 ## `gallery` mode (live walk: find, fix, re-drive)
 
