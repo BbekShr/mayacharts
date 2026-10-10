@@ -73,7 +73,6 @@ const tally = (o: KeyframeAnimationOptions): KeyframeAnimationOptions => ({
   duration: Number(o.duration) * 1.6,
   easing: "cubic-bezier(.25,1,.5,1)",
 });
-const needle = (e: Element) => ring(e) && e.getAttribute("data-key") === "v";
 /** Put an orbit rotation at angle fraction `f` (its direction decides which end of the clock that is). */
 const seek = (a: Animation, f: number) => {
   const c = a.effect!.getComputedTiming();
@@ -229,7 +228,7 @@ function enter(e: Element, origin?: Box, o = DATA): void {
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, false);
   if (f) run(e, [f, arc(e)], ZOOM);
-  else if (needle(e) && o === INTRO)
+  else if (ring(e) && e.getAttribute("data-key") === "v" && o === INTRO)
     // The gauge arc sweeps from empty in step with the centre count-up.
     run(
       e,
@@ -335,15 +334,14 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   const [head, tail] = [to.slice(0, m.index), to.slice(m.index + num.length)];
   const fh = f ? from.slice(0, f.index) : "";
   // The sign ends the head and counts as part of the number, so -5 to 3 passes through 0.
-  const SG = /[-−+]\s*$/,
-    N = /[-−]/;
-  const [hs, fs] = [head, fh].map((h) => SG.exec(h)?.[0] ?? "");
+  const SG = /[-−+]\s*$/;
+  const neg = (h: string) => /[-−]\s*$/.test(h);
   const base = head.replace(SG, "");
   const a = Math.min(
     10 ** ds.length - 1,
     Math.round((+fd || 0) * 10 ** (dp(num) - (f ? dp(f[0]) : 0))),
   );
-  const [A, B] = [N.test(fs) ? -a : a, N.test(hs) ? -nd : +nd];
+  const [A, B] = [neg(fh) ? -a : a, neg(head) ? -nd : +nd];
   if (A === B) return;
   if (f && (fh.replace(SG, "") !== base || from.slice(f.index + f[0].length) !== tail)) {
     // Another unit (K to M) would contradict the number: swap once the mark has landed.
@@ -357,11 +355,7 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
     const t = tok.replace(/\d/g, () => s[i++]!);
     const [int, dec] = ls < 0 ? [t, ""] : [t.slice(0, ls), t.slice(ls)];
     return (
-      base +
-      (k < 0 ? (N.test(hs) ? hs : fs) : k && !N.test(hs) ? hs : "") +
-      int.replace(/^[0\D]+(?=\d)/, "") +
-      dec +
-      tail
+      (k ? (k < 0 === neg(head) ? head : fh) : base) + int.replace(/^[0\D]+(?=\d)/, "") + dec + tail
     );
   };
   const ms = Number(tally(o).duration),
@@ -452,7 +446,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
       const from = arcs.get(m)!;
       stop(as);
       sync(m, e);
-      if (!instant) run(m, [from, arc(m)], needle(m) ? tally(DATA) : ZOOM);
+      if (!instant) run(m, [from, arc(m)], m.getAttribute("data-key") === "v" ? tally(DATA) : ZOOM);
       order.push(m);
       continue;
     }
