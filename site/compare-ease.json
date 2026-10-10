@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-09",
+  "generated": "2026-10-10",
   "definition": "Tokens count identifiers, keywords, numbers, strings, template literals, JSX text runs and each punctuator once; comments and whitespace are free; lines exclude blank ones.",
   "libs": {
     "chartjs": {

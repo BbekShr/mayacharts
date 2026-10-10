@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-09",
+  "generated": "2026-10-10",
   "esbuild": "0.28.2",
   "libs": {
     "chartjs": {
@@ -27,14 +27,14 @@
       }
     },
     "maya": {
-      "version": "0.12.1",
+      "version": "0.13.0",
       "bar": {
-        "min": 150615,
-        "gzip": 56799
+        "min": 150965,
+        "gzip": 56876
       },
       "all": {
-        "min": 168197,
-        "gzip": 63995,
+        "min": 168553,
+        "gzip": 64076,
         "charts": 12
       }
     },
