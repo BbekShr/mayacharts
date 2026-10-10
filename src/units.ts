@@ -44,10 +44,10 @@ function dots(spec: ResolvedSpec, shaped: Shaped): Dot[] {
   const seen = new Map<string, number>();
   const out: Dot[] = [];
   spec.data.forEach((row, i) => {
-    const v = row[spec.y];
+    const v = row[spec.y] as number;
     const g = String(row[spec.x]);
     const ci = cats.get(g) ?? cats.set(g, cats.size).size - 1;
-    if (typeof v !== "number" || !Number.isFinite(v)) return;
+    if (!Number.isFinite(v)) return;
     const nv = spec.name === null ? null : row[spec.name];
     const name = nv == null ? null : String(nv);
     const k = key("u", nameId(seen, name, i)); // before the visibility test: hiding never renames

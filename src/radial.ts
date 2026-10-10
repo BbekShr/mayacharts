@@ -482,7 +482,7 @@ export const gauge: Mark = {
         ? ""
         : ctx.t(
             "change",
-            dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u25AC",
+            dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u2192",
             minus(
               fv(1).includes("%")
                 ? ctx.t("pts", (dv > 0 ? "+" : "") + fv(dv).replace("%", "").trim())
