@@ -59,4 +59,39 @@ describe("bar", () => {
     expect(l.length).toBeGreaterThan(1);
     expect(l.length).toBeLessThan(data.length);
   });
+
+  it("axis-break slashes sit inside the plot when values fall below the domain", () => {
+    const data = [
+      { c: "a", v: 1 },
+      { c: "b", v: 5 },
+    ];
+    const s = renderParts({ type: "bar", x: "c", y: "v", yDomain: [100, 200], data }).svg;
+    const ys = [...s.matchAll(/<rect data-maya="mark"[^>]* y="([\d.]+)"/g)].map((m) => +m[1]!);
+    const brk = s.match(/data-brk="" d="([^"]+)"/)![1]!;
+    const qs = [...brk.matchAll(/M[-\d.]+ ([-\d.]+)/g)].map((m) => +m[1]!);
+    expect(qs.length).toBeGreaterThan(0);
+    for (const q of qs) expect(q).toBeLessThan(Math.min(...ys)); // above the bar sitting on the bottom edge
+  });
+
+  it("a value label sits at the bar's end; a stack segment keeps its middle", () => {
+    const data = [{ c: "alpha", v: 100 }];
+    const num = (t: string, k: string) => +t.match(new RegExp(` ${k}="([\\d.]+)"`))![1]!;
+    const draw = (extra = {}) => {
+      const s = renderParts(
+        { type: "bar", x: "c", y: "v", labels: true, data, ...extra },
+        { width: 400, height: 300 },
+      ).svg;
+      return [
+        s.match(/<rect data-maya="mark"[^>]*>/)![0],
+        s.match(/<text [^>]*data-in[^>]*>/)![0],
+      ] as const;
+    };
+    const [rect, text] = draw();
+    expect(num(text, "y")).toBeCloseTo(num(rect, "y") + 10, 0);
+    const [r2, t2] = draw({ stack: true });
+    expect(num(t2, "y")).toBeCloseTo(num(r2, "y") + num(r2, "height") / 2, 0);
+    const [r3, t3] = draw({ horizontal: true });
+    expect(t3).toContain('text-anchor="end"');
+    expect(num(t3, "x")).toBeCloseTo(num(r3, "x") + num(r3, "width") - 4, 0);
+  });
 });
