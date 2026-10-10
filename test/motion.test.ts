@@ -138,10 +138,14 @@ describe("motion", () => {
 
   /** Record every animate() call: element, keyframes. */
   const spy = () => {
-    const calls: { e: Element; k: Keyframe[] }[] = [];
+    const calls: { e: Element; k: Keyframe[]; o: KeyframeAnimationOptions }[] = [];
     const orig = Element.prototype.animate;
-    Element.prototype.animate = function (this: Element, k: Keyframe[]) {
-      calls.push({ e: this, k });
+    Element.prototype.animate = function (
+      this: Element,
+      k: Keyframe[],
+      o: KeyframeAnimationOptions,
+    ) {
+      calls.push({ e: this, k, o });
       return orig.call(this, k as never) as never;
     } as never;
     return { calls, done: () => (Element.prototype.animate = orig) };
@@ -161,6 +165,22 @@ describe("motion", () => {
     s.done();
     const arc = s.calls.find((c) => c.e.matches("circle[pathLength][data-key=v]"));
     expect(arc?.k[0]?.strokeDasharray).toBe("0 360");
+    el.remove();
+  });
+
+  it("a gauge update sweeps its arc on the count-up clock", async () => {
+    const g = (v: number) =>
+      ({ type: "gauge", y: "v", yDomain: [0, 50], data: [{ v }] }) as unknown as ChartSpec;
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = g(10);
+    document.body.append(el);
+    await frame();
+    const s = spy();
+    el.spec = g(40);
+    await frame();
+    s.done();
+    const arc = s.calls.find((c) => c.e.matches("circle[pathLength][data-key=v]"));
+    expect(arc?.o).toMatchObject({ duration: 832, easing: "cubic-bezier(.25,1,.5,1)" });
     el.remove();
   });
 

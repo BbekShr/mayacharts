@@ -68,6 +68,12 @@ const WIPE = 1100; // ms, line and area first draw
 const MAX = 1500; // ponytail: no animation above this many marks
 const STAGGER = 320; // total stagger spread across categories, ms
 const Z = 1e-6;
+/** The gauge arc and a text count-up share one clock: 1.6 x the entrance, ease-out quart. */
+const tally = (o: KeyframeAnimationOptions): KeyframeAnimationOptions => ({
+  duration: Number(o.duration) * 1.6,
+  easing: "cubic-bezier(.25,1,.5,1)",
+});
+const needle = (e: Element) => ring(e) && e.getAttribute("data-key") === "v";
 /** Put an orbit rotation at angle fraction `f` (its direction decides which end of the clock that is). */
 const seek = (a: Animation, f: number) => {
   const c = a.effect!.getComputedTiming();
@@ -223,15 +229,12 @@ function enter(e: Element, origin?: Box, o = DATA): void {
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, false);
   if (f) run(e, [f, arc(e)], ZOOM);
-  else if (ring(e) && e.getAttribute("data-key") === "v" && o === INTRO)
-    // The gauge arc sweeps from empty in step with the centre count-up (1.6 x, ease-out quart).
+  else if (needle(e) && o === INTRO)
+    // The gauge arc sweeps from empty in step with the centre count-up.
     run(
       e,
       [{ strokeDasharray: "0 360" }, { strokeDasharray: e.getAttribute("stroke-dasharray") ?? "" }],
-      {
-        duration: Number(o.duration) * 1.6,
-        easing: "cubic-bezier(.25,1,.5,1)",
-      },
+      tally(o),
     );
   else if (z) run(e, [{ transform: z, opacity: 0 }, { transform: "none" }], ZOOM);
   else if (g) {
@@ -351,7 +354,7 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
       tail
     );
   };
-  const ms = Number(o.duration) * 1.6,
+  const ms = Number(tally(o).duration),
     t0 = performance.now() + Number(o.delay ?? 0);
   const id = (counts.get(e) ?? 0) + 1;
   counts.set(e, id);
@@ -439,7 +442,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
       const from = arcs.get(m)!;
       stop(as);
       sync(m, e);
-      if (!instant) run(m, [from, arc(m)], ZOOM);
+      if (!instant) run(m, [from, arc(m)], needle(m) ? tally(DATA) : ZOOM);
       order.push(m);
       continue;
     }
