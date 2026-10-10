@@ -136,7 +136,7 @@ export function formatter(
                     maximumFractionDigits: step !== undefined && step >= 1 ? 0 : Math.max(d, 2),
                   }
                 : { maximumFractionDigits: Math.max(d, 2) };
-    o.signDisplay = "negative"; // a value that rounds to zero prints "0", not "-0"
+    Object.assign(o, { signDisplay: "negative" }); // TS lib lacks "negative"; a value that rounds to zero prints "0", not "-0"
     num = nf(locale, o);
     auto = preset === "auto";
     // Step-less, a value under 0.05 gets 2 significant digits (they win over fraction digits),

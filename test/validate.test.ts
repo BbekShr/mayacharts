@@ -199,7 +199,7 @@ describe("one snapshot per error code", () => {
       [0, 5e-324],
     ])
       expect(code({ ...base, yDomain })).toEqual(["invalid-domain", "yDomain"]);
-    expect(() => render({ ...base, yDomain: [1e-300, 2e-300] })).not.toThrow();
+    expect(() => render({ ...base, yDomain: [1e-300, 2e-300] } as ChartSpec)).not.toThrow();
   });
   it("invalid-format", () => {
     const e = err({ ...base, format: "percnt" });

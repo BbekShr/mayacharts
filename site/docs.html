@@ -1052,6 +1052,29 @@
     { "account": "Globex", "revenue": 80, "seats": 25, "tickets": 9 },
     { "account": "Initech", "revenue": 95, "seats": 30, "tickets": 4 }] }</code></pre>
         <p>Accounts placed by how alike their measures are. Import mayacharts/constellation.</p>
+
+        <h3>15. KPI with a goal</h3>
+        <pre><code>{ "type": "kpi", "x": "month", "y": "sales", "was": "lastYear", "format": "compact",
+  "colorBy": { "target": 120000, "warn": 100000 },
+  "data": [{ "month": "2025-10", "sales": 98000, "lastYear": 90000 },
+    { "month": "2025-11", "sales": 104000, "lastYear": 95000 },
+    { "month": "2025-12", "sales": 112000, "lastYear": 100000 }] }</code></pre>
+        <p>
+          The last month is the headline, with its change against the previous month and against
+          last year. The bullet carries the target, the at-risk band runs from warn up to the
+          target, and the status is written as a word as well as a colour.
+        </p>
+
+        <h3>16. Gauge</h3>
+        <pre><code>{ "type": "gauge", "y": "margin", "aggregate": "mean", "yDomain": [0, 50],
+  "colorBy": { "target": 30, "warn": 22 }, "was": "lastYear",
+  "format": { "margin": { "maximumFractionDigits": 1, "suffix": "%" } },
+  "data": [{ "margin": 27, "lastYear": 25 }, { "margin": 29, "lastYear": 26 }] }</code></pre>
+        <p>
+          One value for a fixed range: the rows combine by aggregate, the dial runs over yDomain,
+          and the target tick, the at-risk band and the old value ("was") sit on it. Import
+          mayacharts/radial.
+        </p>
       </section>
     </main>
     <script type="module">
