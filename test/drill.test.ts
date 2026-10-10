@@ -248,4 +248,24 @@ describe("drill in <maya-chart>", () => {
     expect(el.view?.drill?.length).toBe(1);
     expect(asked).toContainEqual({ subtree: true });
   });
+  it("sankey: a drill hides the tooltip, as a zoom does", async () => {
+    const rows = [
+      { region: "West", state: "CA", city: "LA", v: 5 },
+      { region: "East", state: "NY", city: "NYC", v: 4 },
+    ];
+    const el = await mount(spec({ type: "sankey", path: ["region", "state", "city"], data: rows }));
+    const [node, inner] = ["n~0~West", "n~1~CA"].map((k) =>
+      marks(el).find((m) => m.getAttribute("data-key") === k)!,
+    );
+    // The hovered node survives the drill (stable keys): the tooltip would stay on it.
+    inner!.dispatchEvent(
+      Object.assign(new Event("pointerover", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    const tip = el.shadowRoot!.querySelector(".maya-tip")!;
+    expect(tip.classList.contains("maya-open")).toBe(true);
+    click(node!);
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+    expect(tip.classList.contains("maya-open")).toBe(false);
+  });
 });
