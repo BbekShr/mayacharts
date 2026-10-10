@@ -111,7 +111,7 @@ const DATE = w(
 );
 /** Format options holding any date key are Intl.DateTimeFormat options. */
 export const isDateOpts = (o: object): boolean => DATE.some((k) => Object.hasOwn(o, k));
-const TOKENS = [
+export const TOKENS = [
   ...w(
     "font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line gridDash",
   ),
