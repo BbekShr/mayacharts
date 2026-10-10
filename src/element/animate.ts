@@ -232,7 +232,10 @@ function enter(e: Element, origin?: Box, o = DATA): void {
     // The gauge arc sweeps from empty in step with the centre count-up.
     run(
       e,
-      [{ strokeDasharray: "0 360" }, { strokeDasharray: e.getAttribute("stroke-dasharray") ?? "" }],
+      [
+        { strokeDasharray: "0 360", opacity: 0 },
+        { strokeDasharray: e.getAttribute("stroke-dasharray") ?? "" },
+      ],
       tally(o),
     );
   else if (z) run(e, [{ transform: z, opacity: 0 }, { transform: "none" }], ZOOM);
@@ -337,10 +340,7 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   const SG = /[-−+]\s*$/;
   const neg = (h: string) => /[-−]\s*$/.test(h);
   const base = head.replace(SG, "");
-  const a = Math.min(
-    10 ** ds.length - 1,
-    Math.round((+fd || 0) * 10 ** (dp(num) - (f ? dp(f[0]) : 0))),
-  );
+  const a = Math.min(10 ** ds.length - 1, Math.round(+fd * 10 ** (dp(num) - (f ? dp(f[0]) : 0))));
   const [A, B] = [neg(fh) ? -a : a, neg(head) ? -nd : +nd];
   if (A === B) return;
   if (f && (fh.replace(SG, "") !== base || from.slice(f.index + f[0].length) !== tail)) {
@@ -358,7 +358,7 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
       (k ? (k < 0 === neg(head) ? head : fh) : base) + int.replace(/^[0\D]+(?=\d)/, "") + dec + tail
     );
   };
-  const ms = Number(tally(o).duration),
+  const ms = Number(o.duration) * 1.6,
     t0 = performance.now() + Number(o.delay ?? 0);
   const id = (counts.get(e) ?? 0) + 1;
   counts.set(e, id);
@@ -604,8 +604,9 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
   }
   for (const m of old) {
     if (used.has(m)) continue;
+    // Cross in place with the new text, never a gap; a keyed one (its mark left) goes with the mark.
+    fade(m, true, () => m.remove(), key(m) ? UI : late);
     retire(m);
-    fade(m, true, () => m.remove(), late); // cross in place with the new text, never a gap
   }
 }
 
@@ -634,12 +635,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
       follow(p, c, id(c) === "labels" ? late : { ...UI, delay: 160 }, id(c) === "labels");
       out.push(p);
     } else {
-      if (p && fadeable(p)) {
-        // A ghost never carries ids: WebKit drops the gradient while two defs share one.
-        p.querySelector("defs")?.remove();
-        ghosts.push(p);
-        out.push(p);
-      }
+      if (p && fadeable(p)) (ghosts.push(p), out.push(p));
       out.push(c);
       if (p && fadeable(c)) fadeIn.push(c);
     }
@@ -669,6 +665,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
 
 /** An outgoing group: unaddressable while it fades, then removed. */
 function ghost(g: Element): void {
+  g.querySelector("defs")?.remove(); // a ghost never carries ids: WebKit drops the gradient while two defs share one
   const op = getComputedStyle(g).opacity; // mid-fade-in (or still waiting): leave from there
   // Sunburst drill: ring names go at once, the centre text stays until the new labels arrive.
   const hold = zoom && g.getAttribute("data-maya") === "labels";

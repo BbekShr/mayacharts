@@ -165,6 +165,8 @@ describe("motion", () => {
     s.done();
     const arc = s.calls.find((c) => c.e.matches("circle[pathLength][data-key=v]"));
     expect(arc?.k[0]?.strokeDasharray).toBe("0 360");
+    expect(arc?.k[0]?.opacity).toBe(0); // the empty round-capped dash would draw a dot
+    expect(arc?.k[1]).not.toHaveProperty("opacity");
     el.remove();
   });
 
@@ -587,5 +589,19 @@ describe("motion", () => {
     expect(box.querySelectorAll("[data-ghost]").length).toBe(3);
     expect(log.indexOf("w")).toBeGreaterThan(-1);
     expect(log.lastIndexOf("c")).toBeLessThan(log.indexOf("w"));
+  });
+  it("a keyed label whose mark left fades at once with it; an unkeyed one waits for the new text", () => {
+    const box = document.createElement("div");
+    const svg = (t: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks"><rect data-maya="mark" data-key="a" x="0" y="0" width="5" height="5"/></g><g data-maya="labels">${t}</g></svg>`;
+    const old = `<text data-key="gone" x="1" y="1">k</text><text x="2" y="2">u</text><text data-key="a" x="3" y="3">a</text>`;
+    patch(box, svg(old), false);
+    const s = spy();
+    patch(box, svg(`<text data-key="a" x="3" y="4">b</text>`), true);
+    s.done();
+    const leave = (t: string) =>
+      s.calls.find((c) => c.e.textContent === t && c.k.at(-1)?.opacity === 0)?.o;
+    expect(leave("k")?.delay ?? 0).toBe(0);
+    expect(leave("u")?.delay).toBeGreaterThan(0);
   });
 });

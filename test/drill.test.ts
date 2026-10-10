@@ -230,4 +230,22 @@ describe("drill in <maya-chart>", () => {
     // Keys keep the level in the whole path, so the state nodes survive the drill.
     expect(marks(el).some((m) => m.getAttribute("data-key") === "n~1~CA")).toBe(true);
   });
+  it("a keyboard drill waits on the animations of the whole marks subtree", async () => {
+    const el = await mount(spec());
+    const asked: unknown[] = [];
+    const was = Element.prototype.getAnimations;
+    Element.prototype.getAnimations = function (this: Element, o?: GetAnimationsOptions) {
+      if (this.matches("[data-maya=marks]")) asked.push(o);
+      return [];
+    };
+    const svg = el.shadowRoot!.querySelector(".maya-svg")!;
+    for (const key of ["ArrowRight", "Enter"])
+      svg.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, composed: true, cancelable: true }),
+      );
+    await frame();
+    Element.prototype.getAnimations = was;
+    expect(el.view?.drill?.length).toBe(1);
+    expect(asked).toContainEqual({ subtree: true });
+  });
 });
