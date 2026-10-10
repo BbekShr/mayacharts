@@ -304,6 +304,74 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     data: monthTotals.map((m) => ({ month: mon(m.monthMs), sales: m.sales })),
   });
 
+  // 15b. KPI header: four measures side by side, each with its own format and goal.
+  const step = (n: number, to: number) => Math.round(n / to) * to;
+  const nm = monthTotals.length - 1;
+  const units = rollup(FACTS, ["monthMs"], { units: sum("units") }) as { units: number }[];
+  const peak = Math.max(...monthTotals.map((m) => m.sales));
+  const header = monthTotals.map((m, i) => ({
+    month: mon(m.monthMs),
+    revenue: m.sales,
+    orders: units[i]!.units,
+    aov: R(m.sales / units[i]!.units, 2),
+    churn: R(0.062 - 0.026 * (m.sales / peak) + 0.004 * Math.sin(i * 1.7), 4),
+  }));
+  const end = header[nm]!;
+  tile("kpi-multi", {
+    type: "kpi",
+    title: "Business health",
+    x: "month",
+    y: ["revenue", "orders", "aov", "churn"],
+    format: { revenue: "compact", orders: "compact", aov: "currency", churn: "percent" },
+    currency: "USD",
+    titles: { revenue: "Revenue", orders: "Orders", aov: "Average order", churn: "Churn" },
+    colorBy: {
+      revenue: { target: step(end.revenue * 1.04, 1e4), warn: step(end.revenue * 0.94, 1e4) },
+      orders: { target: step(end.orders * 0.97, 1e3), warn: step(end.orders * 0.9, 1e3) },
+      aov: { target: Math.round(end.aov * 0.98) },
+      churn: { target: 0.035, warn: 0.045, better: "lower" },
+    },
+    data: header,
+  });
+
+  // 15c. KPI against last year and a target, with an at-risk band.
+  tile("kpi-goals", {
+    type: "kpi",
+    title: "December sales",
+    x: "month",
+    y: "sales",
+    was: "lastYear",
+    colorBy: {
+      target: step(monthTotals[11]!.sales * 1.08, 1e5),
+      warn: step(monthTotals[11]!.sales * 0.96, 1e5),
+    },
+    format: "compact",
+    titles: { sales: "Sales ($)", lastYear: "Last year" },
+    data: monthTotals.map((m, i) => ({
+      month: mon(m.monthMs),
+      sales: m.sales,
+      lastYear: Math.round(m.sales * (0.84 + 0.03 * Math.sin(i * 1.3))),
+    })),
+  });
+
+  // 15d. Gauge: average margin in December against a goal, with last year's margin.
+  const dec = FACTS.filter((r) => r.monthMs === monthTotals[11]!.monthMs);
+  tile("gauge", {
+    type: "gauge",
+    title: "December margin",
+    y: "margin",
+    aggregate: "mean",
+    yDomain: [0, 50],
+    colorBy: { target: 30, warn: 22 },
+    was: "lastYear",
+    format: {
+      margin: { maximumFractionDigits: 1, suffix: "%" },
+      lastYear: { maximumFractionDigits: 1, suffix: "%" },
+    },
+    titles: { margin: "Margin", lastYear: "last year" },
+    data: dec.map((r) => ({ margin: r.margin * 100, lastYear: r.margin * 92 })),
+  });
+
   // 16. Dumbbell: first half against second half by region and family.
   const half = FACTS.map((r) => ({ ...r, half: r.monthMs < Date.UTC(2025, 6, 1) ? "H1" : "H2" }));
   tile("dumbbell", {

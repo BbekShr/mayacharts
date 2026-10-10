@@ -157,7 +157,7 @@ export const css =
   "[data-maya=grid] *{stroke:var(--maya-grid);stroke-dasharray:var(--maya-grid-dash);shape-rendering:crispEdges}" +
   S +
   "[data-other],[data-total],[data-neu],[data-tone=zero]{--c:var(--maya-fg-muted)}" +
-  "[data-tone=good]{--c:var(--maya-good)}[data-tone=bad]{--c:var(--maya-bad)}" +
+  "[data-tone=good]{--c:var(--maya-good)}[data-tone=warn]{--c:var(--maya-warn,light-dark(#960,#fc3))}[data-tone=bad]{--c:var(--maya-bad)}" +
   "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
   Q +
   "rect[data-hm]{stroke:var(--maya-accent)}" +

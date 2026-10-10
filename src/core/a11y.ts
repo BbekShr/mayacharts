@@ -25,6 +25,8 @@ const ROWS = [
   "constellation",
 ];
 const CAP = 1000;
+/** Types whose description names every measure. */
+const ALL = ["constellation", "kpi"];
 
 export type Fmt = (field: string, v: unknown, step?: number) => string;
 
@@ -37,11 +39,16 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
           spec,
           "chartOf",
           noun,
-          // A constellation has no single value: name every measure.
-          spec.type === "constellation" ? spec.measures.map(ti).join(", ") : ti(spec.y),
+          // A constellation or a kpi with a y array has no single value: name every measure.
+          ALL.includes(spec.type) ? spec.measures.map(ti).join(", ") : ti(spec.y),
           spec.x ? ti(spec.x) : spec.path.join(" / "),
         )
-      : t(spec, "chartOfAll", noun, ti(spec.y));
+      : t(
+          spec,
+          "chartOfAll",
+          noun,
+          ALL.includes(spec.type) ? spec.measures.map(ti).join(", ") : ti(spec.y),
+        );
   if (spec.series !== null && shaped.series.length) {
     // Name only series that hold a value (a series of nulls is not in the picture).
     const live = new Set(shaped.cells.flatMap((c) => (c.value === null ? [] : [c.si])));
@@ -58,6 +65,8 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
     if (c.value !== null) (n++, (lo = Math.min(lo, c.value)), (hi = Math.max(hi, c.value)));
   const f = (v: number) => fmt(spec.y, v);
   if (!n) return s + ". No data.";
+  // A kpi with a y array mixes units, so no range (the mark may add a note).
+  if (spec.type === "kpi" && spec.measures.length > 1) return s + ".";
   const tm = shaped.time;
   if (tm?.length)
     s +=
@@ -74,7 +83,12 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
     ? " " + t(spec, "reduced", ...shaped.reduced.map((v) => fmt("", v))) + "."
     : "";
   return (
-    (n === 1 ? `${s}. 1 value: ${f(lo)}.` : `${s}. ${n} values from ${f(lo)} to ${f(hi)}.`) + cut
+    (n === 1 ? `${s}. 1 value: ${f(lo)}` : `${s}. ${n} values from ${f(lo)} to ${f(hi)}`) +
+    // A single-value goal (kpi, gauge) names its target; the data table adds the tone word.
+    (typeof spec.colorBy === "object" && spec.colorBy?.target != null
+      ? `, ${t(spec, "target")} ${f(spec.colorBy.target)}.`
+      : ".") +
+    cut
   );
 }
 
@@ -88,13 +102,13 @@ export function dataTable(
   spec: ResolvedSpec,
   shaped: Shaped,
   fmt: Fmt,
-  tone: (v: number) => string | null,
+  tone: (v: number, field: string) => string | null,
   own?: MarkOut["table"],
 ): string {
   const ti = (f: string) => spec.titles.get(f) ?? f;
   const cell = (f: string, v: unknown) => {
     if (v == null) return "";
-    const tn = f === spec.y && typeof v === "number" ? tone(v) : null;
+    const tn = (f === spec.y || spec.goals.has(f)) && typeof v === "number" ? tone(v, f) : null;
     return esc(fmt(f, v)) + (tn ? ` (${esc(tn)})` : "");
   };
   const cap = (n: number) => (n > CAP ? t(spec, "firstOf", CAP, n) : titleText(spec));
@@ -142,7 +156,13 @@ export function dataTable(
       .map((row) => `<tr>${cols.map((f) => `<td>${cell(f, row[f])}</td>`).join("")}</tr>`)
       .join("");
   } else {
-    const keys = spec.series === null ? [ti(spec.y)] : shaped.visible.map((j) => shaped.series[j]!);
+    // A kpi with a y array: one column per measure (its cells' si is the measure index).
+    const wide = spec.type === "kpi" && spec.measures.length > 1;
+    const keys = wide
+      ? shaped.visible.map((j) => ti(spec.measures[j]!))
+      : spec.series === null
+        ? [ti(spec.y)]
+        : shaped.visible.map((j) => shaped.series[j]!);
     n = shaped.categories.length;
     // spec.was: a previous-value column after each value column.
     const was = spec.was;
@@ -160,10 +180,10 @@ export function dataTable(
     const by = new Map(shaped.cells.map((c) => [c.ci + "," + c.si, c.value]));
     rows = "";
     for (let i = 0; i < Math.min(n, CAP); i++) {
-      rows += `<tr><th scope="row">${esc(shaped.time ? fmt(spec.x, shaped.categories[i]) : shaped.categories[i]!)}</th>`;
+      rows += `<tr><th scope="row">${esc(!spec.x ? ti(spec.y) : shaped.time ? fmt(spec.x, shaped.categories[i]) : shaped.categories[i]!)}</th>`;
       for (const j of shaped.visible)
         rows +=
-          `<td>${cell(spec.y, by.get(i + "," + j))}</td>` +
+          `<td>${cell(wide ? spec.measures[j]! : spec.y, by.get(i + "," + j))}</td>` +
           (wv ? `<td>${esc(fmt(spec.y, wv(shaped.categories[i]!, shaped.series[j]!)))}</td>` : "");
       rows += "</tr>";
     }

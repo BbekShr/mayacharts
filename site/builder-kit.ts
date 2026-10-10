@@ -211,6 +211,14 @@ export const SAMPLES: Readonly<Record<string, Omit<ChartSpec, "type">>> = {
   }),
   waffle: s({ title: "Share of units by family", x: "Family", y: "Units", data: regionFamily }),
   radial: s({ title: "Sales by month", x: "Month", y: "Sales", format: MONTHLY, data: monthly }),
+  gauge: s({
+    title: "Margin this year",
+    y: "Margin %",
+    aggregate: "mean",
+    yDomain: [0, 100],
+    colorBy: { target: 40, warn: 30 },
+    data: items,
+  }),
   hexmap: s({ title: "Sales by state", x: "State", y: "Sales", format: "compact", data: states }),
   boxplot: s({
     title: "Monthly sales by region",
@@ -281,7 +289,7 @@ export const label = (t: string): string =>
 
 /** Picker groups. A type missing here still shows, under "More". */
 export const GROUPS: readonly (readonly [string, readonly string[]])[] = [
-  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "funnel", "table", "orbit"]],
+  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "gauge", "funnel", "table", "orbit"]],
   ["Trend", ["line", "area", "ridgeline", "radial", "weave"]],
   ["Distribution", ["scatter", "beeswarm", "boxplot", "heatmap", "parallel", "constellation"]],
   ["Part to whole", ["treemap", "sunburst", "marimekko", "waffle", "units"]],
@@ -360,6 +368,7 @@ export const TYPE_HELP: Readonly<Record<string, string>> = {
   marimekko: "Bars whose widths and inner splits both show share of the total.",
   waffle: "A 10 by 10 grid of squares showing each category's share.",
   radial: "Bars arranged around a circle.",
+  gauge: "One number on a dial with a fixed range, coloured by a target.",
   hexmap: "US states as equal hexagons coloured by value.",
   boxplot: "How values spread in each category: the middle half as a box, the median as a line.",
   funnel: "How many remain at each step of a process, with the share kept from step to step.",

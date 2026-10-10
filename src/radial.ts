@@ -1,4 +1,9 @@
-// mayacharts/radial: polar bars. Imports only registry, svg, scale, ticks and types.
+// mayacharts/radial: polar bars and the gauge. Imports only registry, svg, scale, ticks and types.
+//
+// gauge contract: one value, every row of spec.y combined by spec.aggregate (no x, no series, one
+// y). Dial range: spec.yDomain, else 0 to a nice max over the value, colorBy target and warn and
+// spec.was. Thresholds come resolved in spec.colorBy (target, warn, better; null when unset) and
+// ctx.tone(v) gives "good" | "warn" | "bad" | null for data-tone. spec.was is the previous value.
 import { register } from "./core/registry.ts";
 import { TAU } from "./core/scale.ts";
 import { clip, el, esc, key, OTHER, r } from "./core/svg.ts";
@@ -269,3 +274,230 @@ export const radial: Mark = {
 };
 
 register("radial", radial);
+
+// Gauge: a 180 degree dial. The track is a rounded sector, the value a stroked circle (see below);
+// bands, target tick and was marker are unkeyed (outside marks).
+const num = (v: unknown) => (typeof v === "number" ? v : null);
+const PI = Math.PI;
+
+export const gauge: Mark = {
+  noun: "Gauge",
+  draw(ctx) {
+    const { spec, plot } = ctx;
+    const col = (f: string) => ctx.agg(spec.aggregate)(spec.data.map((row) => num(row[f])));
+    const value = col(spec.y);
+    if (value === null)
+      return {
+        marks: "",
+        hits: "",
+        labels: el(
+          "text",
+          {
+            "data-maya": "empty",
+            x: r(ctx.width / 2),
+            y: r(ctx.height / 2),
+            "text-anchor": "middle",
+            "dominant-baseline": "middle",
+          },
+          esc(ctx.t("noData")),
+        ),
+      };
+    const g = typeof spec.colorBy === "object" && spec.colorBy ? spec.colorBy : null;
+    const [target, warn] = [g?.target ?? null, g?.warn ?? null];
+    const wasV = spec.was ? col(spec.was) : null;
+    const fv = (v: number) => ctx.fmt(spec.y, v);
+    // Dial range: yDomain, else nice bounds over zero and everything the dial must hold (negatives show).
+    const vs = [0, value, target ?? 0, warn ?? 0, wasV ?? 0];
+    const nd = niceTicks(Math.min(...vs), Math.max(...vs), 5).domain;
+    const [lo, hi] = spec.yDomain ?? nd;
+    const span = hi - lo || 1;
+    const fr = (v: number) => Math.min(1, Math.max(0, (v - lo) / span));
+    const bands = target !== null && warn !== null;
+    const tl = target === null ? "" : clip(`${ctx.t("target")} ${fv(target)}`, 24);
+
+    // Fit: R is the track's outer radius; the block (arc, band ring, rows below) centres in the box.
+    const ex = bands ? 6 : 0;
+    const tone = ctx.tone(value);
+    const status =
+      tone && target !== null
+        ? ctx.t(tone === "good" ? "onTrack" : tone === "warn" ? "atRisk" : "offTrack")
+        : "";
+    const below = 18 + (wasV !== null || status ? 16 : 0); // the row under the dial: change, and the status when it cannot sit above the value
+    const top = target === null ? 6 : 18;
+    const side = 6 + ex + (target === null ? 0 : Math.min(plot.w * 0.2, tl.length * 6.2));
+    const R = Math.max(14, Math.min(plot.w / 2 - side, plot.h - below - top - ex));
+    const t = Math.min(26, Math.max(6, R * 0.2));
+    const [cx, cy] = [
+      plot.x + plot.w / 2,
+      plot.y + Math.max(0, (plot.h - R - ex - top - below) / 2) + top + ex + R,
+    ];
+    const ri = R - t;
+    const pt = (rr: number, a: number) => `${r(cx + rr * Math.sin(a))} ${r(cy - rr * Math.cos(a))}`;
+    const at = (f: number) => (f - 0.5) * PI;
+    // Annular sector over fractions f0..f1 of the dial; h > 0 rounds both ends (they stay inside f0..f1).
+    const ring = (r0: number, r1: number, f0: number, f1: number, h: number) => {
+      const d = h / ((r0 + r1) / 2);
+      const a0 = at(f0) + d;
+      const a1 = Math.max(at(f1) - d, a0);
+      return (
+        `M${pt(r1, a0)}A${r(r1)} ${r(r1)} 0 0 1 ${pt(r1, a1)}A${r(h)} ${r(h)} 0 0 1 ${pt(r0, a1)}` +
+        `A${r(r0)} ${r(r0)} 0 0 0 ${pt(r0, a0)}A${r(h)} ${r(h)} 0 0 1 ${pt(r1, a0)}Z`
+      );
+    };
+
+    let grid = el("path", { "data-kpi": "track", d: ring(ri, R, 0, 1, t / 2) });
+    if (bands) {
+      const [a, b] = [Math.min(lo, hi), Math.max(lo, hi)];
+      const lower = g!.better === "lower";
+      const cuts = lower ? [a, target, warn, b] : [a, warn, target, b];
+      cuts.slice(0, 3).forEach((_, i) => {
+        const [f0, f1] = [fr(cuts[i]!), fr(cuts[i + 1]!)].sort();
+        if (f1! > f0!)
+          grid += el("path", {
+            fill: "var(--maya-fg)",
+            "fill-opacity": [0.2, 0.12, 0.06][lower ? 2 - i : i],
+            d: ring(R + 3, R + 6, f0!, f1!, 0),
+          });
+      });
+    }
+
+    const f = fv(value);
+    const d = {
+      "data-s": 0,
+      "data-x": "", // the tooltip row names the measure; a header would repeat it
+      "data-y": value,
+      "data-f": f,
+      "data-tone": tone,
+    };
+    // The value is a stroked circle like a sunburst slice (pathLength 360, dash = angle) so a change
+    // sweeps along the track; the round caps sit inside the same inset as the track's rounded ends.
+    const [rm, cap] = [(ri + R) / 2, (t / 2 / ((ri + R) / 2)) * (180 / PI)];
+    const sweep = Math.max(0, fr(value) * 180 - 2 * cap);
+    const marks = el("circle", {
+      "data-maya": "mark",
+      "data-key": "v",
+      ...d,
+      cx: r(cx),
+      cy: r(cy),
+      r: r(rm),
+      "data-depth": 1, // borrows the sunburst ring paint: no fill, stroke var(--c)
+      "stroke-width": r(t),
+      "stroke-linecap": "round",
+      pathLength: 360,
+      "stroke-dasharray": `${r(sweep)} ${r(360 - sweep)}`,
+      "stroke-dashoffset": r(180 - cap),
+    });
+    const hits = el("path", {
+      "data-maya": "hit",
+      "data-key": "v",
+      ...d,
+      fill: "transparent",
+      d: ring(ri, R, 0, 1, t / 2),
+    });
+    // Value centred in the dial; it counts up as a keyed text mark.
+    const fs = Math.max(12, Math.min(ri * 0.55, 44, (ri * 1.5) / (f.length * 0.62)));
+    const out = el(
+      "text",
+      {
+        "data-maya": "mark",
+        "data-key": "t",
+        ...d,
+        "data-tone": null,
+        "data-total": "",
+        x: r(cx),
+        y: r(cy - 4),
+        "text-anchor": "middle",
+        "font-size": r(fs),
+        "font-weight": 650,
+      },
+      esc(f),
+    );
+    // The status word sits above the value when it fits, else it leads the row under the dial (never colour alone).
+    const above = ri * ri - (fs + 22) ** 2 >= 1300;
+    let labels = "";
+    if (status && above)
+      labels += el(
+        "text",
+        {
+          "data-tone": tone,
+          x: r(cx),
+          y: r(cy - 4 - fs - 6),
+          "text-anchor": "middle",
+          "font-size": 12,
+          "font-weight": 600,
+        },
+        esc(status),
+      );
+    const end = (x: number, a: string, s: string) =>
+      el(
+        "text",
+        { "data-kpi": "of", x: r(x), y: r(cy + 14), "text-anchor": a, "font-size": 11 },
+        esc(s),
+      );
+    labels += end(cx - R, "start", ctx.fmt(spec.y, lo)) + end(cx + R, "end", ctx.fmt(spec.y, hi));
+    const tick = (v: number, r0: number, r1: number, a: Parameters<typeof el>[1]) => {
+      const an = at(fr(v));
+      return el("line", {
+        x1: r(cx + r0 * Math.sin(an)),
+        y1: r(cy - r0 * Math.cos(an)),
+        x2: r(cx + r1 * Math.sin(an)),
+        y2: r(cy - r1 * Math.cos(an)),
+        ...a,
+      });
+    };
+    if (target !== null) {
+      labels += tick(target, ri - 2, R + 3 + ex, { "data-kpi": "target", "stroke-width": 2 });
+      const [an, rr] = [at(fr(target)), R + ex + 9];
+      const sx = Math.sin(an);
+      labels += el(
+        "text",
+        {
+          "data-kpi": "of",
+          x: r(cx + rr * sx),
+          y: r(cy - rr * Math.cos(an) + (sx > 0.9 || sx < -0.9 ? 4 : 0)),
+          "text-anchor": Math.abs(sx) < 0.25 ? "middle" : sx > 0 ? "start" : "end",
+          "font-size": 11,
+        },
+        esc(tl),
+      );
+    }
+    if (bands) labels += tick(warn, R + 2, R + 7, { stroke: "var(--maya-fg-muted)" });
+    const dv = wasV === null ? 0 : value - wasV;
+    const nf = (o: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat(spec.locale, {
+        maximumFractionDigits: 1,
+        signDisplay: "exceptZero",
+        ...o,
+      });
+    const minus = (s: string) => s.replace("-", "\u2212");
+    const chg =
+      wasV === null
+        ? ""
+        : ctx.t(
+            "change",
+            dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u25AC",
+            minus(
+              fv(1).includes("%")
+                ? ctx.t("pts", (dv > 0 ? "+" : "") + fv(dv).replace("%", "").trim())
+                : (dv > 0 ? "+" : "") + fv(dv),
+            ),
+            minus(
+              nf({ style: "percent", notation: "compact" }).format(wasV ? dv / Math.abs(wasV) : 0),
+            ),
+            spec.titles.get(spec.was!) ?? spec.was!,
+          );
+    if ((status && !above) || chg) {
+      const lead = status && !above ? status + (chg ? ", " : "") : "";
+      const part = (t: string, tn: string | null) => el("tspan", { "data-tone": tn }, esc(t));
+      labels += el(
+        "text",
+        { x: r(cx), y: r(cy + 32), "text-anchor": "middle", "font-size": 11 },
+        (lead ? part(lead, tone) : "") +
+          (chg ? part(chg, dv ? (dv > 0 === (g?.better !== "lower") ? "good" : "bad") : null) : ""),
+      );
+    }
+    return { marks: marks + out, hits, labels, grid };
+  },
+};
+
+register("gauge", gauge);

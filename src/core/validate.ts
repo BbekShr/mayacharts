@@ -37,7 +37,9 @@ import type {
   ChartSpec,
   ErrorCode,
   FieldFormat,
+  Goal,
   RenderOptions,
+  ResolvedGoal,
   ResolvedSpec,
   Row,
   View,
@@ -87,7 +89,7 @@ const CART = ["bar", "line", "area"];
 const PATHX = [...CART, "dumbbell"];
 const PATH = ["treemap", "sunburst", "sankey", "chord"];
 /** y arrays on these types are shown together (axes, columns), never a measure toggle. */
-export const ALL_Y = ["parallel", "table", "funnel", "constellation"];
+export const ALL_Y = ["parallel", "table", "funnel", "constellation", "kpi"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
@@ -95,7 +97,7 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar,orbit was:bar forms:units size:scatter,constellation name:scatter,beeswarm,boxplot,units path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,treemap,sunburst,hexmap,units,orbit,constellation xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
+    `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge forms:units size:scatter,constellation name:scatter,beeswarm,boxplot,units path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -112,7 +114,7 @@ const DATE = w(
 export const isDateOpts = (o: object): boolean => DATE.some((k) => Object.hasOwn(o, k));
 const TOKENS = [
   ...w(
-    "font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good bad line gridDash",
+    "font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line gridDash",
   ),
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => "series" + n),
 ];
@@ -153,7 +155,11 @@ const HINTS: Record<string, string> = {
   "size:number": "spec.size names a field for bubble area. " + SIZED,
   "select:boolean": 'Use select: true or "multi".',
   timeline: 'Use frame: "<field>".',
-  previous: 'Use was: "<field>" (bar).',
+  previous: 'Use was: "<field>" (bar, kpi, gauge).',
+  target: "Use colorBy: { target: n }.",
+  warn: "Use colorBy: { target: n, warn: n } (kpi, gauge).",
+  min: "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).",
+  max: "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).",
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -166,6 +172,7 @@ const ALIAS: Record<string, string> = {
   donut: PIE,
   bump: 'Use type: "weave" (import "mayacharts/weave").',
 };
+const GOAL = w("target warn better");
 const FN = w("rgb rgba hsl hsla oklch oklab lab lch color color-mix light-dark var calc");
 const FAM = String.raw`\s*(?:"[\w\s.\-]*"|'[\w\s.\-]*'|[\w\-]+(?:\s+[\w\-]+)*)\s*`;
 const FONT = new RegExp(`^${FAM}(?:,${FAM})*$`);
@@ -222,6 +229,54 @@ const css = (path: string, v: string, font: boolean) => {
       `spec.${path} = ${show(v)} is not a safe CSS value.`,
       `Allowed: colours, lengths, numbers and ${FN.join("() ")}(); fonts are family names.`,
       "Not allowed: url(), image-set(), other functions, ; { } < > \\ and (outside fonts) quotes.",
+    );
+};
+
+/** One threshold object: kpi and gauge take any of target, warn, better; other types need target and take no warn. */
+const goal = (t: string, p: string, v: unknown) => {
+  const full = t === "kpi" || t === "gauge";
+  const o = isObj(v) ? v : {};
+  const { target, warn, better } = o;
+  if (
+    !isObj(v) ||
+    !Object.keys(v).length ||
+    Object.keys(v).some((k) => !GOAL.includes(k)) ||
+    (target !== undefined && !Number.isFinite(target)) ||
+    (warn !== undefined && !Number.isFinite(warn)) ||
+    (better !== undefined && better !== "higher" && better !== "lower")
+  )
+    fail(
+      "invalid-option",
+      p,
+      `spec.${p} must be ${full ? 'thresholds { target?: number, warn?: number, better?: "higher" | "lower" }' : '{ target: number, better?: "higher" | "lower" }'}, received ${show(v)}.`,
+      t === "kpi" && p === "colorBy" ? "Thresholds keyed by measure need a y array." : "",
+    );
+  if (!full && warn !== undefined)
+    fail(
+      "option-unsupported",
+      `${p}.warn`,
+      `spec.${p}.warn is not supported with spec.type = "${t}".`,
+      "spec.colorBy.warn works with: kpi, gauge.",
+    );
+  if (!full && target === undefined)
+    fail("invalid-option", `${p}.target`, `spec.${p} on "${t}" needs a target.`);
+  if (warn === undefined) return;
+  if (target === undefined)
+    fail(
+      "invalid-option",
+      `${p}.warn`,
+      `spec.${p}.warn needs spec.${p}.target.`,
+      "warn is the edge between near the target and off track.",
+    );
+  const low = better === "lower";
+  if (low ? (warn as number) <= (target as number) : (warn as number) >= (target as number))
+    fail(
+      "invalid-option",
+      `${p}.warn`,
+      `spec.${p}.warn = ${warn} must be on the bad side of the target ${target} (${low ? "above" : "below"} it, since ${low ? "lower" : "higher"} is better).`,
+      low
+        ? 'Example: { target: 5, warn: 8, better: "lower" }.'
+        : 'Example: { target: 100, warn: 80 }. If lower is better, add better: "lower".',
     );
 };
 
@@ -294,12 +349,11 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
     `a non-empty array of distinct forms: ${FORMS.join(", ")}`,
     (v) => strs(v, 1) && v.every((f) => FORMS.includes(f)) && new Set(v).size === v.length,
   ],
+  // The object's keys are checked with the type (goals() below).
   [
     "colorBy",
     '"sign", { target: number } or a numeric field name',
-    (v) =>
-      (typeof v === "string" && !!v) ||
-      (isObj(v) && Object.keys(v).join() === "target" && Number.isFinite(v.target)),
+    (v) => (typeof v === "string" && !!v) || isObj(v),
   ],
   [
     "titles",
@@ -396,6 +450,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (
     s[need] === undefined &&
     t !== "kpi" &&
+    t !== "gauge" &&
     t !== "beeswarm" &&
     !(t === "funnel" && Array.isArray(s.y)) &&
     !(need === "x" && PATHX.includes(t) && s.path !== undefined)
@@ -405,6 +460,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (["dumbbell", "ridgeline", "marimekko", "weave"].includes(t) && s.series === undefined)
     missing("series");
   // parallel keeps its 0.x code; constellation has its own.
+  if (t === "gauge" && Array.isArray(s.y))
+    fail(
+      "invalid-option",
+      "y",
+      'spec.y on "gauge" must be one field name.',
+      'A gauge shows one value. For several, use type: "kpi" with a y array.',
+    );
   if ((t === "parallel" || t === "constellation") && !(Array.isArray(s.y) && s.y.length >= 2))
     fail(
       t === "parallel" ? "invalid-option" : "too-few-measures",
@@ -576,9 +638,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       'spec.xType = "time" cannot be combined with spec.horizontal.',
     ],
     [
-      t === "kpi" && colorBy !== undefined && !isObj(colorBy),
+      (t === "kpi" || t === "gauge") && colorBy !== undefined && !isObj(colorBy),
       "colorBy",
-      'spec.colorBy on "kpi" must be { target: number }.',
+      `spec.colorBy on "${t}" must be thresholds: { target?, warn?, better? }.`,
+      'Example: colorBy: { target: 100, warn: 80 }, or { better: "lower" }.',
+    ],
+    [
+      t === "gauge" && s.x !== undefined,
+      "x",
+      'spec.x is not supported with spec.type = "gauge".',
+      "A gauge shows one value: its rows combine by spec.aggregate.",
     ],
     [
       t === "funnel" && s.x !== undefined && Array.isArray(y),
@@ -599,6 +668,23 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   ];
   for (const [hit, k, headline, detail] of pairs)
     if (hit) fail("option-unsupported", k, headline, detail ?? "");
+  if (isObj(colorBy)) {
+    // Threshold keys win; otherwise a kpi with a y array may key thresholds by measure.
+    const ks = Object.keys(colorBy);
+    if (ks.length && !ks.some((k) => GOAL.includes(k)) && t === "kpi" && Array.isArray(y))
+      for (const k of ks) {
+        if (!y.includes(k))
+          fail(
+            "invalid-option",
+            `colorBy.${k}`,
+            `spec.colorBy key "${k}" is not a field in spec.y.`,
+            `Keyed thresholds name measures of spec.y: ${y.join(", ")}.`,
+            dym(k, y as string[]),
+          );
+        goal(t, `colorBy.${k}`, colorBy[k]);
+      }
+    else goal(t, "colorBy", colorBy);
+  }
 
   const vk = JSON.stringify(
     [
@@ -830,6 +916,20 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const series = spec.series ?? (spec.type === "units" && !spec.colorBy ? spec.x! : null);
   const entries = <T>(o: Readonly<Partial<Record<string, T>>> | undefined) =>
     Object.entries(o ?? {}).filter((e): e is [string, T] => e[1] !== undefined);
+  const cb = spec.colorBy;
+  const g = (o: Goal): ResolvedGoal => ({
+    target: o.target ?? null,
+    warn: o.warn ?? null,
+    better: o.better ?? "higher",
+  });
+  // Threshold keys win; otherwise thresholds keyed by measure (kpi).
+  const goals = new Map<string, ResolvedGoal>(
+    typeof cb !== "object"
+      ? []
+      : GOAL.some((k) => Object.hasOwn(cb, k))
+        ? measures.map((m) => [m, g(cb as Goal)])
+        : entries<Goal>(cb as Record<string, Goal>).map(([k, v]) => [k, g(v)]),
+  );
   return {
     type: spec.type,
     data: drilled.length
@@ -905,7 +1005,8 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
       : spec.colors
         ? new Map(Object.entries(spec.colors))
         : null,
-    colorBy: spec.colorBy ?? null,
+    colorBy: typeof cb === "object" ? (goals.get(measures[measure]!) ?? null) : (cb ?? null),
+    goals,
     theme: spec.theme ?? {},
   };
 }

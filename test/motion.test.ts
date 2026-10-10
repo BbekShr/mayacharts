@@ -4,6 +4,7 @@ import { MayaChart } from "../src/element/maya-chart.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 import { patch } from "../src/element/animate.ts";
 import "../src/orbit.ts";
+import "../src/radial.ts";
 
 const frame = () => new Promise((r) => setTimeout(r, 30));
 const root = (el: Element) => el.shadowRoot!;
@@ -58,6 +59,25 @@ describe("motion", () => {
     el.spec = kpi(1_900_000);
     await new Promise((r) => setTimeout(r, 1200));
     expect(value()).toBe("1.9M");
+    el.remove();
+  });
+
+  it("a kpi value never restarts from zero: it holds the old unit text, counts down to 0 without a sign", async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = kpi(980_000);
+    document.body.append(el);
+    await new Promise((r) => setTimeout(r, 1200)); // entrance count lands
+    const value = () => root(el).querySelector("text[data-maya=mark]")!.textContent;
+    el.spec = kpi(1_100_000); // 980K -> 1.1M: other unit, old text holds until the move lands
+    await frame();
+    expect(value()).toBe("980K");
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(value()).toBe("1.1M");
+    el.spec = kpi(0);
+    await frame();
+    expect(value()).not.toMatch(/^0\b/); // counts down from 1.1M, no snap
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(value()).toBe("0");
     el.remove();
   });
 
@@ -126,6 +146,23 @@ describe("motion", () => {
     } as never;
     return { calls, done: () => (Element.prototype.animate = orig) };
   };
+
+  it("a gauge arc sweeps from an empty dash on first draw", async () => {
+    const s = spy();
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = {
+      type: "gauge",
+      y: "v",
+      yDomain: [0, 50],
+      data: [{ v: 30 }],
+    } as unknown as ChartSpec;
+    document.body.append(el);
+    await frame();
+    s.done();
+    const arc = s.calls.find((c) => c.e.matches("circle[pathLength][data-key=v]"));
+    expect(arc?.k[0]?.strokeDasharray).toBe("0 360");
+    el.remove();
+  });
 
   it("a fade in leaves its end opacity to the CSS value; a fade out starts from it", async () => {
     const rows = (k: number) => ["a", "b", "c"].map((x, i) => ({ x, v: (i + 1) * k }));

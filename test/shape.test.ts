@@ -322,3 +322,31 @@ describe("cache keys coexist", () => {
     expect(reads.n).toBe(n);
   });
 });
+
+describe("kpi with a y array", () => {
+  const kpi = (data: Row[]) => resolve({ type: "kpi", data, x: "m", y: ["v", "w"] } as ChartSpec);
+  it("each measure is a series: cell.si is the measure index", () => {
+    const s = shape(
+      kpi([
+        { m: "a", v: 1, w: 10 },
+        { m: "b", v: 2, w: null },
+        { m: "a", v: 3 },
+      ]),
+    );
+    expect(s.series).toEqual(["v", "w"]);
+    expect(s.categories).toEqual(["a", "b"]);
+    expect(s.cells.map((c) => [c.ci, c.si, c.value])).toEqual([
+      [0, 0, 4],
+      [0, 1, 10],
+      [1, 0, 2],
+      [1, 1, null],
+    ]);
+  });
+  it("thins every measure together and keeps the last two categories", () => {
+    const data = Array.from({ length: 5000 }, (_, i) => ({ m: "c" + i, v: i % 7, w: -i }));
+    const s = shape(kpi(data), { plotWidth: 400 });
+    expect(s.reduced![1]).toBe(5000);
+    expect(s.categories.slice(-2)).toEqual(["c4998", "c4999"]);
+    expect(s.cells.filter((c) => c.si === 1).length).toBe(s.categories.length);
+  });
+});

@@ -98,7 +98,14 @@ export function shape(
   const wf = s.type === "waterfall";
   const spans = new Map<Cat, [number, number]>();
   // The row pass (grouping, aggregation, time parse) is cached per data array: key = the fields it reads.
-  const rk = JSON.stringify([s.x, s.y, s.y2, s.series, s.aggregate, s.xType]);
+  const rk = JSON.stringify([
+    s.x,
+    wide(s) ? s.measures : s.y,
+    s.y2,
+    s.series,
+    s.aggregate,
+    s.xType,
+  ]);
   const fast = fastTime(s, window, target(1), rk);
   if (fast) {
     ({ cats, reduced } = fast);
@@ -298,12 +305,16 @@ function other(s: ResolvedSpec, series: string[], rest: Cat[]): Cat {
   };
 }
 
+/** A kpi with a y array: each measure is a series (cell.si = measure index), thinned together. */
+const wide = (s: ResolvedSpec) => s.type === "kpi" && s.measures.length > 1;
+
 /**
  * The row pass: one reducer per (category, series) and one for y2 per category; pairs with no row
  * stay null. A time axis (when every label parses) is sorted by time.
  */
 function group(s: ResolvedSpec, time: boolean) {
-  const series: string[] = [];
+  const ms = wide(s) ? s.measures : null;
+  const series: string[] = ms ? [...ms] : [];
   const si = new Map<string, number>();
   const ci = new Map<string, number>();
   const cats: Cat[] = [];
@@ -312,7 +323,7 @@ function group(s: ResolvedSpec, time: boolean) {
     if (s.xType === "time" && row[s.x] == null) continue; // String(null) is a label, not a date
     const c = String(row[s.x]);
     const sk = s.series === null ? "" : String(row[s.series]);
-    let j = si.get(sk);
+    let j = ms ? 0 : si.get(sk);
     if (j === undefined) si.set(sk, (j = series.push(sk) - 1));
     let k = ci.get(c);
     if (k === undefined) {
@@ -320,9 +331,11 @@ function group(s: ResolvedSpec, time: boolean) {
       acc.push({ rs: [], a2: s.y2 === null ? undefined : agg(s.aggregate) });
     }
     const a = acc[k]!;
-    const r = (a.rs[j] ??= agg(s.aggregate));
-    const v = row[s.y];
-    if (typeof v === "number") r.add(v);
+    (ms ?? [s.y]).forEach((m, i) => {
+      const r = (a.rs[ms ? i : j] ??= agg(s.aggregate));
+      const v = row[m];
+      if (typeof v === "number") r.add(v);
+    });
     if (s.y2 !== null) {
       const v2 = row[s.y2];
       if (typeof v2 === "number") a.a2!.add(v2);

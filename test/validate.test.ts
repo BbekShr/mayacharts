@@ -208,7 +208,7 @@ describe("one snapshot per error code", () => {
     expect([e.code, e.path]).toEqual(["invalid-theme", "theme.acent"]);
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.theme.acent is not a theme token.
-        Valid tokens: font, fontSize, fg, fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, bad, line, gridDash, series1, series2, series3, series4, series5, series6, series7, series8.
+        Valid tokens: font, fontSize, fg, fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, warn, bad, line, gridDash, series1, series2, series3, series4, series5, series6, series7, series8.
         Did you mean "accent"?
         -> https://bbekshr.github.io/mayacharts/errors.html#invalid-theme"
     `);
@@ -714,5 +714,91 @@ describe("value magnitude ceiling", () => {
     expect(() =>
       render({ type: "bar", x: "c", y: "v", data: [{ c: "a", v: 1e300 }] }),
     ).not.toThrow();
+  });
+});
+
+describe("colorBy thresholds and gauge", () => {
+  beforeAll(async () => {
+    await import("../src/radial.ts");
+  });
+  const kpi = { ...base, type: "kpi" };
+  const two = { ...kpi, y: ["revenue", "units"] };
+  const gauge = { type: "gauge", data: base.data, y: "revenue" };
+  it.each([
+    { ...base, colorBy: { target: 15, better: "lower" } },
+    { ...base, colorBy: { target: 15, better: "higher" } },
+    { ...kpi, colorBy: { better: "lower" } },
+    { ...kpi, colorBy: { target: 100, warn: 80 } },
+    { ...kpi, colorBy: { target: 5, warn: 8, better: "lower" } },
+    { ...kpi, was: "units", yDomain: [0, 50] },
+    { ...two, colorBy: { target: 100 } },
+    { ...two, colorBy: { revenue: { target: 100, warn: 80 }, units: { better: "lower" } } },
+    { ...two, colorBy: { units: { better: "lower" } } },
+    { ...gauge, colorBy: { target: 60, warn: 40 }, yDomain: [0, 100], was: "units" },
+    { ...gauge, colorBy: { better: "lower" } },
+  ])("accepts %#", (spec) => ok(spec));
+  it.each([
+    [{ ...base, colorBy: { target: 15, warn: 10 } }, "option-unsupported", "colorBy.warn"],
+    [{ ...base, colorBy: { better: "lower" } }, "invalid-option", "colorBy.target"],
+    [{ ...base, colorBy: { target: 1, better: "up" } }, "invalid-option", "colorBy"],
+    [{ ...kpi, colorBy: {} }, "invalid-option", "colorBy"],
+    [{ ...kpi, colorBy: { warn: 80 } }, "invalid-option", "colorBy.warn"],
+    [{ ...kpi, colorBy: { target: 100, warn: 120 } }, "invalid-option", "colorBy.warn"],
+    [{ ...kpi, colorBy: { target: 100, warn: 100 } }, "invalid-option", "colorBy.warn"],
+    [
+      { ...kpi, colorBy: { target: 5, warn: 3, better: "lower" } },
+      "invalid-option",
+      "colorBy.warn",
+    ],
+    [{ ...kpi, colorBy: { target: Infinity } }, "invalid-option", "colorBy"],
+    [{ ...kpi, colorBy: "sign" }, "option-unsupported", "colorBy"],
+    // Keyed by measure: only a kpi with a y array, keys from y, threshold keys win.
+    [{ ...kpi, colorBy: { revenue: { target: 1 } } }, "invalid-option", "colorBy"],
+    [
+      { ...base, y: ["revenue", "units"], colorBy: { revenue: { target: 1 } } },
+      "invalid-option",
+      "colorBy",
+    ],
+    [
+      { ...two, colorBy: { revenue: { target: 1 }, month: { target: 1 } } },
+      "invalid-option",
+      "colorBy.month",
+    ],
+    [{ ...two, colorBy: { revenue: { warn: 1 } } }, "invalid-option", "colorBy.revenue.warn"],
+    [{ ...two, colorBy: { revenue: 5 } }, "invalid-option", "colorBy.revenue"],
+    [{ ...two, colorBy: { target: 1, revenue: { target: 1 } } }, "invalid-option", "colorBy"],
+    [{ ...two, yDomain: [0, 1] }, "option-unsupported", "yDomain"],
+    [{ ...two, was: "units" }, "option-unsupported", "was"],
+    [{ ...base, type: "line", was: "units" }, "option-unsupported", "was"],
+    [{ ...gauge, y: ["revenue", "units"] }, "invalid-option", "y"],
+    [{ ...gauge, x: "month" }, "option-unsupported", "x"],
+    [{ ...gauge, series: "region" }, "option-unsupported", "series"],
+    [{ ...gauge, colorBy: "units" }, "option-unsupported", "colorBy"],
+  ])("rejects %#", (spec, c, path) => {
+    expect(code(spec)).toEqual([c, path]);
+  });
+  it("names the bad side of the target", () => {
+    expect(err({ ...kpi, colorBy: { target: 100, warn: 120 } }).message).toMatchInlineSnapshot(`
+      "mayacharts: spec.colorBy.warn = 120 must be on the bad side of the target 100 (below it, since higher is better).
+        Example: { target: 100, warn: 80 }. If lower is better, add better: "lower".
+        -> https://bbekshr.github.io/mayacharts/errors.html#invalid-option"
+    `);
+    expect(err({ ...two, colorBy: { revenu: { target: 1 } } }).message).toContain(
+      'Did you mean "revenue"?',
+    );
+  });
+  it("resolves thresholds per measure", () => {
+    const r = resolve({ ...two, colorBy: { units: { target: 2, better: "lower" } } } as ChartSpec);
+    expect(r.colorBy).toBe(null); // the active measure (revenue) has none
+    expect(r.goals.get("units")).toEqual({ target: 2, warn: null, better: "lower" });
+    const o = resolve({ ...two, colorBy: { target: 9 } } as ChartSpec);
+    expect([...o.goals.keys()]).toEqual(["revenue", "units"]);
+    expect(o.colorBy).toEqual({ target: 9, warn: null, better: "higher" });
+  });
+  it("gauge needs the radial module, then renders the dial without a legend", () => {
+    const out = render({ ...gauge, colorBy: { target: 60, warn: 40 }, was: "units" } as ChartSpec);
+    expect(out).toContain('data-key="v"');
+    expect(out).not.toContain('data-maya="tone"');
+    expect(out).not.toContain("<span data-past>");
   });
 });

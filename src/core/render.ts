@@ -103,10 +103,30 @@
  *   mark ignores) and its description counts rows. Funnel with a `y` array and no `x` (wide
  *   form): shape makes one category per measure (label = field name, value = the measure's
  *   rows combined by aggregate, one series ""), and the y array is never a measure toggle.
- *   MarkCtx closures: fmt(field, v, step?), label(x, y, text, place, rotate?), tone(v), agg(kind),
+ *   MarkCtx closures: fmt(field, v, step?), label(x, y, text, place, rotate?), tone(v, field?), agg(kind),
  *   fail(code, path, headline, ...details), t(key, ...args); plus spec, shaped, width,
  *   height, plot, x (bottom-axis scale), y (left-axis scale). Modules import only
  *   registry.ts, svg.ts, scale.ts, ticks.ts and types.
+ *
+ * Thresholds (colorBy { target?, warn?, better? }): resolve() gives ResolvedSpec.goals, one
+ *   ResolvedGoal { target, warn, better } per measure (the object form applies to every measure,
+ *   a kpi's keyed form to its keys), and colorBy = the active measure's goal or null. ctx.tone(v,
+ *   field = active measure): "sign" as before; else null without a target; better "higher": v >=
+ *   target good, v >= warn warn, else bad; "lower" mirrors it. Tone words: good is text.above
+ *   (text.below when lower is better), bad the other, warn text.near. The tone legend lists
+ *   good, warn (only with a warn threshold) and bad; none for kpi or a goal without a target.
+ *   kpi and gauge status words: text.onTrack (good), atRisk (warn), offTrack (bad).
+ *
+ * kpi with a `y` array (ALL_Y, never a measure toggle): one tile per measure. shape() makes each
+ *   measure a series (Shaped.series = measures, cell.si = measure index) and thins them together
+ *   (the last two categories kept). Tile parts carry data-s = measure index % 8 and keys with the
+ *   measure field as the series part: headline `v~FIELD`, bullet `b~FIELD`, dots `FIELD~C`, line
+ *   `l~FIELD`, area `a~FIELD`. A single y keeps `v`, `b`, `~C`, `l~`, `a~`. The data table has
+ *   one column per measure, each toned by its own goal.
+ *
+ * gauge (radial module): one value, rows combined by spec.aggregate; one y, no x, no series.
+ *   Dial range yDomain, else 0 to a nice max over the value, target, warn and was. Its tone is
+ *   ctx.tone(value); the full mark contract is the header of radial.ts.
  *
  * Memory (spec.was, bar): the was field aggregated per (category, series) like colorBy. Each bar
  *   with a was value gets a ghost `<rect data-past>` in the marks group after every bar (so
@@ -191,7 +211,7 @@
  *                       types), data-s (palette slot = series index % 8), data-x (formatted
  *                       category), data-y (raw value), data-series (series key, "" when
  *                       none), data-f (formatted value). data-neg when value < 0.
- *                       Optional: data-tone="good|bad", data-q (ramp step), data-other
+ *                       Optional: data-tone="good|warn|bad|zero", data-q (ramp step), data-other
  *   [data-maya=labels] text and band tick text in axis-x/axis-y: data-key only (see the groups above)
  *                       (limit roll-up), data-depth, data-selected.
  *                       bar + y2: one `path[data-maya=line]` plus a point circle mark per
@@ -229,7 +249,7 @@
  *                       With y2 the legend also holds non-button <span data-s data-line>
  *                       entries (the line; the bar measure too when there is no series).
  *                       Ramp/tone legends are non-button <div data-maya="ramp|tone">.
- *                       spec.was (unless legend:false) appends <div class="maya-legend">
+ *                       spec.was on bar (unless legend:false) appends <div class="maya-legend">
  *                       <span data-past><i></i>WAS TITLE</span></div>, the ghosts' key.
  *   The tooltip reads its content from these attributes; the element never sees rows.
  *
@@ -280,7 +300,7 @@
  *     drill:  rect marks zoom (transform/opacity): in, the branch's marks map onto the plot,
  *             children start inside the branch's box, the rest is pushed out; out reverses
  *             it. The marks group is clipped to the plot meanwhile. Flows morph instead.
- *     rings:  sunburst slices are `circle[pathLength=360]` whose stroke dash is the arc; they
+ *     rings:  sunburst slices and the gauge's value arc are `circle[pathLength=360]` whose stroke dash is the arc; they
  *             tween the CSS properties r, stroke-width, stroke-dasharray and
  *             stroke-dashoffset, which sweeps in angle space (exception 3). On a drill the
  *             centre disk carries the drilled branch's key, so the clicked slice grows into
@@ -359,6 +379,7 @@ import type {
   ResolvedSpec,
   Row,
   Shaped,
+  Tone,
 } from "./types.ts";
 
 const CORE: Readonly<Record<string, Mark>> = {
@@ -476,7 +497,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const fv = fr?.[1].length ? fmt(fr[0], fr[1][fr[2]]) : null;
   if (fv !== null) s = { ...s, title: t(s, "frameOf", titleText(s), fv) };
 
-  // colorBy: sign/target give tone; a numeric field gives a 0..9 bucket over its extent.
+  // colorBy: sign/thresholds give tone; a numeric field gives a 0..9 bucket over its extent.
   const cb = s.colorBy;
   let lo = Infinity;
   let hi = -Infinity;
@@ -485,27 +506,33 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       const v = row[cb];
       if (typeof v === "number") ((lo = Math.min(lo, v)), (hi = Math.max(hi, v)));
     }
-  const tone = (v: number): "good" | "bad" | "zero" | null =>
-    cb === "sign"
-      ? v < 0
-        ? "bad"
-        : v > 0
-          ? "good"
-          : "zero"
-      : cb && typeof cb === "object"
-        ? v >= cb.target
-          ? "good"
-          : "bad"
-        : null;
-  const toneWord = (n: "good" | "bad") =>
+  // Thresholds: at or past target good, else at or past warn warn, else bad; "lower" mirrors it.
+  const tone = (v: number, field = s.y): Tone | null => {
+    if (cb === "sign") return v < 0 ? "bad" : v > 0 ? "good" : "zero";
+    const g = s.goals.get(field);
+    if (!g || g.target === null) return null;
+    const d = g.better === "lower" ? -1 : 1;
+    return d * v >= d * g.target ? "good" : g.warn !== null && d * v >= d * g.warn ? "warn" : "bad";
+  };
+  // Tone words (never colour alone): good is "above target" unless lower is better.
+  const toneWord = (n: Exclude<Tone, "zero">, field = s.y) =>
     t(
       s,
-      cb === "sign" ? (n === "good" ? "positive" : "negative") : n === "good" ? "above" : "below",
+      cb === "sign"
+        ? n === "good"
+          ? "positive"
+          : "negative"
+        : n === "warn"
+          ? "near"
+          : (n === "good") === (s.goals.get(field)?.better !== "lower")
+            ? "above"
+            : "below",
     );
-  const toneText = (v: number) => {
-    const n = tone(v);
-    return n && n !== "zero" ? toneWord(n) : "";
+  const toneText = (v: number, field = s.y) => {
+    const n = tone(v, field);
+    return n && n !== "zero" ? toneWord(n, field) : "";
   };
+  const goal = typeof cb === "object" ? cb : null;
 
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
   const boxes: number[][] = [];
@@ -768,26 +795,32 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         ? ""
         : `<span data-s="${shaped.series.length % 8}" data-line><i></i>${esc(s.titles.get(s.y2) ?? s.y2)}</span>`) +
       `</div>`;
-  else if (spec.legend !== false && cb !== null && s.series === null && s.type !== "kpi")
+  else if (
+    spec.legend !== false &&
+    cb !== null &&
+    s.series === null &&
+    s.type !== "kpi" &&
+    s.type !== "gauge"
+  )
     legend =
-      cb === "sign" || typeof cb === "object"
+      cb === "sign" || goal?.target != null
         ? `<div class="maya-legend" data-maya="tone">` +
           // Orbit and constellation colour by a measure the reader cannot guess: name it.
           (cb === "sign" && (s.type === "orbit" || s.type === "constellation")
             ? `<b>${esc(s.titles.get(s.y2 ?? s.y) ?? s.y2 ?? s.y)}</b>`
             : "") +
-          (["good", "bad"] as const)
+          (goal?.warn != null ? (["good", "warn", "bad"] as const) : (["good", "bad"] as const))
             .map((n) => `<span data-tone="${n}"><i></i>${esc(toneWord(n))}</span>`)
             .join("") +
           `</div>`
-        : hi > lo
+        : typeof cb === "string" && hi > lo
           ? `<div class="maya-legend" data-maya="ramp"><b>${esc(s.titles.get(cb) ?? cb)}</b><span>${esc(fmt(cb, lo))}</span><i></i><span>${esc(fmt(cb, hi))}</span></div>`
           : "";
   // A mark legend replaces the normal one, except scatter's size key, which stacks below it.
   if (markLegend !== null && spec.legend !== false)
     legend = s.type === "scatter" ? legend + markLegend : markLegend;
   // spec.was: a dashed swatch named by the was title says what the ghosts are.
-  if (s.was !== null && spec.legend !== false)
+  if (s.was !== null && s.type === "bar" && spec.legend !== false)
     legend += `<div class="maya-legend"><span data-past><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
   return {
     svg,

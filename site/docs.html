@@ -484,13 +484,13 @@
               <td>
                 <code
                   >bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel
-                  table treemap sunburst sankey chord marimekko waffle radial hexmap boxplot funnel
-                  weave units orbit constellation</code
+                  table treemap sunburst sankey chord marimekko waffle radial gauge hexmap boxplot
+                  funnel weave units orbit constellation</code
                 >
                 Core: ridgeline, beeswarm, parallel, table; Modules:
-                treemap/sunburst/marimekko/waffle (hierarchy), sankey/chord (flow), radial (radial),
-                hexmap (geo), boxplot/funnel (stats), weave (weave), units (units), orbit (orbit),
-                constellation (constellation)
+                treemap/sunburst/marimekko/waffle (hierarchy), sankey/chord (flow), radial/gauge
+                (radial), hexmap (geo), boxplot/funnel (stats), weave (weave), units (units), orbit
+                (orbit), constellation (constellation)
               </td>
             </tr>
             <tr>
@@ -566,7 +566,8 @@
               <td>all</td>
               <td>
                 Value; array adds measure toggle, first active (parallel and table: all shown;
-                funnel without <code>x</code>: one stage per field)
+                funnel without <code>x</code>: one stage per field; kpi: one tile per field, shown
+                together; gauge: one field only, no x and no series)
               </td>
             </tr>
             <tr>
@@ -581,13 +582,14 @@
             <tr>
               <td><a class="spec-anchor" id="was"></a><code>was</code></td>
               <td>field</td>
-              <td>bar</td>
+              <td>bar kpi gauge</td>
               <td>
-                Previous value field. Each bar gets a dashed ghost bar at its old value drawn over
-                it, keyed in the legend by the field's title, the tooltip says "was" and the value,
-                the data table gains a column, and the description names the 2 largest relative
-                moves (text.since, "Since Last week: North +12%, West -10%."). Not with stack or a y
-                array
+                Previous value field. kpi: a second comparison, such as the same period last year.
+                gauge: a marker at the old value. Each bar gets a dashed ghost bar at its old value
+                drawn over it, keyed in the legend by the field's title, the tooltip says "was" and
+                the value, the data table gains a column, and the description names the 2 largest
+                relative moves (text.since, "Since Last week: North +12%, West -10%."). Not with
+                stack or a y array
               </td>
             </tr>
             <tr>
@@ -718,10 +720,11 @@
               <td>
                 Localised UI strings with {0} placeholders: noData other back reset showing
                 drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
-                crumbs positive negative above below vs ofTarget total shareOf sortedBy ascending
-                descending fromTo reduced points point range density perCell mean rule play pause
-                frameOf frame was since forms waffle bars swarm perDot count rank speedBy gross
-                alike nearest max q3 median q1 min rows ofPrevious ofFirst
+                crumbs positive negative above below near onTrack atRisk offTrack vs change pts
+                target ofTarget total shareOf sortedBy ascending descending fromTo reduced points
+                point range density perCell mean rule play pause frameOf frame was since forms
+                waffle bars swarm perDot count rank speedBy gross alike nearest max q3 median q1 min
+                rows ofPrevious ofFirst
               </td>
             </tr>
             <tr>
@@ -753,8 +756,8 @@
               <td>[min, max]</td>
               <td>-</td>
               <td>
-                Fixed value-axis domain. Pass [hi, lo] to reverse it (ranks with 1 on top). Not
-                allowed with y array
+                Fixed value-axis domain. Pass [hi, lo] to reverse it (ranks with 1 on top). kpi: the
+                bullet scale. gauge: the dial range. Not allowed with y array
               </td>
             </tr>
             <tr>
@@ -909,9 +912,15 @@
             </tr>
             <tr>
               <td><a class="spec-anchor" id="colorBy"></a><code>colorBy</code></td>
-              <td>"sign" / {target: n} / field</td>
+              <td>"sign" / {target, warn, better} / {[y field]: {target, warn, better}} / field</td>
               <td>
-                Tone by sign of y, by a target value, or a ramp by a numeric field. Not with series
+                Tone by sign of y, by a target value, or a ramp by a numeric field. Not with series.
+                At or past the target is good; <code>better: "lower"</code> flips it. Types other
+                than kpi and gauge need <code>target</code> and take no <code>warn</code>. kpi and
+                gauge take any of target, warn and better; warn needs target and sits on the bad
+                side of it, and values between them are "at risk" (status words On track, At risk,
+                Off track). A kpi with a y array may key the thresholds by y field, for example
+                <code>{ "revenue": { "target": 60000 }, "churn": { "better": "lower" } }</code>
               </td>
             </tr>
             <tr>

@@ -128,6 +128,13 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
           colors that is not an array of strings.
         </p>
         <pre><code>{ "legend": true, "colors": ["#2563eb", "#f97316"] }</code></pre>
+        <p>
+          colorBy thresholds land here too. A warn threshold needs a target and must sit on the bad
+          side of it: below the target when higher is better, above it when lower is better. Keyed
+          thresholds (kpi with a y array) must name fields of y. A gauge takes one y field.
+        </p>
+        <pre><code>{ "type": "kpi", "colorBy": { "target": 100, "warn": 80 }, ... }
+{ "type": "kpi", "colorBy": { "target": 5, "warn": 8, "better": "lower" }, ... }</code></pre>
       </section>
       <section id="option-unsupported">
         <h2><code>option-unsupported</code></h2>
@@ -139,7 +146,9 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <pre><code>// scatter chart with size field
 { "type": "scatter", "x": "x", "y": "y", "size": "population", ... }
 // bar chart with path instead of x
-{ "type": "bar", "path": ["region", "state"], "y": "revenue", ... }</code></pre>
+{ "type": "bar", "path": ["region", "state"], "y": "revenue", ... }
+// warn is a kpi and gauge threshold; other types take { "target": n }
+{ "type": "bar", "colorBy": { "target": 100 }, ... }</code></pre>
       </section>
       <section id="stack-unsupported">
         <h2><code>stack-unsupported</code></h2>
