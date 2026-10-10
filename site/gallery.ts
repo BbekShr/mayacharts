@@ -384,7 +384,6 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     x: "state",
     y: "sales",
     series: "half",
-    labels: true,
     format: "compact",
     data: states.sort((p, q) => swing.get(q.state)! - swing.get(p.state)!),
   });
