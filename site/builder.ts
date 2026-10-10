@@ -323,7 +323,7 @@ function role(k: Role, names: string[], nums: string[]): HTMLElement {
   const row = make("div", { className: "field" });
   row.dataset["key"] = k;
   if (k === "y") {
-    // Several values: a measure toggle, or the columns of a table and the axes of parallel.
+    // Several values: a measure toggle, one KPI tile each, or the columns of a table and the axes of parallel.
     const now = () => [spec.y ?? []].flat() as string[];
     const chosen = now();
     const set_ = make("fieldset", { className: "checks" });
