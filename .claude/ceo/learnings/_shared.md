@@ -4,6 +4,9 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 ## Active
 
+- Tween any arc that changes angle as a pathLength circle dash, never a `d` morph: CSS moves A endpoints along the chord and the arc leaves its track (gauge, 2026-10-09).
+- Make banded zones lightness steps, not hues at equal alpha (they land near 1:1 against each other); add a 1 px edge tick.
+
 **Bar**
 
 - Beat the strongest reference of the same chart type, not our previous version. The owner supplied an ECharts sankey and a D3 radial as the bar on 2026-10-04 and Plotly's sunburst drill as the motion floor; name the reference in every visual brief.
