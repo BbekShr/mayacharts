@@ -48,16 +48,17 @@ const lines = (
   x: number,
   cy: number,
   anchor: string,
+  k: string,
   name: string,
   val: string,
   cap: number,
   room: (top: number, bottom: number) => boolean,
 ) => {
-  const at = { x: r(x), "text-anchor": anchor, "dominant-baseline": "middle" };
+  const at = { x: r(x), "text-anchor": anchor, "dominant-baseline": "middle", "data-key": k };
   if (room(cy - 14, cy + 15))
     return (
       el("text", { ...at, y: r(cy - 7), "data-nm": true }, esc(clip(name, cap))) +
-      el("text", { ...at, y: r(cy + 8), "data-v": true }, esc(val))
+      el("text", { ...at, y: r(cy + 8), "data-key": k + "~v", "data-v": true }, esc(val))
     );
   if (!room(cy - 8, cy + 8)) return "";
   const both = cap - val.length - 1 >= [...name].length; // name and value must both fit
@@ -100,9 +101,10 @@ const linkAttrs = (ctx: MarkCtx, h: Reach, l: L, c: number, off: number, tint: N
   "data-y": l.v,
   "data-f": ctx.fmt(ctx.spec.y, l.v),
 });
+const nodeKey = (n: N, off: number) => key("n", n.lv + off, n.name);
 const nodeAttrs = (ctx: MarkCtx, h: Reach, n: N, c: number, off: number, series = "") => ({
   "data-maya": "mark",
-  "data-key": key("n", n.lv + off, n.name),
+  "data-key": nodeKey(n, off),
   "data-c": c,
   ...paint(n),
   "data-n": n.i,
@@ -310,6 +312,7 @@ export const sankey: Mark = {
             left ? x(n) - 6 : x(n) + W + 6,
             cy + d * slack,
             left ? "end" : "start",
+            nodeKey(n, spec.drilled.length), // the label glides with its node
             n.name,
             val(n),
             cap,
@@ -433,7 +436,7 @@ export const chord: Mark = {
       // Top and bottom labels grow away from the ring; side labels centre on the arc.
       const cyy = pole ? ly + (cs > 0 ? -14 : 14) : ly;
       const anchor = pole ? "middle" : sn > 0 ? "start" : "end";
-      labels += lines(lx, cyy, anchor, n.name, val(n), maxCh, room[sn > 0 ? 1 : 0]!);
+      labels += lines(lx, cyy, anchor, nodeKey(n, 0), n.name, val(n), maxCh, room[sn > 0 ? 1 : 0]!);
     }
     return { marks, hits: "", labels };
   },

@@ -25,8 +25,8 @@ function rowPass(spec: ResolvedSpec, shaped: Shaped) {
   const by: Box[] = []; // sparse, indexed by cell id: filter() walks it in order
   const sj = new Map(shaped.visible.map((j) => [shaped.series[j], j]));
   spec.data.forEach((row, i) => {
-    const v = row[spec.y];
-    if (typeof v !== "number" || !Number.isFinite(v)) return;
+    const v = row[spec.y] as number;
+    if (!Number.isFinite(v)) return; // false for a non-number too
     const ci = cats.get(String(row[spec.x]));
     const si = sj.get(spec.series === null ? "" : String(row[spec.series]));
     if (ci === undefined || si === undefined) return;
@@ -415,7 +415,7 @@ export const funnel: Mark = {
       note:
         end === null || vals.length < 2
           ? ""
-          : `${spec.x ? shaped.categories.at(-1) : ti(shaped.categories.at(-1)!)}, ${ctx.t("ofFirst")}: ${nf(end)}.`,
+          : `${spec.x ? ctx.fmt(spec.x, shaped.categories.at(-1)) : ti(shaped.categories.at(-1)!)}, ${ctx.t("ofFirst")}: ${nf(end)}.`,
       table: {
         head: [
           spec.x ? ti(spec.x) : "",

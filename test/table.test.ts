@@ -16,6 +16,13 @@ const keys = (s: string) =>
 const order = (s: string) => [...new Set(keys(s).map((k) => decodeURIComponent(k.split("~")[1]!)))];
 
 describe("table", () => {
+  it("a column narrower than its padding draws no negative bar", () => {
+    const y = ["a", "b", "c", "d", "e", "f"];
+    const wide = Object.fromEntries(y.map((k, i) => [k, i + 1]));
+    expect(svg({ ...base, y, data: [{ item: "x", ...wide }] }, { width: 60 })).not.toMatch(
+      /width="-/,
+    );
+  });
   it("aggregates by row, one bar per row and measure, keyed measure~row", () => {
     const s = svg(base);
     expect(keys(s)).toEqual([

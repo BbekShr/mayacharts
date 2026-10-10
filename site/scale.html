@@ -10,12 +10,7 @@
     />
     <link rel="stylesheet" href="./site.css" />
     <!-- Apply the saved theme before first paint; theme.ts keeps the button in step. -->
-    <script>
-      try {
-        const m = localStorage.getItem("maya-theme");
-        if (m === "light" || m === "dark") document.documentElement.style.colorScheme = m;
-      } catch {}
-    </script>
+    <script src="./theme-init.js"></script>
   </head>
   <body class="wide">
     <header class="bar">

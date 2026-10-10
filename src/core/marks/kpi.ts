@@ -147,16 +147,15 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
   );
   top += fs + 4;
   lines.slice(0, k).forEach((c, i) => {
-    // The arrow carries the tone; the first comparison is toned throughout, the rest are quiet.
+    // The arrow carries the tone; the words stay quiet.
     const arrow = c.s.slice(0, 1);
     labels += text(
       {
         "data-kpi": i ? "of" : "delta",
-        "data-tone": i ? null : c.tone,
         y: r(top),
         "font-size": 12,
       },
-      (i && c.tone
+      (c.tone
         ? `<tspan data-tone="${c.tone}" aria-hidden="true" dominant-baseline="hanging">${arrow}</tspan>`
         : esc(arrow)) + esc(c.s.slice(1)),
     );
@@ -171,7 +170,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
   if (target !== null) {
     const [lo, hi] = spec.yDomain
       ? [Math.min(...spec.yDomain), Math.max(...spec.yDomain)]
-      : [0, Math.max(target, goal!.warn ?? 0) * 1.2]; // the dial must reach a lower-is-better warn line
+      : [0, Math.max(target, goal!.warn ?? 0, value) * 1.2]; // the dial holds a lower-is-better warn line and any value
     // `|| 0`: a span past Number.MAX_VALUE divides Infinity by Infinity.
     const pos = (v: number) => Math.min(Math.max((v - lo) / (hi - lo || 1) || 0, 0), 1);
     const bands = goal!.warn !== null;
@@ -196,7 +195,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
             "data-kpi": "band",
             "data-tone": t,
             fill: "var(--maya-fg)",
-            "fill-opacity": [0.06, 0.12, 0.2][dir > 0 ? 2 - i : i],
+            "fill-opacity": [0.1, 0.22, 0.4][dir > 0 ? 2 - i : i],
             x: r(L + iw * p),
             y: by,
             width: r(iw * (q - p)),
@@ -241,6 +240,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
       labels += text(
         {
           "data-kpi": "status",
+          "data-key": sKey("b"),
           "data-tone": status,
           y: by - 18,
           "font-size": 12,

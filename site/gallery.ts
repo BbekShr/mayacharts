@@ -10,16 +10,12 @@ import "mayacharts/orbit";
 import "mayacharts/weave";
 import type { ChartSpec, Row } from "../src/index.ts";
 import {
-  makeAccounts,
   makeData,
-  makeGrowth,
   makeLive,
   makeFunnel,
   makeMonths,
   makePoints,
-  makeRanks,
   makeReadings,
-  makeUnits,
   seedOf,
   mean,
   rollup,
@@ -346,7 +342,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
       warn: step(monthTotals[11]!.sales * 0.96, 1e5),
     },
     format: "compact",
-    titles: { sales: "Sales ($)", lastYear: "Last year" },
+    titles: { sales: "Sales ($)", lastYear: "last year" },
     data: monthTotals.map((m, i) => ({
       month: mon(m.monthMs),
       sales: m.sales,
@@ -374,6 +370,13 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
 
   // 16. Dumbbell: first half against second half by region and family.
   const half = FACTS.map((r) => ({ ...r, half: r.monthMs < Date.UTC(2025, 6, 1) ? "H1" : "H2" }));
+  // Biggest rise first: dumbbell lists categories in data order.
+  const swing = new Map<unknown, number>();
+  const states = (rollup(half, ["state", "half"], { sales: sum("sales") }) as Row[]).filter((r) =>
+    ["CA", "TX", "NY", "FL", "IL", "WA", "OH", "GA"].includes(String(r.state)),
+  );
+  for (const r of states)
+    swing.set(r.state, (swing.get(r.state) ?? 0) + (r.half === "H2" ? 1 : -1) * Number(r.sales));
   tile("dumbbell", {
     type: "dumbbell",
     title: "Sales by state, first half to second half",
@@ -381,10 +384,9 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     x: "state",
     y: "sales",
     series: "half",
+    labels: true,
     format: "compact",
-    data: (rollup(half, ["state", "half"], { sales: sum("sales") }) as Row[]).filter((r) =>
-      ["CA", "TX", "NY", "FL", "IL", "WA", "OH", "GA"].includes(String(r.state)),
-    ),
+    data: states.sort((p, q) => swing.get(q.state)! - swing.get(p.state)!),
   });
 
   // 17. Ridgeline: monthly sales profile for each region.

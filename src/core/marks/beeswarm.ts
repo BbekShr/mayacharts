@@ -1,4 +1,4 @@
-import { cbField, el, esc, memo, nameId, key, r } from "../svg.ts";
+import { cbField, el, memo, nameId, key, r } from "../svg.ts";
 import type {
   Axis,
   BandScale,
@@ -34,8 +34,8 @@ function scan(spec: ResolvedSpec, shaped: Shaped): Pt[] {
   const cats = new Map(shaped.categories.map((c, ci) => [c, ci]));
   const yd = spec.yDomain;
   spec.data.forEach((row, i) => {
-    const v = row[spec.y];
-    if (typeof v !== "number" || !Number.isFinite(v)) return;
+    const v = row[spec.y] as number;
+    if (!Number.isFinite(v)) return;
     if (yd && (v < yd[0] || v > yd[1])) return;
     // No x: one swarm (shape put every row in the single category "undefined").
     const ci = spec.x === "" ? 0 : cats.get(String(row[spec.x]));

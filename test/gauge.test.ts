@@ -49,7 +49,7 @@ describe("gauge", () => {
     expect(s).toContain("target 70");
     expect(
       [...s.matchAll(/fill="var\(--maya-fg\)" fill-opacity="([\d.]+)"/g)].map((m) => m[1]),
-    ).toEqual(["0.2", "0.12", "0.06"]);
+    ).toEqual(["0.4", "0.22", "0.1"]);
     expect(svg(base({ colorBy: { target: 70 } }))).not.toContain('fill-opacity="0.2"');
     expect(svg(base())).not.toContain('data-kpi="target"');
   });
@@ -111,5 +111,22 @@ describe("gauge", () => {
     const keys = (s: string) => [...s.matchAll(/data-key="([^"]*)"/g)].map((m) => m[1]).sort();
     expect(keys(svg(base({}, 20)))).toEqual(keys(svg(base({}, 90))));
     expect(arc(svg(base({}, 20)))).not.toBe(arc(svg(base({}, 90))));
+  });
+  it("the fill grows from zero on a dial that crosses it", () => {
+    const start = (v: number) => {
+      const a = arc(svg(base({ yDomain: [-15, 20] }, v)));
+      const dash = +a.match(/stroke-dasharray="([\d.]+)/)![1]!;
+      const from = 180 - +a.match(/stroke-dashoffset="([-\d.]+)"/)![1]!; // degrees from the left end, cap inset included
+      return [from, from + dash, a] as const;
+    };
+    const zero = (15 / 35) * 180; // 77.14
+    const [a0] = start(10);
+    expect(a0).toBeGreaterThan(zero - 1);
+    expect(a0).toBeLessThan(zero + 12);
+    const [, b1] = start(-10);
+    expect(b1).toBeLessThan(zero + 1);
+    expect(b1).toBeGreaterThan(zero - 12);
+    expect(labels(svg(base({ yDomain: [-15, 20] })))).toContain('stroke="var(--maya-fg-muted)"');
+    expect(labels(svg(base()))).not.toContain('stroke="var(--maya-fg-muted)"');
   });
 });

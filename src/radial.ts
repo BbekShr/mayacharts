@@ -126,7 +126,7 @@ export const radial: Mark = {
         "data-x": ctx.fmt(spec.x, cname),
         "data-series": ser,
         "data-y": s.c.value,
-        "data-f": ctx.fmt(spec.y, s.c.value),
+        "data-f": fv(s.c.value!),
         "data-tone": ctx.tone(s.v),
         "data-other": cname === OTHER,
       };
@@ -196,7 +196,7 @@ export const radial: Mark = {
           "dominant-baseline": "middle",
           "data-ring": "",
         },
-        esc(ctx.fmt(spec.y, v)),
+        esc(fv(v)),
       );
     }
 
@@ -205,27 +205,30 @@ export const radial: Mark = {
     const f = fv(total);
     const inner = R0 * 1.5;
     const fs = Math.max(12, Math.min(R0 * 0.4, 26, inner / (f.length * 0.62)));
-    const sub = R0 > 30 && fs * 1.7 + 14 < R0 * 2;
+    // Only a sum or count adds up across categories; a stack of means has no honest total.
+    const tot = spec.aggregate[0] !== "m"; // sum and count; mean, min, max all start with m
+    const sub = tot && R0 > 30 && fs * 1.7 + 14 < R0 * 2;
     // A keyed text mark, so the element counts the total up on first draw and on change.
-    marks += el(
-      "text",
-      {
-        "data-maya": "mark",
-        "data-key": key("t"),
-        "data-x": tt,
-        "data-y": total,
-        "data-f": f,
-        "data-series": "",
-        x: r(cx),
-        y: r(cy + (sub ? 6 : 0)),
-        "text-anchor": "middle",
-        "dominant-baseline": "middle",
-        "font-size": r(fs),
-        "font-weight": 650,
-        "data-total": "",
-      },
-      esc(f),
-    );
+    if (tot)
+      marks += el(
+        "text",
+        {
+          "data-maya": "mark",
+          "data-key": key("t"),
+          "data-x": tt,
+          "data-y": total,
+          "data-f": f,
+          "data-series": "",
+          x: r(cx),
+          y: r(cy + (sub ? 6 : 0)),
+          "text-anchor": "middle",
+          "dominant-baseline": "middle",
+          "font-size": r(fs),
+          "font-weight": 650,
+          "data-total": "",
+        },
+        esc(f),
+      );
     const cap = Math.floor((R0 * 1.8) / 6.2);
     if (sub)
       labels += el(
@@ -307,9 +310,8 @@ export const gauge: Mark = {
     const wasV = spec.was ? col(spec.was) : null;
     const fv = (v: number) => ctx.fmt(spec.y, v);
     // Dial range: yDomain, else nice bounds over zero and everything the dial must hold (negatives show).
-    const vs = [0, value, target ?? 0, warn ?? 0, wasV ?? 0];
-    const nd = niceTicks(Math.min(...vs), Math.max(...vs), 5).domain;
-    const [lo, hi] = spec.yDomain ?? nd;
+    const vs = [value, target ?? 0, warn ?? 0, wasV ?? 0];
+    const [lo, hi] = spec.yDomain ?? niceTicks(Math.min(0, ...vs), Math.max(0, ...vs), 5).domain;
     const span = hi - lo || 1;
     const fr = (v: number) => Math.min(1, Math.max(0, (v - lo) / span));
     const bands = target !== null && warn !== null;
@@ -351,11 +353,11 @@ export const gauge: Mark = {
       const lower = g!.better === "lower";
       const cuts = lower ? [a, target, warn, b] : [a, warn, target, b];
       cuts.slice(0, 3).forEach((_, i) => {
-        const [f0, f1] = [fr(cuts[i]!), fr(cuts[i + 1]!)].sort();
+        const [f0, f1] = [fr(cuts[i]!), fr(cuts[i + 1]!)].sort((p, q) => p - q);
         if (f1! > f0!)
           grid += el("path", {
             fill: "var(--maya-fg)",
-            "fill-opacity": [0.2, 0.12, 0.06][lower ? 2 - i : i],
+            "fill-opacity": [0.4, 0.22, 0.1][lower ? 2 - i : i],
             d: ring(R + 3, R + 6, f0!, f1!, 0),
           });
       });
@@ -371,21 +373,24 @@ export const gauge: Mark = {
     };
     // The value is a stroked circle like a sunburst slice (pathLength 360, dash = angle) so a change
     // sweeps along the track; the round caps sit inside the same inset as the track's rounded ends.
-    const [rm, cap] = [(ri + R) / 2, (t / 2 / ((ri + R) / 2)) * (180 / PI)];
-    const sweep = Math.max(0, fr(value) * 180 - 2 * cap);
+    const cap = (t / (ri + R)) * (180 / PI);
+    // The fill grows from zero (the dial minimum when zero is off the dial), either way round.
+    const z = fr(0) * 180;
+    const d0 = fr(value) * 180 - z;
+    const sweep = Math.max(0, Math.abs(d0) - 2 * cap);
     const marks = el("circle", {
       "data-maya": "mark",
       "data-key": "v",
       ...d,
       cx: r(cx),
       cy: r(cy),
-      r: r(rm),
+      r: r((ri + R) / 2),
       "data-depth": 1, // borrows the sunburst ring paint: no fill, stroke var(--c)
       "stroke-width": r(t),
       "stroke-linecap": "round",
       pathLength: 360,
       "stroke-dasharray": `${r(sweep)} ${r(360 - sweep)}`,
-      "stroke-dashoffset": r(180 - cap),
+      "stroke-dashoffset": r(180 - z - Math.min(d0, 0) - cap),
     });
     const hits = el("path", {
       "data-maya": "hit",
@@ -434,7 +439,7 @@ export const gauge: Mark = {
         { "data-kpi": "of", x: r(x), y: r(cy + 14), "text-anchor": a, "font-size": 11 },
         esc(s),
       );
-    labels += end(cx - R, "start", ctx.fmt(spec.y, lo)) + end(cx + R, "end", ctx.fmt(spec.y, hi));
+    labels += end(cx - R, "start", fv(lo)) + end(cx + R, "end", fv(hi));
     const tick = (v: number, r0: number, r1: number, a: Parameters<typeof el>[1]) => {
       const an = at(fr(v));
       return el("line", {
@@ -454,7 +459,7 @@ export const gauge: Mark = {
         {
           "data-kpi": "of",
           x: r(cx + rr * sx),
-          y: r(cy - rr * Math.cos(an) + (sx > 0.9 || sx < -0.9 ? 4 : 0)),
+          y: r(cy - rr * Math.cos(an) + (Math.abs(sx) > 0.9 ? 4 : 0)),
           "text-anchor": Math.abs(sx) < 0.25 ? "middle" : sx > 0 ? "start" : "end",
           "font-size": 11,
         },
@@ -462,28 +467,27 @@ export const gauge: Mark = {
       );
     }
     if (bands) labels += tick(warn, R + 2, R + 7, { stroke: "var(--maya-fg-muted)" });
+    if (lo * hi < 0) labels += tick(0, ri, R, { stroke: "var(--maya-fg-muted)" }); // where the fill starts
     const dv = wasV === null ? 0 : value - wasV;
-    const nf = (o: Intl.NumberFormatOptions) =>
-      new Intl.NumberFormat(spec.locale, {
-        maximumFractionDigits: 1,
-        signDisplay: "exceptZero",
-        ...o,
-      });
+    const pct = new Intl.NumberFormat(spec.locale, {
+      maximumFractionDigits: 1,
+      signDisplay: "exceptZero",
+      style: "percent",
+      notation: "compact",
+    });
     const minus = (s: string) => s.replace("-", "\u2212");
     const chg =
       wasV === null
         ? ""
         : ctx.t(
             "change",
-            dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u25AC",
+            dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u2192",
             minus(
               fv(1).includes("%")
                 ? ctx.t("pts", (dv > 0 ? "+" : "") + fv(dv).replace("%", "").trim())
                 : (dv > 0 ? "+" : "") + fv(dv),
             ),
-            minus(
-              nf({ style: "percent", notation: "compact" }).format(wasV ? dv / Math.abs(wasV) : 0),
-            ),
+            minus(pct.format(wasV ? dv / Math.abs(wasV) : 0)),
             spec.titles.get(spec.was!) ?? spec.was!,
           );
     if ((status && !above) || chg) {

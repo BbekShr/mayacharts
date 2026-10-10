@@ -280,7 +280,7 @@ describe("titles, labels, tone", () => {
     expect(p.legend).not.toContain("warn");
     // better alone (no target) steers nothing here: no tone, no tone legend
     const b = renderParts({ ...simple, type: "kpi", colorBy: { better: "lower" } });
-    expect(attr(b.svg.replace(/<text[^>]*>/g, ""), "data-tone")).toEqual([]); // the delta text is kpi.ts's
+    expect(attr(b.svg.replace(/<text[^>]*>/g, ""), "data-tone")).toEqual(["bad"]); // the delta arrow is kpi.ts's
   });
   it("warn: a third tone between target and bad, named at risk", () => {
     const k: ChartSpec = { ...simple, type: "kpi", colorBy: { target: 25, warn: 15 } };

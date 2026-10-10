@@ -1,6 +1,6 @@
 // Light and dark toggle shared by the demo pages: auto -> light -> dark, remembered across pages. Each
-// page also applies the saved mode in an inline <head> script, so it never paints in the OS
-// scheme first and flips (same "maya-theme" key).
+// page also applies the saved mode in public/theme-init.js (a classic script in its head), so it never
+// paints in the OS scheme first and flips (same "maya-theme" key).
 // Charts follow it because the element inherits the page's `color-scheme`.
 // A function, not a bare import: package.json "sideEffects" tree-shakes side-effect-only imports.
 import type { ChartSpec } from "../src/index.ts";

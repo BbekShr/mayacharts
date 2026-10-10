@@ -129,4 +129,15 @@ describe("radial", () => {
     expect(out).toMatch(/>Jan</);
     expect(out).toMatch(/2025</);
   });
+  it("the centre total only appears for sums and counts", () => {
+    const d = [
+      { m: "a", v: 10 },
+      { m: "a", v: 30 },
+      { m: "b", v: 20 },
+    ];
+    expect(svg(plain(d))).toContain('data-total=""');
+    expect(svg(plain(d, { aggregate: "count" }))).toContain('data-total=""');
+    expect(svg(plain(d, { aggregate: "mean" }))).not.toContain('data-total=""');
+    expect(svg(plain(d, { aggregate: "max" }))).not.toContain('data-total=""');
+  });
 });

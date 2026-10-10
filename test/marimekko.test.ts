@@ -92,4 +92,21 @@ describe("marimekko", () => {
   it("requires series", () => {
     expect(() => render({ type: "marimekko", x: "r", y: "v", data })).toThrow();
   });
+  it("marimekko and waffle format the x field; keys keep the raw category", () => {
+    const dates = ["2024-01-01", "2024-02-01"].flatMap((r) => [{ r, t: "A", v: 1 }]);
+    for (const type of ["marimekko", "waffle"] as const) {
+      const sr = type === "waffle" ? {} : { series: "t" };
+      const s = svg({
+        type,
+        x: "r",
+        y: "v",
+        ...sr,
+        format: { r: "month" },
+        data: dates,
+      } as ChartSpec);
+      expect(s).toContain('data-x="Jan 2024"');
+      expect(s).not.toContain('data-x="2024');
+      expect(s).toContain("2024-01-01");
+    }
+  });
 });
