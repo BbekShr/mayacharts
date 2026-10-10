@@ -42,9 +42,22 @@ test.describe("units form control", () => {
     const before = await circles(page, "units");
     const radios = tile.locator("[data-maya=form] [role=radio]");
     await expect(radios).toHaveCount(3);
+    // Count the flight in the task that renders (maya-render fires right after the patch): a poll
+    // a frame later can miss it in Firefox when the click and the flight land in different frames.
+    await page.evaluate(() => {
+      const el = document.getElementById("units")!;
+      el.addEventListener(
+        "maya-render",
+        () =>
+          ((window as any).__flight = el
+            .shadowRoot!.querySelector("svg")!
+            .getAnimations({ subtree: true }).length),
+        { once: true },
+      );
+    });
     await radios.nth(2).click();
-    // The flight is under way on the next frame (the keyed FLIP: transform, not geometry).
-    expect(await flying(page, "units")).toBeGreaterThan(0);
+    // The flight is under way at the render (the keyed FLIP: transform, not geometry).
+    await expect.poll(() => page.evaluate(() => (window as any).__flight)).toBeGreaterThan(0);
     await expect.poll(() => view(page, "units")).toEqual({ form: 2 });
     const after = await circles(page, "units");
     expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());

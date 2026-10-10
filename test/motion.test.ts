@@ -509,11 +509,11 @@ describe("motion", () => {
     const ids = (b: Element) => b.querySelectorAll("#g1").length;
     const box = document.createElement("div");
     patch(box, svg(lg("red"), 5), false);
-    patch(box, svg(lg("red"), 9), true); // equal defs: the old node moves into the new group
+    patch(box, svg(lg("red"), 9), true); // the ghost drops its defs outright
     expect(box.querySelectorAll("[data-ghost]").length).toBe(1);
     expect(ids(box)).toBe(1);
     expect(box.querySelector("[data-ghost] defs")).toBeNull();
-    patch(box, svg(lg("blue"), 3), true); // changed defs: the ghost loses its own
+    patch(box, svg(lg("blue"), 3), true);
     expect(ids(box)).toBe(1);
     expect(box.querySelector("[data-ghost] defs")).toBeNull();
   });

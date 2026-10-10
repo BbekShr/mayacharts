@@ -131,15 +131,15 @@ for (const path of PAGES) {
   });
 }
 
-test("reduced motion: no animations after update", async ({ page }) => {
+test("reduced motion: no animations after load or update", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await open(page, "index.html");
+  const running = () =>
+    page.locator("#live svg").evaluate((svg) => svg.getAnimations({ subtree: true }).length);
+  expect(await running()).toBe(0);
   await page.click("#update");
   await page.waitForTimeout(150);
-  const n = await page
-    .locator("#live [data-maya=mark]")
-    .evaluateAll((els) => els.reduce((s, e) => s + e.getAnimations().length, 0));
-  expect(n).toBe(0);
+  expect(await running()).toBe(0);
 });
 
 test("keyboard: Tab reaches the chart, ArrowRight activates and announces", async ({ page }) => {
