@@ -96,7 +96,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Dumbbell sort**: `sort` orders categories by the total of both values, not by the gap between them.
 - **Ridgeline scale**: rows share one value scale from zero with no per-row axis; peaks overlap the row above by at most 40%. A scale from the data minimum does not help when rows differ in magnitude, and per-row scaling would exaggerate small movements.
 - **Beeswarm height**: a swarm taller than its row is clamped to the row, so overflow points overlap.
-- **Parallel axes**: every axis runs from 0 (or the minimum) to a nice maximum; no per-axis domain, and nulls break a line.
+- **Parallel axes**: every axis runs over its own data extent, rounded to nice ticks (not anchored at zero, so a measure of 95 to 99 fills its axis); no per-axis domain, and nulls break a line.
 - **Table height**: rows that do not fit the chart's height are not drawn (no scroll or paging); `limit` cuts to the top N with no Other row.
 - **Chord layout**: from-nodes on the left half, to-nodes on the right (label cuts are under Chord labels).
 - **Marimekko values**: null and negative values count as 0; there is no percentage axis.

@@ -101,3 +101,14 @@ describe("parallel end labels", () => {
     expect(g).toMatch(/text-anchor="start"[^>]*>(North|South|East|West)</);
   });
 });
+
+describe("parallel axes follow the data extent", () => {
+  it("values 95..99 give ticks that do not start at 0", () => {
+    const data = [95, 97, 99].map((v, i) => ({ region: "r" + i, sales: v, units: v, margin: v }));
+    const s = render({ ...spec, data });
+    const ticks = [...s.matchAll(/<text[^>]*text-anchor="end"[^>]*>([^<]*)</g)].map((m) => m[1]);
+    expect(ticks.length).toBeGreaterThan(2);
+    expect(ticks).not.toContain("0");
+    expect(ticks).toContain("94");
+  });
+});
