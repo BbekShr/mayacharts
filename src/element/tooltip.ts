@@ -302,7 +302,9 @@ export function tooltip(
     const g = group(m);
     const speak = () =>
       announce(
-        `${a(m, "data-x") && a(m, "data-x") + ": "}${g.map((k) => [a(k, "data-label") || a(k, "data-series"), a(k, "data-f"), tone(k)].filter(Boolean).join(" ")).join(", ")}`,
+        `${a(m, "data-x") && a(m, "data-x") + ": "}${g.map((k) => [a(k, "data-label") || a(k, "data-series"), a(k, "data-f"), tone(k)].filter(Boolean).join(" ")).join(", ")}`
+          .replace(/\n/g, ", ")
+          .replace(/\t/g, " "),
       );
     // tooltip:false: keys and the live region still work, the popover and guides do not.
     if (!on()) return say && speak();
