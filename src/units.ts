@@ -16,7 +16,7 @@
  *   - swarm: dots along the y axis (the only form with axes), dodged like beeswarm.
  */
 import { register } from "./core/registry.ts";
-import { cbField, el, esc, key, nameId, r } from "./core/svg.ts";
+import { cbField, clip, el, esc, key, nameId, r } from "./core/svg.ts";
 import type { LinearScale, Mark, ResolvedSpec, Shaped } from "./core/types.ts";
 
 const MAX = 1500;
@@ -188,7 +188,7 @@ export const units: Mark = {
       cols.forEach((c, i) => {
         const room = Math.max(0, Math.floor(sw / 6.5));
         const name = ctx.fmt(spec.x, pts.find((d) => d.ci === c)!.g);
-        const fit = name.length <= room ? name : room >= 4 ? `${name.slice(0, room - 1)}…` : "";
+        const fit = name.length <= room ? name : room >= 4 ? clip(name, room) : "";
         const mid = r(ax + (i + 0.5) * sw);
         if (fit)
           labels += el(
