@@ -249,7 +249,7 @@
  *                       With y2 the legend also holds non-button <span data-s data-line>
  *                       entries (the line; the bar measure too when there is no series).
  *                       Ramp/tone legends are non-button <div data-maya="ramp|tone">.
- *                       spec.was (unless legend:false) appends <div class="maya-legend">
+ *                       spec.was on bar (unless legend:false) appends <div class="maya-legend">
  *                       <span data-past><i></i>WAS TITLE</span></div>, the ghosts' key.
  *   The tooltip reads its content from these attributes; the element never sees rows.
  *
@@ -795,7 +795,13 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         ? ""
         : `<span data-s="${shaped.series.length % 8}" data-line><i></i>${esc(s.titles.get(s.y2) ?? s.y2)}</span>`) +
       `</div>`;
-  else if (spec.legend !== false && cb !== null && s.series === null && s.type !== "kpi")
+  else if (
+    spec.legend !== false &&
+    cb !== null &&
+    s.series === null &&
+    s.type !== "kpi" &&
+    s.type !== "gauge"
+  )
     legend =
       cb === "sign" || goal?.target != null
         ? `<div class="maya-legend" data-maya="tone">` +
@@ -814,7 +820,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   if (markLegend !== null && spec.legend !== false)
     legend = s.type === "scatter" ? legend + markLegend : markLegend;
   // spec.was: a dashed swatch named by the was title says what the ghosts are.
-  if (s.was !== null && spec.legend !== false)
+  if (s.was !== null && s.type === "bar" && spec.legend !== false)
     legend += `<div class="maya-legend"><span data-past><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
   return {
     svg,

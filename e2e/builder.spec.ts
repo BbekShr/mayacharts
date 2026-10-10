@@ -49,7 +49,7 @@ for (const scheme of ["light", "dark"] as const)
   test(`every chart type draws its sample (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     const all = await types(page);
-    expect(all.length).toBe(26);
+    expect(all.length).toBe(27);
     for (const t of all) {
       await pick(page, t);
       await expect.poll(async () => ((await spec(page)) as { type: string }).type).toBe(t);

@@ -306,15 +306,15 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Style
 
-| Field     | Type                                                                          | Applies to                 | Default       | Meaning                                                                                                                                                                                                                                                                              |
-| --------- | ----------------------------------------------------------------------------- | -------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `colors`  | string[] or {[series]: color}                                                 | all                        | theme palette | Max 8; slot assignment stable across updates                                                                                                                                                                                                                                         |
-| `colorBy` | "sign" / {target, warn, better} / {[y field]: {target, warn, better}} / field | all but heatmap and sankey | -             | Tone by sign or target (at or past it is good; `better: "lower"` flips it), or ramp by numeric field. Not with `series`. Only kpi and gauge take `warn` (on the bad side of `target`, the "near target" band) or omit `target`; a kpi with a `y` array may key thresholds by y field |
-| `theme`   | {[token]: css}                                                                | all                        | {}            | Theme token overrides (CSS values, allowlisted)                                                                                                                                                                                                                                      |
-| `grid`    | boolean                                                                       | all                        | true          | Grid lines perpendicular to the value axis                                                                                                                                                                                                                                           |
-| `xAxis`   | boolean                                                                       | all                        | true          | Bottom axis                                                                                                                                                                                                                                                                          |
-| `yAxis`   | boolean                                                                       | all                        | true          | Left axis                                                                                                                                                                                                                                                                            |
-| `table`   | boolean                                                                       | all                        | true          | Visually hidden data table for screen readers                                                                                                                                                                                                                                        |
+| Field     | Type                                                                          | Applies to                 | Default       | Meaning                                                                                                                                                                                                                                                                          |
+| --------- | ----------------------------------------------------------------------------- | -------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `colors`  | string[] or {[series]: color}                                                 | all                        | theme palette | Max 8; slot assignment stable across updates                                                                                                                                                                                                                                     |
+| `colorBy` | "sign" / {target, warn, better} / {[y field]: {target, warn, better}} / field | all but heatmap and sankey | -             | Tone by sign or target (at or past it is good; `better: "lower"` flips it), or ramp by numeric field. Not with `series`. Only kpi and gauge take `warn` (on the bad side of `target`, the "at risk" band) or omit `target`; a kpi with a `y` array may key thresholds by y field |
+| `theme`   | {[token]: css}                                                                | all                        | {}            | Theme token overrides (CSS values, allowlisted)                                                                                                                                                                                                                                  |
+| `grid`    | boolean                                                                       | all                        | true          | Grid lines perpendicular to the value axis                                                                                                                                                                                                                                       |
+| `xAxis`   | boolean                                                                       | all                        | true          | Bottom axis                                                                                                                                                                                                                                                                      |
+| `yAxis`   | boolean                                                                       | all                        | true          | Left axis                                                                                                                                                                                                                                                                        |
+| `table`   | boolean                                                                       | all                        | true          | Visually hidden data table for screen readers                                                                                                                                                                                                                                    |
 
 ### Time axes
 
@@ -972,7 +972,7 @@ maya-chart {
 | tooltipFg | --maya-tooltip-fg                  | --maya-fg                            | --maya-fg             | Tooltip text                    |
 | focus     | --maya-focus                       | --maya-accent                        | --maya-accent         | Keyboard focus ring             |
 | good      | --maya-good                        | #1a7f37                              | #3fb950               | colorBy positive / above target |
-| warn      | --maya-warn                        | #996600                              | #ffcc33               | colorBy near target (warn band) |
+| warn      | --maya-warn                        | #996600                              | #ffcc33               | colorBy at risk (warn band)     |
 | bad       | --maya-bad                         | #cf222e                              | #f85149               | colorBy negative / below target |
 | series1-8 | --maya-series-1 to --maya-series-8 | 1: --maya-accent; 2-8: oklch presets | same as light         | Series colours (max 8)          |
 | line      | --maya-line                        | 2.25                                 | 2.25                  | Line width                      |
@@ -1098,15 +1098,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 14,714 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 15,040 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,438,382,255 total, 2,985,652 output
-- claude-sonnet-5-5: 639,318,177 total, 90,341 output
+- claude-opus-5-5: 1,461,108,380 total, 3,019,392 output
+- claude-sonnet-5-5: 652,989,178 total, 92,401 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
-- claude-haiku-4-5-20251001: 28,286,070 total, 1,291 output
+- claude-haiku-4-5-20251001: 29,341,865 total, 1,363 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,302,879,745 total, 3,512,512 output
+- all: 2,340,332,666 total, 3,548,384 output
 
 <!-- tokens:end -->
 

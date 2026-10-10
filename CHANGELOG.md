@@ -8,7 +8,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Added
 
-- `colorBy` thresholds: `{ target?, warn?, better? }`. `better: "lower"` flips the test, so a value at or under the target is good (churn, cost, latency). kpi and gauge take any of the three keys, and `warn` (which needs a target and sits on the bad side of it) adds a third tone, `warn`, read as "near target". Other types still need `target` and take no `warn`.
+- `colorBy` thresholds: `{ target?, warn?, better? }`. `better: "lower"` flips the test, so a value at or under the target is good (churn, cost, latency). kpi and gauge take any of the three keys, and `warn` (which needs a target and sits on the bad side of it) adds a third tone, `warn`, read as "at risk". Other types still need `target` and take no `warn`.
 - A kpi with a `y` array shows every measure together instead of a measure toggle, and `colorBy` may key thresholds by y field: `{ revenue: { target: 1.8e6 }, churn: { better: "lower" } }`.
 - `was` works on kpi (a second comparison, such as the same period last year) and gauge.
 - `gauge` chart type in `mayacharts/radial`: one value on a dial whose range is `yDomain`.

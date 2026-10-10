@@ -331,17 +331,11 @@ function group(s: ResolvedSpec, time: boolean) {
       acc.push({ rs: [], a2: s.y2 === null ? undefined : agg(s.aggregate) });
     }
     const a = acc[k]!;
-    if (ms)
-      ms.forEach((m, j) => {
-        const r = (a.rs[j] ??= agg(s.aggregate));
-        const v = row[m];
-        if (typeof v === "number") r.add(v);
-      });
-    else {
-      const r = (a.rs[j] ??= agg(s.aggregate));
-      const v = row[s.y];
+    (ms ?? [s.y]).forEach((m, i) => {
+      const r = (a.rs[ms ? i : j] ??= agg(s.aggregate));
+      const v = row[m];
       if (typeof v === "number") r.add(v);
-    }
+    });
     if (s.y2 !== null) {
       const v2 = row[s.y2];
       if (typeof v2 === "number") a.a2!.add(v2);

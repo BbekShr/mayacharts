@@ -5,6 +5,7 @@ import { MayaChart } from "../src/element/maya-chart.ts";
 import { renderParts } from "../src/core/render.ts";
 import "../src/flow.ts";
 import "../src/stats.ts";
+import { TEXT } from "../src/core/strings.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 vi.mock("../src/core/render.ts", async (orig) => {
@@ -680,5 +681,72 @@ describe("review fixes", () => {
     el.remove();
     await frame();
     expect(n).toBe(0);
+  });
+
+  it("tooltip tone words follow core: warn is near, lower-is-better swaps above and below", async () => {
+    const words = async (better: "higher" | "lower", v: number) => {
+      const el = await mount((e) => {
+        e.spec = {
+          type: "kpi",
+          x: "m",
+          y: "v",
+          data: [
+            { m: "a", v },
+            { m: "b", v },
+          ],
+          colorBy: { target: 15, warn: better === "lower" ? 20 : 10, better },
+        } as ChartSpec;
+      });
+      const m = marks(el).find((k) => k.getAttribute("data-key") === "b")!;
+      m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+      m.dispatchEvent(
+        Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+      );
+      return el.shadowRoot!.querySelector(".maya-tip")!.textContent;
+    };
+    expect(await words("higher", 5)).toContain("below target");
+    expect(await words("higher", 12)).toContain(TEXT.near);
+    expect(await words("higher", 20)).toContain("above target");
+    expect(await words("lower", 12)).toContain("below target");
+    expect(await words("lower", 18)).toContain(TEXT.near);
+    expect(await words("lower", 25)).toContain("above target");
+  });
+
+  it("kpi tooltip prints data-label and anchors around every headline number", async () => {
+    const el = await mount((e) => {
+      e.spec = {
+        type: "kpi",
+        x: "m",
+        y: ["a", "b"],
+        data: [{ m: "t", a: 1, b: 2 }],
+        titles: { a: "Alpha", b: "Beta" },
+      } as ChartSpec;
+    });
+    const root = el.shadowRoot!;
+    const vs = [...root.querySelectorAll('[data-key="v"],[data-key^="v~"]')];
+    expect(vs.length).toBeGreaterThan(1);
+    const m = marks(el)[0]!;
+    m.setAttribute("data-label", "Shown");
+    m.setAttribute("data-series", "key");
+    vs.forEach(
+      (v, i) =>
+        (v.getBoundingClientRect = () =>
+          ({
+            left: 0,
+            top: i * 100,
+            right: 10,
+            bottom: i * 100 + 10,
+            width: 10,
+            height: 10,
+          }) as DOMRect),
+    );
+    m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+    m.dispatchEvent(
+      Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    expect(root.querySelector(".maya-tip")!.textContent).toContain("Shown");
+    const probe = root.querySelector<HTMLElement>(".maya-probe")!;
+    if (probe)
+      expect(parseFloat(probe.style.height)).toBeGreaterThanOrEqual((vs.length - 1) * 100 + 10);
   });
 });

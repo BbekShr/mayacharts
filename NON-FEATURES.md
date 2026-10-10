@@ -81,6 +81,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Sunburst slivers**: once a slice would be under 4 px across, it and its smaller siblings draw as one grey "Other (n)" slice that does not drill; its rows are only in the data table. Slices under 2 px of outer arc are not drawn, nor their children. Rotated names skip the label overlap scan; each is fitted to its own ring instead.
 - **Entrance**: the first draw animates once; server-rendered charts never replay it.
 - **Measure toggle up to 4 options**: a `y` array works with more measures, but the sliding indicator is styled for 2 to 4.
+- **kpi text fit is estimated**: tile titles and comparison lines are cut using about 6.6 px per character of 12 px text, not measured, so wide glyphs or CJK text can still overflow a narrow tile.
 - **kpi in a short box**: the sparkline needs about 28 px of free height; with a target bullet and too little room, the bullet stays and the sparkline is dropped.
 - **kpi delta is against the previous period only**: compare with a year earlier by passing two rows (for example "2025 YTD" and "2026 YTD") as the x periods.
 - **Box plot scope**: vertical boxes only; no notches, violins or mean marker; every row is drawn as a dot only when a box holds 30 rows or fewer (outliers always); quartiles use linear interpolation (R-7, Excel QUARTILE.INC); median labels sit beside a lone series' box when they fit, else above each upper cap.

@@ -795,7 +795,10 @@ describe("colorBy thresholds and gauge", () => {
     expect([...o.goals.keys()]).toEqual(["revenue", "units"]);
     expect(o.colorBy).toEqual({ target: 9, warn: null, better: "higher" });
   });
-  it("gauge needs the radial module, then renders the no-data stub", () => {
-    expect(render(gauge as ChartSpec)).toContain('data-maya="empty"');
+  it("gauge needs the radial module, then renders the dial without a legend", () => {
+    const out = render({ ...gauge, colorBy: { target: 60, warn: 40 }, was: "units" } as ChartSpec);
+    expect(out).toContain('data-key="v"');
+    expect(out).not.toContain('data-maya="tone"');
+    expect(out).not.toContain("<span data-past>");
   });
 });

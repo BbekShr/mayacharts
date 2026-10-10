@@ -83,7 +83,12 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
     ? " " + t(spec, "reduced", ...shaped.reduced.map((v) => fmt("", v))) + "."
     : "";
   return (
-    (n === 1 ? `${s}. 1 value: ${f(lo)}.` : `${s}. ${n} values from ${f(lo)} to ${f(hi)}.`) + cut
+    (n === 1 ? `${s}. 1 value: ${f(lo)}` : `${s}. ${n} values from ${f(lo)} to ${f(hi)}`) +
+    // A single-value goal (kpi, gauge) names its target; the data table adds the tone word.
+    (typeof spec.colorBy === "object" && spec.colorBy?.target != null
+      ? `, ${t(spec, "target")} ${f(spec.colorBy.target)}.`
+      : ".") +
+    cut
   );
 }
 
@@ -175,7 +180,7 @@ export function dataTable(
     const by = new Map(shaped.cells.map((c) => [c.ci + "," + c.si, c.value]));
     rows = "";
     for (let i = 0; i < Math.min(n, CAP); i++) {
-      rows += `<tr><th scope="row">${esc(shaped.time ? fmt(spec.x, shaped.categories[i]) : shaped.categories[i]!)}</th>`;
+      rows += `<tr><th scope="row">${esc(!spec.x ? ti(spec.y) : shaped.time ? fmt(spec.x, shaped.categories[i]) : shaped.categories[i]!)}</th>`;
       for (const j of shaped.visible)
         rows +=
           `<td>${cell(wide ? spec.measures[j]! : spec.y, by.get(i + "," + j))}</td>` +

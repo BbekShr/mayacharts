@@ -282,24 +282,22 @@ describe("titles, labels, tone", () => {
     const b = renderParts({ ...simple, type: "kpi", colorBy: { better: "lower" } });
     expect(attr(b.svg.replace(/<text[^>]*>/g, ""), "data-tone")).toEqual([]); // the delta text is kpi.ts's
   });
-  it("warn: a third tone between target and bad, named near target", () => {
+  it("warn: a third tone between target and bad, named at risk", () => {
     const k: ChartSpec = { ...simple, type: "kpi", colorBy: { target: 25, warn: 15 } };
     const p = renderParts(k, { width: 300, height: 220 });
-    expect(attr(p.svg.replace(/<text[^>]*>/g, ""), "data-tone").slice(0, 3)).toEqual([
+    expect(attr((p.svg.match(/<circle[^>]*>/g) ?? []).join(""), "data-tone").slice(0, 3)).toEqual([
       "bad",
       "warn",
       "good",
     ]);
-    expect(p.table).toContain("20 (near target)");
+    expect(p.table).toContain("20 (at risk)");
     const low = renderParts(
       { ...k, colorBy: { target: 15, warn: 25, better: "lower" } },
       { width: 300, height: 220 },
     );
-    expect(attr(low.svg.replace(/<text[^>]*>/g, ""), "data-tone").slice(0, 3)).toEqual([
-      "good",
-      "warn",
-      "bad",
-    ]);
+    expect(attr((low.svg.match(/<circle[^>]*>/g) ?? []).join(""), "data-tone").slice(0, 3)).toEqual(
+      ["good", "warn", "bad"],
+    );
   });
   it("kpi with a y array tones each measure by its own thresholds", () => {
     const p = renderParts({

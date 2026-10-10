@@ -276,8 +276,11 @@ export function tooltip(
     const v = a(k, "data-tone"),
       s = spec();
     if (!v || v == "zero") return "";
-    const tgt = typeof s?.colorBy === "object";
-    return str(s ?? {}, v === "good" ? (tgt ? "above" : "positive") : tgt ? "below" : "negative");
+    if (typeof s?.colorBy !== "object") return str(s ?? {}, v === "good" ? "positive" : "negative");
+    // Same words as core's toneWord: warn is "near", lower-is-better swaps above/below. A multi-measure kpi row names its measure in data-series.
+    const g = resolve(s, (host as { view?: View }).view).goals,
+      lower = (g.get(a(k, "data-series")) ?? [...g.values()][0])?.better === "lower";
+    return str(s, v === "warn" ? "near" : (v === "good") !== lower ? "above" : "below");
   };
 
   const show = (m: Element, say = false) => {
@@ -299,7 +302,7 @@ export function tooltip(
     const g = group(m);
     const speak = () =>
       announce(
-        `${a(m, "data-x")}: ${g.map((k) => [a(k, "data-series"), a(k, "data-f"), tone(k)].filter(Boolean).join(" ")).join(", ")}`,
+        `${a(m, "data-x") && a(m, "data-x") + ": "}${g.map((k) => [a(k, "data-label") || a(k, "data-series"), a(k, "data-f"), tone(k)].filter(Boolean).join(" ")).join(", ")}`,
       );
     // tooltip:false: keys and the live region still work, the popover and guides do not.
     if (!on()) return say && speak();
@@ -322,7 +325,7 @@ export function tooltip(
       h("b", a(m, "data-x")),
       ...rows.flatMap((k) => {
         const row = h("div", "", k === m ? { "data-on": "" } : {});
-        const s = a(k, "data-series");
+        const s = a(k, "data-label") || a(k, "data-series");
         // Scatter names its fields: "label\tvalue" lines, one row each under the series row.
         const f = a(k, "data-f");
         const tab = f.includes("\t");
@@ -396,8 +399,11 @@ export function tooltip(
       r = { left, top, width: 0, height: h, right: left, bottom: top + h };
     }
     // Orbit (the name) and constellation (the web): anchor to the mark and what it lights, so the tooltip clears them.
-    if (/^(orbit|constellation|boxplot)$/.test(sp?.type ?? ""))
-      for (const e of peers) {
+    // Kpi: the headline counts as part of the point, so the tooltip never covers any number (multi-measure: all of them).
+    if (/^(orbit|constellation|boxplot|kpi)$/.test(sp?.type ?? ""))
+      for (const e of sp?.type === "kpi"
+        ? box.querySelectorAll('[data-key="v"],[data-key^="v~"]')
+        : peers) {
         const b = e.getBoundingClientRect();
         const [left, top] = [Math.min(r.left, b.left), Math.min(r.top, b.top)];
         const [right, bottom] = [Math.max(r.right, b.right), Math.max(r.bottom, b.bottom)];

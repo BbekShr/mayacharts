@@ -158,8 +158,6 @@ const HINTS: Record<string, string> = {
   previous: 'Use was: "<field>" (bar, kpi, gauge).',
   target: "Use colorBy: { target: n }.",
   warn: "Use colorBy: { target: n, warn: n } (kpi, gauge).",
-  thresholds: "Use colorBy: { target: n, warn: n } (kpi, gauge).",
-  better: 'Use colorBy: { better: "lower" } when lower is better.',
   min: "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).",
   max: "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).",
 };
