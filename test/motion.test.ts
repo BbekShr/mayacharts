@@ -500,4 +500,19 @@ describe("motion", () => {
     expect(opa).not.toContain(fresh);
     expect(opa.length).toBe(1);
   });
+  it("a grid group that ghosts never leaves two defs sharing an id", () => {
+    const svg = (grad: string, tick: number) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="grid"><defs>${grad}</defs><line x1="0" x2="${tick}"/></g><g data-maya="marks"><rect data-maya="mark" data-key="a" x="0" y="0" width="5" height="5"/></g></svg>`;
+    const lg = (c: string) => `<linearGradient id="g1"><stop stop-color="${c}"/></linearGradient>`;
+    const ids = (b: Element) => b.querySelectorAll("#g1").length;
+    const box = document.createElement("div");
+    patch(box, svg(lg("red"), 5), false);
+    patch(box, svg(lg("red"), 9), true); // equal defs: the old node moves into the new group
+    expect(box.querySelectorAll("[data-ghost]").length).toBe(1);
+    expect(ids(box)).toBe(1);
+    expect(box.querySelector("[data-ghost] defs")).toBeNull();
+    patch(box, svg(lg("blue"), 3), true); // changed defs: the ghost loses its own
+    expect(ids(box)).toBe(1);
+    expect(box.querySelector("[data-ghost] defs")).toBeNull();
+  });
 });

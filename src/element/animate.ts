@@ -630,7 +630,14 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
       follow(p, c, id(c) === "labels" ? late : { ...UI, delay: 160 }, id(c) === "labels");
       out.push(p);
     } else {
-      if (p && fadeable(p)) (ghosts.push(p), out.push(p));
+      if (p && fadeable(p)) {
+        ghosts.push(p);
+        out.push(p);
+        // A ghost never carries ids (WebKit drops the gradient while two defs share one): the
+        // new group reuses an equal defs, else the old one goes.
+        const [d0, d1] = [p, c].map((g) => g.querySelector("defs"));
+        d0 && (d1 && d0.outerHTML === d1.outerHTML ? d1.replaceWith(d0) : d0.remove());
+      }
       out.push(c);
       if (p && fadeable(c)) fadeIn.push(c);
     }
