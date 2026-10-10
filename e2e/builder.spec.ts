@@ -227,7 +227,7 @@ test("paste limits: over each limit nothing changes, at each limit it works", as
   const err = page.locator("#paste-err");
   const over = async (text: string, msg: RegExp) => {
     await put(page, text);
-    await expect(err).toHaveText(msg);
+    await expect(err).toHaveText(msg, { timeout: 20_000 }); // a big paste parses slowly in WebKit
     await expect(page.locator("#paste")).toHaveAttribute("aria-invalid", "true");
     expect(JSON.stringify(await spec(page))).toBe(before);
     await drawn(page);
@@ -239,11 +239,11 @@ test("paste limits: over each limit nothing changes, at each limit it works", as
   await over(cols(51), /51 columns/);
 
   await put(page, "v\n" + "1\n".repeat(10000));
-  await expect(err).toBeHidden();
-  await expect(page.locator("#meter")).toHaveText(/10,000 rows/);
+  await expect(err).toBeHidden({ timeout: 20_000 });
+  await expect(page.locator("#meter")).toHaveText(/10,000 rows/, { timeout: 20_000 });
   await put(page, cols(50));
-  await expect(err).toBeHidden();
-  await expect(page.locator("#meter")).toHaveText(/1 rows, 50 columns/);
+  await expect(err).toBeHidden({ timeout: 20_000 });
+  await expect(page.locator("#meter")).toHaveText(/1 rows, 50 columns/, { timeout: 20_000 });
 });
 
 test("code tabs follow the arrow keys and the JSON tab is the previewed spec", async ({ page }) => {

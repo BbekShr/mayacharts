@@ -247,7 +247,7 @@ export class MayaChart extends HTMLElement {
     // nodes in place across a drill (stable keys), so they morph instead.
     const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
     const flow = this.spec?.type === "sankey";
-    if (flow) this.#zoom = undefined;
+    if (flow) d1.length - d0.length && this.#tip?.hide();
     else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
     else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
     this.#state = next;

@@ -68,6 +68,11 @@ const WIPE = 1100; // ms, line and area first draw
 const MAX = 1500; // ponytail: no animation above this many marks
 const STAGGER = 320; // total stagger spread across categories, ms
 const Z = 1e-6;
+/** The gauge arc and a text count-up share one clock: 1.6 x the entrance, ease-out quart. */
+const tally = (o: KeyframeAnimationOptions): KeyframeAnimationOptions => ({
+  duration: Number(o.duration) * 1.6,
+  easing: "cubic-bezier(.25,1,.5,1)",
+});
 /** Put an orbit rotation at angle fraction `f` (its direction decides which end of the clock that is). */
 const seek = (a: Animation, f: number) => {
   const c = a.effect!.getComputedTiming();
@@ -224,14 +229,14 @@ function enter(e: Element, origin?: Box, o = DATA): void {
   const z = zoomed(e, g, false);
   if (f) run(e, [f, arc(e)], ZOOM);
   else if (ring(e) && e.getAttribute("data-key") === "v" && o === INTRO)
-    // The gauge arc sweeps from empty in step with the centre count-up (1.6 x, ease-out quart).
+    // The gauge arc sweeps from empty in step with the centre count-up.
     run(
       e,
-      [{ strokeDasharray: "0 360" }, { strokeDasharray: e.getAttribute("stroke-dasharray") ?? "" }],
-      {
-        duration: Number(o.duration) * 1.6,
-        easing: "cubic-bezier(.25,1,.5,1)",
-      },
+      [
+        { strokeDasharray: "0 360", opacity: 0 },
+        { strokeDasharray: e.getAttribute("stroke-dasharray") ?? "" },
+      ],
+      tally(o),
     );
   else if (z) run(e, [{ transform: z, opacity: 0 }, { transform: "none" }], ZOOM);
   else if (g) {
@@ -252,7 +257,7 @@ function retire(e: Element): void {
 
 const gk = new WeakMap<Element, string>(); // exiting node -> the key it had
 
-function exit(e: Element, origin?: Box): void {
+function exit(e: Element, origin?: Box, from?: Keyframe): void {
   moved = true;
   gk.set(e, e.getAttribute("data-key")!);
   retire(e);
@@ -261,7 +266,7 @@ function exit(e: Element, origin?: Box): void {
   const o = { ...DATA, fill: "forwards" as const };
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, true);
-  if (f) run(e, [arc(e, true), f], { ...ZOOM, fill: "forwards" }, done);
+  if (f) run(e, [from!, f], { ...ZOOM, fill: "forwards" }, done);
   else if (z) run(e, [{}, { transform: z, opacity: 0 }], { ...ZOOM, fill: "forwards" }, done);
   else if (g)
     run(e, [{ transform: "none" }, { transform: tf(g, seed(e, g, origin)), opacity: 0 }], o, done);
@@ -315,52 +320,54 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   const m = NUM.exec(to);
   const f = NUM.exec(from);
   if (!m || instant || typeof requestAnimationFrame === "undefined") return;
-  const tok = m[0];
-  const ds = tok.replace(/\D/g, "");
-  if (ds.length > 15) return;
+  const num = m[0];
   // A last separator followed by other than 3 digits is the decimal mark, as is one after a
   // lone leading zero ("0.125").
   const sep = (t: string) => (/^0\D/.test(t) ? 1 : t.search(/\D\d{1,2}$|\D\d{4,}$/));
   const dp = (t: string) => (sep(t) < 0 ? 0 : t.length - sep(t) - 1);
-  const ls = sep(tok);
-  const head = to.slice(0, m.index),
-    tail = to.slice(m.index + tok.length);
+  const dg = (t: string) => t.replace(/\D/g, "");
   // Count from the old number, rescaled to the new decimals; never from zero except on entrance.
-  const fd = f ? f[0].replace(/\D/g, "") : "";
-  const a = Math.min(
-    10 ** ds.length - 1,
-    Math.round((+fd || 0) * 10 ** (dp(tok) - (f ? dp(f[0]) : 0))),
-  );
-  const b = +ds;
-  if (a === b) return;
-  if (f && (from.slice(0, f.index) !== head || from.slice(f.index + f[0].length) !== tail)) {
+  // A wider old number (1234 to 999) lends its template, so the count has the digits to start there.
+  const fd = f ? dg(f[0]) : "";
+  const nd = dg(num);
+  const tok = f && fd.length > nd.length && dp(f[0]) === dp(num) ? f[0] : num;
+  const ds = dg(tok);
+  if (ds.length > 15) return;
+  const ls = sep(tok);
+  const [head, tail] = [to.slice(0, m.index), to.slice(m.index + num.length)];
+  const fh = f ? from.slice(0, f.index) : "";
+  // The sign ends the head and counts as part of the number, so -5 to 3 passes through 0.
+  const SG = /[-−+]\s*$/;
+  const neg = (h: string) => /[-−]\s*$/.test(h);
+  const base = head.replace(SG, "");
+  const a = Math.min(10 ** ds.length - 1, Math.round(+fd * 10 ** (dp(num) - (f ? dp(f[0]) : 0))));
+  const [A, B] = [neg(fh) ? -a : a, neg(head) ? -nd : +nd];
+  if (A === B) return;
+  if (f && (fh.replace(SG, "") !== base || from.slice(f.index + f[0].length) !== tail)) {
     // Another unit (K to M) would contradict the number: swap once the mark has landed.
     e.textContent = from;
     setTimeout(() => e.textContent === from && (e.textContent = to), Number(o.duration));
     return;
   }
   const shape = (k: number) => {
-    const s = String(k).padStart(ds.length, "0");
+    const s = String(Math.abs(k)).padStart(ds.length, "0");
     let i = 0;
     const t = tok.replace(/\d/g, () => s[i++]!);
     const [int, dec] = ls < 0 ? [t, ""] : [t.slice(0, ls), t.slice(ls)];
     return (
-      (k ? head : head.replace(/[-\u2212+]\s*$/, "")) +
-      int.replace(/^[0\D]+(?=\d)/, "") +
-      dec +
-      tail
+      (k ? (k < 0 === neg(head) ? head : fh) : base) + int.replace(/^[0\D]+(?=\d)/, "") + dec + tail
     );
   };
   const ms = Number(o.duration) * 1.6,
     t0 = performance.now() + Number(o.delay ?? 0);
   const id = (counts.get(e) ?? 0) + 1;
   counts.set(e, id);
-  let cur = shape(a);
+  let cur = shape(A);
   e.textContent = cur;
   const step = (now: number) => {
     if (counts.get(e) !== id || e.textContent !== cur) return; // a newer count or render
     const p = Math.min(1, Math.max(0, (now - t0) / ms));
-    e.textContent = cur = p < 1 ? shape(Math.round(a + (b - a) * (1 - (1 - p) ** 4))) : to;
+    e.textContent = cur = p < 1 ? shape(Math.round(A + (B - A) * (1 - (1 - p) ** 4))) : to;
     if (p < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -402,6 +409,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
 
   const pre = new Map<Element, Box | undefined>();
   const arcs = new Map<Element, Keyframe>();
+  for (const e of o.children) if (ring(e)) arcs.set(e, arc(e, true));
   for (const e of w.children) {
     const m = at(e.getAttribute("data-key")!);
     if (!m || m.localName !== e.localName) continue;
@@ -409,7 +417,6 @@ function marks(o: Element, w: Element, origin?: Box): void {
     const g = geo(t);
     // The on-screen box of an animating mark: its transform is in user units, origin 0 0 (fill-box).
     const c = g && live.get(t) && new DOMMatrix(getComputedStyle(t).transform);
-    if (ring(m)) arcs.set(m, arc(m, true));
     // An orbit planet's transform rotates about the sun: carry its centre through it.
     const q = c && t !== m && c.transformPoint({ x: g[0] + g[2] / 2, y: g[1] + g[3] / 2 });
     pre.set(
@@ -439,7 +446,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
       const from = arcs.get(m)!;
       stop(as);
       sync(m, e);
-      if (!instant) run(m, [from, arc(m)], ZOOM);
+      if (!instant) run(m, [from, arc(m)], m.getAttribute("data-key") === "v" ? tally(DATA) : ZOOM);
       order.push(m);
       continue;
     }
@@ -525,7 +532,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
       fade(tg, false, undefined, { ...UI, delay: glided || tg === m ? 120 : 0 });
     order.push(m);
   }
-  for (const m of old.values()) exit(m, origin);
+  for (const m of old.values()) exit(m, origin, arcs.get(m));
   let ref = o.firstElementChild;
   for (const m of order) {
     while (ref && ref !== m && !ref.hasAttribute("data-key")) ref = ref.nextElementSibling;
@@ -597,8 +604,9 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
   }
   for (const m of old) {
     if (used.has(m)) continue;
+    // Cross in place with the new text, never a gap; a keyed one (its mark left) goes with the mark.
+    fade(m, true, () => m.remove(), key(m) ? UI : late);
     retire(m);
-    fade(m, true, () => m.remove(), late); // cross in place with the new text, never a gap
   }
 }
 
@@ -657,6 +665,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
 
 /** An outgoing group: unaddressable while it fades, then removed. */
 function ghost(g: Element): void {
+  g.querySelector("defs")?.remove(); // a ghost never carries ids: WebKit drops the gradient while two defs share one
   const op = getComputedStyle(g).opacity; // mid-fade-in (or still waiting): leave from there
   // Sunburst drill: ring names go at once, the centre text stays until the new labels arrive.
   const hold = zoom && g.getAttribute("data-maya") === "labels";
