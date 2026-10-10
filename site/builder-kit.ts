@@ -144,7 +144,14 @@ export const SAMPLES: Readonly<Record<string, Omit<ChartSpec, "type">>> = {
     format: "compact",
     data: bridge,
   }),
-  kpi: s({ title: "Monthly sales", x: "Month", y: "Sales", format: MONTHLY, data: monthly }),
+  kpi: s({
+    title: "Monthly sales",
+    x: "Month",
+    y: "Sales",
+    format: MONTHLY,
+    colorBy: { target: 78000, warn: 72000 },
+    data: monthly,
+  }),
   dumbbell: s({
     title: "Sales by state, first half to second half",
     x: "State",
@@ -355,7 +362,7 @@ export const TYPE_HELP: Readonly<Record<string, string>> = {
     "Plot two numbers against each other to show a relationship. Bubble size can add a third.",
   heatmap: "A grid of coloured cells: two categories across and down, the value as colour.",
   waterfall: "Show how a starting value rises and falls step by step to an end total.",
-  kpi: "One headline number with a small trend line.",
+  kpi: "Headline numbers with the change, a goal and a status. Tick several measures for one tile each.",
   dumbbell: "Two values per category joined by a line, such as before and after.",
   ridgeline: "One small area chart per series, stacked so their shapes compare.",
   beeswarm: "One dot per row along a value axis, spread out so none overlap.",
@@ -380,7 +387,7 @@ export const TYPE_HELP: Readonly<Record<string, string>> = {
 
 const HELP: Readonly<Record<string, string>> = {
   x: "The column that names each bar, point or slice, such as month or region.",
-  y: "The number to plot. Tick more than one to add a toggle between them.",
+  y: "The number to plot. Tick more than one to compare them: a line or bar gets a toggle, a KPI one tile each.",
   y2: "A second number drawn as a line against its own axis on the right. On an orbit, the growth.",
   was: "The earlier value of each bar, drawn as a faint bar behind it so the change shows.",
   series: "Split the rows into coloured groups by this column, such as region.",

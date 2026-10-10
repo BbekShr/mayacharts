@@ -71,6 +71,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 - Defaults that vary by chart type go in `resolve()` (`validate.ts`), not as type checks in `render.ts`.
 - Changing a spec default is a docs change too: `types.ts`, README, `schema.json` if described, `llms.txt`, `site/docs.html`, CHANGELOG.
+- A release that adds a type or moves a budget changes every quoted count and KB in README, site/index.html and CLAUDE.md: grep them in the release run, not later.
 
 ## Archive
 

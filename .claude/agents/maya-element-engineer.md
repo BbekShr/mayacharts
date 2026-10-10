@@ -33,3 +33,5 @@ Unit: `npx vitest run test/element.test.ts test/motion.test.ts test/drill.test.t
 ## Report
 
 What changed, frame captures (paths) for any motion change in both engines, e2e status per project, element.js size.
+
+End with a short **First principles** section, only if something was non-obvious (otherwise write "none"): what you learned, the foundation that made it work or fail (browser primitive, math, perceptual rule), where else it applies, and how far it goes before it breaks. A sentence or two each.

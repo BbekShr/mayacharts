@@ -15,9 +15,9 @@ Owner: Bibek Shrestha (GitHub BbekShr). MIT, forever. See STABILITY.md for what 
 
 ## Commands
 
-- `npm test` - Vitest (node + one happy-dom file). ~440 tests incl. fuzz, hostile-string, property, perf and leak suites.
+- `npm test` - Vitest (node + one happy-dom file). about 1400 tests incl. fuzz, hostile-string, property, perf and leak suites.
 - `npm run typecheck` - strict TS 7 (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `erasableSyntaxOnly`: no enums, no parameter properties). Imports use `.ts` extensions.
-- `npm run build` - eight Vite lib builds (index, element, hierarchy, flow, geo, radial, stats, global IIFE) then `tsc` declarations.
+- `npm run build` - thirteen Vite lib builds (index, element, one per optional module, themes, global IIFE) then `tsc` declarations.
 - `npm run size` - gzip budgets from `package.json` `mayaSize`; CI fails when over. Also checks the license banner and that the global build has no top-level `var maya`.
 - `npm run e2e` - Playwright on chromium, firefox, webkit, mobile-webkit (interactions only). Builds and serves `site/` itself.
 - `npm run dev` - demo site (`/`, `/gallery.html` and `/scale.html`, the million-row page).
@@ -31,7 +31,7 @@ Stress scripts live in `bench/` (`node bench/million.mjs` after a build times 1M
 - `src/core/render.ts` - the DESIGN NOTE at the top is the contract: pipeline, SVG groups, hydration attributes (`data-maya`, `data-key`, `data-c`, `data-s`, `data-y`, `data-x`, `data-tone`, `data-q`, `data-plot`), key grammar, shell slot order, CSS hooks, keyboard priority. Read it before touching core or element.
 - `src/core/types.ts` - the spec (`ChartSpec`), one JSDoc line + example per field. `validate.ts` - all validation, error catalogue, `ONLY` table of field-to-type rules, `HINTS`. `shape.ts` - aggregate, sort, limit (Other bucket), window, hidden, in that order. `format.ts` - per-field Intl formatting (UTC dates). `layout.ts` - `frame()`: axes, ticks, grid, margins, label thinning. `a11y.ts` - title/desc/data table. `registry.ts` - mark registry on a version-keyed global symbol. `strings.ts` - every user-visible string (`spec.text` overrides).
 - `src/core/marks/*.ts` - bar (also waterfall), line (also area), scatter, heatmap, kpi, dumbbell, ridgeline, beeswarm, parallel, table. Each is a `Mark { noun, axes?, check?, draw }` using only `MarkCtx` closures (`fmt label tone q agg fail t`).
-- `src/hierarchy.ts`, `flow.ts`, `geo.ts`, `radial.ts`, `stats.ts` - optional modules (treemap/sunburst/marimekko/waffle, sankey/chord, US hexmap, radial bars, boxplot/funnel). They may import only `registry.ts`, `svg.ts`, `scale.ts`, `ticks.ts` and types; never render/validate/shape/format (they are bundled separately).
+- `src/hierarchy.ts`, `flow.ts`, `geo.ts`, `radial.ts`, `stats.ts`, `weave.ts`, `units.ts`, `orbit.ts`, `constellation.ts` - optional modules (treemap/sunburst/marimekko/waffle, sankey/chord, US hexmap, radial bars and gauge, boxplot/funnel, and the signature types). `src/themes.ts` is plain data for `spec.theme`. They may import only `registry.ts`, `svg.ts`, `scale.ts`, `ticks.ts` and types; never render/validate/shape/format (they are bundled separately).
 - `src/element/` - `maya-chart.ts` (element, events, `view`/`selected`, keydown dispatcher), `animate.ts` (key diff, WAAPI entrance/update/exit, stagger, path morph), `tooltip.ts`, `html.ts` (Trusted Types policy `mayacharts`), and the interactions `measure.ts`, `drill.ts`, `select.ts`, `zoom.ts` as pure reducers plus `mount(host)` handlers.
 - `src/styles/theme.ts` - the whole stylesheet as one string (budget 4 KB gzip). Tokens `--maya-*`.
 - `site/` - demo, gallery and the Scale page (synthetic data in `site/data.ts`; never copy data from elsewhere). `site/docs.html`, `site/errors.html` (one anchor per error code; error messages link here).
@@ -42,7 +42,7 @@ Stress scripts live in `bench/` (`node bench/million.mjs` after a build times 1M
 - Ponytail: smallest mechanism that works; no abstraction with one implementation; mark every deliberate ceiling with `// ponytail:` and a line in NON-FEATURES.md "Known ceilings".
 - No runtime dependencies. No function-valued spec options. No inline `style=` attributes in the element path (CSSOM property writes are fine). Every HTML sink goes through `html()`.
 - Every value that reaches markup goes through `esc()`. Data-keyed structures use `Map`; spec-map lookups use `Object.hasOwn`. CSS values from the spec pass the allowlist in `validate.ts`.
-- Animation is transform/opacity only, keyed by `data-key`; never tween SVG geometry attributes. Three exceptions, all in `animate.ts`: a changed path morphs through CSS `d` where the browser interpolates it (else crossfade), a changed number in a text mark counts up, and sunburst slices (stroked circles, `pathLength` 360) tween `r`, `stroke-width` and the stroke dash as CSS properties so a drill sweeps in angle space. See the render.ts DESIGN NOTE.
+- Animation is transform/opacity only, keyed by `data-key`; never tween SVG geometry attributes. Three exceptions, all in `animate.ts`: a changed path morphs through CSS `d` where the browser interpolates it (else crossfade), a changed number in a text mark counts up, and sunburst slices and the gauge's value arc (stroked circles, `pathLength` 360) tween `r`, `stroke-width` and the stroke dash as CSS properties so a drill or an update sweeps in angle space. See the render.ts DESIGN NOTE.
 - Core stays pure: no `window`/`document` (a test deletes them and imports core).
 - `x` is always the category and `y` the value, whatever the orientation. `format` and `titles` are keyed by field.
 - Changing the spec means updating, together: `types.ts` JSDoc, `validate.ts` (`ONLY`/`HINTS`), README spec tables, `schema.json`, `llms.txt`, `site/docs.html`, CHANGELOG. `test/schema.test.ts` catches drift.
@@ -57,4 +57,4 @@ The standing team lives in `.claude/agents/` (chart designer, core engineer, ele
 
 ## Release
 
-Tags `v*` trigger `.github/workflows/release.yml`: typecheck, test, build, size, `npm publish --provenance`, SRI hash of `dist/maya.global.js` in the step summary. Not yet published to npm. Deploy of `site/` to GitHub Pages happens on every push to main.
+Tags `v*` trigger `.github/workflows/release.yml`: typecheck, test, build, size, `npm publish --provenance`, SRI hash of `dist/maya.global.js` in the step summary. Published to npm as `mayacharts` (provenance on). Deploy of `site/` to GitHub Pages happens on every push to main.

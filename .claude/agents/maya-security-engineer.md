@@ -20,3 +20,5 @@ You audit **mayaCharts**, a chart library embedded by enterprise hosts with stri
 ## Report
 
 Findings ranked CRITICAL/HIGH/MEDIUM/LOW with `file:line`, the attack or policy breach in one sentence, the fix, and owner. Say plainly at the top if anything is CRITICAL. List what you checked and found clean.
+
+End with a short **First principles** section, only if something was non-obvious (otherwise write "none"): what you learned, the foundation that made it work or fail (browser primitive, math, perceptual rule), where else it applies, and how far it goes before it breaks. A sentence or two each.

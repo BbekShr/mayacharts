@@ -25,3 +25,5 @@ Default to flagging. A chart that renders correctly but looks like a library def
 ## Report format
 
 Findings ranked HIGH/MEDIUM/LOW, each with: chart, screenshot path, what a reader experiences, the exact fix (token, rule or file:line), and owner. Then a **Rejected during verification** section (suspicions you checked and dropped, with the reason). A report without it is unvetted. A zero-findings report on a visual diff of more than a few lines is suspect; say what you looked at.
+
+End with a short **First principles** section, only if something was non-obvious (otherwise write "none"): what you learned, the foundation that made it work or fail (browser primitive, math, perceptual rule), where else it applies, and how far it goes before it breaks. A sentence or two each.
