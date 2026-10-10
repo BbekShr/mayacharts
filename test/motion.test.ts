@@ -515,4 +515,46 @@ describe("motion", () => {
     expect(ids(box)).toBe(1);
     expect(box.querySelector("[data-ghost] defs")).toBeNull();
   });
+  // A text mark patched from `a` to `b`: every text the count showed, ending on the landed one.
+  const tally = async (a: string, b: string) => {
+    const box = document.createElement("div");
+    const svg = (t: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks"><text data-maya="mark" data-key="t" x="1" y="1">${t}</text></g></svg>`;
+    patch(box, svg(a), false);
+    patch(box, svg(b), true);
+    const t = box.querySelector("text")!;
+    const seen = [t.textContent!];
+    const id = setInterval(() => seen.push(t.textContent!), 10);
+    await new Promise((r) => setTimeout(r, 1000));
+    clearInterval(id);
+    return seen;
+  };
+  const num = (t: string) => +t.replace("−", "-").replace(/,/g, "");
+
+  it("a count-up from a wider old number starts there (1,234 to 999, 45 to 5)", async () => {
+    for (const [a, b] of [
+      ["1,234", "999"],
+      ["45", "5"],
+    ] as const) {
+      const seen = await tally(a, b);
+      expect(seen[0]).toBe(a);
+      expect(seen.at(-1)).toBe(b);
+      expect(seen.some((t) => num(t) < num(a) && num(t) > num(b))).toBe(true);
+    }
+  });
+
+  it("a count crosses zero through a sign change (-5 to 3, -20 to 30, -0.5 to 0.5)", async () => {
+    for (const [a, b, lo, hi] of [
+      ["-5", "3", -5, 3],
+      ["-20", "30", -20, 30],
+      ["-0.5", "0.5", -0.5, 0.5],
+    ] as const) {
+      const seen = await tally(a, b);
+      expect(seen[0]).toBe(a);
+      expect(seen.at(-1)).toBe(b);
+      expect(seen.every((t) => num(t) >= lo && num(t) <= hi)).toBe(true);
+      expect(seen.some((t) => num(t) < 0 && t !== a)).toBe(true);
+      expect(seen.some((t) => num(t) > 0 && t !== b)).toBe(true);
+    }
+  });
 });
