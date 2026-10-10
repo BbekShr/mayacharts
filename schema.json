@@ -59,12 +59,12 @@
     "sort": {
       "type": "string",
       "enum": ["asc", "desc"],
-      "description": "Order categories by total across all series (hidden ones too)."
+      "description": "Order categories by total across all series (hidden ones too). bar line area heatmap dumbbell table radial waffle orbit."
     },
     "limit": {
       "type": "integer",
       "minimum": 1,
-      "description": "Keep the top N categories by total; the rest roll up into a final \"Other\". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`."
+      "description": "Keep the top N categories by total; the rest roll up into a final \"Other\". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`. bar line area heatmap dumbbell table radial waffle orbit."
     },
     "x": {
       "type": "string",
@@ -123,7 +123,7 @@
         "type": "string"
       },
       "minItems": 1,
-      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with `drill` (replaces `x`)."
+      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey chord; bar/line/area/dumbbell with `drill` (replaces `x`)."
     },
     "size": {
       "type": "string",
@@ -418,7 +418,7 @@
           "enum": ["multi"]
         }
       ],
-      "description": "Click/Enter/legend selects marks, others dim; Escape clears. Not with `drill`."
+      "description": "Click/Enter/legend selects marks, others dim; Escape clears. Not with `drill`. bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
     },
     "zoom": {
       "type": "boolean",
@@ -473,7 +473,7 @@
           "minLength": 1
         }
       ],
-      "description": "Tone by sign of y, by a target (good at or past it; better \"lower\" flips it), or a ramp by a numeric field. Not with `series`. Types other than kpi and gauge need target and take no warn; kpi and gauge take any of target, warn and better, warn needs target and sits on the bad side of it."
+      "description": "Tone by sign of y, by a target (good at or past it; better \"lower\" flips it), or a ramp by a numeric field. Not with `series`. Types other than kpi and gauge need target and take no warn; kpi and gauge take any of target, warn and better, warn needs target and sits on the bad side of it. bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation."
     },
     "theme": {
       "type": "object",

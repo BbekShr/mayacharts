@@ -108,8 +108,9 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         </p>
         <pre><code>data: data.filter(r => r.revenue > 0)</code></pre>
         <p>
-          A funnel counts what remains at each stage, so its y values cannot be negative. Zero is
-          allowed; the step after a zero shows no percentage.
+          A funnel counts what remains at each stage, and a ridgeline draws a density from heights
+          above a baseline, so their y values cannot be negative. Zero is allowed; the step after a
+          zero in a funnel shows no percentage.
         </p>
         <pre><code>data: data.filter(r => r.users >= 0)</code></pre>
       </section>
@@ -160,8 +161,9 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
       <section id="invalid-domain">
         <h2><code>invalid-domain</code></h2>
         <p>
-          spec.yDomain or spec.xDomain must be [min, max] with two finite numbers and min less than
-          max.
+          spec.xDomain must be [min, max] with two finite numbers and min less than max.
+          spec.yDomain takes two different numbers, and [max, min] reverses the axis (ranks with 1
+          on top). Both bounds must be within 1e300 and the span at least 1e-300.
         </p>
         <pre><code>{ "yDomain": [0, 100] }</code></pre>
       </section>
@@ -179,8 +181,8 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <h2><code>invalid-theme</code></h2>
         <p>
           spec.theme contains a key that is not a theme token. Valid tokens are font, fontSize, fg,
-          fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, bad, and series1
-          through series8.
+          fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, warn, bad, line,
+          gridDash, and series1 through series8.
         </p>
         <pre><code>{ "theme": { "accent": "#7c3aed" } }</code></pre>
       </section>

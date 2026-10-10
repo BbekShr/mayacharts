@@ -512,7 +512,10 @@
               <td><a class="spec-anchor" id="sort"></a><code>sort</code></td>
               <td>asc / desc</td>
               <td>data order</td>
-              <td>Categories by total across all series (hidden ones too)</td>
+              <td>
+                Categories by total across all series (hidden ones too). bar line area heatmap
+                dumbbell table radial waffle orbit
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="limit"></a><code>limit</code></td>
@@ -521,7 +524,8 @@
               <td>
                 Keep top N categories by signed total; rest roll up into "Other" with
                 re-aggregation. A bar with more categories than fit (past 10000 marks) does this on
-                its own when limit is unset, and says so in warnings
+                its own when limit is unset, and says so in warnings. bar line area heatmap dumbbell
+                table radial waffle orbit
               </td>
             </tr>
           </tbody>
@@ -631,7 +635,7 @@
             <tr>
               <td><a class="spec-anchor" id="path"></a><code>path</code></td>
               <td>field[]</td>
-              <td>treemap sunburst sankey; bar/line/area/dumbbell with drill</td>
+              <td>treemap sunburst sankey chord; bar/line/area/dumbbell with drill</td>
               <td>Hierarchy outer to inner. On bar/line/area/dumbbell replaces <code>x</code></td>
             </tr>
             <tr>
@@ -834,7 +838,11 @@
             <tr>
               <td><a class="spec-anchor" id="select"></a><code>select</code></td>
               <td>true / "multi"</td>
-              <td>Click/Enter/legend selects marks; Escape clears. Not with drill</td>
+              <td>
+                Click/Enter/legend selects marks; Escape clears. Not with drill. bar line area
+                waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial
+                treemap sunburst hexmap boxplot funnel weave units orbit constellation
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="zoom"></a><code>zoom</code></td>
@@ -920,7 +928,9 @@
                 gauge take any of target, warn and better; warn needs target and sits on the bad
                 side of it, and values between them are "at risk" (status words On track, At risk,
                 Off track). A kpi with a y array may key the thresholds by y field, for example
-                <code>{ "revenue": { "target": 60000 }, "churn": { "better": "lower" } }</code>
+                <code>{ "revenue": { "target": 60000 }, "churn": { "better": "lower" } }</code>.
+                Works with: bar line area waterfall scatter dumbbell kpi gauge treemap sunburst
+                hexmap units orbit constellation.
               </td>
             </tr>
             <tr>
