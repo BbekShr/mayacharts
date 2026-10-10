@@ -633,3 +633,16 @@ describe("narrow bar labels", () => {
     expect(texts(render(spec(5, "Category number "), { width: 360 })).join()).toContain("…");
   });
 });
+
+describe("constant huge values", () => {
+  it("renders a scatter at x = y = 1e300 and a beeswarm with a 5e17 point", () => {
+    const sc = [{ a: 1e300, b: 1e300 }];
+    expect(render({ type: "scatter", x: "a", y: "b", data: sc })).toContain("<svg");
+    const bs = [
+      { r: "a", v: 1 },
+      { r: "a", v: 5e17 },
+    ];
+    expect(render({ type: "beeswarm", x: "r", y: "v", data: bs })).toContain("<svg");
+    expect(render({ type: "beeswarm", y: "v", data: [{ v: 5e17 }] })).toContain("<svg");
+  });
+});

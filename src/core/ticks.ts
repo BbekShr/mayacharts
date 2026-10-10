@@ -4,7 +4,9 @@ const clean = (n: number) => parseFloat(n.toPrecision(12));
 
 export function niceTicks(min: number, max: number, target = 5): Ticks {
   if (max === min) {
-    [min, max] = min === 0 ? [0, 1] : [min - 1, max + 1];
+    // Padded relative to magnitude: min - 1 is min itself above 2^53, which made the step 0.
+    const p = Math.max(1, Math.abs(min) / 1e15);
+    [min, max] = min === 0 ? [0, 1] : [min - p, max + p];
   }
   const base = 10 ** Math.floor(Math.log10((max - min) / target));
   let step = base;
