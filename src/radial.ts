@@ -275,8 +275,8 @@ export const radial: Mark = {
 
 register("radial", radial);
 
-// Gauge: a 180 degree dial. Track and value arc are rounded sectors with one command shape, so a
-// changed value morphs through CSS d; bands, target tick and was marker are unkeyed (outside marks).
+// Gauge: a 180 degree dial. The track is a rounded sector, the value a stroked circle (see below);
+// bands, target tick and was marker are unkeyed (outside marks).
 const num = (v: unknown) => (typeof v === "number" ? v : null);
 const PI = Math.PI;
 
@@ -369,8 +369,24 @@ export const gauge: Mark = {
       "data-f": f,
       "data-tone": tone,
     };
-    const arc = ring(ri, R, 0, fr(value), t / 2);
-    const marks = el("path", { "data-maya": "mark", "data-key": "v", ...d, d: arc });
+    // The value is a stroked circle like a sunburst slice (pathLength 360, dash = angle) so a change
+    // sweeps along the track; the round caps sit inside the same inset as the track's rounded ends.
+    const [rm, cap] = [(ri + R) / 2, (t / 2 / ((ri + R) / 2)) * (180 / PI)];
+    const sweep = Math.max(0, fr(value) * 180 - 2 * cap);
+    const marks = el("circle", {
+      "data-maya": "mark",
+      "data-key": "v",
+      ...d,
+      cx: r(cx),
+      cy: r(cy),
+      r: r(rm),
+      "data-depth": 1, // borrows the sunburst ring paint: no fill, stroke var(--c)
+      "stroke-width": r(t),
+      "stroke-linecap": "round",
+      pathLength: 360,
+      "stroke-dasharray": `${r(sweep)} ${r(360 - sweep)}`,
+      "stroke-dashoffset": r(180 - cap),
+    });
     const hits = el("path", {
       "data-maya": "hit",
       "data-key": "v",

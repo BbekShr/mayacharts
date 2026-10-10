@@ -300,7 +300,7 @@
  *     drill:  rect marks zoom (transform/opacity): in, the branch's marks map onto the plot,
  *             children start inside the branch's box, the rest is pushed out; out reverses
  *             it. The marks group is clipped to the plot meanwhile. Flows morph instead.
- *     rings:  sunburst slices are `circle[pathLength=360]` whose stroke dash is the arc; they
+ *     rings:  sunburst slices and the gauge's value arc are `circle[pathLength=360]` whose stroke dash is the arc; they
  *             tween the CSS properties r, stroke-width, stroke-dasharray and
  *             stroke-dashoffset, which sweeps in angle space (exception 3). On a drill the
  *             centre disk carries the drilled branch's key, so the clicked slice grows into

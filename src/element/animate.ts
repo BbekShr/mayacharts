@@ -223,6 +223,16 @@ function enter(e: Element, origin?: Box, o = DATA): void {
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, false);
   if (f) run(e, [f, arc(e)], ZOOM);
+  else if (ring(e) && e.getAttribute("data-key") === "v" && o === INTRO)
+    // The gauge arc sweeps from empty in step with the centre count-up (1.6 x, ease-out quart).
+    run(
+      e,
+      [{ strokeDasharray: "0 360" }, { strokeDasharray: e.getAttribute("stroke-dasharray") ?? "" }],
+      {
+        duration: Number(o.duration) * 1.6,
+        easing: "cubic-bezier(.25,1,.5,1)",
+      },
+    );
   else if (z) run(e, [{ transform: z, opacity: 0 }, { transform: "none" }], ZOOM);
   else if (g) {
     run(e, [{ transform: tf(g, seed(e, g, origin)), opacity: 0 }, { transform: "none" }], at);
@@ -307,23 +317,39 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   if (!m || instant || typeof requestAnimationFrame === "undefined") return;
   const tok = m[0];
   const ds = tok.replace(/\D/g, "");
-  if (ds.length > 15 || +ds === 0) return;
-  // Count from the old number when it has the same shape (same digit count), else from zero.
-  const fd = f ? f[0].replace(/\D/g, "") : "";
-  const a = fd.length === ds.length ? +fd : 0;
-  const b = +ds;
-  if (a === b) return;
+  if (ds.length > 15) return;
   // A last separator followed by other than 3 digits is the decimal mark, as is one after a
   // lone leading zero ("0.125").
-  const ls = /^0\D/.test(tok) ? 1 : tok.search(/\D\d{1,2}$|\D\d{4,}$/);
+  const sep = (t: string) => (/^0\D/.test(t) ? 1 : t.search(/\D\d{1,2}$|\D\d{4,}$/));
+  const dp = (t: string) => (sep(t) < 0 ? 0 : t.length - sep(t) - 1);
+  const ls = sep(tok);
   const head = to.slice(0, m.index),
     tail = to.slice(m.index + tok.length);
+  // Count from the old number, rescaled to the new decimals; never from zero except on entrance.
+  const fd = f ? f[0].replace(/\D/g, "") : "";
+  const a = Math.min(
+    10 ** ds.length - 1,
+    Math.round((+fd || 0) * 10 ** (dp(tok) - (f ? dp(f[0]) : 0))),
+  );
+  const b = +ds;
+  if (a === b) return;
+  if (f && (from.slice(0, f.index) !== head || from.slice(f.index + f[0].length) !== tail)) {
+    // Another unit (K to M) would contradict the number: swap once the mark has landed.
+    e.textContent = from;
+    setTimeout(() => e.textContent === from && (e.textContent = to), Number(o.duration));
+    return;
+  }
   const shape = (k: number) => {
     const s = String(k).padStart(ds.length, "0");
     let i = 0;
     const t = tok.replace(/\d/g, () => s[i++]!);
     const [int, dec] = ls < 0 ? [t, ""] : [t.slice(0, ls), t.slice(ls)];
-    return head + int.replace(/^[0\D]+(?=\d)/, "") + dec + tail;
+    return (
+      (k ? head : head.replace(/[-\u2212+]\s*$/, "")) +
+      int.replace(/^[0\D]+(?=\d)/, "") +
+      dec +
+      tail
+    );
   };
   const ms = Number(o.duration) * 1.6,
     t0 = performance.now() + Number(o.delay ?? 0);
@@ -572,7 +598,7 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
   for (const m of old) {
     if (used.has(m)) continue;
     retire(m);
-    fade(m, true, () => m.remove(), UI);
+    fade(m, true, () => m.remove(), late); // cross in place with the new text, never a gap
   }
 }
 

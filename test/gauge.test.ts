@@ -6,7 +6,7 @@ import type { ChartSpec } from "../src/core/types.ts";
 const base = (o: Partial<ChartSpec> = {}, v = 62): ChartSpec =>
   ({ type: "gauge", y: "v", data: [{ v, w: 50 }], ...o }) as ChartSpec;
 const svg = (s: ChartSpec, size = {}) => render(s, { width: 360, height: 220, ...size });
-const arc = (s: string) => s.match(/<path data-maya="mark"[^>]*>/)![0];
+const arc = (s: string) => s.match(/<circle data-maya="mark"[^>]*>/)![0];
 const labels = (s: string) => s.match(/<g data-maya="labels"[\s\S]*?<\/g>/)?.[0] ?? "";
 
 describe("gauge", () => {

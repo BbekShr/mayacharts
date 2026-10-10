@@ -157,7 +157,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
         "font-size": 12,
       },
       (i && c.tone
-        ? `<tspan data-tone="${c.tone}" aria-hidden="true">${arrow}</tspan>`
+        ? `<tspan data-tone="${c.tone}" aria-hidden="true" dominant-baseline="hanging">${arrow}</tspan>`
         : esc(arrow)) + esc(c.s.slice(1)),
     );
     top += 16;
@@ -220,6 +220,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
       "data-key": sKey("b"),
       ...payload,
       "data-kpi": "fill",
+      "data-dir": "h", // grows left to right on entrance
       "data-tone": status,
       x: L,
       y: by + (14 - bar) / 2,
