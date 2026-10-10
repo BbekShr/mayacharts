@@ -15,7 +15,7 @@ const h = (t: string, txt = "", at: Record<string, string> = {}) => {
 const SEL = "[data-maya=hit],[data-maya=mark],[data-maya=link][data-f]";
 const FADE = 120;
 const NEAR = 12;
-const FIXED = ["position", "position-area", "left", "top", "margin"];
+const FIXED = ["position", "position-area", "position-try-fallbacks", "left", "top", "margin"];
 const GLIDE: KeyframeAnimationOptions = { duration: 200, easing: "cubic-bezier(.22,1,.36,1)" };
 /** viewBox units per client px (the svg may be scaled by CSS). */
 const unit = (svg: Element, s: DOMRect) => {
@@ -335,9 +335,22 @@ export function tooltip(
         if (tn) row.append(h("span", tn));
         const more = tab
           ? f.split("\n").map((p) => {
-              const [l, v] = p.split("\t"),
-                d = h("div");
-              d.append(h("span", l), h("span", v, { "data-v": "" }));
+              // "label\tvalue[\tz]": z draws a bar either side of the average (constellation);
+              // an empty label is a note line under the rows.
+              const [l, v, z] = p.split("\t"),
+                d = h("div", l ? "" : v, l ? {} : { "data-note": "" });
+              if (!l) return d;
+              d.append(h("span", l));
+              if (z) {
+                // The star's group colour, through the same [data-s] rule as the swatch.
+                const b = h("span", "", {
+                  "data-z": "",
+                  ...(s ? { "data-s": a(k, "data-s") } : {}),
+                });
+                b.style.setProperty("--z", z);
+                d.append(b);
+              }
+              d.append(h("span", v, { "data-v": "" }));
               return d;
             })
           : [];
@@ -390,7 +403,9 @@ export function tooltip(
         const [right, bottom] = [Math.max(r.right, b.right), Math.max(r.bottom, b.bottom)];
         r = { left, top, right, bottom, width: right - left, height: bottom - top };
       }
-    tip.toggleAttribute("data-side", side);
+    // Constellation: its tooltip is a tall profile, so it sits beside the web rather than over it.
+    const beside = side || sp?.type === "constellation";
+    tip.toggleAttribute("data-side", beside);
     const p = host.getBoundingClientRect();
     Object.assign(probe.style, {
       left: r.left - p.left - host.clientLeft + "px",
@@ -419,12 +434,14 @@ export function tooltip(
       for (const k of ["left", "top", "margin"]) tip.style.setProperty(k, "0px");
       tip.style.setProperty("position", "fixed");
       tip.style.setProperty("position-area", "none");
+      // A fallback flip would mirror these insets (flip-inline turns left into right).
+      tip.style.setProperty("position-try-fallbacks", "none");
       t = tip.getBoundingClientRect();
-      let y = side ? r.top : r.top - t.height - 8;
+      let y = beside ? r.top : r.top - t.height - 8;
       if (y < top) y = r.bottom + 8;
       y = Math.max(top, Math.min(y, bot - t.height));
-      let x = side ? r.left + 12 : r.left + r.width / 2 - t.width / 2;
-      if (side && x + t.width > hi) x = r.left - 12 - t.width;
+      let x = beside ? r.right + 12 : r.left + r.width / 2 - t.width / 2;
+      if (beside && x + t.width > hi) x = r.left - 12 - t.width;
       x = Math.max(lo, Math.min(x, hi - t.width));
       tip.style.setProperty("left", x + "px");
       tip.style.setProperty("top", y + "px");
@@ -494,7 +511,7 @@ export function tooltip(
       // Orbit: clockwise by angle (rank order is golden-angle scattered). Constellation up/down:
       // the star, then the 3 stars it lights.
       if (i >= 0 && ty === "constellation" && v && !ring.includes(cur!))
-        ring = [cur!, ...box.querySelectorAll(`[data-a~="${a(cur!, "data-n")}"]`)];
+        ring = [cur!, ...box.querySelectorAll(`[data-maya=mark][data-a~="${a(cur!, "data-n")}"]`)];
       const c =
         ty === "orbit"
           ? list.filter((e) => e.localName === "circle").sort((p, q) => ang(p) - ang(q))

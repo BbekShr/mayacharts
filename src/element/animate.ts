@@ -730,13 +730,14 @@ function intro(svg: Element, kind: Intro): void {
   requestAnimationFrame(() =>
     svg.getAnimations?.({ subtree: true }).forEach((a) => orbiting(a) || (a.currentTime = 0)),
   );
-  // Orbit: each planet sweeps in its own direction, further the faster it is, and settles at rest.
+  // Orbit: each planet sweeps in its own direction, further the faster it is, added on top of its
+  // turn; its name sweeps back by the same angle about its own centre, so it stays upright.
   for (const g of m.querySelectorAll("g[data-v]")) {
     const a = (70 + 50 * +g.getAttribute("data-v")!) * (g.hasAttribute("data-neg") ? 1 : -1);
-    run(g, [{ transform: `rotate(${a}deg)` }, { transform: "none" }], {
-      duration: SWEEP_MS,
-      easing: EASE,
-    });
+    const o = { duration: SWEEP_MS, easing: EASE, composite: "add" } as const;
+    run(g, [{ transform: `rotate(${a}deg)` }, { transform: "rotate(0deg)" }], o);
+    for (const u of g.querySelectorAll("g[data-up]"))
+      run(u, [{ transform: `rotate(${-a}deg)` }, { transform: "rotate(0deg)" }], o);
   }
 }
 
@@ -801,47 +802,4 @@ export function patch(
     zm = undefined;
   }
   opts.after?.(box.firstElementChild!);
-}
-
-/** Orbit motion on demand: the planets turn while the pointer is over the chart (theme rule on
- * `data-spin`); when it leaves they glide home the short way and the names return. */
-let home = 0;
-export function spin(maya: Element, on: boolean): void {
-  const gs = [...maya.querySelectorAll("g[data-v]")];
-  if (!gs.length || maya.hasAttribute("data-still")) return;
-  const was = new Map(gs.map((g) => [g, new DOMMatrix(getComputedStyle(g).transform)]));
-  const th = (g: Element) => Math.atan2(was.get(g)!.b, was.get(g)!.a); // where it is drawn, radians
-  const mine = gs.flatMap((g) => g.getAnimations().filter((a) => !orbiting(a)));
-  mine.forEach((a) => a.cancel()); // a sweep or a glide home in progress
-  const id = ++home;
-  if (on) {
-    maya.setAttribute("data-spin", "");
-    for (const g of gs)
-      for (const a of g.getAnimations()) if (orbiting(a)) seek(a, (th(g) / (2 * Math.PI) + 1) % 1);
-    return;
-  }
-  const land = Promise.all(
-    gs.map((g) => {
-      const t = th(g);
-      const d = -Math.atan2(Math.sin(t), Math.cos(t));
-      return g.animate?.([{ transform: `rotate(${t}rad)` }, { transform: `rotate(${t + d}rad)` }], {
-        duration: 450 + 250 * Math.abs(d),
-        easing: EASE,
-        fill: "forwards",
-      })?.finished;
-    }),
-  );
-  land.then(
-    () => {
-      if (id !== home) return;
-      maya.removeAttribute("data-spin");
-      for (const g of gs) {
-        for (const a of g.getAnimations()) if (orbiting(a)) seek(a, 0);
-        g.getAnimations()
-          .filter((a) => !orbiting(a))
-          .forEach((a) => a.cancel());
-      }
-    },
-    () => {},
-  );
 }

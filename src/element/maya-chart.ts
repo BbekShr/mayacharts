@@ -14,7 +14,7 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Intro, patch, spin, type PatchOptions } from "./animate.ts";
+import { type Intro, patch, type PatchOptions } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import { listen } from "./listen.ts";
@@ -135,20 +135,6 @@ export class MayaChart extends HTMLElement {
         ["keydown", this.#key],
         ["pointerover", legend],
         ["pointerout", legend],
-      ),
-      // Orbit: the planets turn while a mouse is over the chart (touch and keyboard leave it at rest).
-      listen(
-        this,
-        ...(["enter", "leave"] as const).map(
-          (k) =>
-            [
-              "pointer" + k,
-              (e: Event) =>
-                (e as PointerEvent).pointerType === "mouse" &&
-                !matchMedia("(prefers-reduced-motion: reduce)").matches &&
-                spin(root.querySelector(".maya")!, k === "enter"),
-            ] as [string, EventListener],
-        ),
       ),
       listen(globalThis, ["maya-register", this.#registered]),
     ];

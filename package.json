@@ -79,6 +79,10 @@
       "types": "./dist/constellation.d.ts",
       "default": "./dist/constellation.js"
     },
+    "./themes": {
+      "types": "./dist/themes.d.ts",
+      "default": "./dist/themes.js"
+    },
     "./global": "./dist/maya.global.js",
     "./theme.css": "./dist/theme.css",
     "./schema.json": "./schema.json",
@@ -124,7 +128,7 @@
   "scripts": {
     "readme:shots": "node scripts/readme-shots.mjs",
     "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
-    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode stats && vite build --mode weave && vite build --mode units && vite build --mode orbit && vite build --mode constellation && vite build --mode global && tsc -p tsconfig.build.json",
+    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode stats && vite build --mode weave && vite build --mode units && vite build --mode orbit && vite build --mode constellation && vite build --mode themes && vite build --mode global && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -142,19 +146,20 @@
     "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
   },
   "mayaSize": {
-    "dist/index.js": 37600,
-    "dist/element.js": 54500,
-    "dist/theme.css": 4600,
+    "dist/index.js": 37900,
+    "dist/element.js": 54600,
+    "dist/theme.css": 4800,
     "dist/hierarchy.js": 4450,
     "dist/flow.js": 3900,
     "dist/geo.js": 3584,
     "dist/radial.js": 3072,
     "dist/stats.js": 4050,
-    "dist/maya.global.js": 72400,
+    "dist/maya.global.js": 72700,
     "dist/weave.js": 2560,
     "dist/units.js": 2560,
     "dist/orbit.js": 2600,
-    "dist/constellation.js": 2900
+    "dist/constellation.js": 3100,
+    "dist/themes.js": 1800
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

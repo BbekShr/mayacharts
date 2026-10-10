@@ -20,7 +20,7 @@
  *   sort -> limit -> window -> reduce -> hidden. SSR can therefore render any state.
  *
  * Frames (spec.frame): the title becomes text.frameOf(title or auto title, fmt(frame field,
- *   value)), so the svg <title> and the visible title name the frame; the auto description
+ *   value)), so the svg aria-label and the visible title name the frame; the auto description
  *   adds text.frame(n, count). Every linear axis spans all frames (each frame is resolved and
  *   shaped, mark.axes() unioned) so axes hold still; a yDomain/xDomain still wins. A scatter
  *   size scale uses the largest |size| over every frame (ctx.sizeMax), so one size is one radius
@@ -152,12 +152,12 @@
  *
  * SVG structure (render/renderParts):
  *   <svg class="maya-svg" viewBox="0 0 W H" width="W" height="H" role="img"
- *        aria-labelledby="maya-t" aria-describedby="maya-d" [tabindex="0" in parts only]
+ *        aria-label="title" aria-describedby="maya-d" [tabindex="0" in parts only]
  *        data-plot="x y w h" data-n="categories" [data-xd="lo hi" data-yd="lo hi" for
  *        linear-x types instead of data-n] [data-dir="h" when horizontal]
  *        [data-drill when a click can drill one level further] [data-pt when the body holds a
  *        [data-maya=line] path: its point circles are hidden until active]>
- *     <title id="maya-t">  <desc id="maya-d">
+ *     <desc id="maya-d">  (named by aria-label; standalone render() adds a <title>, no ids)
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
  *     <g data-maya="axis-x">   category labels (thinned to fit), axis title. Band-axis tick <text>
@@ -684,10 +684,12 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       g("hits", m.hits);
   }
 
+  // :host resolves --maya-series-1: var(--maya-accent) above these vars, so an accent override
+  // sets slot 1 itself unless colors does; theme.series1, later in the list, still wins.
   const vars: [string, string][] = [];
-  if (Array.isArray(s.colors))
-    (s.colors as readonly string[]).forEach((c, i) => vars.push([`--maya-series-${i + 1}`, c]));
-  else if (s.colors)
+  const list = Array.isArray(s.colors) ? (s.colors as readonly string[]) : [s.theme.accent];
+  list.forEach((c, i) => c && vars.push([`--maya-series-${i + 1}`, c]));
+  if (s.colors && !Array.isArray(s.colors))
     // ponytail: slot = the series' first-appearance index, so reordered rows move colours.
     // Waffle slots follow categories (data-s = category index), so its keys map against those.
     for (const [k, c] of s.colors as ReadonlyMap<string, string>) {
@@ -707,8 +709,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       // A table has focusable sort headers, which an img role would hide (children presentational).
       role: s.type === "table" ? "figure" : "img",
       // Standalone SVGs may share a page, so they can't use fixed ids; shadow roots scope them.
-      "aria-label": sheet === null ? null : titleText(s),
-      "aria-labelledby": sheet === null ? "maya-t" : null,
+      // aria-label, not a <title>, in the element path: a root <title> pops the browser's own
+      // tooltip over every hover. A standalone svg keeps the <title> too, for file viewers.
+      "aria-label": titleText(s),
       "aria-describedby": sheet === null ? "maya-d" : null,
       tabindex: sheet === null ? "0" : null,
       style: sheet === null ? null : style || null,
@@ -726,7 +729,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       "data-drill": (s.drill && s.path.length > (s.type === "sankey" ? 2 : 1)) || null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
-      el("title", { id: sheet === null ? "maya-t" : null }, esc(titleText(s))) +
+      (sheet === null ? "" : el("title", {}, esc(titleText(s)))) +
       el(
         "desc",
         { id: sheet === null ? "maya-d" : null },

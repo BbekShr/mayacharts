@@ -71,6 +71,8 @@ export type ThemeToken =
   | "focus"
   | "good"
   | "bad"
+  | "line"
+  | "gridDash"
   | "series1"
   | "series2"
   | "series3"
@@ -117,7 +119,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`).
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
-  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave.
+  /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required; constellation: colours the stars by group). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation.
    * @example series: "region" */
   series?: Field<R>;
   /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with `drill` (replaces `x`).
@@ -216,8 +218,8 @@ export interface ChartSpec<R extends object = Row> {
   /** Tone by sign of y, by a target, or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi: target only, drawn as a bullet bar).
    * @example colorBy: { target: 100 } */
   colorBy?: "sign" | { readonly target: number } | Field<R>;
-  /** Theme token overrides (CSS values, allowlisted).
-   * @example theme: { accent: "#0b6", font: "'Inter', sans-serif" } */
+  /** Theme token overrides (CSS values, allowlisted). `line` is the line width, `gridDash` a grid dash array. Ready-made sets: mayacharts/themes.
+   * @example theme: { accent: "#0b6", font: "'Inter', sans-serif", gridDash: "3 3" } */
   theme?: Readonly<Partial<Record<ThemeToken, string>>>;
   /** Grid lines perpendicular to the value axis. Default true.
    * @example grid: false */

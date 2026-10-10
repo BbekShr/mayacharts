@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render } from "../src/index.ts";
+import { render, renderParts } from "../src/index.ts";
 import "../src/constellation.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
@@ -112,6 +112,27 @@ describe("constellation", () => {
     expect(stars(render(spec(rows(6), { colorBy: "b" })))[0]).toMatch(/data-q=/);
     const neg = rows(6).map((r, i) => ({ ...r, a: i - 3 }));
     expect(stars(render(spec(neg, { colorBy: "sign" }))).join("")).toMatch(/data-tone=/);
+  });
+
+  it("colours stars by series, hides a hidden group's stars and keeps the sky", () => {
+    const g = rows(12).map((r, i) => ({ ...r, g: ["P", "Q", "R"][i % 3]! }));
+    const all = render(spec(g, { series: "g" }));
+    expect(renderParts(spec(g, { series: "g" })).legend).toContain("R");
+    expect(stars(all).map((t) => at(t, "data-s"))).toContain("2");
+    const some = render(spec(g, { series: "g" }), { view: { hidden: ["Q"] } });
+    const shown = stars(some);
+    expect(shown).toHaveLength(8);
+    expect(shown.every((t) => at(t, "data-series") !== "Q")).toBe(true);
+    // Hidden stars are nobody's neighbour, and visible stars stay where they were.
+    expect(shown.every((t) => !at(t, "data-f")!.match(/Closest: .*Star (1|4|7|10)\b/))).toBe(true);
+    for (const [k, p] of pos(some)) expect(pos(all).get(k)).toEqual(p);
+  });
+
+  it("each measure row carries its z, and each star has hover links to its 3 nearest", () => {
+    const t = stars(svg)[0]!;
+    expect(at(t, "data-f")!.split("\n")[0]).toMatch(/^a\t[^\t]+\t-?\d+(\.\d+)?$/);
+    const n = at(t, "data-n");
+    expect(svg.match(new RegExp(`<line [^>]*data-a="${n}"`, "g"))).toHaveLength(3);
   });
 
   it("describes the measures in the table", () => {

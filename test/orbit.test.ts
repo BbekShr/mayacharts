@@ -83,13 +83,13 @@ describe("orbit", () => {
       g.document = d;
     }
   });
-  it("draws every name after every planet, in its own static group (no rotating bucket)", () => {
+  it("a name rides inside its planet's turning group, right after the planet", () => {
     const s = svg(spec);
-    const last = s.lastIndexOf('data-maya="mark" data-key="~');
-    const names = [...s.matchAll(/<g data-key="o~[^"]*~l"[^>]*data-a="(\d)"[^>]*><g data-up/g)];
+    const names = [
+      ...s.matchAll(/<g data-v="\d"[^>]*>(?:<path [^>]*>)?<circle [^>]*\/><g data-up/g),
+    ];
     expect(names.length).toBeGreaterThan(0);
-    expect(names.every((m) => m.index! > last)).toBe(true);
-    expect(s.slice(s.indexOf('~l"'))).not.toContain("data-v=");
+    expect(s).not.toContain('~l"');
     expect(planets(s).map((t) => attr(t, "data-n"))).toEqual(["0", "1", "2", "3"]);
   });
   it("the sun adds the magnitudes, as the planet areas do", () => {
@@ -141,9 +141,10 @@ describe("orbit labels", () => {
   }));
   const sp = { ...spec, data: rows } as ChartSpec;
   const box = (s: string) =>
-    [
-      ...s.matchAll(/data-key="o~[^"]*~l"[^>]*><g data-up[^>]*><text x="([-\d.]+)" y="([-\d.]+)"/g),
-    ].map((m) => [Number(m[1]), Number(m[2])]);
+    [...s.matchAll(/<g data-up[^>]*><text x="([-\d.]+)" y="([-\d.]+)"/g)].map((m) => [
+      Number(m[1]),
+      Number(m[2]),
+    ]);
   it("names are largest first and never overlap each other", () => {
     const b = box(svg(sp));
     expect(b.length).toBeGreaterThan(2);

@@ -56,7 +56,7 @@
         <a class="support" href="https://bbekshr.github.io/mayacharts/support/"
           ><span aria-hidden="true">♥</span> Support</a
         >
-        <button id="theme" type="button">Theme: auto</button>
+        <button id="theme" type="button">Light/dark: auto</button>
       </nav>
     </header>
     <header class="site">
@@ -68,6 +68,7 @@
     </header>
     <nav class="toc doc-toc" aria-label="On this page">
       <a href="#overview">Overview</a>
+      <a href="#customise">Customise a chart</a>
       <a href="#where-the-element-reads-the-spec">Where the element reads the spec</a>
       <a href="#data-fields">Data fields</a>
       <a href="#encoding-fields">Encoding fields</a>
@@ -85,6 +86,365 @@
           The mayaCharts spec is plain JSON. Rule: <code>x</code> is always the category,
           <code>y</code> is always the value, whatever the orientation. <code>yDomain</code> is
           always the value axis.
+        </p>
+      </section>
+
+      <section id="customise">
+        <h2>Customise a chart</h2>
+        <p>
+          Everything below is set in the spec, so it works the same in plain HTML, every framework,
+          server rendering and the builder. Style values can also be set from your own CSS on the
+          <code>maya-chart</code> element, which wins over the spec defaults. Tables are grouped by
+          what you want to change.
+        </p>
+
+        <h3 id="customise-text">Text and labels</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>To change</th>
+              <th>Use</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Heading above the chart</td>
+              <td>
+                <a href="#title"><code>title</code></a
+                >. It is also the accessible name
+              </td>
+              <td><code>"title": "Revenue by month"</code></td>
+            </tr>
+            <tr>
+              <td>Screen reader summary</td>
+              <td>
+                <a href="#description"><code>description</code></a
+                >. Written for you when omitted
+              </td>
+              <td><code>"description": "Revenue doubled in 2025."</code></td>
+            </tr>
+            <tr>
+              <td>Axis titles, legend, tooltip and table names</td>
+              <td>
+                <a href="#titles"><code>titles</code></a
+                >, by field. Axis titles show only when set
+              </td>
+              <td><code>"titles": { "rev": "Revenue ($)" }</code></td>
+            </tr>
+            <tr>
+              <td>Values printed on bars, points or cells</td>
+              <td>
+                <a href="#labels"><code>labels</code></a>
+              </td>
+              <td><code>"labels": true</code></td>
+            </tr>
+            <tr>
+              <td>Series names at the end of lines</td>
+              <td>
+                <a href="#endLabels"><code>endLabels</code></a
+                >. On by default for line and area
+              </td>
+              <td><code>"endLabels": false</code></td>
+            </tr>
+            <tr>
+              <td>Reference line captions</td>
+              <td>
+                <a href="#rules"><code>rules</code></a> with a <code>label</code> (40 characters at
+                most)
+              </td>
+              <td><code>"rules": [{ "y": 100, "label": "Target" }]</code></td>
+            </tr>
+            <tr>
+              <td>Built-in words (No data, Back, Other, Play and the rest)</td>
+              <td>
+                <a href="#text"><code>text</code></a
+                >. Keys are listed under Formatting fields
+              </td>
+              <td><code>"text": { "noData": "Keine Daten", "other": "Rest" }</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="customise-numbers">Numbers and dates</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>To change</th>
+              <th>Use</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>How every value reads</td>
+              <td>
+                <a href="#format"><code>format</code></a> as a preset: auto integer decimal compact
+                percent currency date month year time datetime
+              </td>
+              <td><code>"format": "compact"</code></td>
+            </tr>
+            <tr>
+              <td>One field differently</td>
+              <td><code>format</code> keyed by field</td>
+              <td><code>"format": { "rev": "currency", "month": "month" }</code></td>
+            </tr>
+            <tr>
+              <td>Words around a value</td>
+              <td>A template, or Intl options with <code>prefix</code> and <code>suffix</code></td>
+              <td><code>"format": { "m": "{value:percent} gross" }</code></td>
+            </tr>
+            <tr>
+              <td>Digits, units, compact style</td>
+              <td>Intl.NumberFormat or Intl.DateTimeFormat options per field</td>
+              <td><code>"format": { "w": { "style": "unit", "unit": "kilogram" } }</code></td>
+            </tr>
+            <tr>
+              <td>Decimal and thousands marks, month names</td>
+              <td>
+                <a href="#locale"><code>locale</code></a> (BCP 47)
+              </td>
+              <td><code>"locale": "de-DE"</code></td>
+            </tr>
+            <tr>
+              <td>The currency symbol</td>
+              <td>
+                <a href="#currency"><code>currency</code></a> (ISO 4217)
+              </td>
+              <td><code>"currency": "EUR"</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="customise-fonts">Fonts and text colour</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>To change</th>
+              <th>Use</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Typeface</td>
+              <td><code>theme.font</code>: family names only. Load the font on your page first</td>
+              <td><code>"theme": { "font": "'Inter', sans-serif" }</code></td>
+            </tr>
+            <tr>
+              <td>Text size</td>
+              <td>
+                <code>theme.fontSize</code>: legend, labels and tooltip. Axis text stays 11 px and
+                the title 15 px semibold
+              </td>
+              <td><code>"theme": { "fontSize": "13px" }</code></td>
+            </tr>
+            <tr>
+              <td>Title and value label colour</td>
+              <td><code>theme.fg</code></td>
+              <td><code>"theme": { "fg": "#111827" }</code></td>
+            </tr>
+            <tr>
+              <td>Axis text, legend and breadcrumb colour</td>
+              <td><code>theme.fgMuted</code>. Keep it at 4.5:1 or more on your background</td>
+              <td><code>"theme": { "fgMuted": "#4b5563" }</code></td>
+            </tr>
+            <tr>
+              <td>Tooltip colours</td>
+              <td><code>theme.tooltipBg</code> and <code>theme.tooltipFg</code></td>
+              <td><code>"theme": { "tooltipBg": "#111827", "tooltipFg": "#fff" }</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="customise-colour">Colour</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>To change</th>
+              <th>Use</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>A whole look in one step</td>
+              <td>
+                A ready-made set from <code>mayacharts/themes</code>, or pick one in the builder
+              </td>
+              <td><code>"theme": themes.ocean</code></td>
+            </tr>
+            <tr>
+              <td>Series colours in order</td>
+              <td>
+                <a href="#colors"><code>colors</code></a> as an array (8 at most)
+              </td>
+              <td><code>"colors": ["#2563eb", "#f59e0b"]</code></td>
+            </tr>
+            <tr>
+              <td>A colour for a named series</td>
+              <td><code>colors</code> as a map. It follows the series when the data reorders</td>
+              <td><code>"colors": { "North": "#2563eb" }</code></td>
+            </tr>
+            <tr>
+              <td>Main colour (single series, colour ramps)</td>
+              <td><code>theme.accent</code>. It also recolours series 1</td>
+              <td><code>"theme": { "accent": "#7c3aed" }</code></td>
+            </tr>
+            <tr>
+              <td>Good and bad tones</td>
+              <td>
+                <a href="#colorBy"><code>colorBy</code></a> with <code>theme.good</code> and
+                <code>theme.bad</code>
+              </td>
+              <td><code>"colorBy": "sign", "theme": { "bad": "#dc2626" }</code></td>
+            </tr>
+            <tr>
+              <td>Colour by a numeric field</td>
+              <td><code>colorBy</code> with the field name. Draws a ramp from the accent</td>
+              <td><code>"colorBy": "margin"</code></td>
+            </tr>
+            <tr>
+              <td>Gaps and label halos</td>
+              <td>
+                <code>theme.bg</code>. Set it to your page background when that is not white or near
+                black
+              </td>
+              <td><code>"theme": { "bg": "#f8fafc" }</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="customise-shape">Grid, axes and shape</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>To change</th>
+              <th>Use</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Grid on or off</td>
+              <td>
+                <a href="#grid"><code>grid</code></a>
+              </td>
+              <td><code>"grid": false</code></td>
+            </tr>
+            <tr>
+              <td>Grid colour</td>
+              <td>
+                <code>theme.grid</code>. Use <code>transparent</code> to keep spacing without lines
+              </td>
+              <td><code>"theme": { "grid": "#e5e7eb" }</code></td>
+            </tr>
+            <tr>
+              <td>Dashed grid</td>
+              <td><code>theme.gridDash</code>, an SVG dash array</td>
+              <td><code>"theme": { "gridDash": "3 3" }</code></td>
+            </tr>
+            <tr>
+              <td>Hide an axis</td>
+              <td>
+                <a href="#xAxis"><code>xAxis</code></a> and <a href="#yAxis"><code>yAxis</code></a>
+              </td>
+              <td><code>"yAxis": false</code></td>
+            </tr>
+            <tr>
+              <td>Fixed value range</td>
+              <td>
+                <a href="#yDomain"><code>yDomain</code></a
+                >. Reverse it for ranks
+              </td>
+              <td><code>"yDomain": [0, 100]</code></td>
+            </tr>
+            <tr>
+              <td>Bar corners</td>
+              <td><code>theme.radius</code></td>
+              <td><code>"theme": { "radius": "0px" }</code></td>
+            </tr>
+            <tr>
+              <td>Line width</td>
+              <td><code>theme.line</code></td>
+              <td><code>"theme": { "line": "3" }</code></td>
+            </tr>
+            <tr>
+              <td>Legend on or off</td>
+              <td>
+                <a href="#legend"><code>legend</code></a>
+              </td>
+              <td><code>"legend": false</code></td>
+            </tr>
+            <tr>
+              <td>Tooltip on or off</td>
+              <td>
+                <a href="#tooltip"><code>tooltip</code></a>
+              </td>
+              <td><code>"tooltip": false</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="customise-page">Size, light and dark, motion</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>To change</th>
+              <th>Use</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Height</td>
+              <td>CSS on the element. The width follows its container</td>
+              <td><code>maya-chart { height: 360px }</code></td>
+            </tr>
+            <tr>
+              <td>Light or dark</td>
+              <td>
+                The chart follows your page <code>color-scheme</code>. Set it on the element to pin
+                one chart
+              </td>
+              <td><code>maya-chart { color-scheme: dark }</code></td>
+            </tr>
+            <tr>
+              <td>Follow the OS setting</td>
+              <td>Opt in on the page</td>
+              <td><code>&lt;meta name="color-scheme" content="light dark"&gt;</code></td>
+            </tr>
+            <tr>
+              <td>Animation</td>
+              <td>
+                <a href="#animate"><code>animate</code></a
+                >. Always off under reduced motion
+              </td>
+              <td><code>"animate": false</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="customise-css">The same tokens from CSS</h3>
+        <p>
+          Every <code>theme</code> token is a CSS custom property on the element: the token name in
+          kebab case after <code>--maya-</code>, so <code>fgMuted</code> is
+          <code>--maya-fg-muted</code> and <code>series3</code> is <code>--maya-series-3</code>. Set
+          them in your stylesheet to style every chart at once. A strict CSP is fine: no inline
+          style attribute is needed.
+        </p>
+        <pre><code>maya-chart {
+  --maya-font: "Inter", sans-serif;
+  --maya-accent: #7c3aed;
+  --maya-series-1: #7c3aed;
+  --maya-radius: 0px;
+}</code></pre>
+
+        <h3 id="customise-not-yet">Not customisable yet</h3>
+        <p>
+          Title size and weight, axis text size apart from <code>fontSize</code>, legend position, a
+          subtitle and per-mark styling. Charts never take functions in the spec, so formatting is
+          always through <code>format</code> presets, templates and Intl options.
         </p>
       </section>
 
@@ -258,11 +618,12 @@
               <td>field</td>
               <td>
                 bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial
-                boxplot weave
+                boxplot weave constellation
               </td>
               <td>
                 Split into series; heatmap row category; dumbbell exactly two (from, to); boxplot
-                boxes side by side; weave one thread each (required)
+                boxes side by side; weave one thread each (required); constellation colours stars by
+                group
               </td>
             </tr>
             <tr>
@@ -556,7 +917,10 @@
             <tr>
               <td><a class="spec-anchor" id="theme"></a><code>theme</code></td>
               <td>{[token]: css}</td>
-              <td>Theme token overrides (CSS values, allowlisted)</td>
+              <td>
+                Theme token overrides (CSS values, allowlisted). Ready-made sets: import { themes }
+                from "mayacharts/themes"
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="grid"></a><code>grid</code></td>

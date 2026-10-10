@@ -218,7 +218,7 @@ chart.spec = { type: "bar", x: "family", y: "sales", was: "before", data: rows }
 // not with stack or a y array; a row whose was is not a number shows no ghost
 ```
 
-**Orrery (`orbit`).** Categories as planets around their total. Orbit radius is rank (largest innermost), planet size is value, and orbital speed and direction follow growth, so a shrinking category circles the other way. The planets sweep in and come to rest with their names beside them; pointing at the chart sets them turning, and they glide home when the pointer leaves. A static trail arc shows the growth too, so the chart still reads with motion off: under reduced motion, with `animate: false`, in server rendering and in an exported image.
+**Orrery (`orbit`).** Categories as planets around their total. Orbit radius is rank (largest innermost), planet size is value, and orbital speed and direction follow growth, so a shrinking category circles the other way. The planets sweep in and keep turning, each name riding beside its planet; pointing at the chart stops them where they are, so a planet is easy to read and hover, and they carry on when the pointer leaves. A static trail arc shows the growth too, so the chart still reads with motion off: under reduced motion, with `animate: false`, in server rendering and in an exported image.
 
 ```js
 import "mayacharts/orbit";
@@ -257,22 +257,22 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Encoding
 
-| Field        | Type                            | Applies to                                                                                        | Meaning                                                                                                                                                                                       |
-| ------------ | ------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `x`          | field                           | all but path types                                                                                | Category; scatter numeric x; hexmap state; beeswarm optional row; funnel stage, omitted when `y` lists the stages                                                                             |
-| `xType`      | auto / category / time          | bar line area                                                                                     | How x is spaced: auto detects ISO 8601 dates for a time axis; else categories. "time" accepts epoch ms. Default auto.                                                                         |
-| `y`          | field or field[]                | all                                                                                               | Value; array adds measure toggle (all-y types: axes/columns; funnel without `x`: one stage per field)                                                                                         |
-| `series`     | field                           | bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave | Split into series; heatmap row category; dumbbell exactly two (from, to); boxplot boxes side by side; weave one thread each (required)                                                        |
-| `path`       | field[]                         | treemap sunburst sankey chord; bar/line/area/dumbbell with drill                                  | Hierarchy outer to inner; replaces `x`                                                                                                                                                        |
-| `size`       | field                           | scatter constellation                                                                             | Bubble or star area (sqrt scale)                                                                                                                                                              |
-| `name`       | field                           | scatter beeswarm boxplot units                                                                    | Point identity and tooltip title; units one dot per row                                                                                                                                       |
-| `totals`     | string[]                        | waterfall                                                                                         | x values drawn as running-total bars                                                                                                                                                          |
-| `stack`      | boolean / "percent"             | bar area                                                                                          | Stack series instead of grouping; "percent" shows shares of each category's visible total (axis 0 to 100%, y formatted as percent unless `format` sets it)                                    |
-| `horizontal` | boolean                         | bar dumbbell                                                                                      | Categories on the left axis                                                                                                                                                                   |
-| `y2`         | field                           | bar orbit                                                                                         | Second value field as a line on right axis (vertical bars only); orbit: growth, which sets planet speed and direction                                                                         |
-| `was`        | field                           | bar                                                                                               | Previous value: a ghost bar over each bar keyed in the legend, "was" in the tooltip, a table column and a description sentence naming the 2 largest moves. Not with `stack` or a `y` array    |
-| `forms`      | ("waffle" / "bars" / "swarm")[] | units                                                                                             | Forms a units chart switches between, first shown (`view.form` picks another); a form control appears with 2 or more. Default all three                                                       |
-| `frame`      | field                           | bar line area scatter dumbbell                                                                    | Playback: one frame per distinct value, the last shown by default (`view.frame` picks another); the title names the frame and the value axes span every frame. The element adds a Play button |
+| Field        | Type                            | Applies to                                                                                                      | Meaning                                                                                                                                                                                       |
+| ------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `x`          | field                           | all but path types                                                                                              | Category; scatter numeric x; hexmap state; beeswarm optional row; funnel stage, omitted when `y` lists the stages                                                                             |
+| `xType`      | auto / category / time          | bar line area                                                                                                   | How x is spaced: auto detects ISO 8601 dates for a time axis; else categories. "time" accepts epoch ms. Default auto.                                                                         |
+| `y`          | field or field[]                | all                                                                                                             | Value; array adds measure toggle (all-y types: axes/columns; funnel without `x`: one stage per field)                                                                                         |
+| `series`     | field                           | bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation | Split into series; heatmap row category; dumbbell exactly two (from, to); boxplot boxes side by side; weave one thread each (required); constellation colours stars by group                  |
+| `path`       | field[]                         | treemap sunburst sankey chord; bar/line/area/dumbbell with drill                                                | Hierarchy outer to inner; replaces `x`                                                                                                                                                        |
+| `size`       | field                           | scatter constellation                                                                                           | Bubble or star area (sqrt scale)                                                                                                                                                              |
+| `name`       | field                           | scatter beeswarm boxplot units                                                                                  | Point identity and tooltip title; units one dot per row                                                                                                                                       |
+| `totals`     | string[]                        | waterfall                                                                                                       | x values drawn as running-total bars                                                                                                                                                          |
+| `stack`      | boolean / "percent"             | bar area                                                                                                        | Stack series instead of grouping; "percent" shows shares of each category's visible total (axis 0 to 100%, y formatted as percent unless `format` sets it)                                    |
+| `horizontal` | boolean                         | bar dumbbell                                                                                                    | Categories on the left axis                                                                                                                                                                   |
+| `y2`         | field                           | bar orbit                                                                                                       | Second value field as a line on right axis (vertical bars only); orbit: growth, which sets planet speed and direction                                                                         |
+| `was`        | field                           | bar                                                                                                             | Previous value: a ghost bar over each bar keyed in the legend, "was" in the tooltip, a table column and a description sentence naming the 2 largest moves. Not with `stack` or a `y` array    |
+| `forms`      | ("waffle" / "bars" / "swarm")[] | units                                                                                                           | Forms a units chart switches between, first shown (`view.form` picks another); a form control appears with 2 or more. Default all three                                                       |
+| `frame`      | field                           | bar line area scatter dumbbell                                                                                  | Playback: one frame per distinct value, the last shown by default (`view.frame` picks another); the title names the frame and the value axes span every frame. The element adds a Play button |
 
 ### Formatting
 
@@ -923,6 +923,26 @@ const spec = { type: "bar", x: "month", y: "revenue", data };
 chart.spec = spec;
 ```
 
+## Customising a chart
+
+Everything is set in the spec, so it works the same in HTML, every framework, server rendering and the builder. The [full guide](https://bbekshr.github.io/mayacharts/docs.html#customise) has an example for each item.
+
+| To change                                      | Use                                                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Heading, axis titles, legend and tooltip names | `title`, `titles` (by field)                                                                           |
+| Values on marks, line end names                | `labels`, `endLabels`                                                                                  |
+| Number and date display                        | `format` (presets, templates, Intl options), `locale`, `currency`                                      |
+| Built-in words such as No data, Back, Other    | `text`                                                                                                 |
+| Typeface and text size                         | `theme.font`, `theme.fontSize`                                                                         |
+| Text colours                                   | `theme.fg`, `theme.fgMuted`, `theme.tooltipBg`, `theme.tooltipFg`                                      |
+| Series colours                                 | `colors` (array or map by series), `theme.accent`, `theme.series1` to `series8`, or a ready-made theme |
+| Good and bad tones, ramps                      | `colorBy` with `theme.good`, `theme.bad`                                                               |
+| Grid, axes, legend, tooltip                    | `grid`, `theme.grid`, `theme.gridDash`, `xAxis`, `yAxis`, `legend`, `tooltip`                          |
+| Bar corners, line width                        | `theme.radius`, `theme.line`                                                                           |
+| Height, light or dark                          | CSS on the element: `height`, `color-scheme`                                                           |
+
+Not customisable yet: title size and weight, axis text size apart from `fontSize`, legend position, a subtitle and per-mark styling.
+
 ## Theming
 
 Every colour and font is a CSS custom property. Set them on the element or host:
@@ -953,6 +973,41 @@ maya-chart {
 | good      | --maya-good                        | #1a7f37                              | #3fb950               | colorBy positive / above target |
 | bad       | --maya-bad                         | #cf222e                              | #f85149               | colorBy negative / below target |
 | series1-8 | --maya-series-1 to --maya-series-8 | 1: --maya-accent; 2-8: oklch presets | same as light         | Series colours (max 8)          |
+| line      | --maya-line                        | 2.25                                 | 2.25                  | Line width                      |
+| gridDash  | --maya-grid-dash                   | none                                 | none                  | Grid dash array, e.g. `2 4`     |
+
+### Ready-made themes
+
+`mayacharts/themes` has 18 token sets for `spec.theme`. Each sets the eight series colours plus corner radius, line width and grid style. Colours are `light-dark(light, dark)` and follow the page's `color-scheme`. Every order keeps neighbouring series apart for colourblind readers (adjacent protan and deutan separation of 8 or more, normal vision 15 or more, in light and dark).
+
+| Theme     | Look                                                  |
+| --------- | ----------------------------------------------------- |
+| classic   | The familiar BI-tool palette people already know      |
+| corporate | Trustworthy blues with clear accents, boardroom safe  |
+| bright    | Clean saturated primaries, the modern SaaS look       |
+| ocean     | Deep blues and teals with a coral spark               |
+| arctic    | Icy blues against magenta and violet, cool and crisp  |
+| royal     | Navy, gold, crimson and emerald, formal and rich      |
+| berry     | Raspberry, plum and violet, rich and moody            |
+| sunset    | Hot reds, oranges and purples, warm and bold          |
+| retro     | 70s mustard, rust and teal                            |
+| earth     | Clay, sage and olive, editorial and muted-warm        |
+| spring    | Fresh greens, pinks and sky blue, light and happy     |
+| mint      | Emerald and indigo with warm pops, modern app         |
+| lagoon    | Aqua, pink and emerald, summery                       |
+| candy     | Bright pastels, playful and friendly                  |
+| aurora    | Violet, teal and pink, rounder and airier             |
+| pop       | Hot pink, electric blue and sunflower, maximum energy |
+| neon      | Electric on dark pages, punchy on light               |
+| synthwave | Purple, hot pink and cyan, 80s neon nights            |
+
+```js
+import { themes } from "mayacharts/themes";
+chart.spec = { ...spec, theme: themes.ocean };
+// Change one token: theme: { ...themes.pop, radius: "0px" }
+```
+
+The module is plain data and is not in the global build. Without a bundler, pick a theme in the [builder](https://bbekshr.github.io/mayacharts/builder.html) and its tokens are written into the copied spec. A `theme.accent` also recolours series 1 unless `colors` or `theme.series1` sets it.
 
 Brand palette example:
 
@@ -967,7 +1022,7 @@ maya-chart {
 }
 ```
 
-Dark mode is automatic via `color-scheme: light dark`. Override with `prefers-color-scheme`:
+The chart follows the page's `color-scheme`. A page without one gets a light chart; a page that sets `color-scheme: light dark` (or `<meta name="color-scheme" content="light dark">`) gets a chart that tracks the OS. Set `color-scheme` on `maya-chart` itself to pin one chart. Override colours per scheme with `prefers-color-scheme`:
 
 ```css
 @media (prefers-color-scheme: dark) {
@@ -1041,15 +1096,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 14,275 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 14,570 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,313,741,219 total, 2,668,839 output
+- claude-opus-5-5: 1,408,055,653 total, 2,875,341 output
 - claude-sonnet-5-5: 639,318,177 total, 90,341 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 28,286,070 total, 1,291 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,178,238,709 total, 3,195,699 output
+- all: 2,272,553,143 total, 3,402,201 output
 
 <!-- tokens:end -->
 

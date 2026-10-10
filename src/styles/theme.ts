@@ -1,5 +1,5 @@
 const L =
-  ":host,.maya-root{--maya-font:system-ui,sans-serif;--maya-font-size:12px;--maya-fg:light-dark(#1f2328,#e6edf3);--maya-fg-muted:light-dark(#656d76,#9198a1);--maya-grid:color-mix(in oklab,var(--maya-fg) 10%,transparent);--maya-bg:light-dark(#fff,#0d1117);--maya-accent:oklch(.6 .17 255);--maya-radius:3px;--maya-ease:cubic-bezier(.22,1,.36,1);--maya-tooltip-bg:color-mix(in oklab,var(--maya-bg) 92%,transparent);--maya-tooltip-fg:var(--maya-fg);--maya-focus:var(--maya-accent);--maya-good:light-dark(#0b7a75,#4fb3a9);--maya-bad:light-dark(#b5471b,#f08a5d);--maya-series-1:var(--maya-accent);--maya-series-2:oklch(.66 .16 50);--maya-series-3:oklch(.62 .15 160);--maya-series-4:oklch(.66 .17 330);--maya-series-5:oklch(.62 .14 90);--maya-series-6:oklch(.62 .12 205);--maya-series-7:oklch(.64 .19 22);--maya-series-8:oklch(.62 .16 295);color-scheme:light dark}";
+  ":host,.maya-root{--maya-font:system-ui,sans-serif;--maya-font-size:12px;--maya-fg:light-dark(#1f2328,#e6edf3);--maya-fg-muted:light-dark(#656d76,#9198a1);--maya-grid:color-mix(in oklab,var(--maya-fg) 10%,transparent);--maya-bg:light-dark(#fff,#0d1117);--maya-accent:oklch(.6 .17 255);--maya-radius:3px;--maya-ease:cubic-bezier(.22,1,.36,1);--maya-tooltip-bg:color-mix(in oklab,var(--maya-bg) 92%,transparent);--maya-tooltip-fg:var(--maya-fg);--maya-focus:var(--maya-accent);--maya-good:light-dark(#0b7a75,#4fb3a9);--maya-bad:light-dark(#b5471b,#f08a5d);--maya-series-1:var(--maya-accent);--maya-series-2:oklch(.66 .16 50);--maya-series-3:oklch(.62 .15 160);--maya-series-4:oklch(.66 .17 330);--maya-series-5:oklch(.62 .14 90);--maya-series-6:oklch(.62 .12 205);--maya-series-7:oklch(.64 .19 22);--maya-series-8:oklch(.62 .16 295)}";
 const D = "--maya-fg:#1f2328;--maya-fg-muted:#656d76;--maya-bg:#fff";
 const N = "--maya-fg:#e6edf3;--maya-fg-muted:#9198a1;--maya-bg:#0d1117";
 const rng = (n: number, from = 0) => Array.from({ length: n }, (_, i) => i + from);
@@ -100,21 +100,22 @@ const SCATTER =
 const DIM =
   ":not([data-active],[data-lit],text,:is(rect,path)[data-q],[data-kpi=fill],[data-pt] circle:not([data-last],[data-selected]))";
 // orbit
-// Planets orbit a sun: the theme rotates g[data-v] about the sun (its origin); names are static, at the rest angle.
-// The chart is a still, trails included, unless motion is allowed and not `data-still`: then it spins while the pointer is over it.
+// Planets orbit a sun: the theme rotates g[data-v] about the sun (its origin); a name rides inside, counter-turned upright.
+// The chart is a still, trails included, unless motion is allowed and not `data-still`: then it turns until a pointer, focus or an active planet stops it.
 // ponytail: five speed buckets, one period each (--p).
 const ORBIT =
   "g[data-v]{transform-box:view-box;transform-origin:0 0}" +
-  "[data-trail]{fill:none;stroke:var(--c);stroke-width:3;stroke-linecap:round}" +
+  "[data-trail]{fill:none;stroke:var(--c);stroke-width:2;stroke-opacity:.5;stroke-linecap:round}" +
   "g[data-s] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1.5}g[data-s] circle[data-maya=mark]:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2}" +
   "[data-maya=marks][data-hot] g[data-s]:not([data-lit],:has([data-active])) :is(g[data-up],[data-trail]){opacity:.4}" +
   "g[data-s] circle[data-below]{fill-opacity:.45;stroke:var(--c)}[data-up] text{font-size:11px;font-weight:600}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
   "@media (prefers-reduced-motion:no-preference){@keyframes maya-orbit{to{transform:rotate(360deg)}}" +
   [80, 52, 36, 24, 16].map((s, i) => `g[data-v="${i + 1}"]{--p:${s}s}`).join("") +
-  // At rest (paused at 0, the angle the names are placed for); `data-spin` (element.js: pointer over the chart) turns it, an active planet holds it, and the names step aside.
-  ".maya:not([data-still]) g[data-v]{animation:maya-orbit var(--p) linear infinite paused}.maya:not([data-still]) g[data-neg]{animation-direction:reverse}" +
-  ".maya[data-spin] g[data-v]{animation-play-state:running}.maya[data-spin] .maya-svg:has([data-active]) g[data-v]{animation-play-state:paused}" +
-  ".maya:not([data-still]) g[data-up]{transition:opacity .25s}.maya[data-spin] g[data-up]{opacity:0!important}" +
+  // Always turning; a name turns back about its own centre at the same rate, so it stays upright beside its planet.
+  ".maya:not([data-still]) g[data-v]{animation:maya-orbit var(--p) linear infinite}.maya:not([data-still]) g[data-neg]{animation-direction:reverse}" +
+  ".maya:not([data-still]) g[data-v] g[data-up]{transform-box:fill-box;transform-origin:center;animation:inherit;animation-direction:reverse}.maya:not([data-still]) g[data-neg] g[data-up]{animation-direction:normal}" +
+  // A pointer over the chart, keyboard focus or an active planet stops the sky where it is.
+  ".maya-svg:is(:hover,:focus,:has([data-active])) :is(g[data-v],g[data-up]){animation-play-state:paused}" +
   "}" +
   // Weave threads and halos: dim with legend hover, selection and the lit thread.
   "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks][data-hot] [data-w]:not([data-lit]){opacity:.18}" +
@@ -153,7 +154,7 @@ export const css =
   ".maya-box svg{display:block;width:100%;height:100%;overflow:visible}" +
   ".maya-svg{direction:ltr;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}" +
   ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:11px}" +
-  "[data-maya=grid] *{stroke:var(--maya-grid);shape-rendering:crispEdges}" +
+  "[data-maya=grid] *{stroke:var(--maya-grid);stroke-dasharray:var(--maya-grid-dash);shape-rendering:crispEdges}" +
   S +
   "[data-other],[data-total],[data-neu],[data-tone=zero]{--c:var(--maya-fg-muted)}" +
   "[data-tone=good]{--c:var(--maya-good)}[data-tone=bad]{--c:var(--maya-bad)}" +
@@ -167,7 +168,7 @@ export const css =
   "[data-pt] circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
   "[data-pt] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2}[data-pt] circle[data-lit]{r:4px}" +
   "circle[data-maya=mark][data-active]{filter:drop-shadow(0 0 4px color-mix(in oklab,var(--c) 70%,transparent))}" +
-  "[data-maya=line]{fill:none;stroke:var(--c);stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round}" +
+  "[data-maya=line]{fill:none;stroke:var(--c);stroke-width:var(--maya-line,2.25);stroke-linejoin:round;stroke-linecap:round}" +
   "[data-maya=area]{fill:color-mix(in oklab,var(--c) 18%,transparent);stroke:none}[data-stack] [data-maya=area]{fill:color-mix(in oklab,var(--c) 45%,var(--maya-bg))}" +
   A +
   "stop{stop-color:var(--c)}" +
@@ -214,6 +215,10 @@ export const css =
   ".maya-tip b{display:block;margin:0 0 4px;font-weight:600}" +
   ".maya-tip div{display:flex;align-items:center;gap:8px;color:color-mix(in oklab,var(--maya-tooltip-fg) 72%,transparent)}.maya-tip i{width:8px;height:8px;border-radius:50%}" +
   ".maya-tip [data-v]{margin-inline-start:auto;padding-inline-start:12px;font-weight:600;color:var(--maya-tooltip-fg)}.maya-tip [data-on]{color:var(--maya-tooltip-fg)}" +
+  // Constellation profile: a bar either side of the average (--z in standard deviations), and the neighbour note.
+  ".maya-tip [data-z]{flex:none;position:relative;width:56px;height:6px;margin-inline-start:auto;border-radius:3px;background:linear-gradient(var(--maya-fg-muted),var(--maya-fg-muted)) 50%/1px 100% no-repeat,var(--maya-grid)}.maya-tip [data-z]::before{content:'';position:absolute;inset-block:0;left:calc(50% + min(0px,var(--z)*11px));width:calc(max(var(--z),-1*var(--z))*11px);border-radius:3px;background:var(--c,var(--maya-accent))}.maya-tip [data-z]+[data-v]{margin-inline-start:0;min-width:6ch;text-align:end}.maya-tip [data-note]{display:block;max-width:240px;margin-top:4px}" +
+  // Constellation hover: links to the 3 nearest appear and those stars are ringed.
+  "[data-maya=grid] line[data-a]{stroke:none}[data-maya=grid] line[data-a][data-lit]{stroke:var(--maya-fg);stroke-width:1.5;stroke-dasharray:none;shape-rendering:auto}circle[data-n][data-lit]{stroke:var(--maya-fg);stroke-width:2}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
   "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend :not([data-line])>i{width:8px;height:8px}.maya-title{font-size:12px}}" +
   RADIAL +

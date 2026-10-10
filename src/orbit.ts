@@ -10,19 +10,19 @@
  *     <g data-v="1..5" [data-neg]>   the theme rotates this about the sun
  *       trail <path data-trail>      static arc behind the planet, sweep proportional to growth
  *       <circle data-maya=mark>      the keyed mark, key S~C, cx/cy on its orbit
- * Names are drawn after every planet, each in its own keyed group `o~CATEGORY~l` (data-a = the
- * planet's data-n, so hovering the planet lights its name): <g data-up>two <text>s</g>. They are STATIC,
- * not in a rotating bucket: a name sits radially outward of its planet's resting angle, on its lane,
- * so names never cross each other while the planets turn. Placed largest planet first and dropped when
- * they would touch the sun, another planet or name, or leave the plot (at most 6 are named).
+ *       [<g data-up>]                its name: two <text>s radially outward of the planet
+ * A name rides its planet (inside the turning group) and the theme counter-turns it about its own
+ * centre, so it stays upright and beside its planet. Placed largest planet first at angle 0 and
+ * dropped when it would touch the sun, another planet or name, or leave the plot (at most 6 named);
+ * planets turning at different speeds can pass a name for a moment.
  * Orbit radius is the rank of y (largest innermost); planet area is |y| (capped to its lane, a negative
  * planet is paler with a ring, data-below); the total sits at the sun as a text mark keyed `t` that counts up, the sum of |y| so the
  * planet areas add up to it (with negative values it is gross, not net, and the sun says so). The trail reads with motion off, in SSR and
- * in toSVG(). Motion (theme.ts and animate.ts): the chart rests at angle 0, where the names stand. The first draw
- * sweeps each g[data-v] in from its own direction (further the faster it is) and the names fade in once
- * settled; a mouse over the chart sets data-spin on the host, which turns the planets at their speed and
- * hides the names; an active planet pauses the turn; leaving glides them home the short way, then the
- * names return. Keyboard focus never spins. Reduced motion and animate:false: always at rest. No y2 means no data-v, so nothing moves.
+ * in toSVG(). Motion (theme.ts and animate.ts): the planets turn at their speed all the time; a pointer
+ * over the chart, keyboard focus or an active planet stops them where they are, and they carry on
+ * from there. The first draw sweeps each g[data-v] in from its own direction (further the faster it
+ * is), added on top of the turn. Reduced motion and animate:false: always at rest at angle 0. No y2
+ * means no data-v, so nothing moves.
  * The tooltip's second line (growth) rides in data-f as "label\tvalue" lines, as scatter's does.
  */
 import { register } from "./core/registry.ts";
@@ -83,7 +83,7 @@ export const orbit: Mark = {
     const R = Math.max(inner + 12, Math.min(plot.w / 2 - 40, plot.h / 2 - P - 28));
     const ring = (k: number) => (n > 1 ? inner + (k * (R - inner)) / (n - 1) : (inner + R) / 2);
     // Planets never outgrow their lane: rings can sit 8 px apart.
-    const pmax = Math.min(P, Math.max(3, 0.6 * (n > 1 ? (R - inner) / (n - 1) : R)));
+    const pmax = Math.min(P, Math.max(3, 0.65 * (n > 1 ? (R - inner) / (n - 1) : R)));
     const g = ps.map((p, k) => {
       const [rr, a] = [ring(k), ((k * 137.5 + 20) % 360) / DEG];
       const [px, py] = [r(rr * Math.sin(a)), r(-rr * Math.cos(a))];
@@ -143,7 +143,6 @@ export const orbit: Mark = {
         }
       });
     let marks = "";
-    let names = ""; // labels, drawn after every planet so no trail crosses a name
     let grid = el("circle", { cx, cy, r: r(R0), "data-disc": true });
     ps.forEach((p, k) => {
       const { rr, a, px, py, pr } = g[k]!;
@@ -170,6 +169,7 @@ export const orbit: Mark = {
         "data-below": p.v < 0, // area hides the sign: a negative planet is paler with a ring (theme)
       };
       grid += el("circle", { cx, cy, r: r(rr) });
+      const l = named.get(k);
       marks += el(
         "g",
         {
@@ -186,25 +186,17 @@ export const orbit: Mark = {
                 "data-trail": true,
                 d: `M${at(a + (neg ? sweep : -sweep))}A${r(rr)} ${r(rr)} 0 0 ${neg ? 0 : 1} ${at(a)}`,
               })
-            : "") + el("circle", { "data-maya": "mark", ...d, cx: px, cy: py, r: r(pr) }),
+            : "") +
+            el("circle", { "data-maya": "mark", ...d, cx: px, cy: py, r: r(pr) }) +
+            (l
+              ? el(
+                  "g",
+                  { "data-up": true },
+                  text(l[0], l[2], l[3] - 1) + text(l[1], l[2], l[3] + 11, { "data-g": true }),
+                )
+              : ""),
         ),
       );
-      const l = named.get(k);
-      if (l)
-        names += el(
-          "g",
-          {
-            "data-key": key("o", p.name, "l"),
-            transform: `translate(${cx} ${cy})`,
-            "data-s": 0,
-            "data-a": p.ci,
-          },
-          el(
-            "g",
-            { "data-up": true },
-            text(l[0], l[2], l[3] - 1) + text(l[1], l[2], l[3] + 11, { "data-g": true }),
-          ),
-        );
     });
 
     // The sun: the grand total counts up like radial's centre.
@@ -247,7 +239,7 @@ export const orbit: Mark = {
         )
       : "";
     return {
-      marks: marks + names,
+      marks,
       hits: "",
       labels,
       grid,

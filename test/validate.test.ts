@@ -208,7 +208,7 @@ describe("one snapshot per error code", () => {
     expect([e.code, e.path]).toEqual(["invalid-theme", "theme.acent"]);
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.theme.acent is not a theme token.
-        Valid tokens: font, fontSize, fg, fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, bad, series1, series2, series3, series4, series5, series6, series7, series8.
+        Valid tokens: font, fontSize, fg, fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, bad, line, gridDash, series1, series2, series3, series4, series5, series6, series7, series8.
         Did you mean "accent"?
         -> https://bbekshr.github.io/mayacharts/errors.html#invalid-theme"
     `);

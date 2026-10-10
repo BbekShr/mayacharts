@@ -19,6 +19,7 @@ export default defineConfig({
       { find: /^mayacharts\/units$/, replacement: src("units.ts") },
       { find: /^mayacharts\/orbit$/, replacement: src("orbit.ts") },
       { find: /^mayacharts\/constellation$/, replacement: src("constellation.ts") },
+      { find: /^mayacharts\/themes$/, replacement: src("themes.ts") },
       { find: /^mayacharts$/, replacement: src("index.ts") },
     ],
   },

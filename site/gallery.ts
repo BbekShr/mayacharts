@@ -28,7 +28,7 @@ import {
 } from "./data.ts";
 import { show } from "./show.ts";
 import { signature } from "./signature.ts";
-import { theme } from "./theme.ts";
+import { theme, themed, themePicker } from "./theme.ts";
 
 type Chart = HTMLElement & { spec: ChartSpec; data: Row[] };
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -644,7 +644,13 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
 }
 
 const seed = () => (Math.random() * 2 ** 32) >>> 0;
-for (const [id, spec] of Object.entries(specs(makeData(7)))) show(id, spec);
+// Every tile is drawn through the chart theme picked in the toolbar.
+let shown = specs(makeData(7));
+const draw = (id?: string) => {
+  for (const [k, spec] of Object.entries(shown)) if (!id || k === id) show(k, themed(spec));
+};
+draw();
+themePicker($("chart-theme"), () => draw());
 
 // The feed's Play button steps its windows; scrolling it away, or a re-roll, pauses it.
 const feedChart = $<Chart>("feed");
@@ -657,7 +663,7 @@ const stop = () => {
   feedBtn.textContent = "Play";
 };
 const tick = () => {
-  feedChart.spec = feedWindows[i++]!;
+  feedChart.spec = themed(feedWindows[i++]!);
   if (i === feedWindows.length) ((i = 0), stop());
 };
 feedBtn.onclick = () => {
@@ -675,7 +681,8 @@ document.addEventListener("click", (e) => {
   if (!btn) return;
   const all = specs(makeData(seed()));
   const id = btn.dataset.reroll;
-  for (const [k, spec] of Object.entries(all)) if (!id || k === id) show(k, spec);
+  shown = id ? { ...shown, [id]: all[id]! } : all;
+  draw(id);
   stop();
 });
 

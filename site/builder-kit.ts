@@ -243,6 +243,7 @@ export const SAMPLES: Readonly<Record<string, Omit<ChartSpec, "type">>> = {
     x: "Item",
     y: ["Price", "Margin %", "Units"],
     size: "Units",
+    series: "Family",
     data: items,
   }),
 };
