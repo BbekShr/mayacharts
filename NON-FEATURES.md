@@ -56,6 +56,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Density cells**: scatter past 10000 visible points draws square cells (not hexagons), merges series into one ramp, drops `size` and `name`, and scales colour by the square root of the count against the visible maximum.
 - **Format templates**: one `{value}` or `{value:<preset>}` per template, at most 80 characters; no other placeholders such as the series or category name.
 - **Drill engine**: `drill: true` + `path` for navigation. No custom drill templates, custom breadcrumb shapes, or drilling by a measure-derived category (use `path` and `aggregate`).
+- **Zoom is pointer only**: a zoom window is made only by dragging; there is no keyboard or single-click way to set one (WCAG 2.1.1 and 2.5.7). Escape and the Reset chip work from the keyboard, and hosts can set `el.view.window` from their own controls.
 - **No pinch or wheel zoom**: `zoom: true` on line/area/scatter enables drag-to-brush; Reset chip, double-click and Escape restore. Pinch gestures and scroll wheel are not captured.
 - **Drill and select exclusive**: `drill: true` and `select: true/multi` cannot both be set (ceiling: drill state and selection are orthogonal pipelines and combining them overcomplicates the reducer).
 - **Percent stacks show shares only**: with `stack: "percent"` labels, tooltips and the data table show each segment's share; the raw value is not carried. Chart the same data with `stack: true` to read amounts.
