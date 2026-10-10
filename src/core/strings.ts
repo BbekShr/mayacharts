@@ -51,6 +51,10 @@ export const TEXT = {
   sortedBy: "Sorted by {0}, {1}",
   ascending: "ascending",
   descending: "descending",
+  /** Chart description of a warn threshold when higher is better: {0} = the warn value. */
+  riskBelow: "at risk below {0}",
+  /** Chart description of a warn threshold when lower is better: {0} = the warn value. */
+  riskAbove: "at risk above {0}",
   /** kpi bullet: {0} = share of target, {1} = target. */
   ofTarget: "{0} of target {1}",
   /** Sunburst centre at the root. */

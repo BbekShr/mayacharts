@@ -284,3 +284,26 @@ describe("kpi period caption", () => {
     expect(t).toContain('text-anchor="end"');
   });
 });
+
+describe("kpi and gauge description names the warn threshold", () => {
+  const desc = (s: ChartSpec) => /<desc[^>]*>([^<]*)</.exec(render(s))?.[1] ?? "";
+  const rows = [{ v: 27 }];
+  it("kpi, both directions", () => {
+    const k = (colorBy: object) => desc({ type: "kpi", y: "v", colorBy, data: rows } as ChartSpec);
+    expect(k({ target: 30, warn: 22 })).toContain("target 30, at risk below 22.");
+    expect(k({ target: 20, warn: 25, better: "lower" })).toContain("target 20, at risk above 25.");
+    expect(k({ target: 30 })).not.toContain("at risk");
+  });
+  it("gauge, text override", async () => {
+    await import("../src/radial.ts");
+    const g = desc({
+      type: "gauge",
+      y: "v",
+      yDomain: [0, 50],
+      colorBy: { target: 30, warn: 22 },
+      text: { riskBelow: "Risiko unter {0}" },
+      data: rows,
+    } as ChartSpec);
+    expect(g).toContain("Risiko unter 22.");
+  });
+});

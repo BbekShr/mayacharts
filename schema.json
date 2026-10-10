@@ -270,6 +270,8 @@
           "change",
           "pts",
           "target",
+          "riskBelow",
+          "riskAbove",
           "ofTarget",
           "total",
           "shareOf",
