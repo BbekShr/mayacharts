@@ -89,7 +89,7 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
       ? `, ${t(spec, "target")} ${f(spec.colorBy.target)}` +
         (spec.colorBy.warn == null
           ? "."
-          : `, ${t(spec, spec.colorBy.better === "lower" ? "riskAbove" : "riskBelow", f(spec.colorBy.warn))}.`)
+          : `, ${t(spec, spec.colorBy.better === "lower" ? "offAbove" : "offBelow", f(spec.colorBy.warn))}.`)
       : ".") +
     cut
   );
