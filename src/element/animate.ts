@@ -255,7 +255,7 @@ function retire(e: Element): void {
 
 const gk = new WeakMap<Element, string>(); // exiting node -> the key it had
 
-function exit(e: Element, origin?: Box): void {
+function exit(e: Element, origin?: Box, from?: Keyframe): void {
   moved = true;
   gk.set(e, e.getAttribute("data-key")!);
   retire(e);
@@ -264,7 +264,7 @@ function exit(e: Element, origin?: Box): void {
   const o = { ...DATA, fill: "forwards" as const };
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, true);
-  if (f) run(e, [arc(e, true), f], { ...ZOOM, fill: "forwards" }, done);
+  if (f) run(e, [from!, f], { ...ZOOM, fill: "forwards" }, done);
   else if (z) run(e, [{}, { transform: z, opacity: 0 }], { ...ZOOM, fill: "forwards" }, done);
   else if (g)
     run(e, [{ transform: "none" }, { transform: tf(g, seed(e, g, origin)), opacity: 0 }], o, done);
@@ -415,6 +415,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
 
   const pre = new Map<Element, Box | undefined>();
   const arcs = new Map<Element, Keyframe>();
+  for (const e of o.children) if (ring(e)) arcs.set(e, arc(e, true));
   for (const e of w.children) {
     const m = at(e.getAttribute("data-key")!);
     if (!m || m.localName !== e.localName) continue;
@@ -422,7 +423,6 @@ function marks(o: Element, w: Element, origin?: Box): void {
     const g = geo(t);
     // The on-screen box of an animating mark: its transform is in user units, origin 0 0 (fill-box).
     const c = g && live.get(t) && new DOMMatrix(getComputedStyle(t).transform);
-    if (ring(m)) arcs.set(m, arc(m, true));
     // An orbit planet's transform rotates about the sun: carry its centre through it.
     const q = c && t !== m && c.transformPoint({ x: g[0] + g[2] / 2, y: g[1] + g[3] / 2 });
     pre.set(
@@ -538,7 +538,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
       fade(tg, false, undefined, { ...UI, delay: glided || tg === m ? 120 : 0 });
     order.push(m);
   }
-  for (const m of old.values()) exit(m, origin);
+  for (const m of old.values()) exit(m, origin, arcs.get(m));
   let ref = o.firstElementChild;
   for (const m of order) {
     while (ref && ref !== m && !ref.hasAttribute("data-key")) ref = ref.nextElementSibling;

@@ -557,4 +557,35 @@ describe("motion", () => {
       expect(seen.some((t) => num(t) > 0 && t !== b)).toBe(true);
     }
   });
+  it("exiting sunburst rings read their on-screen style before the first write", () => {
+    const box = document.createElement("div");
+    const ring = (k: string, i: number, d: number) =>
+      `<circle data-maya="mark" data-key="${k}" data-depth="${d}" cx="50" cy="50" r="20" pathLength="360" stroke-width="5" stroke-dasharray="90 270" stroke-dashoffset="${90 - i * 90}"/>`;
+    const svg = (m: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks">${m}</g></svg>`;
+    patch(box, svg(ring("h", 0, 0) + ring("a", 0, 1) + ring("b", 1, 1) + ring("c", 2, 1)), false);
+    const [wasA, wasC, wasN] = [
+      Element.prototype.getAnimations,
+      globalThis.getComputedStyle,
+      Element.prototype.animate,
+    ];
+    Element.prototype.getAnimations = function () {
+      return this.localName === "circle" ? [{} as Animation] : [];
+    };
+    const log: string[] = [];
+    globalThis.getComputedStyle = ((e: Element) => (log.push("c"), wasC(e))) as never;
+    Element.prototype.animate = function (this: Element, ...a: never[]) {
+      log.push("w");
+      return (wasN as any).apply(this, a);
+    } as never;
+    patch(box, svg(ring("a", 0, 0)), true); // drill into a: b and c fold away
+    [Element.prototype.getAnimations, globalThis.getComputedStyle, Element.prototype.animate] = [
+      wasA,
+      wasC,
+      wasN,
+    ];
+    expect(box.querySelectorAll("[data-ghost]").length).toBe(3);
+    expect(log.indexOf("w")).toBeGreaterThan(-1);
+    expect(log.lastIndexOf("c")).toBeLessThan(log.indexOf("w"));
+  });
 });
