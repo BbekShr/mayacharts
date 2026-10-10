@@ -205,27 +205,30 @@ export const radial: Mark = {
     const f = fv(total);
     const inner = R0 * 1.5;
     const fs = Math.max(12, Math.min(R0 * 0.4, 26, inner / (f.length * 0.62)));
-    const sub = R0 > 30 && fs * 1.7 + 14 < R0 * 2;
+    // Only a sum or count adds up across categories; a stack of means has no honest total.
+    const tot = spec.aggregate === "sum" || spec.aggregate === "count";
+    const sub = tot && R0 > 30 && fs * 1.7 + 14 < R0 * 2;
     // A keyed text mark, so the element counts the total up on first draw and on change.
-    marks += el(
-      "text",
-      {
-        "data-maya": "mark",
-        "data-key": key("t"),
-        "data-x": tt,
-        "data-y": total,
-        "data-f": f,
-        "data-series": "",
-        x: r(cx),
-        y: r(cy + (sub ? 6 : 0)),
-        "text-anchor": "middle",
-        "dominant-baseline": "middle",
-        "font-size": r(fs),
-        "font-weight": 650,
-        "data-total": "",
-      },
-      esc(f),
-    );
+    if (tot)
+      marks += el(
+        "text",
+        {
+          "data-maya": "mark",
+          "data-key": key("t"),
+          "data-x": tt,
+          "data-y": total,
+          "data-f": f,
+          "data-series": "",
+          x: r(cx),
+          y: r(cy + (sub ? 6 : 0)),
+          "text-anchor": "middle",
+          "dominant-baseline": "middle",
+          "font-size": r(fs),
+          "font-weight": 650,
+          "data-total": "",
+        },
+        esc(f),
+      );
     const cap = Math.floor((R0 * 1.8) / 6.2);
     if (sub)
       labels += el(
@@ -351,11 +354,11 @@ export const gauge: Mark = {
       const lower = g!.better === "lower";
       const cuts = lower ? [a, target, warn, b] : [a, warn, target, b];
       cuts.slice(0, 3).forEach((_, i) => {
-        const [f0, f1] = [fr(cuts[i]!), fr(cuts[i + 1]!)].sort();
+        const [f0, f1] = [fr(cuts[i]!), fr(cuts[i + 1]!)].sort((p, q) => p - q);
         if (f1! > f0!)
           grid += el("path", {
             fill: "var(--maya-fg)",
-            "fill-opacity": [0.2, 0.12, 0.06][lower ? 2 - i : i],
+            "fill-opacity": [0.4, 0.22, 0.1][lower ? 2 - i : i],
             d: ring(R + 3, R + 6, f0!, f1!, 0),
           });
       });
@@ -372,7 +375,10 @@ export const gauge: Mark = {
     // The value is a stroked circle like a sunburst slice (pathLength 360, dash = angle) so a change
     // sweeps along the track; the round caps sit inside the same inset as the track's rounded ends.
     const [rm, cap] = [(ri + R) / 2, (t / 2 / ((ri + R) / 2)) * (180 / PI)];
-    const sweep = Math.max(0, fr(value) * 180 - 2 * cap);
+    // The fill grows from zero (the dial minimum when zero is off the dial), either way round.
+    const z = fr(0);
+    const fvl = fr(value);
+    const sweep = Math.max(0, Math.abs(fvl - z) * 180 - 2 * cap);
     const marks = el("circle", {
       "data-maya": "mark",
       "data-key": "v",
@@ -382,10 +388,10 @@ export const gauge: Mark = {
       r: r(rm),
       "data-depth": 1, // borrows the sunburst ring paint: no fill, stroke var(--c)
       "stroke-width": r(t),
-      "stroke-linecap": "round",
+      "stroke-linecap": fvl === z ? "butt" : "round", // a value of exactly zero draws nothing
       pathLength: 360,
       "stroke-dasharray": `${r(sweep)} ${r(360 - sweep)}`,
-      "stroke-dashoffset": r(180 - cap),
+      "stroke-dashoffset": r(180 - Math.min(z, fvl) * 180 - cap),
     });
     const hits = el("path", {
       "data-maya": "hit",
@@ -462,6 +468,7 @@ export const gauge: Mark = {
       );
     }
     if (bands) labels += tick(warn, R + 2, R + 7, { stroke: "var(--maya-fg-muted)" });
+    if (lo < 0 && hi > 0) labels += tick(0, ri, R, { stroke: "var(--maya-fg-muted)" }); // where the fill starts
     const dv = wasV === null ? 0 : value - wasV;
     const nf = (o: Intl.NumberFormatOptions) =>
       new Intl.NumberFormat(spec.locale, {
