@@ -4,7 +4,7 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 ## Needs a decision from the human
 
-- **Size headroom** (2026-10-10 follow-up): the owner approved raising index, element, radial and global to the measured sizes plus about 64 B (index 40560, element 58260, radial 4780, global 77930). The guard hook blocks the `mayaSize` edit, so the owner applies it. Other bundles: theme 31 B, units 3 B, flow 7 B, hierarchy 33 B, stats 70 B. Owner: human.
+- **Size headroom** (2026-10-10 follow-up): the owner approved raising index, element, radial and global to the measured sizes plus about 64 B (index 40560, element 58260, radial 4780, global 77930). Applied on the owner's instruction the same day. Other bundles: theme 31 B, units 3 B, flow 7 B, hierarchy 33 B, stats 70 B. Owner: human.
 - **Line charts anchored at zero** (design critic M7): a deliberate ceiling (`line.ts`); FT and Datawrapper nice-pad a line's extent and keep zero for area. About +20 B core and a default change (docs too). Owner: human.
 - **Percent labels mix precision in one chart** ("10%" beside "15.9%", share bar and marimekko): the formatter is per value; one precision per chart needs the data or a fixed decimal. Contract question. Owner: human, then core engineer.
 
@@ -57,4 +57,3 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 - **Firefox flake**: "bar hover column sits under an unevenly spaced bar" failed 4 of 16 on base and 2 of 12 on the branch under load. Owner: element engineer.
 - **Hexmap sums aliases** ("CA" and "California" add up regardless of `aggregate`). Rare; document or leave. Owner: chart designer.
 - **Select clears on any document click**, including a host's own button outside the chart; document it in the select docs. Owner: core engineer.
-- **`playwright.config.ts` still names the removed compare project** and its `testIgnore` (harmless: `npm run e2e` lists projects explicitly). The guard hook blocks the edit; remove the `compare` project, the three `testIgnore` lines and the comment above `projects`. Owner: human.
