@@ -8,6 +8,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Added
 
+- Text key `blank` (default "(blank)"): a row whose category (x, series or a drill path level) is null or missing now reads "(blank)" in axes, `data-x`, tooltips, descriptions and the data table instead of "null". A real "(blank)" value joins the same category. Time axes still drop null rows; scatter, kpi, gauge and the hierarchy types are unchanged.
 - Text keys `offBelow` and `offAbove`: a kpi or gauge description with a `warn` threshold now says where the chart goes off track, for example "target 30%, off track below 22%".
 - Docs: worked examples for a kpi with a goal and for the gauge.
 

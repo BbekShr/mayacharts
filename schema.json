@@ -246,6 +246,7 @@
         "enum": [
           "noData",
           "other",
+          "blank",
           "back",
           "reset",
           "showing",

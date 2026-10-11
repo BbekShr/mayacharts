@@ -5,6 +5,8 @@
 export const TEXT = {
   noData: "No data",
   other: "Other",
+  /** Category label for a row whose x (or path level) is null or missing. */
+  blank: "(blank)",
   back: "Back",
   reset: "Reset zoom",
   /** Live region after a measure toggle: {0} = measure title. */

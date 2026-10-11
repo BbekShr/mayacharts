@@ -30,7 +30,7 @@
  * Lookups keyed by user input go through Object.hasOwn or Array#includes.
  */
 import { CORE_TYPES, MODULE_OF, MODULES, types } from "./registry.ts";
-import { TEXT } from "./strings.ts";
+import { t as txt, TEXT } from "./strings.ts";
 import { memo } from "./svg.ts";
 import { toTime } from "./ticks.ts";
 import type {
@@ -87,6 +87,8 @@ const CART = ["bar", "line", "area"];
 /** Types whose x can come from path with drill (the current level is the category). */
 const PATHX = [...CART, "dumbbell"];
 const PATH = ["treemap", "sunburst", "sankey", "chord"];
+/** Types whose x is not a category (a number, a date or unused): a null stays null. */
+const NOBLANK = ["scatter", "kpi", "gauge", "constellation", "hexmap", ...PATH];
 /** y arrays on these types are shown together (axes, columns), never a measure toggle. */
 export const ALL_Y = ["parallel", "table", "funnel", "constellation", "kpi"];
 /** Option -> types that accept it (option-unsupported otherwise). */
@@ -912,7 +914,31 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const F = spec.frame;
   const fv = F ? [...new Set(spec.data.flatMap((r) => (r[F] == null ? [] : [String(r[F])])))] : [];
   const fi = Math.min(view.frame ?? fv.length, fv.length - 1);
-  const rows = F ? spec.data.filter((r) => String(r[F]) === fv[fi]) : spec.data;
+  const x = spec.x ?? (PATHX.includes(spec.type) ? (path[0] ?? "") : "");
+  const frameRows = F ? spec.data.filter((r) => String(r[F]) === fv[fi]) : spec.data;
+  // A null or missing category reads "(blank)" everywhere (it joins a real "(blank)" row). Time axes drop nulls.
+  const bf =
+    NOBLANK.includes(spec.type) || spec.xType === "time"
+      ? []
+      : [x, spec.series, ...(PATHX.includes(spec.type) ? full : [])].filter(
+          (k): k is string => !!k,
+        );
+  const rows = bf.length
+    ? memo(frameRows, `b${bf}\0${txt(spec, "blank")}`, () =>
+        frameRows.some((r) => bf.some((k) => r[k] == null))
+          ? frameRows.map((r) =>
+              bf.some((k) => r[k] == null)
+                ? {
+                    ...r,
+                    ...Object.fromEntries(
+                      bf.filter((k) => r[k] == null).map((k) => [k, txt(spec, "blank")]),
+                    ),
+                  }
+                : r,
+            )
+          : frameRows,
+      )
+    : frameRows;
   const forms = spec.forms ?? (spec.type === "units" ? (FORMS as ResolvedSpec["forms"]) : []);
   // Units: the group is the series (legend toggles, view.hidden and colors by group), unless colorBy colours the dots.
   const series = spec.series ?? (spec.type === "units" && !spec.colorBy ? spec.x! : null);
@@ -938,7 +964,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
       ? rows.filter((r) => drilled.every((d, i) => String(r[full[i]!]) === d))
       : rows,
     frame: F ? [F, fv, fi] : null,
-    x: spec.x ?? (PATHX.includes(spec.type) ? (path[0] ?? "") : ""),
+    x,
     xType: spec.xType ?? "auto",
     y: measures[measure]!,
     measures,

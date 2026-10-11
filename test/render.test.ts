@@ -646,3 +646,36 @@ describe("constant huge values", () => {
     expect(render({ type: "beeswarm", y: "v", data: [{ v: 5e17 }] })).toContain("<svg");
   });
 });
+
+describe("null category", () => {
+  const data = [
+    { m: "A", s: "u", v: 1 },
+    { m: null, s: "u", v: 3 },
+    { s: "u", v: 2 },
+  ];
+  it.each(["bar", "line", "ridgeline"] as const)("%s reads (blank), never null", (type) => {
+    const p = renderParts({ type, x: "m", y: "v", series: "s", data } as ChartSpec);
+    expect(p.svg).toContain('data-x="(blank)"');
+    expect(p.table).toContain('<th scope="row">(blank)</th>');
+    for (const h of [p.svg, p.table, p.legend]) expect(h).not.toMatch(/null|undefined/);
+  });
+  it("spec.text.blank overrides the label", () => {
+    const svg = render({ type: "bar", x: "m", y: "v", data, text: { blank: "leer" } });
+    expect(svg).toContain("leer");
+    expect(svg).not.toContain("(blank)");
+  });
+  it("a time axis still drops null x rows", () => {
+    const svg = render({
+      type: "line",
+      x: "d",
+      y: "v",
+      xType: "time",
+      data: [
+        { d: "2024-01-01", v: 1 },
+        { d: null, v: 9 },
+        { d: "2024-02-01", v: 2 },
+      ],
+    });
+    expect(svg).not.toContain("(blank)");
+  });
+});
