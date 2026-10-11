@@ -624,7 +624,9 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     [...o.children].filter((c) => c !== om && !out.includes(c)).map((c) => [id(c), c]),
   );
   const fadeIn: Element[] = [];
-  const z = !!(zoom || zm || moved);
+  // Sunburst: labels ghost and fade in late (as on a drill), never follow rings that sweep in angle.
+  const sun = !!w.querySelector('circle[data-depth="0"]');
+  const z = !!(zoom || zm || moved || sun);
   const late = { ...UI, delay: Number((zoom || zm ? ZOOM : DATA).duration) * 0.75 };
   const ghosts: Element[] = [];
   const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
@@ -636,7 +638,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     const p = pool.get(id(c));
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
-    else if (p && !zoom && !zm && /^(labels|axis-[xy])$/.test(id(c))) {
+    else if (p && !zoom && !zm && !sun && /^(labels|axis-[xy])$/.test(id(c))) {
       follow(p, c, id(c) === "labels" ? late : { ...UI, delay: 160 }, id(c) === "labels");
       out.push(p);
     } else {

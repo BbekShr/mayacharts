@@ -617,4 +617,21 @@ describe("motion", () => {
     expect(gl.map((c) => c.e.textContent)).toEqual(["b"]);
     expect(gl[0]!.k[0]!.transform).toBe("translate(0px,-20px)");
   });
+
+  it("a sunburst data update ghosts its labels and fades the new ones in late; other charts follow", () => {
+    const box = document.createElement("div");
+    const svg = (hub: boolean, t: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks"><circle data-maya="mark" data-key="r~0" ${hub ? 'data-depth="0"' : ""} cx="50" cy="50" r="5" pathLength="360" stroke-width="5" stroke-dasharray="30 330"/></g><g data-maya="labels"><text x="5" y="5">${t}</text></g></svg>`;
+    for (const hub of [true, false]) {
+      box.replaceChildren();
+      patch(box, svg(hub, "old"), false);
+      const label = box.querySelector("g[data-maya=labels] text")!;
+      const s = spy();
+      patch(box, svg(hub, "new"), true);
+      s.done();
+      // Followed: the labels group stays and its text is patched. Ghosted: the old one fades out as a ghost.
+      expect(box.querySelector("g[data-maya=labels] text") === label).toBe(!hub);
+      expect(label.parentElement!.hasAttribute("data-ghost")).toBe(hub);
+    }
+  });
 });
