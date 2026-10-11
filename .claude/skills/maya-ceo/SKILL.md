@@ -37,7 +37,7 @@ Taste and ponytail pull in opposite directions on purpose. A richer chart that c
 | Layer  | Command                                                          | Notes                                                                                      |
 | ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Static | `npm run typecheck && npx prettier --check .`                    | no ESLint by design                                                                        |
-| Unit   | `npm test`                                                       | Vitest, ~720 tests incl. fuzz, hostile, perf, leak; seconds                                |
+| Unit   | `npm test`                                                       | Vitest, about 1400 tests incl. fuzz, hostile, perf, leak, docs facts; seconds              |
 | Size   | `npm run build && npm run size`                                  | gzip budgets in `package.json` `mayaSize`; theme budget also in `test/theme.test.ts`       |
 | E2E    | `npm run e2e`                                                    | chromium, firefox, webkit, mobile-webkit; builds and serves `site/` itself                 |
 | Visual | screenshots per agent brief, plus `e2e/global.spec.ts` baselines | per-pixel tolerance can hide colour changes; regenerate on purpose                         |

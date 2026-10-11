@@ -6,6 +6,10 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 - Tween any arc that changes angle as a pathLength circle dash, never a `d` morph: CSS moves A endpoints along the chord and the arc leaves its track (gauge, 2026-10-09).
 - Make banded zones lightness steps, not hues at equal alpha (they land near 1:1 against each other); add a 1 px edge tick.
+- Never let a ghost or clone carry ids (gradients, clipPaths, markers): WebKit binds `url(#id)` at style recompute and keeps the stale one after the old node goes (2026-10-10).
+- Pad a degenerate range relative to its magnitude (`|v| / 1e15`), never by a constant: above 2^53, `v - 1 === v` and a tick loop never ends.
+- Two encodings of one value (an arc and its count-up) take their timing from one helper, in the update path as well as the entrance.
+- A baseline that changes while the chart's SVG and theme are byte-identical to main was already stale: prove identity by rendering both before reverting it.
 
 **Bar**
 
@@ -20,8 +24,6 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Feed every new numeric input the extremes (0, 8.64e15, 1e300, NaN-producing dates) before shipping; a loop guarded by `t > max` never ends on NaN.
 
 - Run the e2e baseline in apply runs and open every failing diff: a Firefox-only duplicate title from the late data table hid behind CI retries (2026-10-05).
-- Agents sharing one scratchpad overwrite each other's baselines: give every agent its own scratch subdirectory.
-- Price a new spec field with a scratch build before promising it: `rules` was estimated at 250 B and measured 950 B.
 - Screenshot every visual change at 2x in light, dark, hovered, 360px and one hostile case, and open the files. Agent-reported screenshots have been mislabelled; look at the chart yourself before shipping.
 - Motion is verified by frames (0, 120, 270 ms, landed) in chromium AND webkit, never by unit tests alone.
 - Playwright per-pixel tolerance let a full sunburst recolour pass against the old baseline. Regenerate changed baselines on purpose, darwin locally and linux in the CI image, then `npm ci`.
@@ -43,7 +45,6 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 - A theme change lands in index and global too (the core bundle embeds the stylesheet): price theme bytes three times.
 - The auto-mode classifier blocks budget and tsconfig edits even from the shell; ask the owner once with the measured numbers, never retry the edit.
-- Before matching unkeyed text by position in an update, match by content: axis titles and ticks swap otherwise (2026-10-07).
 
 - Parallel editors in one tree: one owner per file, no builds from editors, temporary `src/styles/wip-<name>.ts` parts for `theme.ts`, folded in by the CEO.
 - The element bundle contains core; check every bundle with `npm run size` after merging fan-out work, not per agent.
@@ -55,19 +56,12 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - A fade that ends early on one side of a crossfade needs the other side on the same clock, or the frame washes out (zoomed exits at 0.35, 2026-10-09).
 - `isolation: "worktree"` branches from `main`, not the run branch: tell a worktree editor to `git reset --hard <run branch>` as its first step when the run branch has commits.
 - Before any e2e run, free port 4173 (`lsof -i :4173`): Playwright reuses a running preview server, so a stale one silently tests an old build.
-- Two editors that each need `theme.ts` in separate worktrees still collide on its rules: read both theme diffs together when folding (2026-10-05: one set light-mode ink dark, the other light, for the same hexmap steps).
 
 **Process**
 
-- Probe load jank with per-frame viewBox and animation-clock logs in chromium and webkit before blaming the library: the 2026-10-08 Scale jerk was the demo's own resize timer.
-- Editors in one tree race on `git commit` (staged files get swept into another's commit, and the token hook restages README): give concurrent editors separate worktrees.
 - Regenerate baselines with `--update-snapshots=all`; plain `--update-snapshots` rewrote 1 of 20 changed images.
 
 - The builder's ThoughtSpot code tab was built from public ThoughtSpot docs only (owner, 2026-10-06). Do not re-flag it as employer knowledge; flag only new host-specific content.
-
-- In gallery runs, let critics walk a worktree pinned to the run branch; editors' live edits reload Vite mid-probe (2026-10-06).
-- A theme `transform-origin` on a mark breaks the FLIP's 0 0 contract; set any other origin inside the WAAPI keyframes instead.
-- Check a CSS hook beats `[data-maya=labels] text{fill}` before trusting a wip rule: the end-label colour lost on specificity after folding.
 
 - Defaults that vary by chart type go in `resolve()` (`validate.ts`), not as type checks in `render.ts`.
 - Changing a spec default is a docs change too: `types.ts`, README, `schema.json` if described, `llms.txt`, `site/docs.html`, CHANGELOG.
@@ -77,3 +71,13 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 - 2026-10-04, sunburst drill rebuild: slices became stroked circles with `pathLength` 360 so `r`, `stroke-width` and the dash tween as CSS properties through WAAPI. Dash gaps are not hit-testable in any engine, so the stroke itself is the hit target. Exiting slices fold to the nearer edge of the zoomed span; the centre disk carries the drilled branch's key so the clicked slice grows into it.
 - 2026-10-04, other drillable charts: sankey drilled into its level number (keys `n~lv~name` read as the branch), line and area clicks hit keyless band hits, and the treemap showed no names in drill mode. All were invisible to the unit suite and found by clicking every chart in a browser.
+- Demoted from Active on 2026-10-10 (still true):
+  - Agents sharing one scratchpad overwrite each other's baselines: give every agent its own scratch subdirectory.
+  - Probe load jank with per-frame viewBox and animation-clock logs in chromium and webkit before blaming the library: the 2026-10-08 Scale jerk was the demo's own resize timer.
+  - In gallery runs, let critics walk a worktree pinned to the run branch; editors' live edits reload Vite mid-probe (2026-10-06).
+  - Two editors that each need `theme.ts` in separate worktrees still collide on its rules: read both theme diffs together when folding (2026-10-05: one set light-mode ink dark, the other light, for the same hexmap steps).
+  - Check a CSS hook beats `[data-maya=labels] text{fill}` before trusting a wip rule: the end-label colour lost on specificity after folding.
+  - Editors in one tree race on `git commit` (staged files get swept into another's commit, and the token hook restages README): give concurrent editors separate worktrees.
+  - Price a new spec field with a scratch build before promising it: `rules` was estimated at 250 B and measured 950 B.
+  - A theme `transform-origin` on a mark breaks the FLIP's 0 0 contract; set any other origin inside the WAAPI keyframes instead.
+  - Before matching unkeyed text by position in an update, match by content: axis titles and ticks swap otherwise (2026-10-07).
