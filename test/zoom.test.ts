@@ -165,6 +165,71 @@ dom("zoom brush (DOM)", () => {
   });
 });
 
+describe("zoom keys", () => {
+  const step = (s: State, k: number, full: number[], at?: number[]) =>
+    reduce(s, { type: "step", k, full, ...(at && { at }) }).view.window;
+  it("halves about the centre or the active index, doubles, resets at full range", () => {
+    expect(step(S, 0.5, [0, 11])).toEqual([3, 8]);
+    expect(step(S, 0.5, [0, 11], [0])).toEqual([0, 5]);
+    expect(step(S, 0.5, [0, 11], [11])).toEqual([6, 11]);
+    const z = reduce(S, { type: "zoom", window: [4, 7] });
+    expect(step(z, 2, [0, 11])).toEqual([2, 9]);
+    expect(step(z, 2, [0, 11], [7])).toEqual([4, 11]);
+    expect(step(reduce(S, { type: "zoom", window: [2, 9] }), 2, [0, 11])).toBeUndefined();
+  });
+  it("stops shrinking at two points", () => {
+    const z = reduce(S, { type: "zoom", window: [4, 5] });
+    expect(step(z, 0.5, [0, 11])).toEqual([4, 5]);
+  });
+  it("scatter windows scale about the point and reset when both axes are full", () => {
+    const full = [0, 100, 0, 50];
+    expect(step(S, 0.5, full)).toEqual([25, 75, 12.5, 37.5]);
+    expect(step(S, 0.5, full, [0, 0])).toEqual([0, 50, 0, 25]);
+    const z = reduce(S, { type: "zoom", window: [25, 75, 12.5, 37.5] });
+    expect(step(z, 2, full)).toBeUndefined();
+    expect(step(reduce(S, { type: "zoom", window: [40, 60, 0, 10] }), 2, full)).toEqual([
+      30, 70, 0, 20,
+    ]);
+  });
+});
+
+dom("zoom keys (DOM)", () => {
+  const key = (root: ShadowRoot, k: string) =>
+    root
+      .querySelector("svg.maya-svg")!
+      .dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, composed: true }));
+  it("+ narrows, - widens and resets at the full range, Escape resets", async () => {
+    const { root, events } = await chart();
+    key(root, "+");
+    await frame();
+    expect(events.at(-1)).toMatchObject({ window: [2, 4] });
+    key(root, "+");
+    await frame();
+    expect(events.at(-1)).toMatchObject({ window: [3, 4] });
+    key(root, "-");
+    await frame();
+    expect(events.at(-1)).toMatchObject({ window: [2, 5] });
+    key(root, "-");
+    await frame();
+    expect(events.at(-1)).not.toHaveProperty("window");
+    key(root, "=");
+    await frame();
+    key(root, "Escape");
+    await frame();
+    expect(events.at(-1)).not.toHaveProperty("window");
+  });
+  it("ignores ctrl+plus", async () => {
+    const { root, events } = await chart();
+    root
+      .querySelector("svg.maya-svg")!
+      .dispatchEvent(
+        new KeyboardEvent("keydown", { key: "+", ctrlKey: true, bubbles: true, composed: true }),
+      );
+    await frame();
+    expect(events).toHaveLength(0);
+  });
+});
+
 describe("span (time axis)", () => {
   // uneven centres: indexes 10, 11, 40 (a gap), 41
   const cs: [number, number][] = [

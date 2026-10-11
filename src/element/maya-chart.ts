@@ -35,7 +35,11 @@ export class MayaChart extends HTMLElement {
   #attr: ChartSpec | undefined;
   #state: State = { view: {}, selected: [] };
   #seen: ChartSpec | undefined;
-  #ix: Record<"measure" | "drill" | "select" | "zoom" | "sort" | "play", Handlers> | undefined;
+  #ix:
+    | (Record<"measure" | "drill" | "select" | "sort" | "play", Handlers> & {
+        zoom: ReturnType<typeof zoom.mount>;
+      })
+    | undefined;
   #say: ReturnType<typeof setTimeout> | undefined;
   #last: Record<string, string> = {};
   #size = [0, 0];
@@ -263,7 +267,7 @@ export class MayaChart extends HTMLElement {
   /*
    * One keydown dispatcher. Escape priority: pinned tooltip (tooltip.ts, T2) -> brush in
    * progress -> selection -> zoom window -> drill pop. Enter: drill, else select, on the
-   * keyboard-active mark. T2 routes the tooltip's own Escape/Enter/Space through here.
+   * keyboard-active mark. + or = halves the zoom window about the active mark, - doubles it. T2 routes the tooltip's own Escape/Enter/Space through here.
    */
   #key = (e: Event) => {
     const ix = this.#ix;
@@ -281,6 +285,12 @@ export class MayaChart extends HTMLElement {
         (e.target as Element).closest(".maya-svg") &&
         (ix.drill.enter?.(m) || ix.select.enter?.(m))
       );
+    } else if (k === "+" || k === "=" || k === "-") {
+      const { ctrlKey, metaKey, altKey } = e as KeyboardEvent;
+      done =
+        !(ctrlKey || metaKey || altKey) &&
+        !!(e.target as Element).closest(".maya-svg") &&
+        ix.zoom.step(k === "-" ? 2 : 0.5, this.#tip?.active());
     }
     if (done) e.preventDefault();
   };
