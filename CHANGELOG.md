@@ -13,6 +13,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Changed
 
+- The text key `ofTarget` is removed because nothing displayed it. A spec that sets it now fails validation like any unknown text key.
 - Parallel axes run over their own data extent instead of starting at zero, so a measure of 95 to 99 fills its axis.
 - `yDomain` and `xDomain` bounds must be within 1e300 and the span at least 1e-300, and `colorBy` `target` and `warn` within 1e300; larger values are rejected with `invalid-domain` or `invalid-option` instead of drawing infinite geometry.
 - `ridgeline` rejects negative y values with `non-positive-value`, as `funnel` does.

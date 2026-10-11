@@ -55,8 +55,6 @@ export const TEXT = {
   offBelow: "off track below {0}",
   /** Chart description of a warn threshold when lower is better: {0} = the warn value. */
   offAbove: "off track above {0}",
-  /** kpi bullet: {0} = share of target, {1} = target. */
-  ofTarget: "{0} of target {1}",
   /** Sunburst centre at the root. */
   total: "Total",
   /** Sunburst tooltip share: {0} = percent, {1} = parent name. */
