@@ -301,7 +301,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `drill`     | boolean        | treemap sunburst sankey; bar line area dumbbell with `path`                                                                                                             | false                                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop                                                                              |
 | `drillOut`  | boolean        | types that take `drill`                                                                                                                                                 | true                                      | With drill, a click on empty chart space goes back up one level                                                                                       |
 | `select`    | true / "multi" | bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation | off                                       | Click/Enter/legend selects marks; Escape clears. Not with drill                                                                                       |
-| `zoom`      | boolean        | line area scatter                                                                                                                                                       | false                                     | Drag to zoom; Reset, double-click, Escape restore                                                                                                     |
+| `zoom`      | boolean        | line area scatter                                                                                                                                                       | false                                     | Drag to zoom, or `+` / `=` and `-` with the chart focused; Reset, double-click, Escape restore                                                        |
 | `animate`   | boolean        | all (element only)                                                                                                                                                      | true                                      | Animate the first draw and every update                                                                                                               |
 
 ### Style
@@ -779,16 +779,17 @@ Opt-in: `drill`, `select`, `zoom`. Two-way: `el.view`, `el.selected`.
 
 ### Keyboard
 
-| Key              | Action                                                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| Tab              | Move focus between the chart, legend buttons, measure toggle, breadcrumb and Reset chip                    |
-| Arrow Left/Right | Previous/next category (same series); on the measure toggle, previous/next measure                         |
-| Arrow Up/Down    | Previous/next series in the same category; on the measure toggle, previous/next measure                    |
-| Home / End       | First/last measure (measure toggle)                                                                        |
-| Enter            | Drill into the focused mark, else select it                                                                |
-| Space            | Pin or unpin the tooltip on the focused mark                                                               |
-| Enter / Space    | On a focused table header: sort by that column                                                             |
-| Escape           | First of: unpin tooltip, cancel brush in progress, clear selection, reset zoom window, pop one drill level |
+| Key              | Action                                                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tab              | Move focus between the chart, legend buttons, measure toggle, breadcrumb and Reset chip                                                                             |
+| Arrow Left/Right | Previous/next category (same series); on the measure toggle, previous/next measure                                                                                  |
+| Arrow Up/Down    | Previous/next series in the same category; on the measure toggle, previous/next measure                                                                             |
+| Home / End       | First/last measure (measure toggle)                                                                                                                                 |
+| Enter            | Drill into the focused mark, else select it                                                                                                                         |
+| Space            | Pin or unpin the tooltip on the focused mark                                                                                                                        |
+| Enter / Space    | On a focused table header: sort by that column                                                                                                                      |
+| Escape           | First of: unpin tooltip, cancel brush in progress, clear selection, reset zoom window, pop one drill level                                                          |
+| `+` or `=` / `-` | With `zoom`: halve the window about the active mark (else the middle) / double it, reset at the full range. Ctrl, Meta and Alt combinations are left to the browser |
 
 Touch: show tooltip on pointerup if moved < 4 px.
 
@@ -1099,15 +1100,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 16,095 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 16,318 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,519,268,225 total, 3,122,017 output
-- claude-sonnet-5-5: 727,803,121 total, 99,968 output
+- claude-opus-5-5: 1,523,569,896 total, 3,136,813 output
+- claude-sonnet-5-5: 747,479,740 total, 102,730 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 30,518,833 total, 1,456 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,474,483,422 total, 3,658,669 output
+- all: 2,498,461,712 total, 3,676,227 output
 
 <!-- tokens:end -->
 

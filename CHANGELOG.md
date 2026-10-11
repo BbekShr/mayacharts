@@ -8,12 +8,18 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Added
 
+- Zoom keys: with `zoom: true` and the chart focused, `+` or `=` halves the zoom window about the active mark and `-` doubles it (line, area, scatter).
 - Text key `blank` (default "(blank)"): a row whose category (x, series or a drill path level) is null or missing now reads "(blank)" in axes, `data-x`, tooltips, descriptions and the data table instead of "null". A real "(blank)" value joins the same category. Time axes still drop null rows; scatter, kpi, gauge and the hierarchy types are unchanged.
 - Text keys `offBelow` and `offAbove`: a kpi or gauge description with a `warn` threshold now says where the chart goes off track, for example "target 30%, off track below 22%".
 - Docs: worked examples for a kpi with a goal and for the gauge.
 
 ### Changed
 
+- Inside bar value labels sit at the bar's end instead of its middle; stacked segments keep the middle.
+- kpi and gauge zone bands are stronger (0.10, 0.22 and 0.40 of the text colour), and only the arrow of a change line takes the tone colour.
+- The gauge fill grows from zero, with a tick at zero when the dial crosses it, instead of from the dial minimum.
+- The radial centre total shows only when the aggregate is a sum or a count.
+- Waffle and marimekko show the formatted x field.
 - The text key `ofTarget` is removed because nothing displayed it. A spec that sets it now fails validation like any unknown text key.
 - Parallel axes run over their own data extent instead of starting at zero, so a measure of 95 to 99 fills its axis.
 - `yDomain` and `xDomain` bounds must be within 1e300 and the span at least 1e-300, and `colorBy` `target` and `warn` within 1e300; larger values are rejected with `invalid-domain` or `invalid-option` instead of drawing infinite geometry.
@@ -21,6 +27,12 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Fixed
 
+- A kpi bullet holds a value past 1.2 times its target instead of clamping it at the end.
+- Count-up starts from the old number when it had more digits (1,234 to 999) and counts through zero when the sign changes.
+- The gauge arc and its number move on one clock on an update.
+- WebKit no longer loses the area and sparkline gradient after an update that changes the grid.
+- Table value labels glide with their row on a re-sort, sunburst labels no longer slide across a data update, a kpi status word no longer moves between tiles, and sankey node labels move with their node on a drill.
+- Axis-break marks point into the plot; a narrow table no longer draws negative widths; the live region reads multi-line values with commas.
 - A chart whose values are all equal and above 1e15 (up to 1e300) no longer hangs or draws nothing: the tick range is padded relative to the value.
 - The format presets print a negative that rounds to zero as "0", not "-0" (user Intl options are unchanged).
 - Option-to-type lists in the README, llms.txt, schema.json and the docs now match the validator for `sort`, `limit`, `select`, `colorBy`, `path` and `endLabels`; the docs describe a reversed `yDomain`, the full `invalid-theme` token list and the table header sort keys.
