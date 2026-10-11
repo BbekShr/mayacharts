@@ -4,7 +4,6 @@ import "mayacharts/weave";
 import "mayacharts/orbit";
 import "mayacharts/constellation";
 import { makeData } from "./data.ts";
-import size from "./compare-size.json";
 import { signature } from "./signature.ts";
 import { theme } from "./theme.ts";
 import type { ChartSpec, Row } from "../src/index.ts";
@@ -159,32 +158,6 @@ const lazy = new Map<string, ChartSpec>([
   ["orbit", sig.orbit!],
   ["constellation", sig.constellation!],
   ["memory", sig.memory!],
-  [
-    "weight",
-    {
-      type: "bar",
-      horizontal: true,
-      x: "library",
-      y: "kb",
-      labels: true,
-      grid: false,
-      xAxis: false,
-      titles: { library: "Library", kb: "Bundle for the compare set, gzip" },
-      format: { kb: { maximumFractionDigits: 0, suffix: " KB" } },
-      title: "Gzip bundle for the same twelve charts, modules included",
-      // The compare page's own measurement: every chart of the set in one bundle, gzip.
-      data: Object.entries({
-        maya: "mayaCharts",
-        chartjs: "Chart.js",
-        recharts: "Recharts",
-        echarts: "ECharts",
-        plotly: "Plotly",
-      }).map(([k, library]) => ({
-        library,
-        kb: size.libs[k as keyof typeof size.libs].all.gzip / 1024,
-      })),
-    },
-  ],
 ]);
 for (const id of lazy.keys()) later.observe($(id));
 

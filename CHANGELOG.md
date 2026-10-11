@@ -13,6 +13,10 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - Text keys `offBelow` and `offAbove`: a kpi or gauge description with a `warn` threshold now says where the chart goes off track, for example "target 30%, off track below 22%".
 - Docs: worked examples for a kpi with a goal and for the gauge.
 
+### Removed
+
+- The rival comparison page (`compare.html`, its data, scripts, Playwright project and workflow), the LLM eval, the `compare/` sub-install and six unused bench scripts. The README comparison table and the home page weight chart went with them, since the page was their source.
+
 ### Changed
 
 - Inside bar value labels sit at the bar's end instead of its middle; stacked segments keep the middle.
@@ -21,6 +25,9 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - The radial centre total shows only when the aggregate is a sum or a count.
 - Waffle and marimekko show the formatted x field.
 - The text key `ofTarget` is removed because nothing displayed it. A spec that sets it now fails validation like any unknown text key.
+- Gauge prints the warn value beside its tick (dropped when it would touch the target label or leave the chart), clips a long target label to the room beside the dial, and draws no round-cap dot for a value of zero.
+- Line and area below 400 px keep their end labels as the last value alone, in a gutter as wide as the widest value, and the legend names the series.
+- Horizontal bars with value labels draw them inside only when every label fits, else all outside the bar end (a bar with no room outside keeps its label inside).
 - Parallel axes run over their own data extent instead of starting at zero, so a measure of 95 to 99 fills its axis.
 - `yDomain` and `xDomain` bounds must be within 1e300 and the span at least 1e-300, and `colorBy` `target` and `warn` within 1e300; larger values are rejected with `invalid-domain` or `invalid-option` instead of drawing infinite geometry.
 - `ridgeline` rejects negative y values with `non-positive-value`, as `funnel` does.

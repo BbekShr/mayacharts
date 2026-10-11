@@ -10,7 +10,7 @@ import {
   type Dataset,
 } from "./data.ts";
 
-/** The five charts no compared library draws. The gallery and the comparison page share these specs. */
+/** The five charts no mainstream library draws. */
 export function signature({ FACTS }: Pick<Dataset, "FACTS">): Record<string, ChartSpec> {
   const out: Record<string, ChartSpec> = {};
   const tile = (id: string, spec: ChartSpec) => (out[id] = spec);

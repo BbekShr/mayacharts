@@ -255,7 +255,7 @@ describe("time axis review fixes", () => {
       Array.from({ length: 12 }, (_, i) => `2025-${String(i + 1).padStart(2, "0")}-01`),
     );
     const at = (width: number) =>
-      render({ type: "line", x: "x", y: "v", data } as never, { width });
+      render({ type: "line", x: "x", y: "v", endLabels: false, data } as never, { width });
     const narrow = labels(at(360));
     expect(narrow.slice(0, 4)).toEqual(["Jan 2025", "Apr", "Jul", "Oct"]);
     expect(labels(at(1200)).length).toBeGreaterThan(narrow.length);

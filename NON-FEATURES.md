@@ -124,7 +124,8 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Roll-up bar**: the Other bar from `limit` never sets the value scale and is clipped at the plot edge, with no clip mark; its value is in the label and tooltip.
 - **Radial year**: a shared trailing four-digit year moves to the centre caption, which hides below about 170 px.
 - **Small heatmap cells**: cells under 26 px become squares with a 2 px gap, so a 52-week calendar at 360 px draws 3 px dots.
-- **Line end labels**: drawn for 2 to 8 series at 400 px and wider; otherwise the legend names the series. `endLabels: false` always uses the legend.
+- **Line end labels**: drawn for 2 to 8 series; below 400 px a label is the last value alone in a value-wide gutter and the legend names the series (names would not fit). `endLabels: false` always uses the legend.
+- **Gauge warn value**: printed beside its tick like the target label, but dropped (the tick stays) when it would touch the target label or leave the chart; the target label is clipped to the room left beside the dial.
 - **Parallel end labels**: nudged apart only while they fit the plot height at 13 px each; with more lines a colliding name is dropped.
 - **Bar value labels that would print over a taller neighbour are dropped, not thinned.
 - **Sunburst ring names are cut with an ellipsis when the ring is too thin; the tooltip carries the full name.

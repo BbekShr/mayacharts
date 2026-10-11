@@ -342,10 +342,11 @@
  *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
  *   Direct end labels: a mark with `ends(spec, shaped, fmt)` returning [name, last value] pairs
  *   (line and area: 2 to 8 series, all visible, no value labels, no y2) gets a right gutter of
- *   endGutter() px (30% of the width at most; 0 below 400 px). It draws <text data-end data-s>
+ *   endGutter() px (30% of the width at most; below 400 px just the widest value, the labels show the
+ *   value alone and the legend stays to name the series). It draws <text data-end data-s>
  *   (and a <line data-lead> when nudged more than 3 px) into the labels group, and the legend is
- *   dropped unless the spec sets legend:true explicitly (then both show). A hidden series, narrow
- *   width or labels:true keep the legend and draw no end labels; endLabels:false turns them off.
+ *   dropped unless the spec sets legend:true explicitly (then both show). A hidden series or
+ *   labels:true keep the legend and draw no end labels; endLabels:false turns them off.
  *
  * Legend and title are HTML, not SVG (free wrapping and font metrics). render() — the
  * bare SVG — therefore has no legend; renderShell() is the full-fidelity output.
@@ -579,7 +580,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
   const ends = spec.endLabels === false ? null : mark.ends?.(s, shaped, fmt);
-  const gutter = ends?.length ? endGutter(ends, W) : 0;
+  const gutter = ends?.length
+    ? endGutter(ends, W) ||
+      (mark.ends === line.ends ? Math.max(...ends.map((e) => tw(e[1]))) + 14 : 0)
+    : 0;
   const empty = !s.data.some((r) => [...s.measures, s.y2].some((m) => typeof r[m!] === "number"));
   const ax = mark.axes && !empty ? mark.axes(s, shaped) : null;
   // frame: each value axis spans every frame, so it holds still during playback.
@@ -781,7 +785,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let legend = "";
   let tbl: string | undefined;
-  if ((s.series !== null || s.y2 !== null) && s.legend && (!gutter || spec.legend))
+  if ((s.series !== null || s.y2 !== null) && s.legend && (!gutter || W < 400 || spec.legend))
     legend =
       `<div class="maya-legend" data-maya="legend">` +
       (s.series === null && s.y2 !== null

@@ -105,7 +105,7 @@ describe("line", () => {
         "marks",
       ),
     ).toMatchInlineSnapshot(
-      `"<path data-maya="line" data-key="l~" data-s="0" pathLength="1" d="M71.3 43L149.1 10"/><circle data-maya="mark" data-key="~Jan" data-c="0" data-s="0" data-x="Jan" data-series="" data-y="10" data-f="10" r="3" cx="71.3" cy="43"/><circle data-maya="mark" data-key="~Feb" data-c="1" data-s="0" data-x="Feb" data-series="" data-y="20" data-f="20" r="3" cx="149.1" cy="10"/>"`,
+      `"<path data-maya="line" data-key="l~" data-s="0" pathLength="1" d="M66.2 43L133.8 10"/><circle data-maya="mark" data-key="~Jan" data-c="0" data-s="0" data-x="Jan" data-series="" data-y="10" data-f="10" r="3" cx="66.2" cy="43"/><circle data-maya="mark" data-key="~Feb" data-c="1" data-s="0" data-x="Feb" data-series="" data-y="20" data-f="20" r="3" cx="133.8" cy="10"/>"`,
     );
   });
 });
@@ -131,7 +131,7 @@ describe("area", () => {
         "marks",
       ),
     ).toMatchInlineSnapshot(
-      `"<path data-maya="area" data-key="a~N" data-s="0" d="M76.7 62.8L150.9 49.6L150.9 76L76.7 76Z"/><path data-maya="area" data-key="a~S" data-s="1" d="M76.7 43L150.9 10L150.9 49.6L76.7 62.8Z"/><path data-maya="line" data-key="l~N" data-s="0" pathLength="1" d="M76.7 62.8L150.9 49.6"/><path data-maya="line" data-key="l~S" data-s="1" pathLength="1" d="M76.7 43L150.9 10"/><circle data-maya="mark" data-key="N~Jan" data-c="0" data-s="0" data-x="Jan" data-series="N" data-y="2" data-f="2" r="3" cx="76.7" cy="62.8"/><circle data-maya="mark" data-key="N~Feb" data-c="1" data-s="0" data-x="Feb" data-series="N" data-y="4" data-f="4" r="3" cx="150.9" cy="49.6"/><circle data-maya="mark" data-key="S~Jan" data-c="0" data-s="1" data-x="Jan" data-series="S" data-y="3" data-f="3" r="3" cx="76.7" cy="43"/><circle data-maya="mark" data-key="S~Feb" data-c="1" data-s="1" data-x="Feb" data-series="S" data-y="6" data-f="6" r="3" cx="150.9" cy="10"/>"`,
+      `"<path data-maya="area" data-key="a~N" data-s="0" d="M73.4 62.8L141 49.6L141 76L73.4 76Z"/><path data-maya="area" data-key="a~S" data-s="1" d="M73.4 43L141 10L141 49.6L73.4 62.8Z"/><path data-maya="line" data-key="l~N" data-s="0" pathLength="1" d="M73.4 62.8L141 49.6"/><path data-maya="line" data-key="l~S" data-s="1" pathLength="1" d="M73.4 43L141 10"/><circle data-maya="mark" data-key="N~Jan" data-c="0" data-s="0" data-x="Jan" data-series="N" data-y="2" data-f="2" r="3" cx="73.4" cy="62.8"/><circle data-maya="mark" data-key="N~Feb" data-c="1" data-s="0" data-x="Feb" data-series="N" data-y="4" data-f="4" r="3" cx="141" cy="49.6"/><circle data-maya="mark" data-key="S~Jan" data-c="0" data-s="1" data-x="Jan" data-series="S" data-y="3" data-f="3" r="3" cx="73.4" cy="43"/><circle data-maya="mark" data-key="S~Feb" data-c="1" data-s="1" data-x="Feb" data-series="S" data-y="6" data-f="6" r="3" cx="141" cy="10"/>"`,
     );
   });
 });
@@ -153,7 +153,7 @@ describe("line end labels", () => {
     expect(ends({ ...spec, data: one })).toEqual(["a30"]);
     expect(ends({ ...spec, type: "area", data: one })).toEqual(["a30"]);
     expect(ends({ type: "line", x: "m", y: "v", data: one })).toEqual(["30"]);
-    expect(ends({ ...spec, data: one }, 360)).toEqual([]);
+    expect(ends({ ...spec, data: one }, 360)).toEqual(["30"]); // narrow: the value alone
   });
   it("reserve a right gutter and drop the legend", () => {
     const p = renderParts(spec, { width: 640 });
@@ -173,8 +173,8 @@ describe("line end labels", () => {
     ].map((m) => +m[1]!);
     expect(Math.abs(ys[0]! - ys[1]!)).toBeGreaterThanOrEqual(13);
   });
-  it("fall back to the legend when narrow, with a hidden series, or with labels on", () => {
-    expect(ends(spec, 360)).toEqual([]);
+  it("keep the legend and show values alone when narrow; legend too with a hidden series or labels on", () => {
+    expect(ends(spec, 360)).toEqual(["31", "30"]);
     expect(renderParts(spec, { width: 360 }).legend).toContain("maya-legend");
     const h = renderParts(spec, { width: 640, view: { hidden: ["a"] } });
     expect(h.legend).toContain("maya-legend");

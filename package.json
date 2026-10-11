@@ -136,14 +136,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "e2e": "playwright test --project=chromium --project=firefox --project=webkit --project=mobile-webkit",
-    "compare": "npm run compare:install && npm run build && E2E_NO_SERVER=1 playwright test --project=compare",
     "site:build": "node scripts/ssr-demo.ts && vite build --config site/vite.config.ts",
-    "tokens": "node scripts/tokens.mjs",
-    "compare:bundle": "npm run compare:install && node scripts/compare-bundle.mjs",
-    "compare:size": "npm run compare:install && node scripts/compare-size.mjs",
-    "compare:ease": "npm run compare:install && node scripts/compare-ease.mjs",
-    "compare:shots": "npm run compare:install && node scripts/compare-bundle.mjs && node scripts/compare-shots.mjs",
-    "compare:install": "npm install --prefix compare --no-audit --no-fund --silent"
+    "tokens": "node scripts/tokens.mjs"
   },
   "mayaSize": {
     "dist/index.js": 40430,
