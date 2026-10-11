@@ -387,7 +387,7 @@ export const gauge: Mark = {
       r: r((ri + R) / 2),
       "data-depth": 1, // borrows the sunburst ring paint: no fill, stroke var(--c)
       "stroke-width": r(t),
-      "stroke-linecap": "round",
+      "stroke-linecap": d0 ? "round" : "butt", // a zero value draws nothing, not a dot
       pathLength: 360,
       "stroke-dasharray": `${r(sweep)} ${r(360 - sweep)}`,
       "stroke-dashoffset": r(180 - z - Math.min(d0, 0) - cap),
@@ -450,23 +450,45 @@ export const gauge: Mark = {
         ...a,
       });
     };
-    if (target !== null) {
-      labels += tick(target, ri - 2, R + 3 + ex, { "data-kpi": "target", "stroke-width": 2 });
-      const [an, rr] = [at(fr(target)), R + ex + 9];
+    // A threshold's text stands beside its tick, outside the band ring and anchored away from the dial's
+    // middle. Returned with its box so a warn value that would touch the target label can be dropped.
+    // cut: the text is clipped to the room left in the svg (the target label, which is never dropped).
+    const tag = (v: number, s: string, rr: number, a: Parameters<typeof el>[1], cut = false) => {
+      const an = at(fr(v));
       const sx = Math.sin(an);
-      labels += el(
+      const m = Math.abs(sx) < 0.25 ? 1 : sx > 0 ? 2 : 0; // end, middle, start
+      const x = cx + rr * sx;
+      const room = m === 2 ? ctx.width - x : m ? 2 * Math.min(x, ctx.width - x) : x;
+      if (cut) s = clip(s, Math.max(4, Math.floor(room / 6.2)));
+      const w = s.length * 6.2;
+      const y = cy - rr * Math.cos(an) + (Math.abs(sx) > 0.9 ? 4 : 0);
+      const text = el(
         "text",
         {
           "data-kpi": "of",
-          x: r(cx + rr * sx),
-          y: r(cy - rr * Math.cos(an) + (Math.abs(sx) > 0.9 ? 4 : 0)),
-          "text-anchor": Math.abs(sx) < 0.25 ? "middle" : sx > 0 ? "start" : "end",
+          x: r(x),
+          y: r(y),
+          "text-anchor": ["end", "middle", "start"][m],
           "font-size": 11,
+          ...a,
         },
-        esc(tl),
+        esc(s),
       );
+      return { x0: x - ((2 - m) * w) / 2, w, y, text };
+    };
+    const tg = target === null ? null : tag(target, tl, R + ex + 9, {}, true);
+    if (tg) {
+      labels += tick(target!, ri - 2, R + 3 + ex, { "data-kpi": "target", "stroke-width": 2 });
+      labels += tg.text;
     }
-    if (bands) labels += tick(warn, R + 2, R + 7, { stroke: "var(--maya-fg-muted)" });
+    if (bands) {
+      labels += tick(warn, R + 2, R + 7, { stroke: "var(--maya-fg-muted)" });
+      const wt = tag(warn, fv(warn), R + ex + 7, { fill: "var(--maya-fg-muted)" });
+      // ponytail: a warn value that touches the target label or leaves the svg is dropped, its tick stays (the description names it).
+      const touch =
+        tg!.x0 < wt.x0 + wt.w + 4 && wt.x0 < tg!.x0 + tg!.w + 4 && Math.abs(tg!.y - wt.y) < 12;
+      if (!touch && wt.x0 >= 0 && wt.x0 + wt.w <= ctx.width) labels += wt.text;
+    }
     if (lo * hi < 0) labels += tick(0, ri, R, { stroke: "var(--maya-fg-muted)" }); // where the fill starts
     const dv = wasV === null ? 0 : value - wasV;
     const pct = new Intl.NumberFormat(spec.locale, {

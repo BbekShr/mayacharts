@@ -13,6 +13,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Changed
 
+- Gauge prints the warn value beside its tick (dropped when it would touch the target label or leave the chart), clips a long target label to the room beside the dial, and draws no round-cap dot for a value of zero.
 - Line and area below 400 px keep their end labels as the last value alone, in a gutter as wide as the widest value, and the legend names the series.
 - Horizontal bars with value labels draw them inside only when every label fits, else all outside the bar end (a bar with no room outside keeps its label inside).
 - Parallel axes run over their own data extent instead of starting at zero, so a measure of 95 to 99 fills its axis.

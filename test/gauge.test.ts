@@ -85,6 +85,21 @@ describe("gauge", () => {
     expect(labels(svg(base({}, -30)))).toContain(">-30<");
     expect(svg(base({ was: "w" }))).not.toContain("<line");
   });
+  it("prints the warn value beside its tick, dropped when it would touch the target label", () => {
+    const warnText = (c: object) =>
+      labels(svg(base({ colorBy: c, yDomain: [0, 100] }, 40), { width: 640, height: 320 }));
+    expect(warnText({ target: 70, warn: 40 })).toMatch(/<text[^>]*>40<\/text>/);
+    expect(warnText({ target: 70, warn: 69 })).not.toMatch(/<text[^>]*>69<\/text>/);
+    expect(warnText({ target: 70, warn: 69 })).toContain("target 70");
+    // warn near an end of a narrow dial would leave the svg
+    const c = { colorBy: { target: 70, warn: 1 }, format: "currency" } as const;
+    expect(labels(svg(base(c, 40), { width: 360 }))).toContain(">$1.00<");
+    expect(labels(svg(base(c, 40), { width: 150, height: 120 }))).not.toContain(">$1.00<");
+  });
+  it("a value of zero draws no round cap", () => {
+    expect(arc(svg(base({}, 0)))).toContain('stroke-linecap="butt"');
+    expect(arc(svg(base({}, 5)))).toContain('stroke-linecap="round"');
+  });
   it("combines rows by aggregate", () => {
     const s = svg({ type: "gauge", y: "v", aggregate: "mean", data: [{ v: 10 }, { v: 30 }] });
     expect(arc(s)).toContain('data-y="20"');
