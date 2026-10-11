@@ -246,6 +246,7 @@
         "enum": [
           "noData",
           "other",
+          "blank",
           "back",
           "reset",
           "showing",
@@ -272,7 +273,6 @@
           "target",
           "offBelow",
           "offAbove",
-          "ofTarget",
           "total",
           "shareOf",
           "sortedBy",

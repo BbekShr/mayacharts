@@ -34,15 +34,14 @@ Taste and ponytail pull in opposite directions on purpose. A richer chart that c
 
 ## Test harness (what "verified" means)
 
-| Layer  | Command                                                          | Notes                                                                                      |
-| ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Static | `npm run typecheck && npx prettier --check .`                    | no ESLint by design                                                                        |
-| Unit   | `npm test`                                                       | Vitest, about 1400 tests incl. fuzz, hostile, perf, leak, docs facts; seconds              |
-| Size   | `npm run build && npm run size`                                  | gzip budgets in `package.json` `mayaSize`; theme budget also in `test/theme.test.ts`       |
-| E2E    | `npm run e2e`                                                    | chromium, firefox, webkit, mobile-webkit; builds and serves `site/` itself                 |
-| Visual | screenshots per agent brief, plus `e2e/global.spec.ts` baselines | per-pixel tolerance can hide colour changes; regenerate on purpose                         |
-| CI     | `gh pr checks <n>`                                               | compare with `gh run list --branch main --limit 3` before blaming a diff                   |
-| Proof  | `npm run compare`                                                | chromium only, outside `npm run e2e`; regenerates `site/compare.json` (never edit by hand) |
+| Layer  | Command                                                          | Notes                                                                                |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Static | `npm run typecheck && npx prettier --check .`                    | no ESLint by design                                                                  |
+| Unit   | `npm test`                                                       | Vitest, about 1400 tests incl. fuzz, hostile, perf, leak, docs facts; seconds        |
+| Size   | `npm run build && npm run size`                                  | gzip budgets in `package.json` `mayaSize`; theme budget also in `test/theme.test.ts` |
+| E2E    | `npm run e2e`                                                    | chromium, firefox, webkit, mobile-webkit; builds and serves `site/` itself           |
+| Visual | screenshots per agent brief, plus `e2e/global.spec.ts` baselines | per-pixel tolerance can hide colour changes; regenerate on purpose                   |
+| CI     | `gh pr checks <n>`                                               | compare with `gh run list --branch main --limit 3` before blaming a diff             |
 
 Never run two builds in one tree at once (`dist/` is shared). An agent that must build or run Playwright while others edit gets its own tree (`isolation: "worktree"` on the Agent call); merge its branch, then `npm ci` if it added devDependencies. The dev server is `npm run dev` on http://localhost:5173/mayacharts/ (pinned in `.claude/launch.json`); reuse a running one.
 

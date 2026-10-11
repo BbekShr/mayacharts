@@ -3,14 +3,18 @@
  * Drag draws `[data-maya=brush]`; release sets view.window; Reset chip (`.maya-reset`),
  * double-click and Escape restore. Escape priority: cancel() = brush in progress (2),
  * escape() = window (4). Persistence: resets when drill or x change; clamps to category count.
- * ponytail: pointer only; no key makes a window (hosts can set view.window), NON-FEATURES.
+ * Keyboard: `+`/`=` halve the window about the active mark, `-` doubles it (reset once it covers the range).
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, SpecEvent, State, View } from "../core/types.ts";
 import { listen } from "./listen.ts";
 
 type Win = NonNullable<View["window"]>;
-export type ZoomEvent = { type: "zoom"; window: Win } | { type: "reset" } | SpecEvent;
+export type ZoomEvent =
+  | { type: "zoom"; window: Win }
+  | { type: "reset" }
+  | { type: "step"; k: number; full: number[]; at?: number[] }
+  | SpecEvent;
 
 const clear = (s: State): State => {
   if (!s.view.window) return s;
@@ -33,6 +37,33 @@ export const reduce = (s: State, e: ZoomEvent): State => {
     };
   }
   if (e.type === "reset") return clear(s);
+  if (e.type === "step") {
+    // Index windows (2 numbers, inclusive) become half-open cells so both kinds share one loop.
+    const { k, full, at } = e;
+    const idx = full.length === 2;
+    const w = s.view.window;
+    const f = idx ? [full[0]!, full[1]! + 1] : full;
+    const cur = w ? (idx ? [w[0], w[1]! + 1] : w) : f;
+    const out: number[] = [];
+    let all = true;
+    for (let i = 0; i < f.length; i += 2) {
+      const [lo, hi] = [f[i]!, f[i + 1]!];
+      const c = (at?.[i / 2] ?? (cur[i]! + cur[i + 1]!) / 2) + (idx && at?.[0] != null ? 0.5 : 0);
+      let L = (cur[i + 1]! - cur[i]!) * k;
+      if (idx) L = Math.max(2, Math.round(L));
+      if (L >= hi - lo) out.push(lo, hi);
+      else {
+        const a = Math.min(hi - L, Math.max(lo, c - L / 2));
+        out.push(a, a + L);
+        all = false;
+      }
+    }
+    if (all) return clear(s);
+    return reduce(s, {
+      type: "zoom",
+      window: (idx ? [Math.round(out[0]!), Math.round(out[1]!) - 1] : out) as unknown as Win,
+    });
+  }
   const { prev, next } = e;
   if (
     prev &&
@@ -59,7 +90,7 @@ const NS = "http://www.w3.org/2000/svg";
 const num = (s: string | null): number[] => (s ?? "").trim().split(/\s+/).map(Number);
 const fmt = (n: number) => String(+n.toPrecision(4));
 
-export const mount = (host: Host): Handlers => {
+export const mount = (host: Host): Handlers & { step(k: number, m?: Element): boolean } => {
   const { root } = host;
   let down: { id: number; x: number; y: number; svg: SVGSVGElement } | undefined;
   let brush: SVGRectElement | undefined;
@@ -113,6 +144,29 @@ export const mount = (host: Host): Handlers => {
     const y = band ? g.py : Math.min(a.y, b.y),
       h = band ? g.ph : Math.abs(a.y - b.y);
     brush.style.transform = `matrix(${w},0,0,${h},${x},${y})`;
+  };
+
+  /** Plot viewBox x and y to data values (scatter: both axes linear). */
+  const lin = (svg: SVGSVGElement) => {
+    const g = geom(svg),
+      xd = num(svg.getAttribute("data-xd")),
+      yd = num(svg.getAttribute("data-yd"));
+    return [
+      (x: number) => xd[0]! + ((x - g.px) / g.pw) * (xd[1]! - xd[0]!),
+      (y: number) => yd[1]! - ((y - g.py) / g.ph) * (yd[1]! - yd[0]!),
+    ] as const;
+  };
+  /** The unzoomed range, kept from the last paint without a window. */
+  let full: number[] | undefined;
+  const range = (svg: SVGSVGElement): number[] => {
+    if (svg.hasAttribute("data-xd"))
+      return [...num(svg.getAttribute("data-xd")), ...num(svg.getAttribute("data-yd"))];
+    const ids = [...svg.querySelectorAll("[data-maya=mark][data-i]")].map(
+      (m) => +m.getAttribute("data-i")!,
+    );
+    return ids.length
+      ? [Math.min(...ids), Math.max(...ids)]
+      : [0, Math.max(1, +(svg.getAttribute("data-n") ?? 1)) - 1];
   };
 
   let start: { x: number; y: number } | undefined;
@@ -188,10 +242,7 @@ export const mount = (host: Host): Handlers => {
         i1 = idx(Math.max(a.x, b.x));
       host.commit(reduce(s, { type: "zoom", window: [off + i0, off + i1] }), null);
     } else {
-      const xd = num(svg.getAttribute("data-xd")),
-        yd = num(svg.getAttribute("data-yd"));
-      const vx = (x: number) => xd[0]! + ((x - g.px) / g.pw) * (xd[1]! - xd[0]!);
-      const vy = (y: number) => yd[1]! - ((y - g.py) / g.ph) * (yd[1]! - yd[0]!);
+      const [vx, vy] = lin(svg);
       host.commit(reduce(s, { type: "zoom", window: [vx(a.x), vx(b.x), vy(a.y), vy(b.y)] }), null);
     }
   };
@@ -225,6 +276,18 @@ export const mount = (host: Host): Handlers => {
   );
 
   return {
+    step(k, m) {
+      const svg = root.querySelector<SVGSVGElement>("svg.maya-svg");
+      const s = host.state();
+      if (!svg || !host.spec()?.zoom || !full) return false;
+      let at: number[] | undefined;
+      if (m && full.length === 4) {
+        const [vx, vy] = lin(svg);
+        at = [vx(+m.getAttribute("cx")!), vy(+m.getAttribute("cy")!)];
+      } else if (m?.hasAttribute("data-i")) at = [+m.getAttribute("data-i")!];
+      host.commit(reduce(s, { type: "step", k, full, ...(at && { at }) }), null);
+      return true;
+    },
     cancel() {
       if (!brush) return false;
       onCancel();
@@ -241,6 +304,7 @@ export const mount = (host: Host): Handlers => {
       if (w && drilled) return void reset();
       const svg = root.querySelector<SVGSVGElement>("svg.maya-svg");
       if (svg && spec?.zoom) svg.style.touchAction = "pan-y";
+      if (svg && !w) full = range(svg);
       const box = root.querySelector(".maya-box");
       let chip = box?.querySelector<HTMLButtonElement>(".maya-reset") ?? null;
       if (!w || !spec) {

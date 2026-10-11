@@ -199,8 +199,10 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
           y: r(ys[i]!),
           "dominant-baseline": "middle",
         },
-        esc(ok ? n : clip(n, ctx.gutter - 12)) +
-          (ok ? `<tspan data-v="" dx="4">${esc(v)}</tspan>` : ""),
+        ctx.width < 400
+          ? esc(v)
+          : esc(ok ? n : clip(n, ctx.gutter - 12)) +
+              (ok ? `<tspan data-v="" dx="4">${esc(v)}</tspan>` : ""),
       );
     });
   }

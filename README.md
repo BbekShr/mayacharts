@@ -8,7 +8,7 @@ Twenty-seven chart types from one JSON spec. About 56 KB, zero dependencies,<br>
 
 [![npm](https://img.shields.io/npm/v/mayacharts?color=1d4ed8&label=npm)](https://www.npmjs.com/package/mayacharts) [![gzip](https://img.shields.io/bundlejs/size/mayacharts?color=1d4ed8)](https://bundlejs.com/?q=mayacharts) [![dependencies](https://img.shields.io/badge/dependencies-0-1d4ed8)](package.json) [![license](https://img.shields.io/npm/l/mayacharts?color=1d4ed8)](LICENSE) [![support](https://img.shields.io/badge/support-mayaCharts-635bff?logo=githubsponsors&logoColor=ff6b81)](https://bbekshr.github.io/mayacharts/support/)
 
-**[Website](https://bbekshr.github.io/mayacharts/)** · **[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[A million rows](https://bbekshr.github.io/mayacharts/scale.html)** · **[Compare](https://bbekshr.github.io/mayacharts/compare.html)** · **[Docs](https://bbekshr.github.io/mayacharts/docs.html)** · **[♥ Support](https://bbekshr.github.io/mayacharts/support/)**
+**[Website](https://bbekshr.github.io/mayacharts/)** · **[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[A million rows](https://bbekshr.github.io/mayacharts/scale.html)** · **[Docs](https://bbekshr.github.io/mayacharts/docs.html)** · **[♥ Support](https://bbekshr.github.io/mayacharts/support/)**
 
 </div>
 
@@ -47,20 +47,6 @@ One dot per customer, and the same dots fly between a waffle, bars and a spend s
 - **Renders on the server.** `render(spec)` is a pure function that returns an SVG string in Node or any runtime without a DOM. `renderShell` returns a full chart that works before any JavaScript loads.
 - **One JSON spec.** No callbacks in the config, so a spec can be stored in a database, sent over the wire, or written by an LLM. A [JSON Schema](schema.json) and [llms.txt](llms.txt) ship with the package.
 - **Any framework, or none.** It is a custom element, so it works in React, Vue, Svelte, Angular, Astro and plain HTML.
-
-## How it compares
-
-Measured by the [compare page](https://bbekshr.github.io/mayacharts/compare.html), bundle sizes on 2026-10-07 and the rest on 2026-10-05: each library draws the same charts the way its own docs show, with every module it needs bundled in.
-
-|                                                    | mayaCharts | Chart.js | ECharts | Recharts | Plotly   |
-| -------------------------------------------------- | ---------- | -------- | ------- | -------- | -------- |
-| Bundle for the compare set, gzip                   | 58 KB      | 70 KB    | 373 KB  | 197 KB   | 1,437 KB |
-| Lines of user code for the compare set             | 150        | 223      | 213     | 264      | 157      |
-| Renders under `require-trusted-types-for 'script'` | yes        | yes      | no      | yes      | no       |
-| Server-side SVG with no DOM                        | yes        | no       | yes     | no       | no       |
-| Keyboard navigation of data points                 | yes        | no       | no      | yes      | no       |
-
-Chart.js covers 9 of the 12 compare charts and Recharts 11; the others cover all 12. The compare page also has speed, memory, accessibility and RTL results.
 
 ## The idea
 
@@ -194,7 +180,7 @@ The twelve core types ship with `mayacharts` and `mayacharts/element`. Each othe
 
 ## Signature charts
 
-Five of the types above were designed for mayaCharts. None of them ships in Chart.js, ECharts, Recharts or Plotly, the libraries on the [compare page](https://bbekshr.github.io/mayacharts/compare.html). Each is a spec like any other and costs under 3 KB gzip (`was` is part of the core bar).
+Five of the types above were designed for mayaCharts. None of them ships in Chart.js, ECharts, Recharts or Plotly. Each is a spec like any other and costs under 3 KB gzip (`was` is part of the core bar).
 
 **Shapeshifter (`units`).** One dot per row, and the dots change form: a waffle, bars, or a swarm along the value axis. Every dot keeps the same key in every form, so switching form flies each dot to its new place instead of redrawing. Maya means illusion, and this is the one that earns the name. Other libraries make you pick a chart; here the control is part of the chart.
 
@@ -293,16 +279,16 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 
 ### Interaction
 
-| Field       | Type           | Applies to                                                                                                                                                              | Default                                   | Meaning                                                                                                                                               |
-| ----------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tooltip`   | boolean        | all                                                                                                                                                                     | true                                      | Hover/keyboard tooltip                                                                                                                                |
-| `legend`    | boolean        | all                                                                                                                                                                     | true with `series`, waffle, hexmap, units | Legend; clicking toggles series. Line and area: dropped when direct end labels show, unless set to true explicitly.                                   |
-| `endLabels` | boolean        | line area                                                                                                                                                               | true                                      | Name each series at its right end with its last value (2 to 8 visible series, no value labels, no y2, width >= 400 px). false brings back the legend. |
-| `drill`     | boolean        | treemap sunburst sankey; bar line area dumbbell with `path`                                                                                                             | false                                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop                                                                              |
-| `drillOut`  | boolean        | types that take `drill`                                                                                                                                                 | true                                      | With drill, a click on empty chart space goes back up one level                                                                                       |
-| `select`    | true / "multi" | bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation | off                                       | Click/Enter/legend selects marks; Escape clears. Not with drill                                                                                       |
-| `zoom`      | boolean        | line area scatter                                                                                                                                                       | false                                     | Drag to zoom; Reset, double-click, Escape restore                                                                                                     |
-| `animate`   | boolean        | all (element only)                                                                                                                                                      | true                                      | Animate the first draw and every update                                                                                                               |
+| Field       | Type           | Applies to                                                                                                                                                              | Default                                   | Meaning                                                                                                                                                                                                         |
+| ----------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tooltip`   | boolean        | all                                                                                                                                                                     | true                                      | Hover/keyboard tooltip                                                                                                                                                                                          |
+| `legend`    | boolean        | all                                                                                                                                                                     | true with `series`, waffle, hexmap, units | Legend; clicking toggles series. Line and area: dropped when direct end labels show, unless set to true explicitly.                                                                                             |
+| `endLabels` | boolean        | line area                                                                                                                                                               | true                                      | Name each series at its right end with its last value (2 to 8 visible series, no value labels, no y2; below 400 px the label is the value alone and the legend names the series). false brings back the legend. |
+| `drill`     | boolean        | treemap sunburst sankey; bar line area dumbbell with `path`                                                                                                             | false                                     | Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop                                                                                                                                        |
+| `drillOut`  | boolean        | types that take `drill`                                                                                                                                                 | true                                      | With drill, a click on empty chart space goes back up one level                                                                                                                                                 |
+| `select`    | true / "multi" | bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation | off                                       | Click/Enter/legend selects marks; Escape clears. Not with drill                                                                                                                                                 |
+| `zoom`      | boolean        | line area scatter                                                                                                                                                       | false                                     | Drag to zoom, or `+` / `=` and `-` with the chart focused; Reset, double-click, Escape restore                                                                                                                  |
+| `animate`   | boolean        | all (element only)                                                                                                                                                      | true                                      | Animate the first draw and every update                                                                                                                                                                         |
 
 ### Style
 
@@ -779,16 +765,17 @@ Opt-in: `drill`, `select`, `zoom`. Two-way: `el.view`, `el.selected`.
 
 ### Keyboard
 
-| Key              | Action                                                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| Tab              | Move focus between the chart, legend buttons, measure toggle, breadcrumb and Reset chip                    |
-| Arrow Left/Right | Previous/next category (same series); on the measure toggle, previous/next measure                         |
-| Arrow Up/Down    | Previous/next series in the same category; on the measure toggle, previous/next measure                    |
-| Home / End       | First/last measure (measure toggle)                                                                        |
-| Enter            | Drill into the focused mark, else select it                                                                |
-| Space            | Pin or unpin the tooltip on the focused mark                                                               |
-| Enter / Space    | On a focused table header: sort by that column                                                             |
-| Escape           | First of: unpin tooltip, cancel brush in progress, clear selection, reset zoom window, pop one drill level |
+| Key              | Action                                                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tab              | Move focus between the chart, legend buttons, measure toggle, breadcrumb and Reset chip                                                                             |
+| Arrow Left/Right | Previous/next category (same series); on the measure toggle, previous/next measure                                                                                  |
+| Arrow Up/Down    | Previous/next series in the same category; on the measure toggle, previous/next measure                                                                             |
+| Home / End       | First/last measure (measure toggle)                                                                                                                                 |
+| Enter            | Drill into the focused mark, else select it                                                                                                                         |
+| Space            | Pin or unpin the tooltip on the focused mark                                                                                                                        |
+| Enter / Space    | On a focused table header: sort by that column                                                                                                                      |
+| Escape           | First of: unpin tooltip, cancel brush in progress, clear selection, reset zoom window, pop one drill level                                                          |
+| `+` or `=` / `-` | With `zoom`: halve the window about the active mark (else the middle) / double it, reset at the full range. Ctrl, Meta and Alt combinations are left to the browser |
 
 Touch: show tooltip on pointerup if moved < 4 px.
 
@@ -1099,15 +1086,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 16,095 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 16,347 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,519,268,225 total, 3,122,017 output
-- claude-sonnet-5-5: 727,803,121 total, 99,968 output
+- claude-opus-5-5: 1,529,808,723 total, 3,148,773 output
+- claude-sonnet-5-5: 748,864,522 total, 102,819 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 30,518,833 total, 1,456 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,474,483,422 total, 3,658,669 output
+- all: 2,506,085,321 total, 3,688,276 output
 
 <!-- tokens:end -->
 

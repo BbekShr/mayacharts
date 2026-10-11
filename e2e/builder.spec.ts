@@ -385,7 +385,7 @@ for (const saved of ["light", "dark"] as const)
     }, saved);
     await page.emulateMedia({ colorScheme: saved === "light" ? "dark" : "light" });
     await page.evaluate((m) => localStorage.setItem("maya-theme", m), saved);
-    for (const path of ["index.html", "builder.html", "gallery.html", "compare.html"]) {
+    for (const path of ["index.html", "builder.html", "gallery.html", "scale.html"]) {
       await page.goto(path);
       expect(await page.evaluate(() => (window as any).firstScheme), path).toBe(saved);
     }

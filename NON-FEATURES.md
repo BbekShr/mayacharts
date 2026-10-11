@@ -57,8 +57,8 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Density cells**: scatter past 10000 visible points draws square cells (not hexagons), merges series into one ramp, drops `size` and `name`, and scales colour by the square root of the count against the visible maximum.
 - **Format templates**: one `{value}` or `{value:<preset>}` per template, at most 80 characters; no other placeholders such as the series or category name.
 - **Drill engine**: `drill: true` + `path` for navigation. No custom drill templates, custom breadcrumb shapes, or drilling by a measure-derived category (use `path` and `aggregate`).
-- **Zoom is pointer only**: a zoom window is made only by dragging; there is no keyboard or single-click way to set one (WCAG 2.1.1 and 2.5.7). Escape and the Reset chip work from the keyboard, and hosts can set `el.view.window` from their own controls.
-- **No pinch or wheel zoom**: `zoom: true` on line/area/scatter enables drag-to-brush; Reset chip, double-click and Escape restore. Pinch gestures and scroll wheel are not captured.
+- **Zoom keys are coarse**: with focus on the chart or a mark, `+` or `=` halves the zoom window about the active mark (else the middle) and `-` doubles it, reset at the full range; there is no arrow-key pan and no way to type an exact window (hosts can set `el.view.window`).
+- **No pinch or wheel zoom**: `zoom: true` on line/area/scatter enables drag-to-brush and `+` / `-` keys; Reset chip, double-click and Escape restore. Pinch gestures and scroll wheel are not captured.
 - **Drill and select exclusive**: `drill: true` and `select: true/multi` cannot both be set (ceiling: drill state and selection are orthogonal pipelines and combining them overcomplicates the reducer).
 - **Percent stacks show shares only**: with `stack: "percent"` labels, tooltips and the data table show each segment's share; the raw value is not carried. Chart the same data with `stack: true` to read amounts.
 - **Playback is minimal**: the frame Play button steps every 900 ms (fixed, no speed control) and stops at the last frame. It stops when the spec object changes or the element disconnects, but not when scrolled out of view, and Arrow keys on the button do not step frames (use `el.view = { frame }`).
@@ -124,7 +124,8 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Roll-up bar**: the Other bar from `limit` never sets the value scale and is clipped at the plot edge, with no clip mark; its value is in the label and tooltip.
 - **Radial year**: a shared trailing four-digit year moves to the centre caption, which hides below about 170 px.
 - **Small heatmap cells**: cells under 26 px become squares with a 2 px gap, so a 52-week calendar at 360 px draws 3 px dots.
-- **Line end labels**: drawn for 2 to 8 series at 400 px and wider; otherwise the legend names the series. `endLabels: false` always uses the legend.
+- **Line end labels**: drawn for 2 to 8 series; below 400 px a label is the last value alone in a value-wide gutter and the legend names the series (names would not fit). `endLabels: false` always uses the legend.
+- **Gauge warn value**: printed beside its tick like the target label, but dropped (the tick stays) when it would touch the target label or leave the chart; the target label is clipped to the room left beside the dial.
 - **Parallel end labels**: nudged apart only while they fit the plot height at 13 px each; with more lines a colliding name is dropped.
 - **Bar value labels that would print over a taller neighbour are dropped, not thinned.
 - **Sunburst ring names are cut with an ellipsis when the ring is too thin; the tooltip carries the full name.

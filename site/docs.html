@@ -45,7 +45,6 @@
         <a href="./builder.html">Builder</a>
         <a href="./gallery.html">Gallery</a>
         <a href="./scale.html">Scale</a>
-        <a href="./compare.html">Compare</a>
         <a href="./docs.html" aria-current="page">Docs</a>
         <a href="https://github.com/BbekShr/mayacharts">GitHub</a>
         <a class="support" href="https://bbekshr.github.io/mayacharts/support/"
@@ -717,13 +716,13 @@
               <td>{[key]: string}</td>
               <td>English</td>
               <td>
-                Localised UI strings with {0} placeholders: noData other back reset showing
+                Localised UI strings with {0} placeholders: noData other blank back reset showing
                 drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
                 crumbs positive negative above below near onTrack atRisk offTrack vs change pts
-                target offBelow offAbove ofTarget total shareOf sortedBy ascending descending fromTo
-                reduced points point range density perCell mean rule play pause frameOf frame was
-                since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
-                median q1 min rows ofPrevious ofFirst
+                target offBelow offAbove total shareOf sortedBy ascending descending fromTo reduced
+                points point range density perCell mean rule play pause frameOf frame was since
+                forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3 median
+                q1 min rows ofPrevious ofFirst
               </td>
             </tr>
             <tr>
@@ -811,8 +810,8 @@
               <td>boolean</td>
               <td>
                 Line and area: name each series at its right end with its last value (default true;
-                2 to 8 visible series, no value labels, no y2, width >= 400 px). false brings back
-                the legend.
+                2 to 8 visible series, no value labels, no y2; below 400 px the label is the value
+                alone and the legend names the series). false brings back the legend.
               </td>
             </tr>
             <tr>
@@ -842,7 +841,10 @@
             <tr>
               <td><a class="spec-anchor" id="zoom"></a><code>zoom</code></td>
               <td>boolean</td>
-              <td>Drag to zoom (line, area, scatter); Reset, double-click, Escape restore</td>
+              <td>
+                Drag to zoom, or + / = and - with the chart focused (line, area, scatter); Reset,
+                double-click, Escape restore
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="animate"></a><code>animate</code></td>

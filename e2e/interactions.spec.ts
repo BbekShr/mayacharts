@@ -316,6 +316,23 @@ test.describe("zoom", () => {
   });
 });
 
+test("zoom keys: + narrows, - widens, Escape resets", async ({ page }) => {
+  await open(page);
+  const w = async () => (await view(page, "pace-lines")).window as number[] | undefined;
+  const len = async () => ((await w()) ? (await w())![1]! - (await w())![0]! : Infinity);
+  await page.locator("#pace-lines svg").focus();
+  await page.keyboard.press("+");
+  await expect.poll(len).toBeLessThan(Infinity);
+  const a = await len();
+  await page.keyboard.press("=");
+  await expect.poll(len).toBeLessThan(a);
+  const b = await len();
+  await page.keyboard.press("-");
+  await expect.poll(len).toBeGreaterThan(b);
+  await page.keyboard.press("Escape");
+  await expect.poll(w).toBeUndefined();
+});
+
 /** Mount a chart on the gallery page (the element is already defined there). */
 async function mount(page: Page, id: string, spec: object, fresh = true): Promise<void> {
   if (fresh) await open(page);
