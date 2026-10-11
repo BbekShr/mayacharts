@@ -482,7 +482,12 @@ function marks(o: Element, w: Element, origin?: Box): void {
     if (m.hasAttribute("data-ghost") || instant || (shaped && !morphed)) stop(as);
     if (shaped && !instant) moved = true;
     if (shaped && !morphed && !instant) crossfade(m); // the ghost keeps the old outline
+    const [x0, y0] = [n(m, "x"), n(m, "y")];
     sync(m, e);
+    // Keyed text (table cells on a re-sort) glides from where it stood.
+    const [dx, dy] = [x0 - n(m, "x"), y0 - n(m, "y")];
+    if (m.localName === "text" && (dx || dy))
+      run(m, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
     if (morphed) morph(m, from, d1);
     mend(m, e);
     const t1 = nest(m);

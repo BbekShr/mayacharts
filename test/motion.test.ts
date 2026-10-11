@@ -604,4 +604,17 @@ describe("motion", () => {
     expect(leave("k")?.delay ?? 0).toBe(0);
     expect(leave("u")?.delay).toBeGreaterThan(0);
   });
+
+  it("keyed text that moved (a table re-sort) glides from its old place; unmoved text does not", () => {
+    const box = document.createElement("div");
+    const svg = (a: number, b: number) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks"><text data-maya="mark" data-key="a" x="5" y="${a}">a</text><text data-maya="mark" data-key="b" x="5" y="${b}">b</text></g></svg>`;
+    patch(box, svg(10, 30), false);
+    const s = spy();
+    patch(box, svg(10, 50), true);
+    s.done();
+    const gl = s.calls.filter((c) => c.k.some((f) => `${f.transform}`.startsWith("translate")));
+    expect(gl.map((c) => c.e.textContent)).toEqual(["b"]);
+    expect(gl[0]!.k[0]!.transform).toBe("translate(0px,-20px)");
+  });
 });
