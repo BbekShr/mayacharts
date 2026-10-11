@@ -55,7 +55,7 @@ export class MayaChart extends HTMLElement {
   #err = "";
   #drawn = false;
   #intro = 0; // performance.now() of the animated first draw
-  #tbl = 0;
+  #idle: (() => void) | undefined; // cancels the queued data-table insert
 
   get spec(): ChartSpec | undefined {
     return this.#prop ?? this.#json ?? this.#attr;
@@ -396,7 +396,7 @@ export class MayaChart extends HTMLElement {
     } catch (e) {
       this.#tip?.hide();
       // The old table would describe data the box no longer shows; cancel a pending idle insert.
-      this.#tbl++;
+      this.#idle?.();
       this.#last["table"] = "";
       root.querySelector("table.maya-sr")?.remove();
       const d: MayaErrorDetail | null =
@@ -421,17 +421,17 @@ export class MayaChart extends HTMLElement {
     // The table is hidden but costs its markup, style and layout (1000 scatter rows: ~10 ms), so
     // it is built and inserted when the browser is idle (2 s at most) and only the latest lands.
     // ponytail: a screen reader sees the table a moment after the marks.
-    const n = ++this.#tbl;
+    this.#idle?.(); // only the latest table is ever built; a stream never queues old ones
     const late = () => {
-      if (n !== this.#tbl || this.#last["table"] === parts.table) return;
+      if (this.#last["table"] === parts.table) return;
       this.#last["table"] = parts.table;
       root.querySelector("table.maya-sr")?.remove();
       box.insertAdjacentHTML("afterend", html(parts.table));
     };
     // Without requestIdleCallback (Safari) a timer well after the entrance.
-    (globalThis.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1600)))(late, {
-      timeout: 2000,
-    });
+    const ric = globalThis.requestIdleCallback as typeof requestIdleCallback | undefined;
+    const h = ric ? ric(late, { timeout: 2000 }) : setTimeout(late, 1600);
+    this.#idle = () => (ric ? cancelIdleCallback(h as number) : clearTimeout(h));
     // Overrides via CSSOM (never a style attribute).
     for (const [k, v] of parts.vars) maya.style.setProperty(k, v);
     for (const k of this.#vars)

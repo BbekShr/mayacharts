@@ -401,6 +401,28 @@ describe("patch ghosts", () => {
   });
 });
 
+describe("idle data table", () => {
+  it("a new render cancels the queued table insert, so a stream holds one", async () => {
+    vi.stubGlobal("requestIdleCallback", undefined); // the Safari path: a timer
+    const set = vi.spyOn(globalThis, "setTimeout");
+    const clear = vi.spyOn(globalThis, "clearTimeout");
+    const el = document.createElement("maya-chart") as MayaChart;
+    document.body.append(el);
+    for (const v of [1, 2, 3]) {
+      el.spec = { type: "bar", x: "q", y: "v", data: [{ q: "A", v }] } as ChartSpec;
+      await Promise.resolve().then(() => {});
+    }
+    const queued = set.mock.calls.filter((c) => c[1] === 1600).length;
+    expect(queued).toBeGreaterThanOrEqual(3);
+    expect(clear.mock.calls.length).toBeGreaterThanOrEqual(queued - 1);
+    await new Promise((r) => setTimeout(r, 1700));
+    expect(el.shadowRoot!.querySelectorAll("table.maya-sr")).toHaveLength(1);
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    el.remove();
+  });
+});
+
 describe("table header sort", () => {
   const tbl = {
     type: "table",
