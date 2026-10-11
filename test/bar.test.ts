@@ -97,4 +97,18 @@ describe("bar", () => {
     expect(t3).toContain('text-anchor="end"');
     expect(num(t3, "x")).toBeCloseTo(num(r3, "x") + num(r3, "width") - 8, 0);
   });
+
+  it("horizontal bars label inside only when every label fits, else outside", () => {
+    const ins = (v: number[]) =>
+      renderParts({
+        type: "bar",
+        horizontal: true,
+        labels: true,
+        x: "c",
+        y: "v",
+        data: v.map((n, i) => ({ c: "c" + i, v: n })),
+      }).svg.match(/data-in=""/g)?.length ?? 0;
+    expect(ins([100, 90, 80])).toBe(3);
+    expect(ins([100, 90, 0.5])).toBe(1); // only the top bar, which has no room outside
+  });
 });

@@ -206,6 +206,11 @@ export const bar: Mark = {
       // ponytail: no thinning to a subset of steps: a label wider than its column is dropped.
       const first = tags[0]!;
       const last = tags.at(-1)!;
+      // Horizontal bars label inside only when every label fits, else all outside (one rule per chart, not per bar).
+      const all =
+        hz &&
+        !spec.stack &&
+        tags.every(([c, , , w, h]) => tw(ctx.fmt(spec.y, c.v)) <= w && h >= 14);
       for (const t of wf ? new Set([first, last, ...tags]) : tags) {
         const [c, x, y, w, h, d] = t;
         const dk = d["data-key"];
@@ -224,7 +229,7 @@ export const bar: Mark = {
             : d["data-q"] >= 6
               ? ""
               : null;
-        if (est <= w && h >= (hz ? 14 : 16)) {
+        if (hz && !spec.stack ? all : est <= w && h >= (hz ? 14 : 16)) {
           // At the bar's end, where the eye reads a value; a stack segment keeps its middle.
           // A bar cut at the plot edge keeps the middle, clear of its break slashes.
           const pl = ctx.plot;

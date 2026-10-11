@@ -13,6 +13,8 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Changed
 
+- Line and area below 400 px keep their end labels as the last value alone, in a gutter as wide as the widest value, and the legend names the series.
+- Horizontal bars with value labels draw them inside only when every label fits, else all outside the bar end (a bar with no room outside keeps its label inside).
 - Parallel axes run over their own data extent instead of starting at zero, so a measure of 95 to 99 fills its axis.
 - `yDomain` and `xDomain` bounds must be within 1e300 and the span at least 1e-300, and `colorBy` `target` and `warn` within 1e300; larger values are rejected with `invalid-domain` or `invalid-option` instead of drawing infinite geometry.
 - `ridgeline` rejects negative y values with `non-positive-value`, as `funnel` does.
