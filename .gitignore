@@ -13,8 +13,6 @@ site/ssr.html
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
 .claude/tokens.json
-eval/results-*.json
-e2e/compare/.build/
 
 # /brag launch-video output
 brag-output*/

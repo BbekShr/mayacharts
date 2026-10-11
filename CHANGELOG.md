@@ -11,6 +11,10 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - Text keys `offBelow` and `offAbove`: a kpi or gauge description with a `warn` threshold now says where the chart goes off track, for example "target 30%, off track below 22%".
 - Docs: worked examples for a kpi with a goal and for the gauge.
 
+### Removed
+
+- The rival comparison page (`compare.html`, its data, scripts, Playwright project and workflow), the LLM eval, the `compare/` sub-install and six unused bench scripts. The README comparison table and the home page weight chart went with them, since the page was their source.
+
 ### Changed
 
 - Gauge prints the warn value beside its tick (dropped when it would touch the target label or leave the chart), clips a long target label to the room beside the dial, and draws no round-cap dot for a value of zero.

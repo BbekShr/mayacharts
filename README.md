@@ -8,7 +8,7 @@ Twenty-seven chart types from one JSON spec. About 56 KB, zero dependencies,<br>
 
 [![npm](https://img.shields.io/npm/v/mayacharts?color=1d4ed8&label=npm)](https://www.npmjs.com/package/mayacharts) [![gzip](https://img.shields.io/bundlejs/size/mayacharts?color=1d4ed8)](https://bundlejs.com/?q=mayacharts) [![dependencies](https://img.shields.io/badge/dependencies-0-1d4ed8)](package.json) [![license](https://img.shields.io/npm/l/mayacharts?color=1d4ed8)](LICENSE) [![support](https://img.shields.io/badge/support-mayaCharts-635bff?logo=githubsponsors&logoColor=ff6b81)](https://bbekshr.github.io/mayacharts/support/)
 
-**[Website](https://bbekshr.github.io/mayacharts/)** · **[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[A million rows](https://bbekshr.github.io/mayacharts/scale.html)** · **[Compare](https://bbekshr.github.io/mayacharts/compare.html)** · **[Docs](https://bbekshr.github.io/mayacharts/docs.html)** · **[♥ Support](https://bbekshr.github.io/mayacharts/support/)**
+**[Website](https://bbekshr.github.io/mayacharts/)** · **[Gallery](https://bbekshr.github.io/mayacharts/gallery.html)** · **[Builder](https://bbekshr.github.io/mayacharts/builder.html)** · **[A million rows](https://bbekshr.github.io/mayacharts/scale.html)** · **[Docs](https://bbekshr.github.io/mayacharts/docs.html)** · **[♥ Support](https://bbekshr.github.io/mayacharts/support/)**
 
 </div>
 
@@ -47,20 +47,6 @@ One dot per customer, and the same dots fly between a waffle, bars and a spend s
 - **Renders on the server.** `render(spec)` is a pure function that returns an SVG string in Node or any runtime without a DOM. `renderShell` returns a full chart that works before any JavaScript loads.
 - **One JSON spec.** No callbacks in the config, so a spec can be stored in a database, sent over the wire, or written by an LLM. A [JSON Schema](schema.json) and [llms.txt](llms.txt) ship with the package.
 - **Any framework, or none.** It is a custom element, so it works in React, Vue, Svelte, Angular, Astro and plain HTML.
-
-## How it compares
-
-Measured by the [compare page](https://bbekshr.github.io/mayacharts/compare.html), bundle sizes on 2026-10-07 and the rest on 2026-10-05: each library draws the same charts the way its own docs show, with every module it needs bundled in.
-
-|                                                    | mayaCharts | Chart.js | ECharts | Recharts | Plotly   |
-| -------------------------------------------------- | ---------- | -------- | ------- | -------- | -------- |
-| Bundle for the compare set, gzip                   | 58 KB      | 70 KB    | 373 KB  | 197 KB   | 1,437 KB |
-| Lines of user code for the compare set             | 150        | 223      | 213     | 264      | 157      |
-| Renders under `require-trusted-types-for 'script'` | yes        | yes      | no      | yes      | no       |
-| Server-side SVG with no DOM                        | yes        | no       | yes     | no       | no       |
-| Keyboard navigation of data points                 | yes        | no       | no      | yes      | no       |
-
-Chart.js covers 9 of the 12 compare charts and Recharts 11; the others cover all 12. The compare page also has speed, memory, accessibility and RTL results.
 
 ## The idea
 
@@ -194,7 +180,7 @@ The twelve core types ship with `mayacharts` and `mayacharts/element`. Each othe
 
 ## Signature charts
 
-Five of the types above were designed for mayaCharts. None of them ships in Chart.js, ECharts, Recharts or Plotly, the libraries on the [compare page](https://bbekshr.github.io/mayacharts/compare.html). Each is a spec like any other and costs under 3 KB gzip (`was` is part of the core bar).
+Five of the types above were designed for mayaCharts. None of them ships in Chart.js, ECharts, Recharts or Plotly. Each is a spec like any other and costs under 3 KB gzip (`was` is part of the core bar).
 
 **Shapeshifter (`units`).** One dot per row, and the dots change form: a waffle, bars, or a swarm along the value axis. Every dot keeps the same key in every form, so switching form flies each dot to its new place instead of redrawing. Maya means illusion, and this is the one that earns the name. Other libraries make you pick a chart; here the control is part of the chart.
 
