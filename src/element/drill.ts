@@ -183,7 +183,8 @@ export const mount = (host: Host): Handlers => {
         if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1");
         (m as unknown as HTMLElement).focus?.({ preventScroll: true });
       };
-      const zoom = host.root.querySelector("[data-maya=marks]")?.getAnimations?.() ?? [];
+      const zoom =
+        host.root.querySelector("[data-maya=marks]")?.getAnimations?.({ subtree: true }) ?? [];
       if (m && zoom.length) Promise.allSettled(zoom.map((a) => a.finished)).then(go);
       else go();
     },

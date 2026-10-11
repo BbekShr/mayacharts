@@ -262,10 +262,7 @@ const sunburst: Mark = {
         const cap = Math.floor((Math.min((sw / DEG) * rm, Math.sqrt(4 * rm * (w - 12))) - 6) / 7.2);
         const [rot, shown] =
           cap >= Math.min(nm.length, 4)
-            ? [
-                mid + (mid > 90 && mid < 270 ? 180 : 0),
-                nm.length > cap ? `${nm.slice(0, cap - 1)}…` : nm,
-              ]
+            ? [mid + (mid > 90 && mid < 270 ? 180 : 0), clip(nm, cap)]
             : tw < w / 2 - 2 && (sw / DEG) * (rm - tw) >= 14
               ? [mid + (mid < 180 ? -90 : 90), nm]
               : [null, nm];
@@ -366,7 +363,8 @@ export const marimekko: Mark = {
         });
     }
     let x = x0;
-    categories.forEach((name, ci) => {
+    categories.forEach((cat, ci) => {
+      const name = ctx.fmt(spec.x, cat); // shown; the key keeps the raw category
       const t = tot[ci] ?? 0;
       if (!t) return;
       const w = (free * t) / grand;
@@ -378,7 +376,7 @@ export const marimekko: Mark = {
         const share = pct(v / t);
         const a = {
           "data-maya": "mark",
-          "data-key": key(series[si], name),
+          "data-key": key(series[si], cat),
           "data-c": ci,
           "data-s": si % 8,
           "data-x": name,
@@ -412,13 +410,7 @@ export const marimekko: Mark = {
       const full = `${name} · ${gs}`;
       const room = Math.floor((w + gap - 4) / 7.2); // chars that fit; a name is cut, never swapped for a bare share
       const fit =
-        full.length <= room
-          ? full
-          : name.length <= room
-            ? name
-            : room >= 4
-              ? `${name.slice(0, room - 1)}…`
-              : "";
+        full.length <= room ? full : name.length <= room ? name : room >= 4 ? clip(name, room) : "";
       // Too narrow for one line: the name over its share, both kept.
       const two = fit !== full && gs.length <= room && fit.length > 3;
       if (on && fit) {
@@ -453,13 +445,14 @@ export const waffle: Mark = {
     let marks = "";
     let hits = "";
     let i = 0;
-    shaped.categories.forEach((name, ci) => {
+    shaped.categories.forEach((cat, ci) => {
+      const name = ctx.fmt(spec.x, cat);
       const v = vals[ci] ?? 0;
       for (let k = 0; k < (n[ci] ?? 0); k++, i++) {
         const [cx, cy] = [ox + (i % 10) * step, oy + Math.floor(i / 10) * step];
         const a = {
           "data-maya": "mark",
-          "data-key": key("w", name, k),
+          "data-key": key("w", cat, k),
           "data-c": i,
           "data-s": ci % 8,
           // Hovering a cell lights its whole category, the way flows light a path (tooltip.ts).
@@ -493,8 +486,8 @@ export const waffle: Mark = {
       `<div class="maya-legend" data-maya="legend">` +
       shaped.categories
         .map(
-          (name, ci) =>
-            `<span data-s="${ci % 8}"><i></i>${esc(name)} ${pct((vals[ci] ?? 0) / sum)}</span>`,
+          (cat, ci) =>
+            `<span data-s="${ci % 8}"><i></i>${esc(ctx.fmt(spec.x, cat))} ${pct((vals[ci] ?? 0) / sum)}</span>`,
         )
         .join("") +
       `</div>`;

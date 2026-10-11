@@ -5,7 +5,6 @@ import type { Mark } from "../types.ts";
 const HEAD = 30;
 const ROW = 26;
 const PAD = 8;
-const num = (v: unknown) => (typeof v === "number" ? v : null);
 
 /**
  * Rows = x categories, one column per measure (every `spec.y` entry), value text plus a thin bar
@@ -65,7 +64,7 @@ export const table: Mark = {
     }
 
     const lw = Math.max(80, Math.min(W * 0.34, 180));
-    const cw = (W - lw) / ms.length;
+    const cw = Math.max(0, W - lw) / ms.length;
     const colX = (i: number) => lw + i * cw; // left edge of measure column i
     const max = ms.map((_, i) => {
       let m = 0; // a loop: Math.max(...rows) overflows the stack on a long table
@@ -146,7 +145,7 @@ export const table: Mark = {
           esc(text),
         );
         if (v === null) return;
-        const bw = max[mi] ? ((cw - 2 * PAD) * Math.abs(v)) / max[mi]! : 0;
+        const bw = max[mi] ? (Math.max(0, cw - 2 * PAD) * Math.abs(v)) / max[mi]! : 0;
         const d = {
           "data-key": key(m, rw.name),
           "data-c": ri,

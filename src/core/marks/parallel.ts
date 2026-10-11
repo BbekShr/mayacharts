@@ -44,7 +44,9 @@ export const parallel: Mark = {
     let labels = "";
     const scales = ms.map((m, i) => {
       const all = lines.map((l) => l.vals[i]).filter((v): v is number => v !== null);
-      const t = niceTicks(Math.min(0, ...all), Math.max(0, ...all), 4);
+      // ponytail: each axis runs over its own data extent (not anchored at zero); no per-axis domain option.
+      // The spreads are safe: parallel is capped at 10000 marks.
+      const t = all.length ? niceTicks(Math.min(...all), Math.max(...all), 4) : niceTicks(0, 1, 4);
       const [lo, hi] = t.domain;
       const of = (v: number) => r(y1 - ((v - lo) / (hi - lo || 1)) * (y1 - y0));
       const x = at(i);

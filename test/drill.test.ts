@@ -230,4 +230,42 @@ describe("drill in <maya-chart>", () => {
     // Keys keep the level in the whole path, so the state nodes survive the drill.
     expect(marks(el).some((m) => m.getAttribute("data-key") === "n~1~CA")).toBe(true);
   });
+  it("a keyboard drill waits on the animations of the whole marks subtree", async () => {
+    const el = await mount(spec());
+    const asked: unknown[] = [];
+    const was = Element.prototype.getAnimations;
+    Element.prototype.getAnimations = function (this: Element, o?: GetAnimationsOptions) {
+      if (this.matches("[data-maya=marks]")) asked.push(o);
+      return [];
+    };
+    const svg = el.shadowRoot!.querySelector(".maya-svg")!;
+    for (const key of ["ArrowRight", "Enter"])
+      svg.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, composed: true, cancelable: true }),
+      );
+    await frame();
+    Element.prototype.getAnimations = was;
+    expect(el.view?.drill?.length).toBe(1);
+    expect(asked).toContainEqual({ subtree: true });
+  });
+  it("sankey: a drill hides the tooltip, as a zoom does", async () => {
+    const rows = [
+      { region: "West", state: "CA", city: "LA", v: 5 },
+      { region: "East", state: "NY", city: "NYC", v: 4 },
+    ];
+    const el = await mount(spec({ type: "sankey", path: ["region", "state", "city"], data: rows }));
+    const [node, inner] = ["n~0~West", "n~1~CA"].map((k) =>
+      marks(el).find((m) => m.getAttribute("data-key") === k)!,
+    );
+    // The hovered node survives the drill (stable keys): the tooltip would stay on it.
+    inner!.dispatchEvent(
+      Object.assign(new Event("pointerover", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    const tip = el.shadowRoot!.querySelector(".maya-tip")!;
+    expect(tip.classList.contains("maya-open")).toBe(true);
+    click(node!);
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+    expect(tip.classList.contains("maya-open")).toBe(false);
+  });
 });

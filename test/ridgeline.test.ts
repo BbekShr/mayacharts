@@ -12,6 +12,10 @@ const tags = (s: string, re: string) =>
   [...s.matchAll(new RegExp(`<${re}[^>]*>`, "g"))].map((m) => m[0]);
 
 describe("ridgeline", () => {
+  it("rejects a negative value like funnel", () => {
+    const bad = { ...spec, data: [...data, { m: "Jan", p: "East", v: -1 }] };
+    expect(() => svg(bad)).toThrow(/non-positive-value|cannot be negative/);
+  });
   it("one area, outline and dot per cell, keyed", () => {
     const s = svg(spec);
     expect(tags(s, 'path data-maya="area"')).toHaveLength(2);

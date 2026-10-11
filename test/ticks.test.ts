@@ -72,3 +72,15 @@ describe("niceTicks crossing zero", () => {
     expect(niceTicks(-40, 510).domain).toEqual([-100, 600]);
   });
 });
+
+describe("niceTicks equal huge range", () => {
+  for (const v of [1e15, 1e16, 1e300]) {
+    it(`[${v}, ${v}] is finite and fast`, () => {
+      const t0 = performance.now();
+      const t = niceTicks(v, v);
+      expect(performance.now() - t0).toBeLessThan(50);
+      expect(t.values.length).toBeLessThan(12);
+      expect(t.values.every(Number.isFinite)).toBe(true);
+    });
+  }
+});

@@ -30,6 +30,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Sankey node count**: link keys are numbers (`source * 2^26 + target`), so a sankey stops at about 67 million nodes.
 - **Builder paste size**: the demo site's chart builder previews at most 1 MB, 10,000 rows (the `too-many-marks` cap) and 50 columns of pasted data, and its copied code inlines at most 60 rows (the first 20 when there are more). The library itself has no such limit; load the full data in your own code.
 - **Radial bar centre label**: the centre label and the shared year hide below about 170 px wide, and a year-first locale keeps full names.
+- **Radial stacked tip totals of means**: the radial centre total shows only for sum and count (a sum of per-category means is not a total). The tip total of a stacked radial bar is still the sum of its segments, so with `aggregate: "mean"` or another non-additive one it reads as a sum of means. Use one series, or sum, for an honest tip.
 - **Render batching**: property sets in one task coalesce into one render (microtask), but sets in separate tasks each render, so a host that updates faster than 60 Hz is not capped at one render per frame. Resizes still wait for a frame.
 - **Scatter pointer pick**: scatter has no hit circles; the tooltip and click pick the nearest point centre within 12 px by a linear scan, so a pick costs O(points) per pointer move.
 - **Thinned sparkline and ridgeline**: kpi (one hover point per 4 px) and ridgeline (one per 6 px of plot width) keep the same largest-triangle-three-buckets pick as a downsampled time axis (each series' minimum and maximum and every gap edge included), so a click or hover lands on a kept category only, not every row. When the kept set is still over the target it is thinned evenly, which can drop a gap edge or a peak in the densest cases.
@@ -43,8 +44,10 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Reference lines**: `rules` draws at most 4 lines across the value axis only (no bands, no rules on x) at values up to 1e15 in size, with labels of at most 40 characters above the line at the plot end. Rule labels do not avoid value labels or each other (the caller shortens a label or drops `labels`). A rule on a downsampled time axis averages the kept points only.
 - **Y-domain origin**: value axes (lines included) are 0-anchored. Negative values are supported; set `yDomain` to override the origin.
 - **Ramp depth**: 10-step sequential ramp for colorBy numeric fields (not user-tunable). Only steps 8 and 9 reach 3:1 as fill (3:1 needs about 80% accent, which leaves no range), so heatmap cells and hexes carry a full-accent outline (3.9:1 light, 4.8:1 dark) as the WCAG 1.4.11 mark; the ramp itself stays a hint.
+- **Text width is estimated**: core has no text measurement (it runs in Node), so every fit check counts 0.6 em per code point and 1 em per East-Asian-wide one; a font much wider or narrower than the default can still clip or leave room.
 - **Label truncation**: a category axis with 8 or fewer labels is never thinned, each label is clipped to its slot with an ellipsis (full text in a title); longer axes are thinned. Text is measured by counting East-Asian-wide characters at 1 em, not rendered width (no DOM measurement).
 - **Time axis scope**: line, area and vertical bar only, on the bottom axis. UTC only (no time zones or DST), no fiscal or ISO-week calendars, no sub-second ticks; a bare year like "2024" is a category. Numbers become epoch ms only with `xType: "time"`.
+- **Thinned line gaps**: on a downsampled time line the median step is the thinning's, so only a hole of about 6 mean steps (about 6 px) breaks the line; smaller real gaps do not show.
 - **Time line gaps**: a line breaks where the gap between readings exceeds 5 times the series' median step (fixed factor); use null rows for gaps it should not guess.
 - **Time bar width**: bars on a time axis take 0.8 of the smallest gap between dates, so one close pair makes every bar thin.
 - **Time tick labels**: a `format` entry for x replaces the per-unit tick labels entirely.
@@ -54,10 +57,12 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Density cells**: scatter past 10000 visible points draws square cells (not hexagons), merges series into one ramp, drops `size` and `name`, and scales colour by the square root of the count against the visible maximum.
 - **Format templates**: one `{value}` or `{value:<preset>}` per template, at most 80 characters; no other placeholders such as the series or category name.
 - **Drill engine**: `drill: true` + `path` for navigation. No custom drill templates, custom breadcrumb shapes, or drilling by a measure-derived category (use `path` and `aggregate`).
+- **Zoom is pointer only**: a zoom window is made only by dragging; there is no keyboard or single-click way to set one (WCAG 2.1.1 and 2.5.7). Escape and the Reset chip work from the keyboard, and hosts can set `el.view.window` from their own controls.
 - **No pinch or wheel zoom**: `zoom: true` on line/area/scatter enables drag-to-brush; Reset chip, double-click and Escape restore. Pinch gestures and scroll wheel are not captured.
 - **Drill and select exclusive**: `drill: true` and `select: true/multi` cannot both be set (ceiling: drill state and selection are orthogonal pipelines and combining them overcomplicates the reducer).
 - **Percent stacks show shares only**: with `stack: "percent"` labels, tooltips and the data table show each segment's share; the raw value is not carried. Chart the same data with `stack: true` to read amounts.
 - **Playback is minimal**: the frame Play button steps every 900 ms (fixed, no speed control) and stops at the last frame. It stops when the spec object changes or the element disconnects, but not when scrolled out of view, and Arrow keys on the button do not step frames (use `el.view = { frame }`).
+- **Frame size scale**: with `frame` and `size`, the size scale reads the raw rows of every frame (hidden series and windows included) so dots hold their size between frames.
 - **Frame axes**: with `frame`, every render shapes every frame once to fix the value axes (cost grows with frames times rows, so more than 200 distinct frames fail with too-many-marks). Frame values match as strings, so 1 and "1" are one frame. Category axes are not shared: a category that is missing from a frame drops out of it, and on a time axis the dates shown follow the frame. Rows whose frame value is null belong to no frame.
 - **Stack labels show segments**: stacked bar labels display the segment value, not the total. Column labels in a heatmap show the cell value.
 - **Scatter keyboard order**: keyboard navigation follows mark draw order, not spatial proximity.
@@ -78,6 +83,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Bar width**: bars stop growing at 72 px and sit centred in their slot.
 - **Flow node labels**: node labels that would collide with a larger node's label are dropped (the tooltip still names them).
 - **Radial tip values**: a bar's total shows at its tip only when it fits (wedge arc of 11 px or more, 40 categories or fewer); otherwise it is in the tooltip.
+- **Sunburst hairlines**: an arc under 2 px along its middle is not drawn, nor its children; its rows stay in the data table.
 - **Sunburst slivers**: once a slice would be under 4 px across, it and its smaller siblings draw as one grey "Other (n)" slice that does not drill; its rows are only in the data table. Slices under 2 px of outer arc are not drawn, nor their children. Rotated names skip the label overlap scan; each is fitted to its own ring instead.
 - **Entrance**: the first draw animates once; server-rendered charts never replay it.
 - **Measure toggle up to 4 options**: a `y` array works with more measures, but the sliding indicator is styled for 2 to 4.
@@ -92,7 +98,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Dumbbell sort**: `sort` orders categories by the total of both values, not by the gap between them.
 - **Ridgeline scale**: rows share one value scale from zero with no per-row axis; peaks overlap the row above by at most 40%. A scale from the data minimum does not help when rows differ in magnitude, and per-row scaling would exaggerate small movements.
 - **Beeswarm height**: a swarm taller than its row is clamped to the row, so overflow points overlap.
-- **Parallel axes**: every axis runs from 0 (or the minimum) to a nice maximum; no per-axis domain, and nulls break a line.
+- **Parallel axes**: every axis runs over its own data extent, rounded to nice ticks (not anchored at zero, so a measure of 95 to 99 fills its axis); no per-axis domain, and nulls break a line.
 - **Table height**: rows that do not fit the chart's height are not drawn (no scroll or paging); `limit` cuts to the top N with no Other row.
 - **Chord layout**: from-nodes on the left half, to-nodes on the right (label cuts are under Chord labels).
 - **Marimekko values**: null and negative values count as 0; there is no percentage axis.
@@ -122,6 +128,8 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Parallel end labels**: nudged apart only while they fit the plot height at 13 px each; with more lines a colliding name is dropped.
 - **Bar value labels that would print over a taller neighbour are dropped, not thinned.
 - **Sunburst ring names are cut with an ellipsis when the ring is too thin; the tooltip carries the full name.
+- **Weave density**: under 32 px a period, only the first and last dots of a thread are full size (the rest are pinpricks); under 32 px a rank, dots are not labelled and the legend and tooltip name the threads.
+- **Heatmap ink cuts**: heatmap and hexmap value ink switches at fixed ramp steps tuned for the default accent; a `colors` accent of a very different lightness can put a step under 4.5 to 1.
 - **Weave caps at 8 series**: a weave throws `too-many-marks` above 8 threads (one per palette slot); `limit` rolls up categories, never series, so filter the rows or fold the tail into one series first. Ranks are among the series present in a period, and tied values share a rank but keep separate rows in series order. A thread is named on the left axis (in first-period order, clipped to 16 characters), at the end, and above its first dot when it starts late or after a gap; that start name and `labels` values need rows 32 px apart. Below 32 px a step the middle dots shrink to pinpricks, and below 48 px the crossing halos are dropped. With no end gutter the last value sits right of its dot, and is dropped (the tooltip carries it) when it does not fit or rows are under 16 px apart.
 - **Chord labels**: a label is cut to 36% of the plot width (20 characters at most) and dropped when its neighbour on the same side leaves no 16 px of height, so a narrow chart with many nodes names only the largest; the tooltip names the rest.
 

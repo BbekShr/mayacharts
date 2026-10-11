@@ -12,7 +12,11 @@ const base: ChartSpec = {
 const svg = (s: ChartSpec, o = {}) => renderParts(s, { width: 300, height: 220, ...o }).svg;
 const headline = (s: string) =>
   s.match(/<text data-maya="mark" data-key="v"[^>]*>([^<]*)<\/text>/)!;
-const delta = (s: string) => s.match(/<text [^>]*data-kpi="delta"[^>]*>([^<]*)<\/text>/);
+// [whole element, its text]: the arrow sits in a toned tspan, the words stay plain.
+const delta = (s: string) => {
+  const m = s.match(/<text [^>]*data-kpi="delta"[^>]*>(.*?)<\/text>/);
+  return m && [m[0], m[1]!.replace(/<[^>]*>/g, "")];
+};
 
 describe("kpi", () => {
   it("headline is the last category", () => {
@@ -142,9 +146,9 @@ describe("kpi", () => {
   it("bands are lightness steps, darkest at the bad zone, with a warn hairline", () => {
     const ops = (s: ChartSpec) =>
       [...svg(s).matchAll(/data-kpi="band"[^>]*fill-opacity="([\d.]+)"/g)].map((m) => +m[1]!);
-    expect(ops({ ...base, colorBy: { target: 120, warn: 100 } })).toEqual([0.2, 0.12, 0.06]);
+    expect(ops({ ...base, colorBy: { target: 120, warn: 100 } })).toEqual([0.4, 0.22, 0.1]);
     expect(ops({ ...base, colorBy: { target: 100, warn: 120, better: "lower" } })).toEqual([
-      0.06, 0.12, 0.2,
+      0.1, 0.22, 0.4,
     ]);
     const s = svg({ ...base, colorBy: { target: 120, warn: 100 } });
     expect(s).toContain('fill="var(--maya-fg)"');
@@ -157,7 +161,22 @@ describe("kpi", () => {
       format: "percent",
       data: base.data.map((r, i) => ({ ...r, w: [0.3, 0.32, 0.31, 0.34][i]! })),
     });
-    expect(p).toContain("▲ +3 pts (+9.7%) vs Mar");
+    expect(p).toContain(" +3 pts (+9.7%) vs Mar");
+  });
+  it("only the arrow of a change line is toned", () => {
+    const d = delta(svg(base))![0]!;
+    expect(d).not.toMatch(/<text [^>]*data-tone/);
+    expect(d).toMatch(/<tspan data-tone="good"[^>]*>▲<\/tspan>/);
+  });
+  it("the bullet dial reaches a value past 1.2 x target", () => {
+    const s = svg({ ...base, data: [{ m: "a", v: 300 }], colorBy: { target: 100 } });
+    const fill = +s.match(/data-kpi="fill"[^>]* width="([\d.]+)"/)![1]!;
+    const tick = +s.match(/<line data-kpi="target"[^>]* x1="([\d.]+)"/)![1]!;
+    expect(fill).toBeCloseTo(3 * (tick - 12), 0); // 300 is three times the target, not clamped to 120
+  });
+  it("the status word keys with the bar so it moves with it", () => {
+    const s = svg({ ...base, colorBy: { target: 100 } });
+    expect(s).toMatch(/data-kpi="status"[^>]*data-key="b"/);
   });
   it("bullet wins in a short box", () => {
     const s = svg({ ...base, colorBy: { target: 100 } }, { height: 110 });
@@ -282,5 +301,30 @@ describe("kpi period caption", () => {
   it("is right-aligned over the sparkline's last point", () => {
     const t = svg(base).match(/<text[^>]*data-kpi="period"[^>]*>/)![0];
     expect(t).toContain('text-anchor="end"');
+  });
+});
+
+describe("kpi and gauge description names the warn threshold", () => {
+  const desc = (s: ChartSpec) => /<desc[^>]*>([^<]*)</.exec(render(s))?.[1] ?? "";
+  const rows = [{ v: 27 }];
+  it("kpi, both directions", () => {
+    const k = (colorBy: object) => desc({ type: "kpi", y: "v", colorBy, data: rows } as ChartSpec);
+    expect(k({ target: 30, warn: 22 })).toContain("target 30, off track below 22.");
+    expect(k({ target: 20, warn: 25, better: "lower" })).toContain(
+      "target 20, off track above 25.",
+    );
+    expect(k({ target: 30 })).not.toContain("off track");
+  });
+  it("gauge, text override", async () => {
+    await import("../src/radial.ts");
+    const g = desc({
+      type: "gauge",
+      y: "v",
+      yDomain: [0, 50],
+      colorBy: { target: 30, warn: 22 },
+      text: { offBelow: "Ausser Plan unter {0}" },
+      data: rows,
+    } as ChartSpec);
+    expect(g).toContain("Ausser Plan unter 22.");
   });
 });

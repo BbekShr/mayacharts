@@ -115,10 +115,10 @@ export interface ChartSpec<R extends object = Row> {
   /** How rows sharing a (category, series) combine. `count` counts non-null y. Default "sum".
    * @example aggregate: "mean" */
   aggregate?: Aggregate;
-  /** Order categories by total across all series (hidden ones too). Default: data order.
+  /** Order categories by total across all series (hidden ones too). Default: data order. bar line area heatmap dumbbell table radial waffle orbit.
    * @example sort: "desc" */
   sort?: "asc" | "desc";
-  /** Keep the top N categories by total; the rest roll up into a final "Other". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`.
+  /** Keep the top N categories by total; the rest roll up into a final "Other". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`. bar line area heatmap dumbbell table radial waffle orbit.
    * @example limit: 10 */
   limit?: number;
 
@@ -134,7 +134,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required; constellation: colours the stars by group). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation.
    * @example series: "region" */
   series?: Field<R>;
-  /** Hierarchy fields, outer to inner. treemap sunburst sankey; bar/line/area/dumbbell with `drill` (replaces `x`).
+  /** Hierarchy fields, outer to inner. treemap sunburst sankey chord; bar/line/area/dumbbell with `drill` (replaces `x`).
    * @example path: ["region", "state"] */
   path?: readonly Field<R>[];
   /** Bubble area field (sqrt scale). scatter constellation.
@@ -214,7 +214,7 @@ export interface ChartSpec<R extends object = Row> {
   /** With `drill`: a click on empty chart space goes back up one level. Default true.
    * @example drillOut: false */
   drillOut?: boolean;
-  /** Click/Enter/legend selects marks, others dim; Escape clears. Not with `drill`.
+  /** Click/Enter/legend selects marks, others dim; Escape clears. Not with `drill`. bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
    * @example select: "multi" */
   select?: true | "multi";
   /** Drag to zoom. line, area, scatter. Reset chip, double-click and Escape restore.
@@ -227,7 +227,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Palette in series order (max 8), or colours by series value.
    * @example colors: { North: "#0b6", South: "oklch(.6 .17 30)" } */
   colors?: readonly string[] | Readonly<Record<string, string>>;
-  /** Tone by sign of y, by a target (good at or past it; `better: "lower"` flips it), or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi and gauge: thresholds only, any of target, warn and better, warn needs target and sits on the bad side; kpi with a `y` array: also keyed by y field).
+  /** Tone by sign of y, by a target (good at or past it; `better: "lower"` flips it), or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi and gauge: thresholds only, any of target, warn and better, warn needs target and sits on the bad side; kpi with a `y` array: also keyed by y field). bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation.
    * @example colorBy: { target: 100, warn: 80 } or colorBy: { revenue: { target: 1.8e6 }, churn: { better: "lower" } } */
   colorBy?: "sign" | Goal | Readonly<Partial<Record<Field<R>, Goal>>> | Field<R>;
   /** Theme token overrides (CSS values, allowlisted). `line` is the line width, `gridDash` a grid dash array. Ready-made sets: mayacharts/themes.

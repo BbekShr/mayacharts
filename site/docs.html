@@ -6,12 +6,7 @@
     <title>mayaCharts docs</title>
     <link rel="stylesheet" href="./site.css" />
     <!-- Apply the saved theme before first paint; theme.ts keeps the button in step. -->
-    <script>
-      try {
-        const m = localStorage.getItem("maya-theme");
-        if (m === "light" || m === "dark") document.documentElement.style.colorScheme = m;
-      } catch {}
-    </script>
+    <script src="./theme-init.js"></script>
     <style>
       .spec-anchor {
         display: block;
@@ -512,7 +507,10 @@
               <td><a class="spec-anchor" id="sort"></a><code>sort</code></td>
               <td>asc / desc</td>
               <td>data order</td>
-              <td>Categories by total across all series (hidden ones too)</td>
+              <td>
+                Categories by total across all series (hidden ones too). bar line area heatmap
+                dumbbell table radial waffle orbit
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="limit"></a><code>limit</code></td>
@@ -521,7 +519,8 @@
               <td>
                 Keep top N categories by signed total; rest roll up into "Other" with
                 re-aggregation. A bar with more categories than fit (past 10000 marks) does this on
-                its own when limit is unset, and says so in warnings
+                its own when limit is unset, and says so in warnings. bar line area heatmap dumbbell
+                table radial waffle orbit
               </td>
             </tr>
           </tbody>
@@ -631,7 +630,7 @@
             <tr>
               <td><a class="spec-anchor" id="path"></a><code>path</code></td>
               <td>field[]</td>
-              <td>treemap sunburst sankey; bar/line/area/dumbbell with drill</td>
+              <td>treemap sunburst sankey chord; bar/line/area/dumbbell with drill</td>
               <td>Hierarchy outer to inner. On bar/line/area/dumbbell replaces <code>x</code></td>
             </tr>
             <tr>
@@ -721,10 +720,10 @@
                 Localised UI strings with {0} placeholders: noData other back reset showing
                 drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
                 crumbs positive negative above below near onTrack atRisk offTrack vs change pts
-                target ofTarget total shareOf sortedBy ascending descending fromTo reduced points
-                point range density perCell mean rule play pause frameOf frame was since forms
-                waffle bars swarm perDot count rank speedBy gross alike nearest max q3 median q1 min
-                rows ofPrevious ofFirst
+                target offBelow offAbove ofTarget total shareOf sortedBy ascending descending fromTo
+                reduced points point range density perCell mean rule play pause frameOf frame was
+                since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
+                median q1 min rows ofPrevious ofFirst
               </td>
             </tr>
             <tr>
@@ -834,7 +833,11 @@
             <tr>
               <td><a class="spec-anchor" id="select"></a><code>select</code></td>
               <td>true / "multi"</td>
-              <td>Click/Enter/legend selects marks; Escape clears. Not with drill</td>
+              <td>
+                Click/Enter/legend selects marks; Escape clears. Not with drill. bar line area
+                waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial
+                treemap sunburst hexmap boxplot funnel weave units orbit constellation
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="zoom"></a><code>zoom</code></td>
@@ -920,7 +923,9 @@
                 gauge take any of target, warn and better; warn needs target and sits on the bad
                 side of it, and values between them are "at risk" (status words On track, At risk,
                 Off track). A kpi with a y array may key the thresholds by y field, for example
-                <code>{ "revenue": { "target": 60000 }, "churn": { "better": "lower" } }</code>
+                <code>{ "revenue": { "target": 60000 }, "churn": { "better": "lower" } }</code>.
+                Works with: bar line area waterfall scatter dumbbell kpi gauge treemap sunburst
+                hexmap units orbit constellation.
               </td>
             </tr>
             <tr>
@@ -1042,6 +1047,29 @@
     { "account": "Globex", "revenue": 80, "seats": 25, "tickets": 9 },
     { "account": "Initech", "revenue": 95, "seats": 30, "tickets": 4 }] }</code></pre>
         <p>Accounts placed by how alike their measures are. Import mayacharts/constellation.</p>
+
+        <h3>15. KPI with a goal</h3>
+        <pre><code>{ "type": "kpi", "x": "month", "y": "sales", "was": "lastYear", "format": "compact",
+  "colorBy": { "target": 120000, "warn": 100000 },
+  "data": [{ "month": "2025-10", "sales": 98000, "lastYear": 90000 },
+    { "month": "2025-11", "sales": 104000, "lastYear": 95000 },
+    { "month": "2025-12", "sales": 112000, "lastYear": 100000 }] }</code></pre>
+        <p>
+          The last month is the headline, with its change against the previous month and against
+          last year. The bullet carries the target, the at-risk band runs from warn up to the
+          target, and the status is written as a word as well as a colour.
+        </p>
+
+        <h3>16. Gauge</h3>
+        <pre><code>{ "type": "gauge", "y": "margin", "aggregate": "mean", "yDomain": [0, 50],
+  "colorBy": { "target": 30, "warn": 22 }, "was": "lastYear",
+  "format": { "margin": { "maximumFractionDigits": 1, "suffix": "%" } },
+  "data": [{ "margin": 27, "lastYear": 25 }, { "margin": 29, "lastYear": 26 }] }</code></pre>
+        <p>
+          One value for a fixed range: the rows combine by aggregate, the dial runs over yDomain,
+          and the target tick, the at-risk band and the old value ("was") sit on it. Import
+          mayacharts/radial.
+        </p>
       </section>
     </main>
     <script type="module">

@@ -4,6 +4,25 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Added
+
+- Text keys `offBelow` and `offAbove`: a kpi or gauge description with a `warn` threshold now says where the chart goes off track, for example "target 30%, off track below 22%".
+- Docs: worked examples for a kpi with a goal and for the gauge.
+
+### Changed
+
+- Parallel axes run over their own data extent instead of starting at zero, so a measure of 95 to 99 fills its axis.
+- `yDomain` and `xDomain` bounds must be within 1e300 and the span at least 1e-300, and `colorBy` `target` and `warn` within 1e300; larger values are rejected with `invalid-domain` or `invalid-option` instead of drawing infinite geometry.
+- `ridgeline` rejects negative y values with `non-positive-value`, as `funnel` does.
+
+### Fixed
+
+- A chart whose values are all equal and above 1e15 (up to 1e300) no longer hangs or draws nothing: the tick range is padded relative to the value.
+- The format presets print a negative that rounds to zero as "0", not "-0" (user Intl options are unchanged).
+- Option-to-type lists in the README, llms.txt, schema.json and the docs now match the validator for `sort`, `limit`, `select`, `colorBy`, `path` and `endLabels`; the docs describe a reversed `yDomain`, the full `invalid-theme` token list and the table header sort keys.
+
 ## 0.14.0 - 2026-10-09
 
 ### Added

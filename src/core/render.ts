@@ -212,8 +212,9 @@
  *                       category), data-y (raw value), data-series (series key, "" when
  *                       none), data-f (formatted value). data-neg when value < 0.
  *                       Optional: data-tone="good|warn|bad|zero", data-q (ramp step), data-other
+ *                       (limit roll-up), data-depth (breadcrumb button), data-selected (written by
+ *                       the element on selected marks).
  *   [data-maya=labels] text and band tick text in axis-x/axis-y: data-key only (see the groups above)
- *                       (limit roll-up), data-depth, data-selected.
  *                       bar + y2: one `path[data-maya=line]` plus a point circle mark per
  *                       non-null category, data-s = series count % 8, data-series = the
  *                       y2 title; hits are 24px squares round each point.
@@ -241,6 +242,10 @@
  *                       mark centre within 12px of the pointer. Parallel's hit paths share
  *                       their stroke through a wrapping <g> in the hits group.
  *                       Beeswarm writes no data-series when there is no series.
+ *   Also read by the element: [data-maya=sort][data-field] (table header, element/sort.ts), data-v
+ *   (the number inside a text mark that counts up; the orbit group's speed), data-w (weave thread),
+ *   data-total (a total's path, which enters late), data-in (a label inside its mark, tooltip.ts), and
+ *   data-hot, which the element writes on the marks group for a lit flow node.
  *   [data-maya="probe"] / .maya-tip  tooltip anchor probe + popover (shell only).
  *   [data-maya="live"]  the static polite live region; written via textContent only.
  *   [data-maya="play"]  the frame Play button in the controls slot (see Shadow content).
@@ -266,6 +271,9 @@
  *   [data-maya=brush]  [data-maya=cross] (scatter: guide lines + text pills, --x/--y)
  *   [data-maya=link]  [data-depth]  [data-selected]  [data-past] (was ghosts)
  *   [data-maya=rules] line|text  svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
+ *   Theme-only hooks (set by a mark or module, styled in theme.ts, never read by the element):
+ *   data-ink data-hm data-nm data-ring data-arc data-disc data-ridge data-kpi data-polar data-tint
+ *   data-hex data-last data-below data-brk.
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
  *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
  *   key on `svg[data-xd]` (both axes linear). Rules whose subject is a mark avoid a `:has()` on
@@ -274,7 +282,8 @@
  *
  * Keyboard (one keydown dispatcher in maya-chart.ts; handlers return "handled"):
  *   Escape priority: pinned tooltip -> brush in progress -> selection -> zoom window -> drill
- *   pop. Enter activates drill, else select, on the tooltip's active mark; Space pins.
+ *   pop. Enter activates drill, else select, on the tooltip's active mark; Space pins. On a focused
+ *   table header (tabindex 0) Enter or Space sorts by that column (element/sort.ts).
  *
  * Colors: never inline. CSS rules `[data-s="0"]..[data-s="7"]` map to --maya-series-1..8;
  *   --maya-series-1 defaults to var(--maya-accent) so single-series charts use the

@@ -86,7 +86,10 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
     (n === 1 ? `${s}. 1 value: ${f(lo)}` : `${s}. ${n} values from ${f(lo)} to ${f(hi)}`) +
     // A single-value goal (kpi, gauge) names its target; the data table adds the tone word.
     (typeof spec.colorBy === "object" && spec.colorBy?.target != null
-      ? `, ${t(spec, "target")} ${f(spec.colorBy.target)}.`
+      ? `, ${t(spec, "target")} ${f(spec.colorBy.target)}` +
+        (spec.colorBy.warn == null
+          ? "."
+          : `, ${t(spec, spec.colorBy.better === "lower" ? "offAbove" : "offBelow", f(spec.colorBy.warn))}.`)
       : ".") +
     cut
   );

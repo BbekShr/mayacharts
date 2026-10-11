@@ -280,7 +280,7 @@ describe("titles, labels, tone", () => {
     expect(p.legend).not.toContain("warn");
     // better alone (no target) steers nothing here: no tone, no tone legend
     const b = renderParts({ ...simple, type: "kpi", colorBy: { better: "lower" } });
-    expect(attr(b.svg.replace(/<text[^>]*>/g, ""), "data-tone")).toEqual([]); // the delta text is kpi.ts's
+    expect(attr(b.svg.replace(/<text[^>]*>/g, ""), "data-tone")).toEqual(["bad"]); // the delta arrow is kpi.ts's
   });
   it("warn: a third tone between target and bad, named at risk", () => {
     const k: ChartSpec = { ...simple, type: "kpi", colorBy: { target: 25, warn: 15 } };
@@ -631,5 +631,18 @@ describe("narrow bar labels", () => {
   });
   it("still cuts to the slot when 3 or more characters survive", () => {
     expect(texts(render(spec(5, "Category number "), { width: 360 })).join()).toContain("…");
+  });
+});
+
+describe("constant huge values", () => {
+  it("renders a scatter at x = y = 1e300 and a beeswarm with a 5e17 point", () => {
+    const sc = [{ a: 1e300, b: 1e300 }];
+    expect(render({ type: "scatter", x: "a", y: "b", data: sc })).toContain("<svg");
+    const bs = [
+      { r: "a", v: 1 },
+      { r: "a", v: 5e17 },
+    ];
+    expect(render({ type: "beeswarm", x: "r", y: "v", data: bs })).toContain("<svg");
+    expect(render({ type: "beeswarm", y: "v", data: [{ v: 5e17 }] })).toContain("<svg");
   });
 });

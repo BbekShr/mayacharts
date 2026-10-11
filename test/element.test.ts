@@ -632,6 +632,19 @@ describe("review fixes", () => {
     expect(got).toHaveLength(1);
   });
 
+  it("the live region reads tabs as spaces and newlines as commas", async () => {
+    const el = await mount(
+      (e) => (e.spec = spec([{ q: "a\tb\nc", v: 1, r: "s" }], { tooltip: false })),
+    );
+    live(el)
+      .querySelector(".maya-svg")!
+      .dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, composed: true }),
+      );
+    await new Promise((r) => setTimeout(r, 340));
+    expect(live(el).querySelector("[data-maya=live]")!.textContent).toMatch(/^a b, c: /);
+  });
+
   it("a spec error removes the stale data table", async () => {
     const el = await mount((e) => (e.spec = spec()));
     await new Promise((r) => setTimeout(r, 1700));

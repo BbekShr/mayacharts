@@ -138,10 +138,14 @@ describe("motion", () => {
 
   /** Record every animate() call: element, keyframes. */
   const spy = () => {
-    const calls: { e: Element; k: Keyframe[] }[] = [];
+    const calls: { e: Element; k: Keyframe[]; o: KeyframeAnimationOptions }[] = [];
     const orig = Element.prototype.animate;
-    Element.prototype.animate = function (this: Element, k: Keyframe[]) {
-      calls.push({ e: this, k });
+    Element.prototype.animate = function (
+      this: Element,
+      k: Keyframe[],
+      o: KeyframeAnimationOptions,
+    ) {
+      calls.push({ e: this, k, o });
       return orig.call(this, k as never) as never;
     } as never;
     return { calls, done: () => (Element.prototype.animate = orig) };
@@ -161,6 +165,24 @@ describe("motion", () => {
     s.done();
     const arc = s.calls.find((c) => c.e.matches("circle[pathLength][data-key=v]"));
     expect(arc?.k[0]?.strokeDasharray).toBe("0 360");
+    expect(arc?.k[0]?.opacity).toBe(0); // the empty round-capped dash would draw a dot
+    expect(arc?.k[1]).not.toHaveProperty("opacity");
+    el.remove();
+  });
+
+  it("a gauge update sweeps its arc on the count-up clock", async () => {
+    const g = (v: number) =>
+      ({ type: "gauge", y: "v", yDomain: [0, 50], data: [{ v }] }) as unknown as ChartSpec;
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = g(10);
+    document.body.append(el);
+    await frame();
+    const s = spy();
+    el.spec = g(40);
+    await frame();
+    s.done();
+    const arc = s.calls.find((c) => c.e.matches("circle[pathLength][data-key=v]"));
+    expect(arc?.o).toMatchObject({ duration: 832, easing: "cubic-bezier(.25,1,.5,1)" });
     el.remove();
   });
 
@@ -479,5 +501,107 @@ describe("motion", () => {
     const fresh = b2.querySelector("path[data-key]")!;
     expect(opa).not.toContain(fresh);
     expect(opa.length).toBe(1);
+  });
+  it("a grid group that ghosts never leaves two defs sharing an id", () => {
+    const svg = (grad: string, tick: number) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="grid"><defs>${grad}</defs><line x1="0" x2="${tick}"/></g><g data-maya="marks"><rect data-maya="mark" data-key="a" x="0" y="0" width="5" height="5"/></g></svg>`;
+    const lg = (c: string) => `<linearGradient id="g1"><stop stop-color="${c}"/></linearGradient>`;
+    const ids = (b: Element) => b.querySelectorAll("#g1").length;
+    const box = document.createElement("div");
+    patch(box, svg(lg("red"), 5), false);
+    patch(box, svg(lg("red"), 9), true); // the ghost drops its defs outright
+    expect(box.querySelectorAll("[data-ghost]").length).toBe(1);
+    expect(ids(box)).toBe(1);
+    expect(box.querySelector("[data-ghost] defs")).toBeNull();
+    patch(box, svg(lg("blue"), 3), true);
+    expect(ids(box)).toBe(1);
+    expect(box.querySelector("[data-ghost] defs")).toBeNull();
+  });
+  // A text mark patched from `a` to `b`: every text the count showed, ending on the landed one.
+  const tally = async (a: string, b: string) => {
+    const box = document.createElement("div");
+    const svg = (t: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks"><text data-maya="mark" data-key="t" x="1" y="1">${t}</text></g></svg>`;
+    patch(box, svg(a), false);
+    patch(box, svg(b), true);
+    const t = box.querySelector("text")!;
+    const seen = [t.textContent!];
+    const id = setInterval(() => seen.push(t.textContent!), 10);
+    await new Promise((r) => setTimeout(r, 1000));
+    clearInterval(id);
+    return seen;
+  };
+  const num = (t: string) => +t.replace("−", "-").replace(/,/g, "");
+
+  it("a count-up from a wider old number starts there (1,234 to 999, 45 to 5)", async () => {
+    for (const [a, b] of [
+      ["1,234", "999"],
+      ["45", "5"],
+    ] as const) {
+      const seen = await tally(a, b);
+      expect(seen[0]).toBe(a);
+      expect(seen.at(-1)).toBe(b);
+      expect(seen.some((t) => num(t) < num(a) && num(t) > num(b))).toBe(true);
+    }
+  });
+
+  it("a count crosses zero through a sign change (-5 to 3, -20 to 30, -0.5 to 0.5)", async () => {
+    for (const [a, b, lo, hi] of [
+      ["-5", "3", -5, 3],
+      ["-20", "30", -20, 30],
+      ["-0.5", "0.5", -0.5, 0.5],
+    ] as const) {
+      const seen = await tally(a, b);
+      expect(seen[0]).toBe(a);
+      expect(seen.at(-1)).toBe(b);
+      expect(seen.every((t) => num(t) >= lo && num(t) <= hi)).toBe(true);
+      expect(seen.some((t) => num(t) < 0 && t !== a)).toBe(true);
+      expect(seen.some((t) => num(t) > 0 && t !== b)).toBe(true);
+    }
+  });
+  it("exiting sunburst rings read their on-screen style before the first write", () => {
+    const box = document.createElement("div");
+    const ring = (k: string, i: number, d: number) =>
+      `<circle data-maya="mark" data-key="${k}" data-depth="${d}" cx="50" cy="50" r="20" pathLength="360" stroke-width="5" stroke-dasharray="90 270" stroke-dashoffset="${90 - i * 90}"/>`;
+    const svg = (m: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks">${m}</g></svg>`;
+    patch(box, svg(ring("h", 0, 0) + ring("a", 0, 1) + ring("b", 1, 1) + ring("c", 2, 1)), false);
+    const [wasA, wasC, wasN] = [
+      Element.prototype.getAnimations,
+      globalThis.getComputedStyle,
+      Element.prototype.animate,
+    ];
+    Element.prototype.getAnimations = function () {
+      return this.localName === "circle" ? [{} as Animation] : [];
+    };
+    const log: string[] = [];
+    globalThis.getComputedStyle = ((e: Element) => (log.push("c"), wasC(e))) as never;
+    Element.prototype.animate = function (this: Element, ...a: never[]) {
+      log.push("w");
+      return (wasN as any).apply(this, a);
+    } as never;
+    patch(box, svg(ring("a", 0, 0)), true); // drill into a: b and c fold away
+    [Element.prototype.getAnimations, globalThis.getComputedStyle, Element.prototype.animate] = [
+      wasA,
+      wasC,
+      wasN,
+    ];
+    expect(box.querySelectorAll("[data-ghost]").length).toBe(3);
+    expect(log.indexOf("w")).toBeGreaterThan(-1);
+    expect(log.lastIndexOf("c")).toBeLessThan(log.indexOf("w"));
+  });
+  it("a keyed label whose mark left fades at once with it; an unkeyed one waits for the new text", () => {
+    const box = document.createElement("div");
+    const svg = (t: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks"><rect data-maya="mark" data-key="a" x="0" y="0" width="5" height="5"/></g><g data-maya="labels">${t}</g></svg>`;
+    const old = `<text data-key="gone" x="1" y="1">k</text><text x="2" y="2">u</text><text data-key="a" x="3" y="3">a</text>`;
+    patch(box, svg(old), false);
+    const s = spy();
+    patch(box, svg(`<text data-key="a" x="3" y="4">b</text>`), true);
+    s.done();
+    const leave = (t: string) =>
+      s.calls.find((c) => c.e.textContent === t && c.k.at(-1)?.opacity === 0)?.o;
+    expect(leave("k")?.delay ?? 0).toBe(0);
+    expect(leave("u")?.delay).toBeGreaterThan(0);
   });
 });

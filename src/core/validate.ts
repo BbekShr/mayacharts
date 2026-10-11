@@ -12,12 +12,12 @@
  *   unknown-field       a field-valued option names no field in data
  *   non-numeric-y       data[i][y] not a finite number within 1e300 (null allowed; numeric strings get a coercion hint)
  *   non-numeric-field   size / scatter x / colorBy field, as above
- *   non-positive-value  treemap/sunburst/sankey y <= 0, funnel y < 0
+ *   non-positive-value  treemap/sunburst/sankey y <= 0, funnel and ridgeline y < 0
  *   unknown-option      top-level key not in ChartSpec (HINTS, else "did you mean")
  *   invalid-option      wrong type/value for a known option
  *   option-unsupported  option not valid for this type or pair
  *   stack-unsupported   stack (true or "percent") with type "line"
- *   invalid-domain      yDomain/xDomain not [lo, hi] with lo < hi
+ *   invalid-domain      yDomain/xDomain not [lo, hi] with lo < hi, |bounds| <= 1e300, span >= 1e-300
  *   invalid-format      unknown preset, bad Intl options, unsupported locale, bad currency
  *   invalid-theme       unknown theme token
  *   unsafe-css-value    colors/theme value outside the CSS allowlist
@@ -41,7 +41,6 @@ import type {
   RenderOptions,
   ResolvedGoal,
   ResolvedSpec,
-  Row,
   View,
 } from "./types.ts";
 
@@ -112,7 +111,7 @@ const DATE = w(
 );
 /** Format options holding any date key are Intl.DateTimeFormat options. */
 export const isDateOpts = (o: object): boolean => DATE.some((k) => Object.hasOwn(o, k));
-const TOKENS = [
+export const TOKENS = [
   ...w(
     "font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line gridDash",
   ),
@@ -189,7 +188,7 @@ const show = (v: unknown) => {
   return t.length > 60 ? t.slice(0, 59) + "…" : t;
 };
 
-export const dym = (s: string, c: readonly string[]): string => {
+const dym = (s: string, c: readonly string[]): string => {
   const a = s.toLowerCase();
   let best = "";
   let min = 40;
@@ -241,8 +240,8 @@ const goal = (t: string, p: string, v: unknown) => {
     !isObj(v) ||
     !Object.keys(v).length ||
     Object.keys(v).some((k) => !GOAL.includes(k)) ||
-    (target !== undefined && !Number.isFinite(target)) ||
-    (warn !== undefined && !Number.isFinite(warn)) ||
+    (target !== undefined && !(Number.isFinite(target) && Math.abs(target as number) <= 1e300)) ||
+    (warn !== undefined && !(Number.isFinite(warn) && Math.abs(warn as number) <= 1e300)) ||
     (better !== undefined && better !== "higher" && better !== "lower")
   )
     fail(
@@ -499,6 +498,9 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         d.length === 2 &&
         Number.isFinite(d[0]) &&
         Number.isFinite(d[1]) &&
+        Math.abs(d[0]!) <= 1e300 && // ponytail: beyond this the span or a tick step overflows
+        Math.abs(d[1]!) <= 1e300 &&
+        Math.abs(d[1]! - d[0]!) >= 1e-300 &&
         (k === "yDomain" ? d[0] !== d[1] : d[0]! < d[1]!)
       )
     )
@@ -807,7 +809,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         });
       if (typeof colorBy === "string" && colorBy !== "sign")
         numeric(colorBy, "non-numeric-field", "colorBy");
-      if (isPath || t === "funnel")
+      if (isPath || t === "funnel" || t === "ridgeline")
         for (const f of ys)
           scan(f, (v, i) => {
             if (typeof v === "number" && (v < 0 || (isPath && v === 0))) {
