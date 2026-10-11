@@ -4,7 +4,13 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
-## Unreleased
+## 0.15.0 - 2026-10-10
+
+### Breaking
+
+- The text key `ofTarget` is removed because nothing displayed it. A spec that sets it now fails validation like any unknown text key.
+- `ridgeline` rejects negative y values with `non-positive-value`, as `funnel` does.
+- A null or missing category now reads, keys and selects as "(blank)" (the `blank` text key) instead of "null", so `el.selected`, `maya-select` details and `view.drill` paths that named "null" need the new value.
 
 ### Added
 
@@ -24,13 +30,11 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - The gauge fill grows from zero, with a tick at zero when the dial crosses it, instead of from the dial minimum.
 - The radial centre total shows only when the aggregate is a sum or a count.
 - Waffle and marimekko show the formatted x field.
-- The text key `ofTarget` is removed because nothing displayed it. A spec that sets it now fails validation like any unknown text key.
 - Gauge prints the warn value beside its tick (dropped when it would touch the target label or leave the chart), clips a long target label to the room beside the dial, and draws no round-cap dot for a value of zero.
 - Line and area below 400 px keep their end labels as the last value alone, in a gutter as wide as the widest value, and the legend names the series.
 - Horizontal bars with value labels draw them inside only when every label fits, else all outside the bar end (a bar with no room outside keeps its label inside).
 - Parallel axes run over their own data extent instead of starting at zero, so a measure of 95 to 99 fills its axis.
 - `yDomain` and `xDomain` bounds must be within 1e300 and the span at least 1e-300, and `colorBy` `target` and `warn` within 1e300; larger values are rejected with `invalid-domain` or `invalid-option` instead of drawing infinite geometry.
-- `ridgeline` rejects negative y values with `non-positive-value`, as `funnel` does.
 
 ### Fixed
 
