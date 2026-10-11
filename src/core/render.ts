@@ -283,7 +283,9 @@
  * Keyboard (one keydown dispatcher in maya-chart.ts; handlers return "handled"):
  *   Escape priority: pinned tooltip -> brush in progress -> selection -> zoom window -> drill
  *   pop. Enter activates drill, else select, on the tooltip's active mark; Space pins. On a focused
- *   table header (tabindex 0) Enter or Space sorts by that column (element/sort.ts).
+ *   table header (tabindex 0) Enter or Space sorts by that column (element/sort.ts). With zoom, + or =
+ *   halves the window about the active mark (else the middle) and - doubles it, reset once it covers
+ *   the range (element/zoom.ts step); Ctrl, Meta and Alt combinations are left to the browser.
  *
  * Colors: never inline. CSS rules `[data-s="0"]..[data-s="7"]` map to --maya-series-1..8;
  *   --maya-series-1 defaults to var(--maya-accent) so single-series charts use the
