@@ -110,3 +110,13 @@ describe("host colorBy", () => {
     ).toEqual({ Sales: { target: 1 } });
   });
 });
+
+describe("host cells", () => {
+  it("unwraps DataModel { v } cells", () => {
+    const el = columns(
+      { schema: [{ name: "Item" }, { name: "Sales" }], data: [[{ v: "a" }, { v: 3 }]] },
+      { type: "bar", x: "item", y: "sales" },
+    );
+    expect((el.spec as any).data).toEqual([{ Item: "a", Sales: 3 }]);
+  });
+});

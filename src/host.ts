@@ -8,7 +8,7 @@
  *   field, tooltip.fields) may be a RegExp or a case-insensitive column name; each resolves to the
  *   first matching column name. No match leaves the value as written, so validation reports the
  *   usual unknown-field error listing the columns the host sent.
- * - Cells unwrap `{ value() }` (a method) and `{ value }`; anything else passes through.
+ * - Cells unwrap `{ value() }` (a method), `{ value }` and `{ v }` (a DataModel cell); anything else passes through.
  * - The element: `el`, else `#chart`, else a new `<maya-chart id="chart">` appended to the body.
  *   The adapter sets `el.spec` and returns the element (so `el.data = ...` still works).
  * - thoughtspot: `viz.getDataFromSearchQuery().getData()` gives `{ schema: [{ name }], data: [[...]] }`
@@ -94,7 +94,7 @@ export function columns(table: HostTable, spec: HostSpec, el?: MayaChart): MayaC
   s.titles = keyed(s.titles);
   for (const k of ["format", "titles", "colorBy"]) s[k] ?? delete s[k];
   // A ThoughtSpot cell is a value, or { value() } / { value }.
-  const cell = (v: any) => (typeof v?.value === "function" ? v.value() : (v?.value ?? v));
+  const cell = (v: any) => (typeof v?.value === "function" ? v.value() : (v?.value ?? v?.v ?? v));
   s.data = (table.data ?? []).map((r) => Object.fromEntries(names.map((n, i) => [n, cell(r[i])])));
   el ??=
     (document.getElementById("chart") as MayaChart | null) ??
