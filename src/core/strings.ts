@@ -79,6 +79,8 @@ export const TEXT = {
   perCell: "Points per cell",
   /** Label of an unlabelled rules: ["mean"] line. */
   mean: "Average",
+  /** Scatter slope rule value after its label: {0} = slope formatted by format[y], {1} = x title. */
+  perX: "{0} per {1}",
   /** Description name of an unlabelled numeric rule ("Reference line: 100."). */
   rule: "Reference line",
   /** Description with spec.xScale or spec.yScale "log": {0} = the axis title. */

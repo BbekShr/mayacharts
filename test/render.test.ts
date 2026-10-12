@@ -679,3 +679,94 @@ describe("null category", () => {
     expect(svg).not.toContain("(blank)");
   });
 });
+
+describe("#76 tokens, empty arrays, per-y aggregate", () => {
+  const title = (spec: ChartSpec, view = {}) =>
+    /<div class="maya-title">([^<]*)/.exec(renderParts(spec, { view }).title)?.[1];
+  const two: ChartSpec = {
+    type: "line",
+    x: "m",
+    y: "v",
+    series: "yr",
+    data: ["2024", "2025"].flatMap((yr, j) => months.map((m, i) => ({ m, yr, v: 10 + 5 * j + i }))),
+  };
+
+  it("no rows: a title or subtitle with a token is dropped, plain text stays", () => {
+    const p = renderParts({
+      type: "bar",
+      x: "k",
+      y: "v",
+      title: "{max.x} leads with {max.y}",
+      subtitle: "of {total:West}",
+      data: [],
+    });
+    expect(p.title).toBe("");
+    expect(p.svg).toContain('data-maya="empty"');
+    expect(renderParts({ ...simple, title: "Sales {x}", data: [] }).title).toContain("Sales {x}");
+  });
+
+  it("scatter: max and min by y, first and last by x, .x the x value or the name", () => {
+    const sc: ChartSpec = {
+      type: "scatter",
+      x: "u",
+      y: "s",
+      title: "{max.x}|{max.y}|{total}|{first.y}|{last.x}|{mean}",
+      data: [
+        { u: 3, s: 4 },
+        { u: 1, s: 2 },
+        { u: 2, s: 9 },
+      ],
+    };
+    expect(title(sc)).toBe("2|9|15|2|3|5");
+    const named = { ...sc, name: "n", title: "{max.x}", data: [{ u: 1, s: 2, n: "Ann" }] };
+    expect(title(named)).toBe("Ann");
+  });
+
+  it("a series selector reads one series; without it max reads a point and total sums all", () => {
+    expect(title({ ...two, title: "max {max.y} last {last.y} total {total}" })).toBe(
+      "max 17 last 17 total 81",
+    );
+    expect(
+      title({
+        ...two,
+        title: "{last.y:2024} {first.x:2025} {total:2025} {mean:2024} {max.y:1999}",
+      }),
+    ).toBe("12 Jan 48 11 {max.y:1999}");
+    // A selector on a stack reads that series' segments, not the category totals.
+    expect(title({ ...two, type: "bar", stack: true, title: "{max.y} {max.y:2024}" })).toBe(
+      "29 12",
+    );
+  });
+
+  it("[] is the same as unset for annotate, dash, rules and totals", () => {
+    for (const k of ["annotate", "dash", "rules"])
+      expect(() => render({ ...two, [k]: [] } as ChartSpec)).not.toThrow();
+    expect(() => render({ ...simple, type: "heatmap", annotate: [], totals: [] })).not.toThrow();
+    expect(() => render({ ...simple, dash: [] })).not.toThrow();
+  });
+
+  it("aggregate keyed by y field: the toggled measure uses its rule, others sum", () => {
+    const rows = [
+      { c: "A", gap: 1, s: 100, u: 4 },
+      { c: "A", gap: 2, s: 50, u: 1 },
+      { c: "B", gap: 3, s: 30, u: 3 },
+    ];
+    const spec: ChartSpec = {
+      type: "bar",
+      x: "c",
+      y: ["gap", "price"],
+      aggregate: { price: { ratio: ["s", "u"] } },
+      title: "{max.x} {max.y}",
+      data: rows,
+    };
+    expect(title(spec)).toBe("A 3");
+    expect(title(spec, { measure: 1 })).toBe("A 30");
+    expect(title({ ...spec, y: ["gap", "s"], aggregate: { gap: "mean" } })).toBe("B 3");
+    // The issue's drill shape: a path with drill, measure toggled to the ratio.
+    const { x: _x, ...rest } = spec;
+    const drill: ChartSpec = { ...rest, path: ["c", "gap"], drill: true };
+    expect(title(drill, { measure: 1, drill: ["A"] })).toBe("2 50");
+    // The ratio fields reach the SSR JSON child.
+    expect(renderShell(spec, { view: { measure: 1 } })).toContain('"u":4');
+  });
+});

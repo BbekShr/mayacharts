@@ -246,11 +246,31 @@ describe("slope rules, tooltip fields and log axes", () => {
     expect(y2).toBeGreaterThanOrEqual(py - 0.01);
     expect(y1).toBeLessThanOrEqual(py + ph + 0.01);
     expect(s.indexOf("data-slope")).toBeLessThan(s.indexOf('data-maya="mark"'));
-    expect(s).toContain(">2x<");
+    expect(s).toContain(">2x 2 per a<"); // label, then the slope as y per x (#76)
   });
   it('"mean" is sum(y) / sum(x)', () => {
     const s = renderParts({ ...spec, rules: [{ slope: "mean" }] }).svg;
-    expect(s).toContain(">Average<");
+    expect(s).toContain(">Average 2.86 per a<");
+    // The label sits clear of every point (not on the highest one at the line's end).
+    const [, lx, ly] = s
+      .match(/<text x="([\d.]+)" y="([\d.]+)"[^>]*>Average/)!
+      .map(Number) as number[];
+    for (const c of s.matchAll(/<circle [^>]*r="([\d.]+)" cx="([\d.]+)" cy="([\d.]+)"/g))
+      expect(Math.hypot(+c[2]! - (lx! + 40), +c[3]! - ly!)).toBeGreaterThan(+c[1]!);
+  });
+  it("the label box clears points seeded along the line, at its upper end too", () => {
+    const d = Array.from({ length: 12 }, (_, i) => ({
+      a: 80 * (i + 1),
+      b: 240 * (i + 1) + (i % 3) * 30,
+    }));
+    const s = renderParts({ ...spec, data: d, rules: [{ slope: "mean", label: "Average" }] }).svg;
+    const t = s.match(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="(\w+)"[^>]*>(Average[^<]*)</)!;
+    const [x, y, w] = [+t[1]!, +t[2]!, t[4]!.length * 6];
+    const [l, r] = t[3] === "end" ? [x - w, x] : [x, x + w];
+    for (const c of s.matchAll(/<circle [^>]*r="([\d.]+)" cx="([\d.]+)" cy="([\d.]+)"/g)) {
+      const hit = +c[2]! > l && +c[2]! < r && Math.abs(+c[3]! - y) < 7;
+      expect(hit, `point at ${c[2]},${c[3]}`).toBe(false);
+    }
   });
   it("is skipped when only one axis is logarithmic", () => {
     expect(

@@ -12,12 +12,17 @@ export const titleText = (spec: ResolvedSpec): string =>
       ? ` by ${spec.titles.get(spec.x) ?? (spec.x || spec.path.join(" / "))}`
       : "");
 
+/** A data token: {max.x} ... {last.y}, {total}, {mean}, each with an optional series selector {max.y:2025}.
+ * Global flag: use only with replace and search, which reset lastIndex (test and exec keep it). */
+export const TOKEN = /\{(?:(max|min|first|last)\.([xy])|(total|mean))(?::([^{}]*))?\}/g;
+
 /**
- * Fill the exact data tokens in a title or subtitle: {max.x} {max.y} {min.x} {min.y} {first.x}
- * {first.y} {last.x} {last.y} {total} {mean}, formatted by the field's format. Anything else in
- * braces, and a token with no value (no categories), stays as written. max, min, first and last
- * name one drawn point (category x series), or the category total when `stack` is set; Other is
- * left out of them. `total` adds every drawn value; `mean` is the "mean" rule's value.
+ * Fill the exact data tokens in a title or subtitle, formatted by the field's format. Anything
+ * else in braces, and a token with no value (no points, an unknown series), stays as written.
+ * max, min, first and last name one drawn point (category x series), or the category total when
+ * `stack` is set; Other is left out of them. `total` adds every drawn value; `mean` is the "mean"
+ * rule's value. A selector (`:2025`) reads only that series value: its points, their sum and
+ * their mean. Scatter (`pts`): max and min by y, first and last by x, `.x` the x value or the name.
  */
 export function resolveTokens(
   text: string,
@@ -25,33 +30,60 @@ export function resolveTokens(
   shaped: Shaped,
   fmt: Fmt,
   mean: () => number,
+  pts?: () => readonly { x: number; y: number; si: number; name: string | null }[],
 ): string {
   if (!text.includes("{")) return text;
-  const by = new Map<number, number>();
-  const pts: [number, number][] = [];
-  let sum = 0;
-  for (const c of shaped.cells)
-    if (c.value !== null) {
-      by.set(c.ci, (by.get(c.ci) ?? 0) + c.value);
-      pts.push([c.ci, c.value]);
-      sum += c.value;
+  // [x, value, series index, order]: scatter points ordered by x, else drawn cells by category.
+  const all: [unknown, number, number, number][] = pts
+    ? pts().map((p) => [p.name ?? p.x, p.y, p.si, p.x])
+    : shaped.cells.flatMap((c) =>
+        c.value === null ? [] : [[shaped.categories[c.ci], c.value, c.si, c.ci]],
+      );
+  // One pass per distinct token, and an unknown series costs no pass: a long title stays linear.
+  const seen = new Map<string, string>();
+  const one = (m: string, k?: string, a?: string, o?: string, q?: string): string => {
+    const qi = q === undefined || s.series === null ? -1 : shaped.series.indexOf(q);
+    let es = q === undefined ? all : qi < 0 ? [] : all.filter((e) => e[2] === qi);
+    if (!es.length) return m;
+    const sum = es.reduce((t, e) => t + e[1], 0);
+    if (o) {
+      const v = o === "total" ? sum : q === undefined ? mean() : sum / es.length;
+      return Number.isFinite(v) ? fmt(s.y, v) : m;
     }
-  const cs = (s.stack ? [...by] : pts).filter(([i]) => shaped.categories[i] !== OTHER);
-  return text.replace(
-    /\{(?:(max|min|first|last)\.([xy])|(total|mean))\}/g,
-    (m, k?: string, a?: string, o?: string) => {
-      if (o) {
-        const v = o === "mean" ? mean() : sum;
-        return pts.length && Number.isFinite(v) ? fmt(s.y, v) : m;
+    if (s.stack && q === undefined) {
+      const by = new Map<number, [unknown, number, number, number]>();
+      for (const e of es) {
+        const t = by.get(e[3]);
+        if (t) t[1] += e[1];
+        else by.set(e[3], [e[0], e[1], -1, e[3]]);
       }
-      const e = cs.reduce<[number, number] | undefined>(
+      es = [...by.values()];
+    }
+    const e = es
+      .filter((c) => c[0] !== OTHER)
+      .reduce<(typeof es)[number] | undefined>(
         (p, c) =>
-          !p || (k === "max" ? c[1] > p[1] : k === "min" ? c[1] < p[1] : k === "last") ? c : p,
+          !p ||
+          (k === "max"
+            ? c[1] > p[1]
+            : k === "min"
+              ? c[1] < p[1]
+              : k === "last"
+                ? c[3] >= p[3]
+                : c[3] < p[3])
+            ? c
+            : p,
         undefined,
       );
-      return e ? (a === "x" ? fmt(s.x, shaped.categories[e[0]]) : fmt(s.y, e[1])) : m;
-    },
-  );
+    if (!e) return m;
+    return a === "y"
+      ? fmt(s.y, e[1])
+      : fmt(pts && s.name && typeof e[0] === "string" ? s.name : s.x, e[0]);
+  };
+  return text.replace(TOKEN, (m: string, ...g: (string | undefined)[]) => {
+    if (!seen.has(m)) seen.set(m, one(m, ...(g as [string?, string?, string?, string?])));
+    return seen.get(m)!;
+  });
 }
 
 /** Types whose a11y table lists the raw rows (no category x series grid). */

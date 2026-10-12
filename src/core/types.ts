@@ -35,6 +35,10 @@ export type ChartType =
   | "constellation";
 
 export type Aggregate = "sum" | "mean" | "count" | "min" | "max";
+/** A ratio aggregate: a group's y is sum(numerator) / sum(denominator). */
+export interface Ratio<F extends string = string> {
+  readonly ratio: readonly [F, F];
+}
 
 /** Points `annotate` labels: the largest and smallest value, the first and last category. */
 export type Annotate = "max" | "min" | "first" | "last";
@@ -133,9 +137,10 @@ export interface ChartSpec<R extends object = Row> {
   /** Row objects.
    * @example data: [{ month: "Jan", revenue: 10 }] */
   data: readonly R[];
-  /** How rows sharing a (category, series) combine. `count` counts non-null y. Default "sum". `{ ratio: [numerator, denominator] }` sums both fields per group and divides (a zero denominator gives null), at every level of a drill, in Other and in "mean" rules; `y` then only names the measure (titles, format) and need not be in the rows; other fields (y2, tooltip fields, a colorBy field) sum. Ratio: bar line area heatmap dumbbell table kpi gauge hexmap; not with `stack`, `was` or a `y` array.
-   * @example aggregate: "mean" or aggregate: { ratio: ["sales", "units"] } */
-  aggregate?: Aggregate | { readonly ratio: readonly [Field<R>, Field<R>] };
+  /** How rows sharing a (category, series) combine. `count` counts non-null y. Default "sum". `{ ratio: [numerator, denominator] }` sums both fields per group and divides (a zero denominator gives null), at every level of a drill, in Other and in "mean" rules; `y` then only names the measure (titles, format) and need not be in the rows; other fields (y2, tooltip fields, a colorBy field) sum. Ratio: bar line area heatmap dumbbell table kpi gauge hexmap; not with `stack` or `was`. With a `y` array that toggles the measure, key it by y field (unlisted fields sum).
+   * @example aggregate: "mean" or aggregate: { ratio: ["sales", "units"] } or y: ["gap", "price"], aggregate: { price: { ratio: ["sales", "units"] } } */
+  aggregate?:
+    Aggregate | Ratio<Field<R>> | Readonly<Partial<Record<Field<R>, Aggregate | Ratio<Field<R>>>>>;
   /** Order categories by total across all series (hidden ones too). Default: data order. bar line area heatmap dumbbell table radial waffle orbit.
    * @example sort: "desc" */
   sort?: "asc" | "desc";
@@ -216,10 +221,10 @@ export interface ChartSpec<R extends object = Row> {
   /** ISO 4217 code for the "currency" preset. Default "USD".
    * @example currency: "EUR" */
   currency?: string;
-  /** Visible heading, also the accessible name. Data tokens fill in from the chart: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by `format`. Only these exact names are replaced; any other brace text stays as written.
-   * @example title: "{max.x} leads with {max.y}" */
+  /** Visible heading, also the accessible name. Data tokens fill in from the chart: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by `format`. Without a selector max, min, first and last read one drawn point (stacked: category totals) and total sums every series; a series selector reads one series (`{last.y:2025}`). Scatter: max and min by y, first and last by x, `.x` the x value or `name`. With no rows a title holding a token is dropped. Only these exact names are replaced; any other brace text stays as written. One line with an ellipsis in an element under 200 px tall.
+   * @example title: "{max.x} leads with {max.y}, 2025 total {total:2025}" */
   title?: string;
-  /** Second line under the title, smaller and muted; takes the same data tokens. Not in the bare render() SVG.
+  /** Second line under the title, smaller and muted; takes the same data tokens. Hidden in an element under 200 px tall; not in the bare render() SVG.
    * @example subtitle: "Sales by state, 2025" */
   subtitle?: string;
   /** Accessible description; auto-generated when omitted.
@@ -231,7 +236,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Fixed x domain. scatter only.
    * @example xDomain: [0, 1] */
   xDomain?: readonly [number, number];
-  /** Reference lines (at most 4): a number or "mean" across the value axis (mean of the visible values; stacked: of the category totals), `{ x }` across the category axis at that x, `{ band: [lo, hi] }` a shaded value range; each optionally labelled. Scatter also takes `{ slope, intercept? }`: the line y = slope * x + intercept, slope "mean" = sum of y / sum of x. bar line area scatter dumbbell.
+  /** Reference lines (at most 4): a number or "mean" across the value axis (mean of the visible values; stacked: of the category totals), `{ x }` across the category axis at that x, `{ band: [lo, hi] }` a shaded value range; each optionally labelled. Scatter also takes `{ slope, intercept? }`: the line y = slope * x + intercept, slope "mean" = sum of y / sum of x, labelled with its value as y per x. `[]` is unset. bar line area scatter dumbbell.
    * @example rules: [{ y: 100, label: "Target" }, { x: "2025-06-01", label: "Launch" }, { band: [80, 100] }] */
   rules?: readonly Rule[];
   /** Log value axis (powers of 10 ticks); every plotted value must be above 0. line scatter (bars start at zero, so not bar).
@@ -240,10 +245,10 @@ export interface ChartSpec<R extends object = Row> {
   /** Log x axis; every x must be above 0. scatter only.
    * @example xScale: "log" */
   xScale?: "log";
-  /** Label these points of each visible series with their value: "max", "min", "first", "last" (scatter: max and min by y, first and last by x); `{ x, text }` labels the mark at that x with the text. bar line area scatter.
+  /** Label these points of each visible series with their value: "max", "min", "first", "last" (scatter: max and min by y, first and last by x); `{ x, text }` labels the mark at that x with the text. `[]` is unset. bar line area scatter.
    * @example annotate: ["max", "last", { x: "CA", text: "Largest store" }] */
   annotate?: readonly (Annotate | AnnotateAt)[];
-  /** Series values drawn dashed (line, the area outline), e.g. last year against this year. line area; needs `series`.
+  /** Series values drawn dashed (line, the area outline), e.g. last year against this year. line area; needs `series`; `[]` is unset.
    * @example dash: ["2024"] */
   dash?: readonly string[];
 
@@ -272,7 +277,7 @@ export interface ChartSpec<R extends object = Row> {
    * @example animate: false */
   animate?: boolean;
 
-  /** Palette in series order (max 8), or colours by series value. treemap and sunburst: by `path[0]` value; sankey and chord: by node name (links and inner levels inherit); waffle: by category. Keys that match nothing are ignored. Path types keep each name's colour through drill.
+  /** Palette in series order (max 8), or colours by series value. treemap and sunburst: by `path[0]` value; sankey and chord: by node name (links and inner levels inherit); waffle: by category. Keys that match nothing are ignored. Path types keep each name's colour through drill; a sankey root missing from the map stays neutral.
    * @example colors: { North: "#0b6", South: "oklch(.6 .17 30)" } */
   colors?: readonly string[] | Readonly<Record<string, string>>;
   /** Tone by sign of y, by a target (good at or past it; `better: "lower"` flips it), or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi and gauge: thresholds only, any of target, warn and better, warn needs target and sits on the bad side; kpi with a `y` array: also keyed by y field). bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation.

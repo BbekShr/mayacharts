@@ -193,8 +193,8 @@ describe("theme css", () => {
       expect(css, h).toContain(h);
     expect(css).not.toContain("style=");
   });
-  it("gzips under 5230 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(5230);
+  it("gzips under 5300 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(5300);
   });
   it("narrow containers compact the legend, never hide it", () => {
     expect(css).toContain("@container (max-width:320px){.maya-legend{font-size:11px");

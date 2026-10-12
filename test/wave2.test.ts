@@ -147,7 +147,8 @@ describe("customisation (#72)", () => {
     );
     expect(renderParts(b).legendAt).toBeUndefined();
     expect(renderParts({ ...b, title: "x {mean}" }).title).toContain("x 2");
-    expect(renderParts({ ...b, title: "{max.x}", data: [] }).title).toContain("{max.x}");
+    // No rows: a text holding a token is dropped, never shown raw (#76).
+    expect(renderParts({ ...b, title: "{max.x}", data: [] }).title).toBe("");
   });
   it("axisSize widens the label margin", () => {
     const plot = (t = {}) => /data-plot="(\S+)/.exec(render({ ...b, y: "v", theme: t }))![1]!;
@@ -250,7 +251,7 @@ describe("fix round 2", () => {
         { x: 2, y: 5 },
       ],
     });
-    expect(d).toContain("Trend: y = 2x.");
+    expect(d).toContain("Trend: 2 per x.");
     expect(d).toContain("Labelled points: Max.");
     expect(d).toContain("Peak: 1.");
   });

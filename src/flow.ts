@@ -216,8 +216,12 @@ export const sankey: Mark = {
     const roots = nodes.filter((n) => n.lv === 0);
     const one = (n: N) => ls.filter((l) => l.t === n).length === 1; // a single parent
     // A drilled view has one root (the drilled node) and keeps its branch colour (spec.hue).
+    // With a colors map, the tree rule holds only when every root is mapped; else the map wins.
+    const map = spec.colors instanceof Map ? spec.colors : null;
     const tree =
-      (roots.length > 1 || spec.drilled.length > 0) && nodes.every((n) => n.lv !== 1 || one(n));
+      (roots.length > 1 || spec.drilled.length > 0) &&
+      (!map || roots.every((n) => map.has(n.name))) &&
+      nodes.every((n) => n.lv !== 1 || one(n));
     tree ? roots.forEach((n) => (n.s = (spec.hue ?? slotOf(ctx, n)) % 8)) : neutral(ctx, roots);
     for (let lv = 1; lv < cols; lv++)
       for (const n of nodes.filter((n) => n.lv === lv)) {

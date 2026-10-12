@@ -71,10 +71,38 @@
           },
           "required": ["ratio"],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": ["sum", "mean", "count", "min", "max"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "ratio": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                },
+                "required": ["ratio"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "description": "Keyed by y field, with a y array that toggles the measure."
         }
       ],
       "default": "sum",
-      "description": "How rows sharing a (category, series) combine. `count` counts non-null y. { ratio: [numerator, denominator] } sums both fields per group and divides (zero denominator: null), at every drill level, in Other and in \"mean\" rules; y then only names the measure and need not be in the rows; other fields sum. Ratio: bar line area heatmap dumbbell table kpi gauge hexmap; not with stack, was or a y array."
+      "description": "How rows sharing a (category, series) combine. `count` counts non-null y. { ratio: [numerator, denominator] } sums both fields per group and divides (zero denominator: null), at every drill level, in Other and in \"mean\" rules; y then only names the measure and need not be in the rows; other fields sum. Ratio: bar line area heatmap dumbbell table kpi gauge hexmap; not with stack or was. With a y array that toggles the measure, key it by y field: { price: { ratio: [\"sales\", \"units\"] } }; unlisted fields sum."
     },
     "sort": {
       "type": "string",
@@ -340,6 +368,7 @@
           "density",
           "perCell",
           "mean",
+          "perX",
           "rule",
           "log",
           "play",
@@ -385,11 +414,11 @@
     },
     "title": {
       "type": "string",
-      "description": "Visible heading, also the accessible name. Data tokens: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by format. Only these exact names are replaced; any other brace text stays as written."
+      "description": "Visible heading, also the accessible name. Data tokens: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by format. Without a selector max, min, first and last read one drawn point (stacked: category totals) and total sums every series; a series selector such as {last.y:2025} or {total:2025} reads only that series. Scatter: max and min by y, first and last by x, .x the x value or name. With no rows a title holding a token is dropped. In an element under 200 px tall it is one line with an ellipsis. Only these exact names are replaced; any other brace text stays as written."
     },
     "subtitle": {
       "type": "string",
-      "description": "Second line under the title, smaller and muted; takes the same data tokens as title. Not in the bare render() SVG."
+      "description": "Second line under the title, smaller and muted; takes the same data tokens as title; hidden in an element under 200 px tall. Not in the bare render() SVG."
     },
     "description": {
       "type": "string",
@@ -504,7 +533,7 @@
           }
         ]
       },
-      "description": "Reference lines (at most 4): a number or \"mean\" across the value axis (mean of the visible values; stacked: of the category totals), { x } across the category axis at that x, { band: [lo, hi] } a shaded value range; each optionally labelled. Scatter also takes { slope, intercept? }: y = slope * x + intercept, slope \"mean\" = sum of y / sum of x. bar line area scatter dumbbell."
+      "description": "Reference lines (at most 4): a number or \"mean\" across the value axis (mean of the visible values; stacked: of the category totals), { x } across the category axis at that x, { band: [lo, hi] } a shaded value range; each optionally labelled. Scatter also takes { slope, intercept? }: y = slope * x + intercept, slope \"mean\" = sum of y / sum of x, labelled with its value as y per x (text.perX), clear of the points. [] is the same as unset. bar line area scatter dumbbell."
     },
     "yScale": {
       "type": "string",
@@ -540,16 +569,14 @@
           }
         ]
       },
-      "minItems": 1,
-      "description": "Label these points of each visible series with their value: max, min, first, last (scatter: max and min by y, first and last by x); { x, text } labels the mark at that x with the text. bar line area scatter."
+      "description": "Label these points of each visible series with their value: max, min, first, last (scatter: max and min by y, first and last by x); { x, text } labels the mark at that x with the text. bar line area scatter. [] is the same as unset."
     },
     "dash": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "minItems": 1,
-      "description": "Series values drawn dashed (line, the area outline). line area; needs series."
+      "description": "Series values drawn dashed (line, the area outline). line area; needs series. [] is the same as unset."
     },
     "tooltip": {
       "oneOf": [
@@ -640,7 +667,7 @@
           "maxProperties": 8
         }
       ],
-      "description": "Palette in series order, or colours by name: series value; treemap and sunburst path[0] value; sankey and chord node name (links and inner levels inherit); waffle category. Unmatched keys are ignored. Path types keep each name colour through drill."
+      "description": "Palette in series order, or colours by name: series value; treemap and sunburst path[0] value; sankey and chord node name (links and inner levels inherit); waffle category. Unmatched keys are ignored. Path types keep each name colour through drill. A sankey root missing from a map stays neutral at every drill level."
     },
     "colorBy": {
       "anyOf": [
