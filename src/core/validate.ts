@@ -46,6 +46,7 @@ import type {
   RenderOptions,
   ResolvedGoal,
   ResolvedSpec,
+  Rule,
   View,
 } from "./types.ts";
 
@@ -131,26 +132,10 @@ export const TOKENS = [
   ),
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => "series" + n),
 ];
-const USE: Record<string, string> = {
-  x: "the category axis",
-  y: "the plotted numbers",
-  y2: "the right-axis line (orbit: growth)",
-  was: "the previous values",
-  "was.by": "the period of long data (the latest is current, the one before previous)",
-  "tooltip.fields": "extra tooltip rows",
-  "aggregate.ratio": "the ratio's numerator and denominator",
-  series: "splitting rows into series",
-  size: "bubble area",
-  name: "point identity",
-  path: "the hierarchy levels",
-  colorBy: "colouring marks by value",
-  format: "formatting that field",
-  titles: "naming that field",
-  frame: "the playback frames",
-};
 const HORIZ = "Use horizontal: true.";
 const SIZED = "Size comes from CSS, or render(spec, { width, height }).";
-const LOG = 'Use yScale: "log" (line, scatter) or xScale: "log" (scatter).';
+const LOG = 'Use yScale: "log" or xScale: "log".';
+const DOM = "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).";
 const PIE = 'Pie and donut charts are not supported: use "bar" or "treemap".';
 const GEO = 'Use type: "hexmap" (import "mayacharts/geo").';
 const EX =
@@ -175,20 +160,15 @@ const HINTS: Record<string, string> = {
   previous: 'Use was: "<field>" (bar, kpi, gauge).',
   target: "Use colorBy: { target: n }.",
   warn: "Use colorBy: { target: n, warn: n } (kpi, gauge).",
-  min: "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).",
-  max: "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).",
+  min: DOM,
+  max: DOM,
   scale: LOG,
   logScale: LOG,
-  annotations: 'Use annotate: ["max", "min", "first", "last"] (bar, line, area).',
-  interaction:
-    "With drill and select both on, click and Enter select; double-click and Shift+Enter drill.",
-  styles:
-    'Use dash: ["<series value>"] (line, area). Widths and opacity per series are not supported.',
-  measures:
-    'Use aggregate: { ratio: ["<numerator>", "<denominator>"] }, with y naming the measure.',
-  nested: "Use depth: 2 (treemap).",
-  legendPosition: 'Use legend: "top", "bottom" or "right".',
-  subTitle: 'Use subtitle: "<text>".',
+  interaction: "Click selects; double-click or Shift+Enter drills.",
+  styles: 'Use dash: ["<series value>"].',
+  measures: 'Use aggregate: { ratio: ["<numerator>", "<denominator>"] }.',
+  nested: "Use depth: 2.",
+  legendPosition: 'Use legend: "bottom" or "right".',
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -213,6 +193,9 @@ const isObj = (v: unknown): v is Record<string, unknown> =>
 const strs = (v: unknown, min = 0): v is string[] =>
   Array.isArray(v) && v.length >= min && v.every((c) => typeof c === "string");
 const ty = (v: unknown) => (v === null ? "null" : Array.isArray(v) ? "array" : typeof v);
+/** Every key of `o` is in `ks`. */
+const only = (o: object, ks: readonly string[]) => Object.keys(o).every((k) => ks.includes(k));
+const fin = (n: unknown, m: number) => Number.isFinite(n) && Math.abs(n as number) <= m;
 const show = (v: unknown) => {
   const t = typeof v === "string" || isObj(v) || Array.isArray(v) ? JSON.stringify(v) : String(v);
   return t.length > 60 ? t.slice(0, 59) + "…" : t;
@@ -238,11 +221,14 @@ export const fail = (code: ErrorCode, path: string, headline: string, ...d: stri
   throw new MayaSpecError(code, path, `mayacharts: ${headline}\n${body.join("\n")}`);
 };
 
+/** fail() with the headline "spec.<path> <rest>". */
+const F = (code: ErrorCode, p: string, rest: string, ...d: string[]) =>
+  fail(code, p, `spec.${p} ${rest}`, ...d);
 const bad = (k: string, v: unknown, want: string) =>
-  fail(
+  F(
     "invalid-option",
     k,
-    `spec.${k} must be ${want}, received ${show(v)}.`,
+    `must be ${want}, received ${show(v)}.`,
     own(HINTS, `${k}:${ty(v)}`) ?? "",
   );
 
@@ -252,10 +238,10 @@ const css = (path: string, v: string, font: boolean) => {
     : /^[#\w\s.,%()+\-\/]*$/.test(v) &&
       [...v.matchAll(/([\w-]*)\s*\(/g)].every((m) => FN.includes(m[1]!.toLowerCase()));
   if (!v || !ok)
-    fail(
+    F(
       "unsafe-css-value",
       path,
-      `spec.${path} = ${show(v)} is not a safe CSS value.`,
+      `= ${show(v)} is not a safe CSS value.`,
       `Allowed: colours, lengths, numbers and ${FN.join("() ")}(); fonts are family names.`,
       "Not allowed: url(), image-set(), other functions, ; { } < > \\ and (outside fonts) quotes.",
     );
@@ -264,53 +250,35 @@ const css = (path: string, v: string, font: boolean) => {
 /** One threshold object: kpi and gauge take any of target, warn, better; other types need target and take no warn. */
 const goal = (t: string, p: string, v: unknown) => {
   const full = t === "kpi" || t === "gauge";
-  const o = isObj(v) ? v : {};
-  const { target, warn, better } = o;
+  const { target, warn, better } = (isObj(v) ? v : {}) as Record<string, unknown>;
   if (
     !isObj(v) ||
     !Object.keys(v).length ||
-    Object.keys(v).some((k) => !GOAL.includes(k)) ||
-    (target !== undefined && !(Number.isFinite(target) && Math.abs(target as number) <= 1e300)) ||
-    (warn !== undefined && !(Number.isFinite(warn) && Math.abs(warn as number) <= 1e300)) ||
-    (better !== undefined && better !== "higher" && better !== "lower")
+    !only(v, GOAL) ||
+    ![target, warn].every((n) => n === undefined || fin(n, 1e300)) ||
+    ![undefined, "higher", "lower"].includes(better as string)
   )
-    fail(
+    F(
       "invalid-option",
       p,
-      `spec.${p} must be ${full ? 'thresholds { target?: number, warn?: number, better?: "higher" | "lower" }' : '{ target: number, better?: "higher" | "lower" }'}, received ${show(v)}.`,
+      `must be { target${full ? "?: number, warn?" : ""}: number, better?: "higher" | "lower" }, received ${show(v)}.`,
       t === "kpi" && p === "colorBy" ? "Thresholds keyed by measure need a y array." : "",
     );
-  if (!full && warn !== undefined)
-    fail(
-      "option-unsupported",
-      `${p}.warn`,
-      `spec.${p}.warn is not supported with spec.type = "${t}".`,
-      "spec.colorBy.warn works with: kpi, gauge.",
-    );
-  if (!full && target === undefined)
-    fail("invalid-option", `${p}.target`, `spec.${p} on "${t}" needs a target.`);
+  if (!full && warn !== undefined) F("option-unsupported", `${p}.warn`, "works with: kpi, gauge.");
+  if (!full && target === undefined) F("invalid-option", `${p}.target`, "is required.");
   if (warn === undefined) return;
-  if (target === undefined)
-    fail(
-      "invalid-option",
-      `${p}.warn`,
-      `spec.${p}.warn needs spec.${p}.target.`,
-      "warn is the edge between near the target and off track.",
-    );
+  if (target === undefined) F("invalid-option", `${p}.warn`, `needs spec.${p}.target.`);
   const low = better === "lower";
   if (low ? (warn as number) <= (target as number) : (warn as number) >= (target as number))
-    fail(
+    F(
       "invalid-option",
       `${p}.warn`,
-      `spec.${p}.warn = ${warn} must be on the bad side of the target ${target} (${low ? "above" : "below"} it, since ${low ? "lower" : "higher"} is better).`,
-      low
-        ? 'Example: { target: 5, warn: 8, better: "lower" }.'
-        : 'Example: { target: 100, warn: 80 }. If lower is better, add better: "lower".',
+      `= ${warn} must be ${low ? "above" : "below"} the target ${target} (${low ? "lower" : "higher"} is better).`,
+      low ? "" : 'If lower is better, add better: "lower".',
     );
 };
 
-const bFmt = (p: string, headline: string, ...d: string[]) =>
-  fail("invalid-format", p, headline, ...d);
+const bFmt = (p: string, rest: string, ...d: string[]) => F("invalid-format", p, rest, ...d);
 
 const format = (path: string, v: unknown, locale: string) => {
   if (typeof v === "string") {
@@ -319,8 +287,8 @@ const format = (path: string, v: unknown, locale: string) => {
       if (!m || v.length > 80 || (m[2] !== undefined && !PRESETS.includes(m[2])))
         bFmt(
           path,
-          `spec.${path} = ${show(v)} is not a format template.`,
-          'A template holds one {value} or {value:<preset>} plus text, e.g. "{value:percent} of plan".',
+          `= ${show(v)} is not a format template.`,
+          'One {value} or {value:<preset>} plus text, e.g. "{value:percent} of plan".',
           m?.[2] === undefined ? "" : `Presets: ${PRESETS.join(", ")}. ${dym(m[2], PRESETS)}`,
         );
       return;
@@ -328,27 +296,27 @@ const format = (path: string, v: unknown, locale: string) => {
     if (!PRESETS.includes(v))
       bFmt(
         path,
-        `spec.${path} = ${show(v)} is not a format preset.`,
+        `= ${show(v)} is not a format preset.`,
         `Presets: ${PRESETS.join(", ")}. Or per field: { <field>: preset or Intl options }.`,
         dym(v, PRESETS),
       );
     return;
   }
-  if (!isObj(v)) bFmt(path, `spec.${path} must be a preset or Intl options, received ${show(v)}.`);
+  if (!isObj(v)) bFmt(path, `must be a preset or Intl options, received ${show(v)}.`);
   const { prefix, suffix, ...o } = v as Record<string, unknown>;
   for (const [k, a] of [
     ["prefix", prefix],
     ["suffix", suffix],
   ] as const)
     if (a !== undefined && typeof a !== "string")
-      bFmt(`${path}.${k}`, `spec.${path}.${k} must be a string, received ${show(a)}.`);
+      bFmt(`${path}.${k}`, `must be a string, received ${show(a)}.`);
   const dt = isDateOpts(o);
   try {
     void (dt ? new Intl.DateTimeFormat(locale, o) : new Intl.NumberFormat(locale, o));
   } catch (e) {
     bFmt(
       path,
-      `spec.${path} = ${show(v)} is not valid ${dt ? "Intl.DateTimeFormat" : "Intl.NumberFormat"} options.`,
+      `= ${show(v)} is not valid ${dt ? "Intl.DateTimeFormat" : "Intl.NumberFormat"} options.`,
       e instanceof Error ? e.message : String(e),
     );
   }
@@ -393,38 +361,33 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
       typeof v === "string" ||
       (isObj(v) &&
         typeof v.by === "string" &&
-        Object.keys(v).every((k) => ["by", "current", "previous"].includes(k)) &&
-        ["current", "previous"].every(
-          (k) => v[k] === undefined || /^(string|number)$/.test(typeof v[k]),
-        ) &&
+        only(v, w("by current previous")) &&
+        [v.current, v.previous].every((c) => /^(st|n|u)/.test(typeof c)) &&
         (v.current === undefined || String(v.current) !== String(v.previous))),
   ],
   [
     "tooltip",
     "a boolean, or { fields: [field names] }",
-    (v) =>
-      typeof v === "boolean" ||
-      (isObj(v) && strs(v.fields, 1) && Object.keys(v).every((k) => k === "fields")),
+    (v) => v === !!v || (isObj(v) && strs(v.fields, 1) && only(v, ["fields"])),
   ],
   ["xScale", '"log"', (v) => v === "log"],
   ["yScale", '"log"', (v) => v === "log"],
   [
     "annotate",
-    `a non-empty array of distinct points (${ANN.join(", ")}) or { x, text } items, text at most 40 characters`,
+    `a non-empty array of distinct ${ANN.join(", ")} or { x, text (40 characters) }`,
     (v) =>
       Array.isArray(v) &&
       v.length > 0 &&
+      new Set(v).size === v.length &&
       v.every((a) =>
         isObj(a)
-          ? Object.keys(a).every((k) => k === "x" || k === "text") &&
+          ? only(a, ["x", "text"]) &&
             (typeof a.x === "string" || Number.isFinite(a.x)) &&
             typeof a.text === "string" &&
             a.text.length > 0 &&
             a.text.length <= 40
           : ANN.includes(a as string),
-      ) &&
-      new Set(v.filter((a) => typeof a === "string")).size ===
-        v.filter((a) => typeof a === "string").length,
+      ),
   ],
   ["dash", "a non-empty array of series values (strings)", (v) => strs(v, 1)],
   [
@@ -456,20 +419,20 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   const s = spec as Record<string, unknown>;
   for (const k of Object.keys(s))
     if (!KEYS.includes(k))
-      fail(
+      F(
         "unknown-option",
         k,
-        `spec.${k} is not a known option.`,
+        `is not a known option.`,
         own(HINTS, k) ?? dym(k, KEYS),
         `Known options: ${KEYS.join(", ")}.`,
       );
 
   const type = s.type;
   if (type === undefined)
-    fail(
+    F(
       "missing-field",
       "type",
-      "spec.type is required but missing.",
+      "is required but missing.",
       "Required fields: type, data, x, y.",
       EX,
     );
@@ -478,16 +441,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (str === undefined || !known.includes(str)) {
     const mod = str === undefined ? undefined : own(MODULE_OF, str);
     if (mod)
-      fail(
+      F(
         "unknown-type",
         "type",
-        `spec.type = "${type}" needs the "${mod}" module, which is not loaded.`,
-        `Add: import "mayacharts/${mod}", or without a bundler load maya.${mod}.global.js after maya.core.global.js.`,
+        `= "${type}" needs the "${mod}" module, which is not loaded.`,
+        `Add: import "mayacharts/${mod}" (or load maya.${mod}.global.js).`,
       );
-    fail(
+    F(
       "unknown-type",
       "type",
-      `spec.type = ${show(type)} is not a chart type.`,
+      `= ${show(type)} is not a chart type.`,
       `Valid types: ${known.join(", ")}.`,
       str === undefined ? "" : (own(ALIAS, str) ?? dym(str, [...known, ...Object.keys(MODULE_OF)])),
     );
@@ -497,16 +460,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   const need = isPath ? "path" : "x";
   const pth = (spec as Record<string, unknown>)["path"];
   if (Array.isArray(pth) && (t === "sankey" ? pth.length < 2 : t === "chord" && pth.length !== 2))
-    fail(
+    F(
       "invalid-option",
       "path",
-      `spec.path needs ${t === "sankey" ? "at least" : "exactly"} two levels for a ${t}.`,
+      `needs ${t === "sankey" ? "at least" : "exactly"} two levels for a ${t}.`,
     );
   const missing = (f: string) =>
-    fail(
+    F(
       "missing-field",
       f,
-      `spec.${f} is required but missing.`,
+      `is required but missing.`,
       `Required fields: type, data, ${need}, y.`,
       isPath
         ? `Example: { type: "${t}", data: [{ region: "N", state: "NY", sales: 10 }], path: ["region", "state"], y: "sales" }`
@@ -515,17 +478,17 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
 
   if (s.data === undefined) missing("data");
   if (!Array.isArray(s.data))
-    fail("data-not-array", "data", `spec.data must be an array of rows, received ${ty(s.data)}.`);
+    F("data-not-array", "data", `must be an array of rows, received ${ty(s.data)}.`);
   const rows = s.data as Record<string, unknown>[];
   // Row checks run once per data array and the fields they read (memo): a re-render of the same
   // array skips them; a mutated array needs a new identity.
   memo(rows, "v1", () =>
     rows.forEach((r, i) => {
       if (!isObj(r))
-        fail(
+        F(
           "row-not-object",
           `data[${i}]`,
-          `spec.data[${i}] must be an object, received ${ty(r)}.`,
+          `must be an object, received ${ty(r)}.`,
           `Received: ${show(r)}`,
         );
     }),
@@ -544,10 +507,10 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     missing("series");
   // parallel keeps its 0.x code; constellation has its own.
   if (t === "gauge" && Array.isArray(s.y))
-    fail(
+    F(
       "invalid-option",
       "y",
-      'spec.y on "gauge" must be one field name.',
+      'on "gauge" must be one field name.',
       'A gauge shows one value. For several, use type: "kpi" with a y array.',
     );
   if ((t === "parallel" || t === "constellation") && !(Array.isArray(s.y) && s.y.length >= 2))
@@ -564,44 +527,30 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (!isObj(text)) bad("text", text, "an object of strings");
     for (const [k, v] of Object.entries(text as object)) {
       if (!Object.hasOwn(TEXT, k))
-        fail(
-          "invalid-option",
-          `text.${k}`,
-          `spec.text.${k} is not a text key.`,
-          dym(k, Object.keys(TEXT)),
-        );
+        F("invalid-option", `text.${k}`, `is not a text key.`, dym(k, Object.keys(TEXT)));
       if (typeof v !== "string") bad(`text.${k}`, v, "a string");
     }
   }
   for (const k of ["yDomain", "xDomain"]) {
     const d = s[k] as number[] | undefined;
+    const log = s[k[0] + "Scale"] === "log";
     if (
       d !== undefined &&
       !(
         Array.isArray(d) &&
         d.length === 2 &&
-        Number.isFinite(d[0]) &&
-        Number.isFinite(d[1]) &&
-        Math.abs(d[0]!) <= 1e300 && // ponytail: beyond this the span or a tick step overflows
-        Math.abs(d[1]!) <= 1e300 &&
+        fin(d[0], 1e300) && // ponytail: beyond this the span or a tick step overflows
+        fin(d[1], 1e300) &&
         Math.abs(d[1]! - d[0]!) >= 1e-300 &&
-        (k === "yDomain" ? d[0] !== d[1] : d[0]! < d[1]!)
+        (k === "yDomain" ? d[0] !== d[1] : d[0]! < d[1]!) &&
+        !(log && Math.min(d[0]!, d[1]!) <= 0)
       )
     )
-      fail(
+      F(
         "invalid-domain",
         k,
-        `spec.${k} = ${show(d)} is not a valid domain.`,
-        k === "yDomain"
-          ? "Expected [min, max] (or [max, min] to reverse) with two different finite numbers."
-          : "Expected [min, max] with finite numbers and min < max, e.g. [0, 100].",
-      );
-    if (d !== undefined && s[k[0] + "Scale"] === "log" && Math.min(d[0]!, d[1]!) <= 0)
-      fail(
-        "invalid-domain",
-        k,
-        `spec.${k} = ${show(d)} reaches 0 or below, which a log axis cannot show.`,
-        "Expected bounds above 0, e.g. [1, 1000].",
+        `= ${show(d)} is not a valid domain.`,
+        `Expected [min, max]${k === "yDomain" ? " (or [max, min] to reverse)" : ""} of finite numbers${log ? " above 0 (log axis)" : ""}, e.g. [1, 100].`,
       );
   }
 
@@ -613,45 +562,37 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       // One kind per item: { y }, { slope, intercept? } (scatter), { x } or { band: [lo, hi] }.
       const k = ["slope", "x", "band"].find((q) => Object.hasOwn(o, q)) ?? "y";
       // ponytail: |y| <= 1e15 keeps the widened axis span finite.
-      const fin = (n: unknown) => Number.isFinite(n) && Math.abs(n as number) <= 1e15;
       const b = o.band as unknown[];
       const okY =
         k === "band"
-          ? Array.isArray(b) && b.length === 2 && fin(b[0]) && fin(b[1]) && b[0] !== b[1]
+          ? Array.isArray(b) &&
+            b.length === 2 &&
+            fin(b[0], 1e15) &&
+            fin(b[1], 1e15) &&
+            b[0] !== b[1]
           : k === "x"
             ? typeof o.x === "string" || Number.isFinite(o.x)
-            : o[k] === "mean" || fin(o[k]);
+            : o[k] === "mean" || fin(o[k], 1e15);
       const okL = o.label === undefined || (typeof o.label === "string" && o.label.length <= 40);
-      const keys = [k, "label", ...(k === "slope" ? ["intercept"] : [])];
       if (
         !okY ||
         !okL ||
-        (o.intercept !== undefined && !fin(o.intercept)) ||
-        Object.keys(o).some((x) => !keys.includes(x))
+        (o.intercept !== undefined && !fin(o.intercept, 1e15)) ||
+        !only(o, [k, "label", ...(k === "slope" ? ["intercept"] : [])])
       )
         bad(
           `rules[${i}]`,
           e,
-          'a number, "mean", { y }, { x }, { band: [lo, hi] } or { slope, intercept? }, each with label? <= 40 characters',
+          'a number, "mean", { y }, { x }, { band: [lo, hi] } or { slope, intercept? }, each with label? (40 characters)',
         );
       if (k === "slope" && t !== "scatter")
-        fail(
-          "option-unsupported",
-          `rules[${i}].slope`,
-          `spec.rules[${i}].slope is not supported with spec.type = "${t}".`,
-          "Slope rules work with: scatter.",
-        );
+        F("option-unsupported", `rules[${i}].slope`, "works with: scatter.");
       if (
         s.yScale === "log" &&
         ((typeof o.y === "number" && o.y <= 0) ||
           (k === "band" && Math.min(...(b as number[])) <= 0))
       )
-        fail(
-          "invalid-option",
-          `rules[${i}]`,
-          `spec.rules[${i}] = ${show(e)} cannot be drawn on a log axis (spec.yScale = "log").`,
-          "A log axis shows values above 0 only.",
-        );
+        F("invalid-option", `rules[${i}]`, "must be above 0 on a log axis.");
     });
   }
 
@@ -661,15 +602,14 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     try {
       ok = Intl.NumberFormat.supportedLocalesOf(s.locale).length > 0;
     } catch {}
-    if (!ok)
-      bFmt("locale", `spec.locale = ${show(s.locale)} is not a locale this runtime supports.`);
+    if (!ok) bFmt("locale", `= ${show(s.locale)} is not a locale this runtime supports.`);
     locale = s.locale;
   }
   if (typeof s.currency === "string")
     try {
       new Intl.NumberFormat(locale, { style: "currency", currency: s.currency });
     } catch {
-      bFmt("currency", `spec.currency = ${show(s.currency)} is not an ISO 4217 currency code.`);
+      bFmt("currency", `= ${show(s.currency)} is not an ISO 4217 currency code.`);
     }
   if (typeof s.format === "string") format("format", s.format, locale);
   else if (s.format !== undefined) {
@@ -686,11 +626,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (!entries || !entries.every(([, c]) => typeof c === "string"))
       bad("colors", colors, "an array of colours, or an object of colours by series value");
     if (entries!.length > 8)
-      fail(
-        "invalid-option",
-        "colors",
-        `spec.colors has ${entries!.length} colours; the palette has 8 slots.`,
-      );
+      F("invalid-option", "colors", `has ${entries!.length} colours; the palette has 8 slots.`);
     for (const [p, c] of entries!) css(`colors${p}`, c as string, false);
   }
   if (theme !== undefined) {
@@ -698,10 +634,10 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       bad("theme", theme, "an object of string values");
     for (const k of Object.keys(theme as object))
       if (!TOKENS.includes(k))
-        fail(
+        F(
           "invalid-theme",
           `theme.${k}`,
-          `spec.theme.${k} is not a theme token.`,
+          `is not a theme token.`,
           `Valid tokens: ${TOKENS.join(", ")}.`,
           dym(k, TOKENS),
         );
@@ -709,186 +645,90 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       css(`theme.${k}`, v, k === "font");
   }
 
+  const NS = `is not supported with spec.type = "${t}".`;
   if (s.stack && t === "line")
-    fail(
-      "stack-unsupported",
-      "stack",
-      'spec.stack is not supported with spec.type = "line".',
-      'Use type "area" (or "bar") to stack series.',
-    );
-  if (s.yScale !== undefined && ["bar", "waterfall", "area"].includes(t))
-    fail(
-      "option-unsupported",
-      "yScale",
-      `spec.yScale = "log" is not supported with spec.type = "${t}": its marks start at zero, which a log axis cannot show.`,
-      `A bar's length encodes its value from zero, so a log axis would misstate every bar. Use type: "line" or "scatter" for a log axis.`,
-    );
+    F("stack-unsupported", "stack", NS, 'Use type "area" (or "bar") to stack series.');
   for (const k in ONLY)
     if (s[k] !== undefined && s[k] !== false && !ONLY[k]!.includes(t))
-      fail(
-        "option-unsupported",
-        k,
-        `spec.${k} is not supported with spec.type = "${t}".`,
-        `spec.${k} works with: ${ONLY[k]!.join(", ")}.`,
-      );
+      F("option-unsupported", k, NS, `spec.${k} works with: ${ONLY[k]!.join(", ")}.`);
   const cart = DRILLP.includes(t);
   const ratio = isObj(s.aggregate) ? (s.aggregate.ratio as string[]) : null;
-  const pairs: [boolean, string, string, string?][] = [
+  const CB = "cannot be combined with";
+  const pairs: [unknown, string, string, string?][] = [
+    [colorBy != null && s.series != null && t !== "dumbbell", "colorBy", `${CB} spec.series.`],
+    [s.yDomain != null && Array.isArray(y), "yDomain", `${CB} a y array.`],
+    [PATHX.includes(t) && path != null && s.x != null, "x", `${CB} spec.path.`],
     [
-      colorBy !== undefined && s.series !== undefined && t !== "dumbbell",
-      "colorBy",
-      "spec.colorBy cannot be combined with spec.series.",
-    ],
-    [
-      s.yDomain !== undefined && Array.isArray(y),
-      "yDomain",
-      "spec.yDomain cannot be combined with a y array.",
-    ],
-    [
-      PATHX.includes(t) && path !== undefined && s.x !== undefined,
-      "x",
-      "spec.x cannot be combined with spec.path.",
-    ],
-    [
-      t === "heatmap" && path !== undefined && s.series !== undefined,
+      t === "heatmap" && path != null && s.series != null,
       "series",
-      'spec.series cannot be combined with spec.path on "heatmap" (the path levels are its rows).',
+      `${CB} spec.path on "heatmap" (its levels are the rows).`,
     ],
     [
-      !!ratio && !RATIO.includes(t),
+      ratio && !RATIO.includes(t),
       "aggregate",
-      `spec.aggregate.ratio is not supported with spec.type = "${t}".`,
-      `A ratio does not add up into a whole. It works with: ${RATIO.join(", ")}.`,
+      `= { ratio } ${NS}`,
+      `A ratio works with: ${RATIO.join(", ")}.`,
     ],
     [
-      !!ratio && (!!s.stack || s.was !== undefined || Array.isArray(y)),
+      ratio && (s.stack || s.was != null || Array.isArray(y)),
       "aggregate",
-      "spec.aggregate.ratio cannot be combined with spec.stack, spec.was or a y array.",
-      "A ratio names one measure, and stacked ratios do not add up.",
+      `= { ratio } ${CB} spec.stack, spec.was or a y array.`,
     ],
     // ponytail: was ghosts are grouped bars only, not stacks or a measure toggle (NON-FEATURES).
-    [
-      s.was !== undefined && (!!s.stack || Array.isArray(y)),
-      "was",
-      "spec.was cannot be combined with spec.stack or a y array.",
-    ],
-    [
-      isObj(s.was) && s.was.by === s.x,
-      "was",
-      "spec.was.by cannot be spec.x: it names the period field of long data, not the category.",
-    ],
+    [s.was != null && (s.stack || Array.isArray(y)), "was", `${CB} spec.stack or a y array.`],
+    [isObj(s.was) && s.was.by === s.x, "was", ".by cannot be spec.x (it names the period field)."],
     [
       isObj(s.tooltip) && !TIPF.includes(t),
       "tooltip",
-      `spec.tooltip.fields is not supported with spec.type = "${t}".`,
-      `spec.tooltip.fields works with: ${TIPF.join(", ")}.`,
+      `.fields ${NS}`,
+      `It works with: ${TIPF.join(", ")}.`,
     ],
+    [s.dash != null && s.series === undefined, "dash", "needs spec.series."],
+    [s.y2 != null && s.horizontal === true, "y2", `${CB} spec.horizontal.`],
     [
-      s.dash !== undefined && s.series === undefined,
-      "dash",
-      "spec.dash needs spec.series: it names series values to draw dashed.",
-    ],
-    [
-      s.y2 !== undefined && s.horizontal === true,
-      "y2",
-      "spec.y2 cannot be combined with spec.horizontal.",
-    ],
-    [
-      s.xType === "time" && (s.sort !== undefined || s.limit !== undefined),
+      s.xType === "time" && (s.sort != null || s.limit != null || s.horizontal === true),
       "xType",
-      'spec.xType = "time" cannot be combined with spec.sort or spec.limit.',
+      `= "time" ${CB} spec.sort, spec.limit or spec.horizontal.`,
     ],
     [
-      s.xType === "time" && s.horizontal === true,
-      "xType",
-      'spec.xType = "time" cannot be combined with spec.horizontal.',
-    ],
-    [
-      (t === "kpi" || t === "gauge") && colorBy !== undefined && !isObj(colorBy),
+      (t === "kpi" || t === "gauge") && colorBy != null && !isObj(colorBy),
       "colorBy",
-      `spec.colorBy on "${t}" must be thresholds: { target?, warn?, better? }.`,
-      'Example: colorBy: { target: 100, warn: 80 }, or { better: "lower" }.',
+      `on "${t}" must be thresholds: { target?, warn?, better? }.`,
     ],
-    [
-      t === "gauge" && s.x !== undefined,
-      "x",
-      'spec.x is not supported with spec.type = "gauge".',
-      "A gauge shows one value: its rows combine by spec.aggregate.",
-    ],
-    [
-      t === "funnel" && s.x !== undefined && Array.isArray(y),
-      "x",
-      'spec.x cannot be combined with a y array on "funnel" (the fields are the stages).',
-    ],
-    [
-      t === "boxplot" && s.aggregate !== undefined,
-      "aggregate",
-      'spec.aggregate is not supported with spec.type = "boxplot".',
-      "A box plot summarises raw rows.",
-    ],
-    [
-      cart && s.drill === true && path === undefined,
-      "drill",
-      `spec.drill on "${t}" needs spec.path.`,
-    ],
+    [t === "gauge" && s.x != null, "x", NS, "A gauge shows one value."],
+    [t === "funnel" && s.x != null && Array.isArray(y), "x", `${CB} a y array on "funnel".`],
+    [t === "boxplot" && s.aggregate != null, "aggregate", NS],
+    [cart && s.drill === true && path === undefined, "drill", `on "${t}" needs spec.path.`],
   ];
-  for (const [hit, k, headline, detail] of pairs)
-    if (hit) fail("option-unsupported", k, headline, detail ?? "");
+  for (const [hit, k, rest, detail] of pairs)
+    if (hit)
+      fail("option-unsupported", k, `spec.${k}${rest[0] === "." ? "" : " "}${rest}`, detail ?? "");
   if (isObj(colorBy)) {
     // Threshold keys win; otherwise a kpi with a y array may key thresholds by measure.
     const ks = Object.keys(colorBy);
     if (ks.length && !ks.some((k) => GOAL.includes(k)) && t === "kpi" && Array.isArray(y))
       for (const k of ks) {
         if (!y.includes(k))
-          fail(
-            "invalid-option",
-            `colorBy.${k}`,
-            `spec.colorBy key "${k}" is not a field in spec.y.`,
-            `Keyed thresholds name measures of spec.y: ${y.join(", ")}.`,
-            dym(k, y as string[]),
-          );
+          F("invalid-option", `colorBy.${k}`, `is not in spec.y: ${y.join(", ")}.`, dym(k, y));
         goal(t, `colorBy.${k}`, colorBy[k]);
       }
     else goal(t, "colorBy", colorBy);
   }
 
-  const vk = JSON.stringify(
-    [
-      t,
-      s.x,
-      s.y,
-      s.series,
-      s.y2,
-      s.was,
-      s.size,
-      s.name,
-      s.path,
-      s.colorBy,
-      s.frame,
-      s.xType,
-      s.format,
-      s.titles,
-      s.tooltip,
-      s.dash,
-      s.xScale,
-      s.yScale,
-      s.aggregate,
-    ],
-    (_, v) => (typeof v === "bigint" ? String(v) : v),
-  );
+  // The row checks read most of the spec: key them by all of it but the rows.
+  const vk = JSON.stringify({ ...s, data: 0 }, (_, v) => (typeof v === "bigint" ? String(v) : v));
   if (rows.length)
     memo(rows, `v2${vk}`, () => {
       // The key list is only built on the error path; the check itself stops at the first row.
       const has = (f: string) => rows.some((r) => Object.hasOwn(r, f));
-      const unk = (p: string, headline: string, f: string, use: string) => {
+      const unk = (p: string, rest: string, f: string) => {
         const found = [...new Set(rows.flatMap((r) => Object.keys(r)))];
-        return fail(
+        F(
           "unknown-field",
           p,
-          headline,
+          rest + "is not a field in spec.data.",
           `Fields found: ${found.slice(0, 20).join(", ")}.`,
           dym(f, found),
-          use,
         );
       };
       // Under a ratio aggregate y only names the measure: its rows need not hold it.
@@ -910,31 +750,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         ["colorBy", colorBy === "sign" ? undefined : colorBy],
         ["frame", s.frame],
       ];
-      for (const [p, f] of fields) {
-        if (typeof f !== "string" || has(f)) continue;
-        const opt = p.replace(/\[.*/, "");
-        unk(
-          p,
-          `spec.${p} = ${show(f)} is not a field in spec.data.`,
-          f,
-          `spec.${opt} names the field used for ${USE[opt]}.`,
-        );
-      }
+      for (const [p, f] of fields) if (typeof f === "string" && !has(f)) unk(p, `= ${show(f)} `, f);
       for (const opt of ["format", "titles"])
         if (isObj(s[opt]))
           for (const f of Object.keys(s[opt] as object))
-            if (!has(f) && !(ratio && f === y))
-              unk(
-                `${opt}.${f}`,
-                `spec.${opt} key "${f}" is not a field in spec.data.`,
-                f,
-                `spec.${opt} keys name fields, for ${USE[opt]}.`,
-              );
+            if (!has(f) && !(ratio && f === y)) unk(`${opt}.${f}`, "", f);
       if (colorBy === "sign" && has("sign"))
-        fail(
+        F(
           "invalid-option",
           "colorBy",
-          'spec.colorBy = "sign" colours by the sign of y, but spec.data also has a field named "sign".',
+          '= "sign" is ambiguous: spec.data has a field named "sign".',
         );
 
       // Callbacks build the data[i].field path themselves, only when a row fails.
@@ -971,10 +796,10 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         vals.forEach((v, i) => {
           if (v === undefined || seen.has(String(v))) return;
           const pi = p === "dash" ? `${p}[${i}]` : p;
-          fail(
+          F(
             "invalid-option",
             pi,
-            `spec.${pi} = ${show(v)} is not a value of ${what} in spec.data.`,
+            `= ${show(v)} is not a value of spec.${what} in spec.data.`,
             `Values found: ${[...seen].slice(0, 20).join(", ")}.`,
             dym(String(v), [...seen]),
           );
@@ -982,63 +807,42 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       };
       if (isObj(s.was)) {
         const b = s.was.by as string;
-        among("was.current", b, [s.was.current], `spec.was.by ("${b}")`);
-        among("was.previous", b, [s.was.previous], `spec.was.by ("${b}")`);
+        among("was.current", b, [s.was.current], "was.by");
+        among("was.previous", b, [s.was.previous], "was.by");
       }
-      if (strs(s.dash) && typeof s.series === "string")
-        among("dash", s.series, s.dash, `spec.series ("${s.series}")`);
+      if (strs(s.dash) && typeof s.series === "string") among("dash", s.series, s.dash, "series");
       if (t === "dumbbell" && typeof s.series === "string") {
         const n = new Set(rows.map((r) => String(r[s.series as string]))).size;
         if (n !== 2)
-          fail(
-            "invalid-option",
-            "series",
-            `spec.series on "dumbbell" needs exactly 2 values, found ${n}.`,
-          );
+          F("invalid-option", "series", `on "dumbbell" needs exactly 2 values, found ${n}.`);
       }
       if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
       if (s.xType === "time" && typeof s.x === "string")
         scan(s.x, (v, i) => {
           if (v == null || toTime(v) !== null) return;
           const p = `data[${i}].${s.x}`;
-          fail(
+          F(
             "invalid-date",
             p,
-            `spec.${p} is ${show(v)}, but spec.xType = "time" needs ISO 8601 dates or epoch ms.`,
+            `is ${show(v)}, but spec.xType = "time" needs ISO 8601 dates or epoch ms.`,
           );
         });
       if (typeof colorBy === "string" && colorBy !== "sign")
         numeric(colorBy, "non-numeric-field", "colorBy");
-      const logs: [string, string][] = [
-        ...(s.yScale === "log" ? ys.map((f): [string, string] => [f, "yScale"]) : []),
-        ...(s.xScale === "log" && typeof s.x === "string"
-          ? [[s.x, "xScale"] as [string, string]]
-          : []),
-      ];
-      for (const [f, o] of logs)
+      // Refuses values at or below 0 (below 0 when `zero` is allowed).
+      const pos = (f: string, why: string, zero = false) =>
         scan(f, (v, i) => {
-          if (typeof v !== "number" || v > 0) return;
-          const p = `data[${i}].${f}`;
-          fail(
-            "non-positive-value",
-            p,
-            `spec.${p} is ${v}, but spec.${o} = "log" shows values above 0 only.`,
-            `Filter first: data.filter(r => r.${f} > 0), or drop spec.${o} for a linear axis.`,
-          );
+          if (typeof v === "number" && (v < 0 || (!zero && v === 0)))
+            F(
+              "non-positive-value",
+              `data[${i}].${f}`,
+              `is ${v}, but ${why} needs values ${zero ? "of 0 or more" : "above 0"}.`,
+              `Filter first: data.filter(r => r.${f} ${zero ? ">=" : ">"} 0).`,
+            );
         });
-      if (isPath || t === "funnel" || t === "ridgeline")
-        for (const f of ys)
-          scan(f, (v, i) => {
-            if (typeof v === "number" && (v < 0 || (isPath && v === 0))) {
-              const p = `data[${i}].${f}`;
-              fail(
-                "non-positive-value",
-                p,
-                `spec.${p} is ${v}, but ${t} ${isPath ? "sizes must be positive" : "values cannot be negative"}.`,
-                `Filter first: data.filter(r => r.${f} ${isPath ? ">" : ">="} 0), or chart the signed values with "bar".`,
-              );
-            }
-          });
+      if (s.yScale === "log") for (const f of ys) pos(f, 'yScale: "log"');
+      if (s.xScale === "log" && typeof s.x === "string") pos(s.x, 'xScale: "log"');
+      if (isPath || t === "funnel" || t === "ridgeline") for (const f of ys) pos(f, t, !isPath);
     });
   MODULES.get(t)?.check?.(spec as unknown as ChartSpec, fail);
 }
@@ -1167,14 +971,10 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
       )
     : frameRows;
   // spec.was long form: pivot the periods into the wide form the marks read (shape.ts).
+  const W = spec.was;
+  const str = (v: unknown) => (v === undefined ? null : String(v));
   const wb =
-    typeof spec.was === "object"
-      ? {
-          by: spec.was.by,
-          current: spec.was.current === undefined ? null : String(spec.was.current),
-          previous: spec.was.previous === undefined ? null : String(spec.was.previous),
-        }
-      : null;
+    typeof W === "object" ? { by: W.by, current: str(W.current), previous: str(W.previous) } : null;
   const pv = wb
     ? pivotWas(
         rows,
@@ -1213,6 +1013,14 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
         : entries<Goal>(cb as Record<string, Goal>).map(([k, v]) => [k, g(v)]),
   );
   const tip = spec.tooltip;
+  // spec.rules split by kind, in object form, each with its label.
+  const rule = <K extends string, T>(k: K, f: (e: Extract<Rule, Record<K, unknown>>) => T) =>
+    (spec.rules ?? []).flatMap((e) => {
+      const o = typeof e === "object" ? e : { y: e };
+      return k in o
+        ? [{ ...f(o as Extract<Rule, Record<K, unknown>>), label: o.label ?? null }]
+        : [];
+    });
   const titles = new Map([
     // A scatter names its axes by field: two numeric axes say nothing otherwise.
     ...(spec.type === "scatter" ? [spec.x!, measures[measure]!] : []).map((k): [string, string] => [
@@ -1234,7 +1042,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     measure,
     series,
     y2: spec.y2 ?? null,
-    was: typeof spec.was === "string" ? spec.was : (wb?.by ?? null),
+    was: typeof W === "string" ? W : (wb?.by ?? null),
     wasBy: wb,
     dash: new Set(spec.dash),
     tipFields: typeof tip === "object" ? [...tip.fields] : [],
@@ -1291,26 +1099,10 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     currency: spec.currency ?? "USD",
     yDomain: spec.yDomain ?? null,
     xDomain: spec.xDomain ?? null,
-    rules: (spec.rules ?? []).flatMap((e) =>
-      typeof e !== "object"
-        ? [{ y: e, label: null }]
-        : "y" in e
-          ? [{ y: e.y, label: e.label ?? null }]
-          : [],
-    ),
-    slopes: (spec.rules ?? []).flatMap((e) =>
-      typeof e === "object" && "slope" in e
-        ? [{ k: e.slope, b: e.intercept ?? 0, label: e.label ?? null }]
-        : [],
-    ),
-    xRules: (spec.rules ?? []).flatMap((e) =>
-      typeof e === "object" && "x" in e ? [{ x: e.x, label: e.label ?? null }] : [],
-    ),
-    bands: (spec.rules ?? []).flatMap((e) =>
-      typeof e === "object" && "band" in e
-        ? [{ lo: Math.min(...e.band), hi: Math.max(...e.band), label: e.label ?? null }]
-        : [],
-    ),
+    rules: rule("y", (e) => ({ y: e.y })),
+    slopes: rule("slope", (e) => ({ k: e.slope, b: e.intercept ?? 0 })),
+    xRules: rule("x", (e) => ({ x: e.x })),
+    bands: rule("band", (e) => ({ lo: Math.min(...e.band), hi: Math.max(...e.band) })),
     table: spec.table ?? true,
     animate: spec.animate ?? true,
     colors: Array.isArray(spec.colors)

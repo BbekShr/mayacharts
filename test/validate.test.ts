@@ -49,7 +49,7 @@ const ok = (spec: unknown) => expect(() => validateSpec(spec)).not.toThrow();
 it("unloaded module type, then loaded", async () => {
   expect(err(tree).message).toMatchInlineSnapshot(`
     "mayacharts: spec.type = "treemap" needs the "hierarchy" module, which is not loaded.
-      Add: import "mayacharts/hierarchy", or without a bundler load maya.hierarchy.global.js after maya.core.global.js.
+      Add: import "mayacharts/hierarchy" (or load maya.hierarchy.global.js).
       -> https://bbekshr.github.io/mayacharts/errors.html#unknown-type"
   `);
   expect(err({ ...tree, type: "treemp" }).message).toContain('Did you mean "treemap"?');
@@ -114,7 +114,6 @@ describe("one snapshot per error code", () => {
       "mayacharts: spec.y = "revenu" is not a field in spec.data.
         Fields found: month, revenue, region, units.
         Did you mean "revenue"?
-        spec.y names the field used for the plotted numbers.
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-field"
     `);
   });
@@ -143,8 +142,8 @@ describe("one snapshot per error code", () => {
     const e = err({ ...tree, data: [...tree.data, { region: "W", state: "CA", sales: -1 }] });
     expect([e.code, e.path]).toEqual(["non-positive-value", "data[2].sales"]);
     expect(e.message).toMatchInlineSnapshot(`
-      "mayacharts: spec.data[2].sales is -1, but treemap sizes must be positive.
-        Filter first: data.filter(r => r.sales > 0), or chart the signed values with "bar".
+      "mayacharts: spec.data[2].sales is -1, but treemap needs values above 0.
+        Filter first: data.filter(r => r.sales > 0).
         -> https://bbekshr.github.io/mayacharts/errors.html#non-positive-value"
     `);
   });
@@ -189,7 +188,7 @@ describe("one snapshot per error code", () => {
     expect(err({ ...base, type: "scatter", x: "units", xDomain: [1] }).message)
       .toMatchInlineSnapshot(`
         "mayacharts: spec.xDomain = [1] is not a valid domain.
-          Expected [min, max] with finite numbers and min < max, e.g. [0, 100].
+          Expected [min, max] of finite numbers, e.g. [1, 100].
           -> https://bbekshr.github.io/mayacharts/errors.html#invalid-domain"
       `);
   });
@@ -784,8 +783,8 @@ describe("colorBy thresholds and gauge", () => {
   });
   it("names the bad side of the target", () => {
     expect(err({ ...kpi, colorBy: { target: 100, warn: 120 } }).message).toMatchInlineSnapshot(`
-      "mayacharts: spec.colorBy.warn = 120 must be on the bad side of the target 100 (below it, since higher is better).
-        Example: { target: 100, warn: 80 }. If lower is better, add better: "lower".
+      "mayacharts: spec.colorBy.warn = 120 must be below the target 100 (higher is better).
+        If lower is better, add better: "lower".
         -> https://bbekshr.github.io/mayacharts/errors.html#invalid-option"
     `);
     expect(err({ ...two, colorBy: { revenu: { target: 1 } } }).message).toContain(
@@ -856,7 +855,7 @@ describe("#59-#68 contracts: was long form, log scales, slope rules, dash, toolt
     ok({ ...sc, xScale: "log", yScale: "log" });
     const e = err({ ...long, yScale: "log" });
     expect([e.code, e.path]).toEqual(["option-unsupported", "yScale"]);
-    expect(e.message).toContain('Use type: "line" or "scatter"');
+    expect(e.message).toContain("works with: line, scatter");
     expect(code({ ...long, type: "area", yScale: "log" })).toEqual([
       "option-unsupported",
       "yScale",

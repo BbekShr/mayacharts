@@ -148,7 +148,7 @@
  *   (shape groups, Other, drill levels, kpi, gauge, table, "mean" rules, title tokens) the value
  *   is sum(num) / sum(den), null when sum(den) is 0; rows read num and den, not y. renderShell's
  *   JSON child projects both fields. Modules use ctx.agg("sum") on each and divide.
- *   Drill + select: click/Enter select; double-click, Shift+Enter (Handlers.enter shift) and the
+ *   Drill + select: click/Enter select; double-click, Shift+Enter and the
  *   pinned tooltip's text.drillInto button drill. The drill gesture on a mark that cannot drill
  *   further dispatches maya-drill-leaf { path } (bubbles, composed, not cancelable): drilled
  *   values then the mark's own level values. Flows: only once drilled to their last branch.
@@ -466,17 +466,13 @@ const CORE: Readonly<Record<string, Mark>> = {
 
 /** Numeric rules widen the value axis (a target above the data stays visible); a yDomain still wins. */
 function withRules(s: ResolvedSpec, axes: [Axis, Axis, Axis?]): [Axis, Axis, Axis?] {
-  const n = [
-    ...s.rules.flatMap((u) => (u.y === "mean" ? [] : [u.y])),
-    ...s.bands.flatMap((b) => [b.lo, b.hi]),
-  ];
+  const n = [...s.rules.map((u) => u.y), ...s.bands.flatMap((b) => [b.lo, b.hi])].filter(
+    (v) => v !== "mean",
+  );
   if (!n.length) return axes;
   return axes.map((a) =>
     a?.kind === "linear" && a.field === s.y
-      ? {
-          ...a,
-          domain: [Math.min(a.domain[0], ...n), Math.max(a.domain[1], ...n)],
-        }
+      ? { ...a, domain: [Math.min(a.domain[0], ...n), Math.max(a.domain[1], ...n)] }
       : a,
   ) as [Axis, Axis, Axis?];
 }
@@ -576,11 +572,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       "Aggregate or bin the frame field (year instead of day) so it has fewer distinct values.",
     );
   // Data tokens in the title and subtitle (a11y.ts resolveTokens), so the accessible name matches.
-  if (s.title?.includes("{") || s.subtitle?.includes("{")) {
-    const tok = (v: string | null) =>
-      v && resolveTokens(v, s, shaped, fmt, () => average(s, shaped));
-    s = { ...s, title: tok(s.title), subtitle: tok(s.subtitle) };
-  }
+  const tok = (v: string | null) => v && resolveTokens(v, s, shaped, fmt, () => average(s, shaped));
+  s = { ...s, title: tok(s.title), subtitle: tok(s.subtitle) };
   const fv = fr?.[1].length ? fmt(fr[0], fr[1][fr[2]]) : null;
   if (fv !== null) s = { ...s, title: t(s, "frameOf", titleText(s), fv) };
 
@@ -770,13 +763,18 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     const v = s.horizontal ? f?.x : f?.y;
     const cat = s.horizontal ? f?.y : f?.x;
     const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
+    // A line across the plot at p on the x axis (vertical) or the y axis, and the box from p to q.
+    const seg = (p: number, onX: boolean) =>
+      onX
+        ? { x1: r(p), x2: r(p), y1: y0, y2: r(plot.y + plot.h) }
+        : { x1: r(plot.x), x2: x0, y1: r(p), y2: r(p) };
+    const say = (name: string | null, val: string) => (said += ` ${name ?? t(s, "rule")}: ${val}.`);
     if (v && !("bandwidth" in v)) {
       s.bands.forEach((u) => {
         const [lo, hi] = [Math.max(u.lo, v.domain[0]), Math.min(u.hi, v.domain[1])];
         if (!(lo <= hi)) return;
         const [p, q] = [v.of(lo), v.of(hi)].sort((a, b) => a - b) as [number, number];
-        const text = u.label ?? t(s, "rule");
-        said += ` ${text}: ${t(s, "fromTo", fmt(s.y, u.lo), fmt(s.y, u.hi))}.`;
+        say(u.label, t(s, "fromTo", fmt(s.y, u.lo), fmt(s.y, u.hi)));
         rules += el(
           "rect",
           s.horizontal
@@ -793,15 +791,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         const p = r(v.of(at));
         const name = u.label ?? (u.y === "mean" ? t(s, "mean") : null);
         const val = fmt(s.y, at);
-        const text = name ? `${name} ${val}` : val;
-        said += ` ${name ?? t(s, "rule")}: ${val}.`;
+        say(name, val);
         rules +=
-          el(
-            "line",
-            s.horizontal
-              ? { x1: p, x2: p, y1: y0, y2: r(plot.y + plot.h) }
-              : { x1: r(plot.x), x2: x0, y1: p, y2: p },
-          ) +
+          el("line", seg(p, s.horizontal)) +
           // above the line at its end; beside the line at the top for a vertical one
           el(
             "text",
@@ -810,20 +802,18 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
               y: s.horizontal ? y0 + 10 : p - 4,
               "text-anchor": "end",
             },
-            esc(text),
+            esc(name ? `${name} ${val}` : val),
           );
       });
     }
     // x rules: a band's centre (or a time or number's place) on the category axis.
     if (cat)
       s.xRules.forEach((u) => {
-        const k = String(u.x);
-        const i = "bandwidth" in cat ? cat.domain.indexOf(k) : -1;
         const ms = toTime(u.x);
         const p =
           "bandwidth" in cat
-            ? i >= 0
-              ? cat.at(i) + cat.bandwidth / 2
+            ? cat.domain.includes(String(u.x))
+              ? cat.at(cat.domain.indexOf(String(u.x))) + cat.bandwidth / 2
               : "kind" in cat && ms !== null
                 ? (cat as TimeScale).of(ms)
                 : NaN
@@ -835,23 +825,16 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         const at = r(p);
         const val = fmt(s.x, u.x);
         const text = u.label ? `${u.label} ${val}` : val;
-        said += ` ${u.label ?? t(s, "rule")}: ${val}.`;
-        rules += el(
-          "line",
-          s.horizontal
-            ? { "data-xrule": true, x1: r(plot.x), x2: x0, y1: at, y2: at }
-            : { "data-xrule": true, x1: at, x2: at, y1: y0, y2: r(plot.y + plot.h) },
-        );
+        say(u.label, val);
+        rules += el("line", { "data-xrule": true, ...seg(at, !s.horizontal) });
         // Beside the line at the top; ends at the line instead of passing the plot's right edge.
+        const over = !s.horizontal && at + 4 + tw(text) > plot.x + plot.w;
         if (s.horizontal) tag(text, plot.x + plot.w, at - 14, true);
-        else {
-          const over = at + 4 + tw(text) > plot.x + plot.w;
-          tag(text, over ? at - 4 : at + 4, plot.y, over);
-        }
+        else tag(text, over ? at - 4 : at + 4, plot.y, over);
       });
     // Slope rules and annotations join the description, like bands and x rules.
     for (const u of s.slopes)
-      said += ` ${u.label ?? t(s, "rule")}: y = ${u.k === "mean" ? t(s, "mean") : u.k}x${u.b ? ` + ${u.b}` : ""}.`;
+      say(u.label, `y = ${u.k === "mean" ? t(s, "mean") : u.k}x${u.b ? ` + ${u.b}` : ""}`);
     if (s.annotate.length)
       said += ` ${t(s, "labelled", s.annotate.map((k) => t(s, k)).join(", "))}.`;
     for (const n of s.notes) said += ` ${n.text}: ${fmt(s.x, n.x)}.`;
@@ -981,7 +964,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
               "data-s": i % 8,
               "data-dash": s.dash.has(k),
               // With a dashed series the solid ones get a line key too, so keys differ only solid vs dashed.
-              "data-line": s.dash.size > 0 && !s.dash.has(k) ? true : null,
+              "data-line": !!s.dash.size && !s.dash.has(k),
               "data-key": k,
               "aria-pressed": String(shaped.visible.includes(i)),
             },

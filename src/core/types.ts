@@ -746,9 +746,8 @@ export interface Handlers {
   cancel?(): boolean;
   /** Escape at this module's priority: select 3, zoom window 4, drill pop 5. */
   escape?(): boolean;
-  /** Enter on the keyboard-active mark: drill first, then select. With drill and select both on,
-   * Enter selects and Shift+Enter (`shift`) drills. */
-  enter?(mark: Element, shift?: boolean): boolean;
+  /** Enter on the keyboard-active mark: drill first, then select. */
+  enter?(mark: Element): boolean;
   /** After every paint (re-apply data-selected, restore focus). */
   painted?(): void;
   off(): void;

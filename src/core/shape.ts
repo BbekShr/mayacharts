@@ -49,12 +49,9 @@ interface Cat {
   label: string;
   vals: (number | null)[];
   y2?: number | null;
-  /** Mean only: the count behind each value and behind y2, so the Other bucket can merge. */
-  ns?: number[];
-  n2?: number;
-  /** Ratio only: numerator and denominator sums behind each value. */
-  nu?: number[];
-  de?: number[];
+  /** Mean and ratio only: the reducers behind each value and behind y2, so the Other bucket can merge their sums. */
+  rs?: (Reducer | undefined)[];
+  a2?: Reducer | undefined;
   /** UTC ms on a time axis. */
   t?: number;
   /** Position in the time-ordered list, before window and reduction. */
@@ -166,16 +163,15 @@ export function shape(
     // Dense horizontal bars (#66.1): bands under 14 px (one label each) roll the smallest nominal
     // categories into Other rather than thin the labels. Not for dates, xType "time" or a set limit.
     // ponytail: the height is estimated (24 px value axis, 18 px title), a layout surprise falls back to thinning.
+    // (Horizontal is never a time axis: validate refuses xType "time" with it.)
     const room = Math.floor((height - 10 - (s.xAxis ? 24 : 8) - (s.titles.has(s.y) ? 18 : 0)) / 14);
     if (
       lim === null &&
       s.type === "bar" &&
       s.horizontal &&
-      !isTime &&
-      s.xType !== "time" &&
       room >= 3 &&
       cats.length > room &&
-      !cats.every((c) => toTime(c.label, false) !== null)
+      cats.some((c) => toTime(c.label, false) === null)
     ) {
       lim = room - 1;
       capped = [lim, cats.length];
@@ -299,50 +295,22 @@ export function shape(
   };
 }
 
-/** The Other bucket from the rolled-up categories' aggregates (a mean is weighted by its counts). */
+/** The Other bucket from the rolled-up categories' aggregates: values fold by the aggregate; a mean or ratio merges its reducers' sums. */
 function other(s: ResolvedSpec, series: string[], rest: Cat[]): Cat {
   const k = s.aggregate;
-  const fold = (get: (c: Cat) => number | null, w: (c: Cat) => number) => {
-    let acc: number | null = null;
-    let n = 0;
+  const fold = (get: (c: Cat) => Reducer | number | null | undefined, ratio = false) => {
+    const m = agg(k === "count" ? "sum" : k, ratio);
     for (const c of rest) {
       const v = get(c);
-      if (v === null) continue;
-      const m = k === "mean" ? w(c) : 1;
-      acc =
-        acc === null
-          ? v * m
-          : k === "min"
-            ? Math.min(acc, v)
-            : k === "max"
-              ? Math.max(acc, v)
-              : acc + v * m;
-      n += m;
+      if (typeof v === "number") m.add(v);
+      else if (v) ((m.n += v.n), (m.acc += v.acc), (m.den += v.den));
     }
-    return acc === null ? null : k === "mean" ? acc / n : acc;
-  };
-  // A ratio merges its sums, not the ratios.
-  const merged = (j: number) => {
-    const sum = (f: "nu" | "de") => rest.reduce((t, c) => t + c[f]![j]!, 0);
-    return sum("de") ? sum("nu") / sum("de") : null;
+    return m.value();
   };
   return {
     label: OTHER,
-    vals: series.map((_, j) =>
-      s.ratio
-        ? merged(j)
-        : fold(
-            (c) => c.vals[j] ?? null,
-            (c) => c.ns![j]!,
-          ),
-    ),
-    y2:
-      s.y2 === null
-        ? null
-        : fold(
-            (c) => c.y2 ?? null,
-            (c) => c.n2!,
-          ),
+    vals: series.map((_, j) => fold((c) => (c.rs ? c.rs[j] : c.vals[j]), !!s.ratio)),
+    y2: s.y2 === null ? null : fold((c) => c.a2 ?? c.y2),
   };
 }
 
@@ -383,12 +351,7 @@ function group(s: ResolvedSpec, time: boolean) {
   cats.forEach((c, k) => {
     c.vals = series.map((_, j) => acc[k]!.rs[j]?.value() ?? null);
     c.y2 = acc[k]!.a2?.value() ?? null;
-    if (s.aggregate === "mean")
-      ((c.ns = series.map((_, j) => acc[k]!.rs[j]?.n ?? 0)), (c.n2 = acc[k]!.a2?.n ?? 0));
-    if (s.ratio) {
-      c.nu = series.map((_, j) => acc[k]!.rs[j]?.acc ?? 0);
-      c.de = series.map((_, j) => acc[k]!.rs[j]?.den ?? 0);
-    }
+    if (s.aggregate === "mean" || s.ratio) ((c.rs = acc[k]!.rs), (c.a2 = acc[k]!.a2));
   });
   let isTime = false;
   if (time && cats.length) {
@@ -610,31 +573,27 @@ export function pivotWas(
     // Distinct periods by String(value), first appearance; a null period is no period.
     const raw = new Map<string, Row[string]>();
     for (const r of rows)
-      if (r[w.by] != null && !raw.has(String(r[w.by]))) raw.set(String(r[w.by]), r[w.by]);
-    let order = [...raw.keys()];
-    const ts = order.map((k) => toTime(raw.get(k)));
-    if (ts.every((t) => t !== null))
-      order = order
-        .map((k, i) => [k, ts[i]!] as const)
-        .sort((a, b) => a[1] - b[1])
-        .map((e) => e[0]);
+      if (r[w.by] != null) raw.has(String(r[w.by])) || raw.set(String(r[w.by]), r[w.by]);
+    const ks = [...raw.keys()];
+    const at = (k: string) => toTime(raw.get(k));
+    const order = ks.some((k) => at(k) === null) ? ks : ks.sort((a, b) => at(a)! - at(b)!);
     const cur = w.current ?? order.at(-1) ?? null;
-    const prev = w.previous ?? order[order.indexOf(cur ?? "") - 1] ?? null;
+    const prev = w.previous ?? order[order.indexOf(cur!) - 1] ?? null;
     // ponytail: groups by (x, series) only, so a drill path with the same x under two parents merges.
     // The first row of a group is its base: fields other than x, series, y and by come from it.
-    const g = new Map<string, { row: Row; c: ReturnType<typeof agg>; p: ReturnType<typeof agg> }>();
+    const g = new Map<string, [Row, Reducer, Reducer]>();
     for (const r of rows) {
-      const k = r[w.by] == null ? "" : String(r[w.by]);
-      if (k === "" || (k !== cur && k !== prev)) continue;
-      const id = String(r[x]) + "\0" + (series === null ? "" : String(r[series]));
-      const e = g.get(id) ?? g.set(id, { row: r, c: agg(aggregate), p: agg(aggregate) }).get(id)!;
+      const k = String(r[w.by]);
+      if (r[w.by] == null || (k !== cur && k !== prev)) continue;
+      const id = `${r[x]}\0${series && r[series]}`;
+      const e = g.get(id) ?? g.set(id, [r, agg(aggregate), agg(aggregate)]).get(id)!;
       const v = r[y];
-      if (typeof v === "number") (k === cur ? e.c : e.p).add(v);
+      if (typeof v === "number") e[k === cur ? 1 : 2].add(v);
     }
-    const out = [...g.values()].map((e) => {
-      const { [w.by]: _, ...rest } = e.row;
-      const p = e.p.value();
-      return { ...rest, [y]: e.c.value(), ...(p === null ? {} : { [w.by]: p }) };
+    const out = [...g.values()].map(([row, c, q]) => {
+      const { [w.by]: _, ...rest } = row;
+      const p = q.value();
+      return { ...rest, [y]: c.value(), ...(p === null ? {} : { [w.by]: p }) };
     });
     return { rows: out, previous: prev === null ? null : (raw.get(prev) ?? null) };
   });

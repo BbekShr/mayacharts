@@ -393,8 +393,7 @@ export function frame(
       "data-t": tt ? true : null,
       "data-xd": both ? bt.domain.join(" ") : null,
       "data-yd": both ? lt.domain.join(" ") : null,
-      "data-log":
-        (bt?.log ? "x" : "") + (bt?.log && lt?.log ? " " : "") + (lt?.log ? "y" : "") || null,
+      "data-log": [bt?.log && "x", lt?.log && "y"].filter(Boolean).join(" ") || null,
     },
   };
 }

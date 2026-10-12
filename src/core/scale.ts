@@ -22,21 +22,17 @@ export function linearScale(
   range: readonly [number, number],
   log = false,
 ): LinearScale {
-  const [d0, d1] = domain;
+  // Log: the domain stays in data units (positive); `of` maps log10, and a value at or below 0 sits on the low edge.
+  const f = (v: number) => (log ? Math.log10(Math.max(v, domain[0])) : v);
+  const [d0, d1] = domain.map(f) as [number, number];
   const [r0, r1] = range;
-  if (log) {
-    // Domain stays in data units (positive); `of` maps log10, and a value at or below 0 sits on the low edge.
-    const [l0, l1] = [Math.log10(d0), Math.log10(d1)];
-    const k = l1 === l0 ? 0 : (r1 - r0) / (l1 - l0);
-    return {
-      domain,
-      range,
-      log,
-      of: (v) => (l1 === l0 ? (r0 + r1) / 2 : r0 + (Math.log10(Math.max(v, d0)) - l0) * k),
-    };
-  }
   const k = d1 === d0 ? 0 : (r1 - r0) / (d1 - d0);
-  return { domain, range, of: (v) => (d1 === d0 ? (r0 + r1) / 2 : r0 + (v - d0) * k) };
+  return {
+    domain,
+    range,
+    ...(log ? { log } : {}),
+    of: (v) => (d1 === d0 ? (r0 + r1) / 2 : r0 + (f(v) - d0) * k),
+  };
 }
 
 const monthStart = (ms: number) => ms % 864e5 === 0 && new Date(ms).getUTCDate() === 1;

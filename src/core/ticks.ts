@@ -45,19 +45,13 @@ export function logTicks(min: number, max: number): Ticks {
   if (!(min > 0)) min = max / 1e3;
   const lo = Math.floor(Math.log10(min) + 1e-9);
   const hi = Math.max(lo + 1, Math.ceil(Math.log10(max) - 1e-9));
-  const fine = hi - lo < 3 ? [1, 2, 5] : [1];
-  // Domain bounds snap to 1-2-5 (or whole decades when wide), not always to whole decades.
+  // 1-2-5 of each decade under 3 decades, else whole decades; the domain snaps to them.
   const all: number[] = [];
-  for (let e = lo; e <= hi; e++) for (const m of [1, 2, 5]) all.push(clean(m * 10 ** e));
-  const d0 = (hi - lo < 3 ? all.filter((v) => v <= min * (1 + 1e-9)).pop() : undefined) ?? 10 ** lo;
-  const d1 = (hi - lo < 3 ? all.find((v) => v >= max * (1 - 1e-9)) : undefined) ?? 10 ** hi;
-  const values: number[] = [];
   for (let e = lo; e <= hi; e++)
-    for (const m of fine) {
-      const v = clean(m * 10 ** e);
-      if (v >= clean(d0) && v <= clean(d1)) values.push(v);
-    }
-  return { domain: [clean(d0), clean(d1)], values, step: clean(10 ** lo) };
+    for (const m of hi - lo < 3 ? [1, 2, 5] : [1]) all.push(clean(m * 10 ** e));
+  const d0 = all.filter((v) => v <= min * (1 + 1e-9)).pop() ?? all[0]!;
+  const d1 = all.find((v) => v >= max * (1 - 1e-9)) ?? all.at(-1)!;
+  return { domain: [d0, d1], values: all.filter((v) => v >= d0 && v <= d1), step: clean(10 ** lo) };
 }
 
 const ISO =
