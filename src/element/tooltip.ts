@@ -23,7 +23,7 @@ const unit = (svg: Element, s: DOMRect) => {
   const w = +(a(svg, "viewBox").split(" ")[2] || s.width) || 1;
   return w / (s.width || w);
 };
-const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+export const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export interface Tooltip {
   off(): void;
@@ -40,8 +40,8 @@ export interface Tooltip {
 export function tooltip(
   root: ShadowRoot,
   on: () => boolean,
-  announce: (text: string) => void = () => {},
-  spec: () => ChartSpec | undefined = () => undefined,
+  announce: (text: string) => void,
+  spec: () => ChartSpec | undefined,
 ): Tooltip {
   const q = (s: string) => root.querySelector<HTMLElement>(s)!;
   const box = q(".maya-box"),

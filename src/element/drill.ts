@@ -48,7 +48,7 @@ export const reduce = (s: State, e: DrillEvent): State => {
   return withDrill(s, keep);
 };
 
-const decode = (raw: string) => {
+export const decode = (raw: string) => {
   try {
     return decodeURIComponent(raw);
   } catch {

@@ -6,7 +6,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, Sel, SpecEvent, State } from "../core/types.ts";
-import { BUSY } from "./drill.ts";
+import { BUSY, decode as dec } from "./drill.ts";
 import { listen } from "./listen.ts";
 
 export type SelectEvent =
@@ -15,13 +15,6 @@ export type SelectEvent =
 const FIELDS = ["x", "series", "name"] as const;
 // String compare: a numeric selection (x: 2024) matches the attribute-derived "2024".
 const same = (a: Sel, b: Sel) => FIELDS.every((f) => String(a[f]) === String(b[f]));
-const dec = (s: string) => {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
-  }
-};
 
 export function reduce(s: State, e: SelectEvent): State {
   if (e.type === "clear") return s.selected.length ? { ...s, selected: [] } : s;

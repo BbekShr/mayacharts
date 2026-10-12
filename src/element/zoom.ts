@@ -134,7 +134,6 @@ export const mount = (host: Host): Handlers & { step(k: number, m?: Element): bo
       brush.setAttribute("data-maya", "brush");
       brush.setAttribute("width", "1");
       brush.setAttribute("height", "1");
-      brush.style.pointerEvents = "none";
       brush.style.transformOrigin = "0 0";
       svg.append(brush);
     }
