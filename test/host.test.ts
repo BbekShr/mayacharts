@@ -93,3 +93,20 @@ describe("host adapters", () => {
     expect(done).toBe(3);
   });
 });
+
+describe("host colorBy", () => {
+  it("resolves a plain colorBy field case-insensitively and leaves goal keys alone", () => {
+    const t = { schema: ["Item", "Sales", "Target"], data: [["a", 1, 2]] };
+    expect(
+      (columns(t, { type: "bar", x: "item", y: "sales", colorBy: "target" }).spec as any).colorBy,
+    ).toBe("Target");
+    expect(
+      (columns(t, { type: "bar", x: "item", y: "sales", colorBy: { target: 1 } }).spec as any)
+        .colorBy,
+    ).toEqual({ target: 1 });
+    expect(
+      (columns(t, { type: "kpi", y: ["sales"], colorBy: { sales: { target: 1 } } }).spec as any)
+        .colorBy,
+    ).toEqual({ Sales: { target: 1 } });
+  });
+});

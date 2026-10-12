@@ -135,4 +135,12 @@ describe("annotate and tooltip fields", () => {
     const s = renderParts({ ...spec, tooltip: { fields: ["t"] } }).svg;
     expect(s).toMatch(/data-maya="mark"[^>]*data-more="t\t30"/);
   });
+  it("a tab or newline in a tooltip field title cannot add rows", () => {
+    const s = renderParts({
+      ...spec,
+      tooltip: { fields: ["t"] },
+      titles: { t: "x\nRevenue\t$9M" },
+    }).svg;
+    expect(s).toMatch(/data-more="x Revenue \$9M\t30"/);
+  });
 });

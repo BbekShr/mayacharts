@@ -854,6 +854,7 @@ export function thoughtSpotJs(spec: ChartSpec): string {
   const { data: _, ...rest } = spec;
   return `// Column names match case-insensitively; a /regex/ works too (x: /item/i).
 const spec = ${flat(JSON.stringify(rest, null, 2)).replace(/</g, "\\u003c")};
+// Pin this file: add integrity: "sha384-..." and crossOrigin: "anonymous" from the release summary.
 document.head.append(Object.assign(document.createElement("script"), {
   src: "${CDN}",
   onload: () => maya.host.thoughtspot(viz, spec),

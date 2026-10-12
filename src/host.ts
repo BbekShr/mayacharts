@@ -74,7 +74,7 @@ export function columns(table: HostTable, spec: HostSpec, el?: MayaChart): MayaC
       ? (names.find((n) => n.toLowerCase() === f.toLowerCase()) ?? f)
       : (names.find((n) => n.search(f) >= 0) ?? f.source);
   const one = (f: any) => (Array.isArray(f) ? f.map(hit) : hit(f));
-  // Keyed maps (format, titles, colorBy goals) rename keys that match a column.
+  // Keyed maps (format, titles) rename keys that match a column.
   const keyed = (o: any) =>
     o && typeof o === "object" && !(o instanceof RegExp)
       ? Object.fromEntries(Object.entries(o).map(([k, v]) => [hit(k), v]))
@@ -83,8 +83,12 @@ export function columns(table: HostTable, spec: HostSpec, el?: MayaChart): MayaC
   for (const k of ["x", "y", "series", "y2", "size", "name", "frame", "path"])
     if (s[k] != null) s[k] = one(s[k]);
   if (s.was) s.was = s.was.by ? { ...s.was, by: hit(s.was.by) } : hit(s.was);
-  if (s.colorBy instanceof RegExp) s.colorBy = hit(s.colorBy);
-  else if (s.colorBy !== "sign") s.colorBy = keyed(s.colorBy);
+  // A field colorBy resolves like any field; a goal ({ target, warn, better }) keeps its keys,
+  // goals keyed by y field rename theirs.
+  const c = s.colorBy;
+  if (typeof c === "string" ? c !== "sign" : c instanceof RegExp) s.colorBy = hit(c);
+  else if (c && !["target", "warn", "better"].some((k) => Object.hasOwn(c, k)))
+    s.colorBy = keyed(c);
   if (s.tooltip?.fields) s.tooltip = { ...s.tooltip, fields: s.tooltip.fields.map(hit) };
   s.format = keyed(s.format);
   s.titles = keyed(s.titles);

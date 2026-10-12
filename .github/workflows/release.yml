@@ -62,5 +62,5 @@ jobs:
         run: |
           echo "## Release SRI" >> $GITHUB_STEP_SUMMARY
           for f in dist/*.global.js; do
-            echo "$f sha384-$(openssl dgst -sha384 -binary $f | openssl base64 -A)" >> $GITHUB_STEP_SUMMARY
+            echo "$f sha384-$(openssl dgst -sha384 -binary "$f" | openssl base64 -A)" >> $GITHUB_STEP_SUMMARY
           done

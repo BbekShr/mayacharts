@@ -40,7 +40,9 @@ export const more = (ctx: MarkCtx, val: (f: string, i: number) => unknown) =>
   ctx.spec.tipFields
     .flatMap((f, i) => {
       const v = val(f, i);
-      return v == null ? [] : [`${ctx.spec.titles.get(f) ?? f}\t${ctx.fmt(f, v)}`];
+      // Tabs and newlines are the grammar: a cell holding them must not add rows.
+      const t = (x: string) => x.replace(/[\t\n]/g, " ");
+      return v == null ? [] : [`${t(ctx.spec.titles.get(f) ?? f)}\t${t(ctx.fmt(f, v))}`];
     })
     .join("\n") || null;
 
