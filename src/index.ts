@@ -13,6 +13,7 @@ export type {
   Goal,
   MayaErrorDetail,
   MayaSelectDetail,
+  MayaSettledDetail,
   MayaViewDetail,
   NumberPreset,
   RenderOptions,

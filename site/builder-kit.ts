@@ -347,6 +347,8 @@ export const SKIP = new Set([
   "theme",
   "format", // set per field under Fields, see formatFields()
   "forms", // units: an array of forms, set in the copied code
+  "annotate", // arrays, set in the copied code
+  "dash",
   ...ROLES,
 ]);
 

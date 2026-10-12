@@ -12,7 +12,7 @@
  *   unknown-field       a field-valued option names no field in data
  *   non-numeric-y       data[i][y] not a finite number within 1e300 (null allowed; numeric strings get a coercion hint)
  *   non-numeric-field   size / scatter x / colorBy field, as above
- *   non-positive-value  treemap/sunburst/sankey y <= 0, funnel and ridgeline y < 0
+ *   non-positive-value  treemap/sunburst/sankey y <= 0, funnel and ridgeline y < 0, a log axis value <= 0
  *   unknown-option      top-level key not in ChartSpec (HINTS, else "did you mean")
  *   invalid-option      wrong type/value for a known option
  *   option-unsupported  option not valid for this type or pair
@@ -31,6 +31,8 @@
  */
 import { CORE_TYPES, MODULE_OF, MODULES, types } from "./registry.ts";
 import { t as txt, TEXT } from "./strings.ts";
+import { formatter } from "./format.ts";
+import { pivotWas } from "./shape.ts";
 import { memo } from "./svg.ts";
 import { toTime } from "./ticks.ts";
 import type {
@@ -67,19 +69,20 @@ export const MAX_POINTS = 1000;
 
 const w = (s: string) => s.split(" ");
 const S: Record<string, "string" | "boolean"> = Object.fromEntries([
-  ...w("$schema x y2 was series size name title description locale currency frame").map((k) => [
+  ...w("$schema x y2 series size name title description locale currency frame").map((k) => [
     k,
     "string",
   ]),
-  ...w(
-    "horizontal labels legend endLabels tooltip drill drillOut zoom grid xAxis yAxis table animate",
-  ).map((k) => [k, "boolean"]),
+  ...w("horizontal labels legend endLabels drill drillOut zoom grid xAxis yAxis table animate").map(
+    (k) => [k, "boolean"],
+  ),
 ]);
 /** Every spec key (schema.json is tested against this). */
 export const KEYS = [
   ...w(
     "type data y path totals aggregate sort limit format titles text yDomain xDomain rules select xType stack forms",
   ),
+  ...w("was tooltip xScale yScale annotate dash"),
   ...w("colors colorBy theme"),
   ...Object.keys(S),
 ];
@@ -98,12 +101,15 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = "treemap,sunburst,sankey";
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge forms:units size:scatter,constellation name:scatter,beeswarm,boxplot,units path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell`,
+    `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge forms:units size:scatter,constellation name:scatter,beeswarm,boxplot,units path:${CPA},dumbbell,${PTH} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation xDomain:scatter drill:${CPA},dumbbell,${DRL} drillOut:${CPA},dumbbell,${DRL} select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter frame:${CPA},scatter,dumbbell xScale:scatter yScale:line,scatter annotate:${CPA} dash:line,area`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
 );
 const AGGS = w("sum mean count min max");
+const ANN = w("max min first last");
+/** Types whose tooltip takes extra fields (tooltip: { fields }). */
+const TIPF = [...CART, "scatter"];
 const FORMS = w("waffle bars swarm");
 const PRESETS = w("auto integer decimal compact percent currency date month year time datetime");
 /** A format template: text, one `{value}` or `{value:preset}`, text. Braces elsewhere are not allowed. */
@@ -124,6 +130,8 @@ const USE: Record<string, string> = {
   y: "the plotted numbers",
   y2: "the right-axis line (orbit: growth)",
   was: "the previous values",
+  "was.by": "the period of long data (the latest is current, the one before previous)",
+  "tooltip.fields": "extra tooltip rows",
   series: "splitting rows into series",
   size: "bubble area",
   name: "point identity",
@@ -135,6 +143,7 @@ const USE: Record<string, string> = {
 };
 const HORIZ = "Use horizontal: true.";
 const SIZED = "Size comes from CSS, or render(spec, { width, height }).";
+const LOG = 'Use yScale: "log" (line, scatter) or xScale: "log" (scatter).';
 const PIE = 'Pie and donut charts are not supported: use "bar" or "treemap".';
 const GEO = 'Use type: "hexmap" (import "mayacharts/geo").';
 const EX =
@@ -161,6 +170,9 @@ const HINTS: Record<string, string> = {
   warn: "Use colorBy: { target: n, warn: n } (kpi, gauge).",
   min: "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).",
   max: "Use yDomain: [min, max] (gauge: the dial range; kpi: the bullet scale).",
+  scale: LOG,
+  logScale: LOG,
+  annotations: 'Use annotate: ["max", "min", "first", "last"] (bar, line, area).',
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -346,6 +358,34 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ["select", 'true or "multi"', (v) => v === true || v === "multi"],
   ["stack", 'a boolean or "percent"', (v) => v === !!v || v === "percent"],
   [
+    "was",
+    "a field name, or { by: field, current?, previous? } for long data",
+    (v) =>
+      typeof v === "string" ||
+      (isObj(v) &&
+        typeof v.by === "string" &&
+        Object.keys(v).every((k) => ["by", "current", "previous"].includes(k)) &&
+        ["current", "previous"].every(
+          (k) => v[k] === undefined || /^(string|number)$/.test(typeof v[k]),
+        ) &&
+        (v.current === undefined || String(v.current) !== String(v.previous))),
+  ],
+  [
+    "tooltip",
+    "a boolean, or { fields: [field names] }",
+    (v) =>
+      typeof v === "boolean" ||
+      (isObj(v) && strs(v.fields, 1) && Object.keys(v).every((k) => k === "fields")),
+  ],
+  ["xScale", '"log"', (v) => v === "log"],
+  ["yScale", '"log"', (v) => v === "log"],
+  [
+    "annotate",
+    `a non-empty array of distinct points: ${ANN.join(", ")}`,
+    (v) => strs(v, 1) && v.every((a) => ANN.includes(a)) && new Set(v).size === v.length,
+  ],
+  ["dash", "a non-empty array of series values (strings)", (v) => strs(v, 1)],
+  [
     "forms",
     `a non-empty array of distinct forms: ${FORMS.join(", ")}`,
     (v) => strs(v, 1) && v.every((f) => FORMS.includes(f)) && new Set(v).size === v.length,
@@ -400,7 +440,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         "unknown-type",
         "type",
         `spec.type = "${type}" needs the "${mod}" module, which is not loaded.`,
-        `Add: import "mayacharts/${mod}"`,
+        `Add: import "mayacharts/${mod}", or without a bundler load maya.${mod}.global.js after maya.core.global.js.`,
       );
     fail(
       "unknown-type",
@@ -514,6 +554,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
           ? "Expected [min, max] (or [max, min] to reverse) with two different finite numbers."
           : "Expected [min, max] with finite numbers and min < max, e.g. [0, 100].",
       );
+    if (d !== undefined && s[k[0] + "Scale"] === "log" && Math.min(d[0]!, d[1]!) <= 0)
+      fail(
+        "invalid-domain",
+        k,
+        `spec.${k} = ${show(d)} reaches 0 or below, which a log axis cannot show.`,
+        "Expected bounds above 0, e.g. [1, 1000].",
+      );
   }
 
   if (s.rules !== undefined) {
@@ -521,11 +568,31 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (!Array.isArray(v) || v.length > 4) bad("rules", v, "an array of at most 4 rules");
     (v as unknown[]).forEach((e, i) => {
       const o = isObj(e) ? e : { y: e };
+      // A slope rule (scatter) is { slope, label? } instead of { y, label? }.
+      const k = Object.hasOwn(o, "slope") ? "slope" : "y";
       // ponytail: |y| <= 1e15 keeps the widened axis span finite.
-      const okY = o.y === "mean" || (Number.isFinite(o.y) && Math.abs(o.y as number) <= 1e15);
+      const okY = o[k] === "mean" || (Number.isFinite(o[k]) && Math.abs(o[k] as number) <= 1e15);
       const okL = o.label === undefined || (typeof o.label === "string" && o.label.length <= 40);
-      if (!okY || !okL || Object.keys(o).some((k) => k !== "y" && k !== "label"))
-        bad(`rules[${i}]`, e, 'a number, "mean" or { y, label?: string of at most 40 characters }');
+      if (!okY || !okL || Object.keys(o).some((x) => x !== k && x !== "label"))
+        bad(
+          `rules[${i}]`,
+          e,
+          'a number, "mean", { y, label? } or { slope, label? }, label <= 40 characters',
+        );
+      if (k === "slope" && t !== "scatter")
+        fail(
+          "option-unsupported",
+          `rules[${i}].slope`,
+          `spec.rules[${i}].slope is not supported with spec.type = "${t}".`,
+          "Slope rules work with: scatter.",
+        );
+      if (s.yScale === "log" && typeof o.y === "number" && o.y <= 0)
+        fail(
+          "invalid-option",
+          `rules[${i}]`,
+          `spec.rules[${i}] = ${o.y} cannot be drawn on a log axis (spec.yScale = "log").`,
+          "A log axis shows values above 0 only.",
+        );
     });
   }
 
@@ -590,6 +657,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       'spec.stack is not supported with spec.type = "line".',
       'Use type "area" (or "bar") to stack series.',
     );
+  if (s.yScale !== undefined && ["bar", "waterfall", "area"].includes(t))
+    fail(
+      "option-unsupported",
+      "yScale",
+      `spec.yScale = "log" is not supported with spec.type = "${t}": its marks start at zero, which a log axis cannot show.`,
+      'Use type: "line" or "scatter" for a log axis.',
+    );
   for (const k in ONLY)
     if (s[k] !== undefined && s[k] !== false && !ONLY[k]!.includes(t))
       fail(
@@ -625,6 +699,22 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       s.was !== undefined && (!!s.stack || Array.isArray(y)),
       "was",
       "spec.was cannot be combined with spec.stack or a y array.",
+    ],
+    [
+      isObj(s.was) && s.was.by === s.x,
+      "was",
+      "spec.was.by cannot be spec.x: it names the period field of long data, not the category.",
+    ],
+    [
+      isObj(s.tooltip) && !TIPF.includes(t),
+      "tooltip",
+      `spec.tooltip.fields is not supported with spec.type = "${t}".`,
+      `spec.tooltip.fields works with: ${TIPF.join(", ")}.`,
+    ],
+    [
+      s.dash !== undefined && s.series === undefined,
+      "dash",
+      "spec.dash needs spec.series: it names series values to draw dashed.",
     ],
     [
       s.y2 !== undefined && s.horizontal === true,
@@ -706,6 +796,10 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       s.xType,
       s.format,
       s.titles,
+      s.tooltip,
+      s.dash,
+      s.xScale,
+      s.yScale,
     ],
     (_, v) => (typeof v === "bigint" ? String(v) : v),
   );
@@ -733,6 +827,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         ["series", s.series],
         ["y2", s.y2],
         ["was", s.was],
+        ["was.by", isObj(s.was) ? s.was.by : undefined],
+        ...arr("tooltip.fields", isObj(s.tooltip) ? (s.tooltip.fields as string[]) : []),
         ["size", s.size],
         ["name", s.name],
         ...arr("path", (path as string[] | undefined) ?? []),
@@ -789,6 +885,32 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       if (typeof s.size === "string") numeric(s.size, "non-numeric-field", "size");
       for (const k of ["y2", "was"])
         if (typeof s[k] === "string") numeric(s[k] as string, "non-numeric-field", k);
+      // Aggregated marks combine tooltip fields by spec.aggregate; scatter shows the row's value.
+      if (isObj(s.tooltip) && t !== "scatter")
+        for (const f of s.tooltip.fields as string[])
+          numeric(f, "non-numeric-field", "tooltip.fields");
+      // Values matched as strings, as frame values are: a typo would draw nothing silently.
+      const among = (p: string, f: string, vals: unknown[], what: string) => {
+        const seen = new Set(rows.map((r) => (r[f] == null ? txt(s, "blank") : String(r[f]))));
+        vals.forEach((v, i) => {
+          if (v === undefined || seen.has(String(v))) return;
+          const pi = p === "dash" ? `${p}[${i}]` : p;
+          fail(
+            "invalid-option",
+            pi,
+            `spec.${pi} = ${show(v)} is not a value of ${what} in spec.data.`,
+            `Values found: ${[...seen].slice(0, 20).join(", ")}.`,
+            dym(String(v), [...seen]),
+          );
+        });
+      };
+      if (isObj(s.was)) {
+        const b = s.was.by as string;
+        among("was.current", b, [s.was.current], `spec.was.by ("${b}")`);
+        among("was.previous", b, [s.was.previous], `spec.was.by ("${b}")`);
+      }
+      if (strs(s.dash) && typeof s.series === "string")
+        among("dash", s.series, s.dash, `spec.series ("${s.series}")`);
       if (t === "dumbbell" && typeof s.series === "string") {
         const n = new Set(rows.map((r) => String(r[s.series as string]))).size;
         if (n !== 2)
@@ -811,6 +933,23 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         });
       if (typeof colorBy === "string" && colorBy !== "sign")
         numeric(colorBy, "non-numeric-field", "colorBy");
+      const logs: [string, string][] = [
+        ...(s.yScale === "log" ? ys.map((f): [string, string] => [f, "yScale"]) : []),
+        ...(s.xScale === "log" && typeof s.x === "string"
+          ? [[s.x, "xScale"] as [string, string]]
+          : []),
+      ];
+      for (const [f, o] of logs)
+        scan(f, (v, i) => {
+          if (typeof v !== "number" || v > 0) return;
+          const p = `data[${i}].${f}`;
+          fail(
+            "non-positive-value",
+            p,
+            `spec.${p} is ${v}, but spec.${o} = "log" shows values above 0 only.`,
+            `Filter first: data.filter(r => r.${f} > 0), or drop spec.${o} for a linear axis.`,
+          );
+        });
       if (isPath || t === "funnel" || t === "ridgeline")
         for (const f of ys)
           scan(f, (v, i) => {
@@ -939,6 +1078,19 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
           : frameRows,
       )
     : frameRows;
+  // spec.was long form: pivot the periods into the wide form the marks read (shape.ts).
+  const wb =
+    typeof spec.was === "object"
+      ? {
+          by: spec.was.by,
+          current: spec.was.current === undefined ? null : String(spec.was.current),
+          previous: spec.was.previous === undefined ? null : String(spec.was.previous),
+        }
+      : null;
+  const pv = wb
+    ? pivotWas(rows, x, spec.series ?? null, measures[measure]!, wb, spec.aggregate ?? "sum")
+    : null;
+  const data = pv ? pv.rows : rows;
   const forms = spec.forms ?? (spec.type === "units" ? (FORMS as ResolvedSpec["forms"]) : []);
   // Units: the group is the series (legend toggles, view.hidden and colors by group), unless colorBy colours the dots.
   const series = spec.series ?? (spec.type === "units" && !spec.colorBy ? spec.x! : null);
@@ -958,11 +1110,20 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
         ? measures.map((m) => [m, g(cb as Goal)])
         : entries<Goal>(cb as Record<string, Goal>).map(([k, v]) => [k, g(v)]),
   );
-  return {
+  const tip = spec.tooltip;
+  const titles = new Map([
+    // A scatter names its axes by field: two numeric axes say nothing otherwise.
+    ...(spec.type === "scatter" ? [spec.x!, measures[measure]!] : []).map((k): [string, string] => [
+      k,
+      k,
+    ]),
+    ...entries<string>(spec.titles),
+  ]);
+  const out: ResolvedSpec = {
     type: spec.type,
     data: drilled.length
-      ? rows.filter((r) => drilled.every((d, i) => String(r[full[i]!]) === d))
-      : rows,
+      ? data.filter((r) => drilled.every((d, i) => String(r[full[i]!]) === d))
+      : data,
     frame: F ? [F, fv, fi] : null,
     x,
     xType: spec.xType ?? "auto",
@@ -971,7 +1132,13 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     measure,
     series,
     y2: spec.y2 ?? null,
-    was: spec.was ?? null,
+    was: typeof spec.was === "string" ? spec.was : (wb?.by ?? null),
+    wasBy: wb,
+    dash: new Set(spec.dash),
+    tipFields: typeof tip === "object" ? [...tip.fields] : [],
+    xScale: spec.xScale ?? "linear",
+    yScale: spec.yScale ?? "linear",
+    annotate: [...(spec.annotate ?? [])],
     forms,
     form: Math.max(0, Math.min(view.form ?? 0, forms.length - 1)),
     path,
@@ -995,13 +1162,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
       ...measures.flatMap((m) => (spec.stack === "percent" ? [[m, "percent"] as const] : [])),
       ...(typeof f === "string" ? measures.map((m) => [m, f] as const) : entries<FieldFormat>(f)),
     ]),
-    // A scatter names its axes by field: two numeric axes say nothing otherwise.
-    titles: new Map([
-      ...(spec.type === "scatter" ? [spec.x!, measures[measure]!] : []).map(
-        (k): [string, string] => [k, k],
-      ),
-      ...entries<string>(spec.titles),
-    ]),
+    titles,
     labels: spec.labels ?? null,
     text: { ...spec.text },
     title: spec.title ?? null,
@@ -1012,7 +1173,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
         (spec.y2 !== undefined && spec.type === "bar") ||
         spec.type === "waffle" ||
         spec.type === "hexmap"),
-    tooltip: spec.tooltip ?? true,
+    tooltip: tip !== false,
     drill: spec.drill ?? false,
     select: spec.select ?? false,
     zoom: spec.zoom ?? false,
@@ -1023,8 +1184,15 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     currency: spec.currency ?? "USD",
     yDomain: spec.yDomain ?? null,
     xDomain: spec.xDomain ?? null,
-    rules: (spec.rules ?? []).map((e) =>
-      typeof e === "object" ? { y: e.y, label: e.label ?? null } : { y: e, label: null },
+    rules: (spec.rules ?? []).flatMap((e) =>
+      typeof e !== "object"
+        ? [{ y: e, label: null }]
+        : "y" in e
+          ? [{ y: e.y, label: e.label ?? null }]
+          : [],
+    ),
+    slopes: (spec.rules ?? []).flatMap((e) =>
+      typeof e === "object" && "slope" in e ? [{ k: e.slope, label: e.label ?? null }] : [],
     ),
     table: spec.table ?? true,
     animate: spec.animate ?? true,
@@ -1037,4 +1205,8 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     goals,
     theme: spec.theme ?? {},
   };
+  // The ghosts are titled by the previous period (format[by]) unless titles names `by`.
+  if (wb && pv?.previous != null && !titles.has(wb.by))
+    titles.set(wb.by, formatter(out, wb.by)(pv.previous));
+  return out;
 }

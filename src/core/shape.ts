@@ -1,7 +1,7 @@
 import { cbField, memo, OTHER } from "./svg.ts";
 import { toTime } from "./ticks.ts";
 import { MAX_MARKS, MAX_POINTS } from "./validate.ts";
-import type { Aggregate, Cell, ResolvedSpec, Shaped, View } from "./types.ts";
+import type { Aggregate, Cell, ResolvedSpec, Row, Shaped, View } from "./types.ts";
 
 /** Reducer for one aggregate; shared with hierarchy.ts. Empty: null (count: 0). A class: a million categories hold a million of these. */
 class Reducer {
@@ -543,6 +543,27 @@ function reduceTime(
     (_, k) => rest[Math.floor(((k + 0.5) * rest.length) / room)]!,
   );
   return [...pin, ...picked].sort((a, b) => a - b);
+}
+
+/**
+ * spec.was long form (#60), called by resolve() after frame and blank fill, before drill.
+ * Periods: `w.current` / `w.previous` when set (matched as String of the `w.by` value), else the
+ * latest distinct value and the one before it (all ISO dates or epoch ms: by time; else data order).
+ * Returns one row per (x, series) holding the current period's `y` combined by `aggregate` and,
+ * under the key `w.by`, the previous period's (missing when it has no rows), so marks read the
+ * wide form unchanged; other periods are dropped. `previous` is the previous period's raw value
+ * (the default ghost title), null when there is none. Memoise on `rows` (svg.ts memo).
+ */
+export function pivotWas(
+  rows: readonly Row[],
+  x: string,
+  series: string | null,
+  y: string,
+  w: { by: string; current: string | null; previous: string | null },
+  aggregate: Aggregate,
+): { rows: readonly Row[]; previous: Row[string] | null } {
+  void [x, series, y, w, aggregate]; // TODO(#60): stub from the contract phase
+  return { rows, previous: null };
 }
 
 /** A field (default: the colorBy field; also spec.was) aggregated per (category, series) like the marks; null without one. */

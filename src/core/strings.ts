@@ -79,6 +79,8 @@ export const TEXT = {
   mean: "Average",
   /** Description name of an unlabelled numeric rule ("Reference line: 100."). */
   rule: "Reference line",
+  /** Description with spec.xScale or spec.yScale "log": {0} = the axis title. */
+  log: "{0} on a log scale",
   /** Frame playback button (spec.frame), and its label while playing. */
   play: "Play",
   pause: "Pause",

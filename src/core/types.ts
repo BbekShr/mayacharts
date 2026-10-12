@@ -36,6 +36,9 @@ export type ChartType =
 
 export type Aggregate = "sum" | "mean" | "count" | "min" | "max";
 
+/** Points `annotate` labels: the largest and smallest value, the first and last category. */
+export type Annotate = "max" | "min" | "first" | "last";
+
 export type NumberPreset = "auto" | "integer" | "decimal" | "compact" | "percent" | "currency";
 export type DatePreset = "date" | "month" | "year" | "time" | "datetime";
 export type FormatPreset = NumberPreset | DatePreset;
@@ -158,15 +161,21 @@ export interface ChartSpec<R extends object = Row> {
   /** Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction.
    * @example y2: "units" */
   y2?: Field<R>;
-  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value). bar kpi gauge; not with `stack` or a `y` array.
-   * @example was: "lastYear" */
-  was?: Field<R>;
+  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). bar kpi gauge; not with `stack` or a `y` array.
+   * @example was: "lastYear" or was: { by: "year" } */
+  was?:
+    | Field<R>
+    | {
+        readonly by: Field<R>;
+        readonly current?: string | number;
+        readonly previous?: string | number;
+      };
   /** Forms a units chart switches between, first one shown (view.form picks another); the element adds a form control when there are 2 or more. Default all three. units only.
    * @example forms: ["waffle", "swarm"] */
   forms?: readonly ("waffle" | "bars" | "swarm")[];
 
-  /** A preset for every `y`, or a preset / Intl options per field. Display only.
-   * @example format: { revenue: "currency", month: "month", margin: { style: "percent", suffix: " gm" } } */
+  /** A preset for every `y`, or a preset / Intl options per field; Intl options also take `prefix` and `suffix` text. Display only.
+   * @example format: { revenue: "currency", month: "month", gap: { maximumFractionDigits: 1, signDisplay: "exceptZero", suffix: " pts" } } */
   format?: FormatPreset | FormatTemplate | Readonly<Partial<Record<Field<R>, FieldFormat>>>;
   /** Display names by field: axis titles (shown only when set), tooltip, legend, table.
    * @example titles: { revenue: "Revenue ($)" } */
@@ -195,13 +204,30 @@ export interface ChartSpec<R extends object = Row> {
   /** Fixed x domain. scatter only.
    * @example xDomain: [0, 1] */
   xDomain?: readonly [number, number];
-  /** Reference lines across the value axis (at most 4): a number, or "mean" of the visible values (stacked: of the category totals), optionally labelled. bar line area scatter.
-   * @example rules: [100, "mean"] or rules: [{ y: 100, label: "Target" }] */
-  rules?: readonly (number | "mean" | { readonly y: number | "mean"; readonly label?: string })[];
+  /** Reference lines across the value axis (at most 4): a number, or "mean" of the visible values (stacked: of the category totals), optionally labelled. Scatter also takes `{ slope }`: the line y = slope * x through the origin, "mean" = sum of y / sum of x. bar line area scatter.
+   * @example rules: [100, "mean"] or rules: [{ y: 100, label: "Target" }, { slope: "mean", label: "Average price" }] */
+  rules?: readonly (
+    | number
+    | "mean"
+    | { readonly y: number | "mean"; readonly label?: string }
+    | { readonly slope: number | "mean"; readonly label?: string }
+  )[];
+  /** Log value axis (powers of 10 ticks); every plotted value must be above 0. line scatter (bars start at zero, so not bar).
+   * @example yScale: "log" */
+  yScale?: "log";
+  /** Log x axis; every x must be above 0. scatter only.
+   * @example xScale: "log" */
+  xScale?: "log";
+  /** Label these points of each visible series with their value: "max", "min", "first", "last". bar line area.
+   * @example annotate: ["max", "last"] */
+  annotate?: readonly Annotate[];
+  /** Series values drawn dashed (line, the area outline), e.g. last year against this year. line area; needs `series`.
+   * @example dash: ["2024"] */
+  dash?: readonly string[];
 
-  /** Hover/keyboard tooltip. Default true.
-   * @example tooltip: false */
-  tooltip?: boolean;
+  /** Hover/keyboard tooltip. Default true. `{ fields }` adds those fields as rows (also data table columns), formatted by `format`; bar, line and area combine numeric fields by `aggregate`. fields: bar line area scatter.
+   * @example tooltip: false or tooltip: { fields: ["pricePerUnit"] } */
+  tooltip?: boolean | { readonly fields: readonly Field<R>[] };
   /** Legend; clicking toggles series. Default: true when `series` is set, and for waffle, hexmap (colour ramp) and units (toggles groups).
    * @example legend: false */
   legend?: boolean;
@@ -293,6 +319,10 @@ export interface MayaErrorDetail {
   path: string;
   message: string;
 }
+/** maya-settled: after the last animation of a render (with maya-render when nothing animates), and after maya-error with that error. */
+export interface MayaSettledDetail {
+  error: Error | null;
+}
 
 export type ErrorCode =
   | "spec-not-object"
@@ -340,8 +370,20 @@ export interface ResolvedSpec {
   series: string | null;
   /** Right-axis line measure (bar), or growth (orbit); null when unset. */
   y2: string | null;
-  /** spec.was, the previous value field (bar); null when unset. */
+  /** The field marks read the previous value from (bar, kpi, gauge): spec.was, or with the long form
+   * `wasBy.by`, which the pivot fills with the previous period's value; null when unset. */
   was: string | null;
+  /** spec.was long form: period field and the explicit periods as strings (null = latest, one before).
+   * `data` is already pivoted (shape.ts pivotWas); titles default `by` to the previous period, formatted. */
+  wasBy: { by: string; current: string | null; previous: string | null } | null;
+  /** spec.dash as a set of series keys (empty when unset). */
+  dash: ReadonlySet<string>;
+  /** spec.tooltip.fields ([] when tooltip is a boolean). */
+  tipFields: readonly string[];
+  xScale: "linear" | "log";
+  yScale: "linear" | "log";
+  /** spec.annotate ([] when unset). */
+  annotate: readonly Annotate[];
   /** Units forms ([] for other types; all three when unset). */
   forms: readonly ("waffle" | "bars" | "swarm")[];
   /** Index into `forms` from view.form, clamped. */
@@ -387,8 +429,10 @@ export interface ResolvedSpec {
   currency: string;
   yDomain: readonly [number, number] | null;
   xDomain: readonly [number, number] | null;
-  /** spec.rules in object form ([] when unset). */
+  /** spec.rules across the value axis, in object form ([] when unset). */
   rules: readonly { y: number | "mean"; label: string | null }[];
+  /** spec.rules `{ slope }` items (scatter): y = k * x through the origin. */
+  slopes: readonly { k: number | "mean"; label: string | null }[];
   table: boolean;
   animate: boolean;
   colors: readonly string[] | ReadonlyMap<string, string> | null;
@@ -457,6 +501,8 @@ export interface BandScale {
 export interface LinearScale {
   domain: readonly [number, number];
   range: readonly [number, number];
+  /** Logarithmic (spec.xScale / yScale "log"): `of` maps log10 of the value; domain stays in data units. */
+  log?: boolean;
   of(value: number): number;
 }
 
@@ -509,7 +555,7 @@ export interface Layout {
 /** One screen axis a mark asks for. `field` names the title/format source. */
 export type Axis =
   | { kind: "band"; field: string; domain: readonly string[] }
-  | { kind: "linear"; field: string; domain: readonly [number, number] }
+  | { kind: "linear"; field: string; domain: readonly [number, number]; log?: boolean }
   /** Categories placed at their time; `t` parallel to `domain` (Shaped.time). */
   | { kind: "time"; field: string; domain: readonly string[]; t: readonly number[] }
   | null;
@@ -543,8 +589,15 @@ export interface MarkCtx {
   y2: LinearScale | null;
   /** Display text for a raw value of `field` (step = tick step for number decimals). */
   fmt(field: string, v: unknown, step?: number): string;
-  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. `key` = the data-key of the mark it labels. */
-  label(x: number, y: number, text: string, place: LabelPlace, key?: string): boolean;
+  /** Queue a value label into `<g data-maya="labels">`; false if it collided and was dropped. `key` = the data-key of the mark it labels; `ann` marks a spec.annotate label (written as data-ann). */
+  label(
+    x: number,
+    y: number,
+    text: string,
+    place: LabelPlace,
+    key?: string,
+    ann?: Annotate,
+  ): boolean;
   /** colorBy tone for a value of `field` (default the active measure): "good" | "warn" | "bad" ("zero" for 0 under sign), or null without sign or a target for that field. */
   tone(v: number, field?: string): Tone | null;
   /** colorBy ramp bucket 0..9 for a value of the colorBy field; null when colorBy is not a field. */

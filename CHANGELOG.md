@@ -4,6 +4,26 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Added
+
+- `was: { by, current?, previous? }` takes long data, one row per item and period: the latest period is current, the one before it previous, and the ghosts are titled by that period. No pivot before the spec (#60).
+- `maya-settled` event and the `el.settled` promise: the chart has drawn and its animations have finished, or it failed. Hosts that snapshot charts should wait for it instead of `maya-render` (#59, #62).
+- `mayacharts/host` (`maya.host` in the global builds): `thoughtspot(viz, spec)` and `columns({ schema, data }, spec)` build rows from a columnar result, match fields given as a RegExp or a case-insensitive name, and signal render-complete once settled (#61).
+- `maya.core.global.js` plus one `maya.<module>.global.js` per module, so a page without a bundler loads only the types it draws. The unknown-type error names the file to add (#67).
+- `yScale: "log"` (line, scatter) and `xScale: "log"` (scatter). Bars refuse it with a hint, and values at or below 0 fail with `non-positive-value` (#68).
+- `rules: [{ slope }]` on scatter: the line y = slope * x through the origin, `"mean"` for the average ratio (#68).
+- `dash: [series values]` draws those series dashed on line and area (#68).
+- `tooltip: { fields }` adds fields to the tooltip and the data table (#68).
+- `annotate: ["max", "min", "first", "last"]` labels those points on bar, line and area (#68).
+- Text key `log` for the description of a log axis.
+
+### Docs
+
+- `format` options `prefix` and `suffix` are documented, with an example (#68).
+- "Embedding in hosts" and "Height" sections in the docs (#61, #63).
+
 ## 0.15.0 - 2026-10-10
 
 ### Breaking

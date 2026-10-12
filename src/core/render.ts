@@ -138,19 +138,26 @@
  *   title and the 2 largest relative moves (y - was) / |was| (zero or null was skipped, ties in
  *   data order), e.g. "Since Last week: North +12%, West -10%.". The element may treat a ghost's
  *   geometry as its bar's previous state on first paint.
+ *   Long form (was: { by, current?, previous? }): resolve() calls shape.ts pivotWas, which keeps
+ *   two periods and writes the previous period's value under the key `by`, so ResolvedSpec.was =
+ *   by and marks read the wide form unchanged; titles default `by` to the previous period
+ *   formatted by format[by] (ResolvedSpec.wasBy keeps the field and the explicit periods).
  *
  * Outputs
  *   render(spec, opts)      standalone `<svg class="maya-root">` with an embedded <style>.
  *                           Works as a file, in <img>, or rasterized by the hosted API.
  *   renderShell(spec, opts) `<maya-chart>` with Declarative Shadow DOM + JSON spec child.
  *                           The JSON child is the spec with rows projected to referenced
- *                           fields only (x y series y2 was frame size name path colorBy,
- *                           format and titles keys). `opts.nonce` lands on the shell's <style>.
+ *                           fields only (x y series y2 was (or was.by) frame size name path
+ *                           colorBy, tooltip.fields, format and titles keys). `opts.nonce` lands on the shell's <style>.
  *   renderParts(spec, opts) the pieces (svg without <style>, legend, controls, crumbs, table,
  *                           title, override style + vars, warnings). `table` is a getter that
  *                           builds the data table on first read (the element reads it idle).
  *   The element renders in a microtask after a property set, and in the next frame after a
- *   resize or while it waits for its JSON spec child.
+ *   resize or while it waits for its JSON spec child. Each paint dispatches maya-render (or
+ *   maya-error); maya-settled { error: null } follows once that paint's animations finish (same
+ *   task when nothing animates) and maya-settled { error } follows a maya-error. el.settled is a
+ *   promise for the current or next paint: it resolves on settle, rejects with the MayaSpecError.
  *
  * Shadow content (identical from renderShell and the element, built by `shellInner`).
  * Slot order is fixed:
@@ -176,7 +183,9 @@
  *        data-plot="x y w h" data-n="categories" [data-xd="lo hi" data-yd="lo hi" for
  *        linear-x types instead of data-n] [data-dir="h" when horizontal]
  *        [data-drill when a click can drill one level further] [data-pt when the body holds a
- *        [data-maya=line] path: its point circles are hidden until active]>
+ *        [data-maya=line] path: its point circles are hidden until active]
+ *        [data-log="x", "y" or "x y" for log axes: data-xd/data-yd stay in data units, so the
+ *        element inverts pixels through log10 (zoom.ts)]>
  *     <desc id="maya-d">  (named by aria-label; standalone render() adds a <title>, no ids)
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
@@ -191,7 +200,9 @@
  *                              (stacked: the category totals; Other left out). Numeric rules widen
  *                              the value domain; a yDomain wins and hides rules outside it. No
  *                              data-key: animate.ts diffs only marks, so the group crossfades with
- *                              the other non-mark groups.
+ *                              the other non-mark groups. A scatter { slope } rule draws
+ *                              <line data-slope> from the plot edge to edge along y = k * x, then
+ *                              its <text> at the line's far end.
  *     <g data-maya="labels">   value labels (text), from ctx.label and the marks' own m.labels. A label
  *                              carries data-key = the data-key of the mark it labels (bar and
  *                              waterfall incl. y2 dots, heatmap, dumbbell, scatter, beeswarm, ridgeline
@@ -199,6 +210,9 @@
  *                              its path's key (l~SERIES, l~ROW). Unkeyed (the element falls back to
  *                              index): kpi, table, parallel axis ticks and titles, rule labels, the
  *                              hierarchy, flow, radial and geo modules, density-bin plots, leaders.
+ *                              A spec.annotate label (ctx.label's ann argument) carries
+ *                              data-ann="max|min|first|last" and its point's data-key; it goes
+ *                              through the same collision queue, before plain value labels.
  *     <g data-maya="cross">    crosshair (line/area), moved via CSSOM transform
  *     <g data-maya="hits">     invisible enlarged targets (see below)
  *   Empty: no row holds a number in any measure or y2. Grid/axes/groups
@@ -213,7 +227,10 @@
  *                       none), data-f (formatted value). data-neg when value < 0.
  *                       Optional: data-tone="good|warn|bad|zero", data-q (ramp step), data-other
  *                       (limit roll-up), data-depth (breadcrumb button), data-selected (written by
- *                       the element on selected marks).
+ *                       the element on selected marks), data-more (spec.tooltip.fields: one
+ *                       "title\tvalue" line per field, joined by "\n", the scatter data-f grammar;
+ *                       on the hit too; the tooltip adds them as rows under the mark's row),
+ *                       data-dash (path marks and points of a spec.dash series).
  *   [data-maya=labels] text and band tick text in axis-x/axis-y: data-key only (see the groups above)
  *                       bar + y2: one `path[data-maya=line]` plus a point circle mark per
  *                       non-null category, data-s = series count % 8, data-series = the
@@ -256,6 +273,8 @@
  *                       Ramp/tone legends are non-button <div data-maya="ramp|tone">.
  *                       spec.was on bar (unless legend:false) appends <div class="maya-legend">
  *                       <span data-past><i></i>WAS TITLE</span></div>, the ghosts' key.
+ *                       A spec.dash series' button (and its end label) carries data-dash.
+ *                       No legend at all (series, was key, tone, ramp) when the chart is empty.
  *   The tooltip reads its content from these attributes; the element never sees rows.
  *
  * Key grammar (svg.ts key(...parts)): each part encodeURIComponent'ed with `~` -> %7E,
@@ -269,7 +288,8 @@
  * CSS hooks theme.ts styles (interaction modules never touch theme.ts):
  *   .maya-ctl [role=radio][aria-checked]  .maya-play  .maya-crumbs  .maya-reset  .maya-err
  *   [data-maya=brush]  [data-maya=cross] (scatter: guide lines + text pills, --x/--y)
- *   [data-maya=link]  [data-depth]  [data-selected]  [data-past] (was ghosts)
+ *   [data-maya=link]  [data-depth]  [data-selected]  [data-past] (was ghosts)  [data-dash] (dashed
+ *   series: path, legend swatch, end label)  [data-ann] (annotate labels)  line[data-slope]
  *   [data-maya=rules] line|text  svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   Theme-only hooks (set by a mark or module, styled in theme.ts, never read by the element):
  *   data-ink data-hm data-nm data-ring data-arc data-disc data-ridge data-kpi data-polar data-tint
@@ -928,7 +948,8 @@ function project(spec: ChartSpec): ChartSpec {
     ...(typeof spec.y === "string" ? [spec.y] : spec.y),
     spec.series,
     spec.y2,
-    spec.was,
+    typeof spec.was === "object" ? spec.was.by : spec.was,
+    ...(typeof spec.tooltip === "object" ? spec.tooltip.fields : []),
     spec.frame,
     spec.size,
     spec.name,
