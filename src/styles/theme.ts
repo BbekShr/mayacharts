@@ -31,6 +31,7 @@ const C =
   rng(3, 1)
     .map((i) => `.maya-ctl[data-i="${i}"]::before{transform:translateX(${i * 100}%)}`)
     .join("");
+const R = ".maya[data-legend=right]";
 const B = "border:0;background:none;font:inherit;color:var(--maya-fg-muted);cursor:pointer";
 // radial
 const RADIAL =
@@ -131,15 +132,14 @@ export const css =
   ".maya-sub{margin:-3px 0 8px;color:var(--maya-fg-muted);line-height:1.35}" +
   // Legend placement (slot order never changes): bottom moves it after the chart; right makes the chart a grid whose last row holds the chart and the legend side by side (up to six rows above for title, subtitle, controls and crumbs).
   ".maya[data-legend=bottom] .maya-legend{order:1;margin:8px 0 0}" +
-  ".maya[data-legend=right]{display:grid;grid-template-columns:minmax(0,1fr) max-content;grid-template-rows:repeat(6,auto) minmax(0,1fr)}" +
-  ".maya[data-legend=right]>:not(.maya-box,.maya-legend){grid-column:1/-1}" +
-  ".maya[data-legend=right] :is(.maya-box,.maya-legend){grid-row:7}.maya[data-legend=right] .maya-box{grid-column:1}.maya[data-legend=right] .maya-legend{grid-column:2;flex-direction:column;align-items:flex-start;align-self:start;flex-wrap:nowrap;max-width:30cqw;margin:0 0 0 12px}" +
+  `${R}{display:grid;grid-template:repeat(6,auto) minmax(0,1fr)/minmax(0,1fr) max-content}${R}>*{grid-column:1/-1}${R} .maya-box{grid-area:7/1}` +
+  `${R} .maya-legend{grid-area:7/2;flex-flow:column;align-items:start;align-self:start;max-width:30cqw;margin:0 0 0 12px}` +
   ".maya-legend,.maya-crumbs{color:var(--maya-fg-muted);display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;margin:0 0 8px}" +
   ".maya-crumbs{min-height:1.25em;line-height:1.25}" +
   // The current crumb is where you are, not a link: ink, bold, no hover.
   ".maya-crumbs [aria-current]{padding:2px 6px;color:var(--maya-fg);font-weight:600}" +
-  `.maya-legend :is(button,span),.maya-crumbs button,.maya-reset,.maya-play{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
-  ":is(.maya-legend,.maya-crumbs) button:hover{background:var(--maya-grid);color:var(--maya-fg)}" +
+  `.maya-legend :is(button,span),:is(.maya-crumbs,.maya-tip) button,.maya-reset,.maya-play{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
+  ":is(.maya-legend,.maya-crumbs,.maya-tip) button:hover{background:var(--maya-grid);color:var(--maya-fg)}" +
   ".maya-legend [aria-pressed=false]{opacity:.5}.maya-legend [aria-pressed=false] i{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}" +
   ":is(button,a):focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
   "i{width:10px;height:10px;border-radius:3px;background:var(--c)}" +
@@ -188,10 +188,10 @@ export const css =
   // Direct end labels of line and area, in their series colour.
   "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
   // Dashed series (spec.dash): square caps so the gaps stay open (the dash itself is the path's stroke-dasharray, in pathLength units); the legend key is the same dash. Annotations (spec.annotate) are the quiet bold; a slope rule is a faint diagonal.
-  "[data-maya=line][data-dash]{stroke-linecap:butt}.maya-legend [data-dash] i{width:14px;height:2px;border-radius:0;background:repeating-linear-gradient(90deg,var(--c) 0 5px,#0000 5px 8px)}[data-maya=labels] [data-ann]{font-weight:600}" +
+  "[data-maya=line][data-dash]{stroke-linecap:butt}.maya-legend [data-dash] i{width:14px;height:2px;border-radius:0;background:repeating-linear-gradient(90deg,var(--c) 0 5px,#0000 5px 8px)}[data-ann]{font-weight:600}" +
   "line[data-slope]{stroke:var(--maya-fg-muted);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}" +
   // Rules across the category axis (an event) and shaded value ranges (a target band): quiet, behind the data's eye.
-  "[data-maya=rules] line[data-xrule]{stroke:var(--maya-fg-muted);stroke-dasharray:none}[data-maya=rules] rect[data-band]{fill:var(--maya-accent);fill-opacity:.1;stroke:var(--maya-accent);stroke-opacity:.45}[data-maya=labels] [data-ann=note]{font-weight:500;font-style:italic}" +
+  "[data-maya=rules] line[data-xrule]{stroke:var(--maya-fg-muted);stroke-dasharray:none}rect[data-band]{fill:var(--maya-accent);fill-opacity:.1;stroke:var(--maya-accent);stroke-opacity:.45}[data-ann=note]{font-weight:500;font-style:italic}" +
   // Break marks on a clipped Other bar; parallel tick halos and end-label leaders.
   "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
   // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.
@@ -225,9 +225,7 @@ export const css =
   ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
   "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}.maya-tip[data-side]{position-area:inline-end span-block-end;position-try-fallbacks:flip-inline;margin:0 12px}}" +
   ".maya-tip.maya-open{opacity:1;translate:none}" +
-  ".maya-tip button{" +
-  B +
-  ";display:block;margin:6px -4px -4px;padding:2px 4px;border-radius:6px;color:var(--maya-fg);pointer-events:auto}.maya-tip button:hover{background:var(--maya-grid)}" +
+  ".maya-tip button{display:block;margin:6px -4px -4px;padding:2px 4px;color:var(--maya-fg);pointer-events:auto}" +
   ".maya-tip b{display:block;margin:0 0 4px;font-weight:600}" +
   ".maya-tip div{display:flex;align-items:center;gap:8px;color:color-mix(in oklab,var(--maya-tooltip-fg) 72%,transparent)}.maya-tip i{width:8px;height:8px;border-radius:50%}" +
   ".maya-tip [data-v]{margin-inline-start:auto;padding-inline-start:12px;font-weight:600;color:var(--maya-tooltip-fg)}.maya-tip [data-on]{color:var(--maya-tooltip-fg)}" +
@@ -242,8 +240,8 @@ export const css =
   FLOW +
   // Treemap names: dark ink on full-strength slots; drilled tiles tint toward white so it holds.
   "svg:has(rect[data-depth]) [data-maya=labels] [data-in]{fill:#12161c}" +
-  "rect[data-lt]{fill:color-mix(in oklab,var(--c) var(--t),#fff)}" +
-  rng(8)
+  "rect[data-lt]{fill:color-mix(in oklab,var(--c) var(--t,100%),#fff)}" +
+  rng(7, 1)
     .map((n) => `[data-lt="${n}"]{--t:${100 - n * 8}%}`)
     .join("") +
   // Nested treemap parent: a quiet frame of its branch colour behind its children.

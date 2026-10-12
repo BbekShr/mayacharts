@@ -170,21 +170,17 @@ const treemap: Mark = {
       // 0.5 px inset below the top level: siblings sit 1 px apart (stroke adds more).
       const g = n.depth > 1 ? 0.5 : 0;
       const [bx, by, bw, bh] = [x + g, y + g, Math.max(0, w - 2 * g), Math.max(0, h - 2 * g)];
-      if (!n.children.length) {
-        if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
+      const tile = (more: Record<string, number | boolean | null>) => {
         const a = attrs(n);
-        // Lightness by value against the largest sibling, in 8 steps (ponytail: values within 1/8 share a tint).
-        const lt = tinted ? Math.round(7 * (1 - n.value / top)) : null;
-        marks += el("rect", {
-          ...a,
-          "data-lt": lt,
-          x: r(bx),
-          y: r(by),
-          width: r(bw),
-          height: r(bh),
-        });
+        marks += el("rect", { ...a, ...more, x: r(bx), y: r(by), width: r(bw), height: r(bh) });
         // No data-depth on the hit: [data-depth] strokes would outline every grown target.
         hits += hit({ ...a, "data-depth": null }, bx, by, bw, bh);
+        return a;
+      };
+      if (!n.children.length) {
+        if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
+        // Lightness by value against the largest sibling, in 8 steps (ponytail: values within 1/8 share a tint).
+        const a = tile({ "data-lt": tinted ? Math.round(7 * (1 - n.value / top)) : null });
         // Name over value when both fit (the name cut with an ellipsis, never dropped), else "name · value", else the value.
         const [lx, ly, f] = [bx + bw / 2, by + bh / 2, a["data-f"]];
         const cap = Math.floor((bw - 4) / 7.2);
@@ -201,16 +197,7 @@ const treemap: Mark = {
       if (nest && n.depth) {
         // A parent is a quiet tinted frame with its name in a header strip; the pointer over its
         // padding or header hits it, over a child the child (hits are drawn in order).
-        const a = attrs(n);
-        marks += el("rect", {
-          ...a,
-          "data-par": true,
-          x: r(bx),
-          y: r(by),
-          width: r(bw),
-          height: r(bh),
-        });
-        hits += hit({ ...a, "data-depth": null }, bx, by, bw, bh);
+        const a = tile({ "data-par": true });
         const head = bw >= 36 && bh >= 34 ? 17 : 2;
         if (head > 2 && spec.labels !== false) {
           const f = a["data-f"];

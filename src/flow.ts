@@ -16,12 +16,11 @@ interface C {
 const paint = (n: C) => (n.s < 0 ? { "data-neu": true } : { "data-s": n.s });
 // A colors map (by node name) also paints the outer column; slots come from all rows (spec.slots), so a name keeps its colour through a drill.
 const slotOf = (ctx: MarkCtx, n: N) => (ctx.spec.slots.get(n.name) ?? 0) % 8;
-const mapped = (ctx: MarkCtx, n: N) =>
-  !!ctx.spec.colors &&
-  !Array.isArray(ctx.spec.colors) &&
-  (ctx.spec.colors as ReadonlyMap<string, string>).has(n.name);
 const neutral = (ctx: MarkCtx, col: N[]) =>
-  col.forEach((n) => (n.s = mapped(ctx, n) ? slotOf(ctx, n) : -1));
+  col.forEach((n) => {
+    const c = ctx.spec.colors;
+    n.s = c instanceof Map && c.has(n.name) ? slotOf(ctx, n) : -1;
+  });
 // Every node index upstream or downstream of a node along any path; hovering lights them.
 const reach = (ls: L[]) => {
   // Neighbours per node and direction, so a walk reads its own links, not every link per step.
@@ -123,9 +122,7 @@ const nodeAttrs = (ctx: MarkCtx, h: Reach, n: N, c: number, off: number, series 
   "data-depth": n.lv,
   // The next level to drill, short of the last column: the only nodes that take a click (cursor).
   "data-dr":
-    ctx.spec.drill && n.lv + off === ctx.spec.drilled.length && n.lv < ctx.spec.path.length - 1
-      ? true
-      : null,
+    ctx.spec.drill && n.lv + off === ctx.spec.drilled.length && n.lv < ctx.spec.path.length - 1,
 });
 
 /** Rows to nodes (one per name per level) and links (one per adjacent pair, aggregated). */
@@ -221,9 +218,7 @@ export const sankey: Mark = {
     // A drilled view has one root (the drilled node) and keeps its branch colour (spec.hue).
     const tree =
       (roots.length > 1 || spec.drilled.length > 0) && nodes.every((n) => n.lv !== 1 || one(n));
-    tree
-      ? roots.forEach((n) => (n.s = (spec.hue ?? ctx.spec.slots.get(n.name) ?? 0) % 8))
-      : neutral(ctx, roots);
+    tree ? roots.forEach((n) => (n.s = (spec.hue ?? slotOf(ctx, n)) % 8)) : neutral(ctx, roots);
     for (let lv = 1; lv < cols; lv++)
       for (const n of nodes.filter((n) => n.lv === lv)) {
         const from = new Set(ls.filter((l) => l.t === n).map((l) => l.s.s));

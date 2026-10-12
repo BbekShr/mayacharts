@@ -51,16 +51,70 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   const cvOf = colorVals(spec);
   const px = (ci: number) => r(cat.at(ci) + cat.bandwidth / 2);
   const tipOf = spec.tipFields.map((f) => colorVals(spec, f));
+  const series = shaped.visible.map((si) => shaped.cells.filter((c) => c.si === si)); // ascending ci, as shape lays them out
+  const paths = series.map((cells) =>
+    cells.flatMap((c) => (c.value === null ? [] : [[px(c.ci), val.of(c.y1)] as const])),
+  );
+  // Where cell c's label sits off the stroke: the first of above/below/left/right (a peak, trough,
+  // rise or fall prefers its own) whose estimated box meets no segment of its series.
+  const spot = (c: Cell, said?: string) => {
+    const k = shaped.visible.indexOf(c.si);
+    const [cells, path] = [series[k]!, paths[k]!];
+    const i = cells.indexOf(c);
+    const at = (j: number) => (cells[j]?.value == null ? c.y1 : cells[j]!.y1);
+    const [p, q] = [at(i - 1), at(i + 1)];
+    const [lx, ly, text] = [+px(c.ci), val.of(c.y1), said ?? ctx.fmt(spec.y, c.value)];
+    const w = tw(text) + 4;
+    const f = p <= c.y1 && q <= c.y1 ? 0 : p >= c.y1 && q >= c.y1 ? 1 : p < c.y1 ? 2 : 3;
+    // k: 0 above, 1 below, 2 end (left), 3 start (right); l, t the box's left and top.
+    const n = [f, 0, 1, 2, 3].find((k) => {
+      const l = lx + [-w / 2, -w / 2, -5 - w, 5][k]!;
+      const t = ly + (k === 1 ? 2 : -16);
+      if (k === 1 && spec.yDomain && ly >= plot.y + plot.h) return false; // would sit on the axis
+      return path.every(([x1, y1], j) => {
+        const [x0, y0] = path[j - 1] ?? [x1, y1];
+        const [a, b] = [Math.max(x0, l), Math.min(x1, l + w)];
+        if (a > b || x1 === x0) return true;
+        const [ya, yb] = [a, b].map((x) => y0 + ((y1 - y0) * (x - x0)) / (x1 - x0)) as [
+          number,
+          number,
+        ];
+        return Math.max(ya, yb) < t || Math.min(ya, yb) > t + 14;
+      });
+    });
+    return n === undefined
+      ? null
+      : ([
+          lx + [0, 0, -5, 5][n]!,
+          ly - (n > 1 ? 9 : 0),
+          text,
+          (["above", "below", "end", "start"] as const)[n]!,
+          key(shaped.series[c.si], shaped.categories[c.ci]),
+        ] as const);
+  };
+  // spec.annotate, ahead of plain value labels; the labelled point keeps its dot.
+  // ponytail: "last" is skipped beside end labels, which already say it.
+  const done = new Set<Cell>();
+  marked(
+    ctx,
+    series.map((cells) => cells.filter((c) => c.value !== null)),
+    (c) => shaped.categories[c.ci],
+    (c) => c.value!,
+    (c, a, said) => {
+      const sp = spot(c, said);
+      return !!sp && ctx.label(...sp, a) && !!done.add(c);
+    },
+    ctx.gutter ? spec.annotate.filter((a) => a !== "last") : spec.annotate,
+  );
 
   let areas = "";
   let lines = "";
   let dots = "";
   const tx = ctx.ends;
   const ep: [number, number, number, [string, string]][] = [];
-  const told = new Set<number>(); // spec.notes already placed
-  for (const si of shaped.visible) {
+  for (const [k, si] of shaped.visible.entries()) {
     const ser = shaped.series[si]!;
-    const cells: Cell[] = shaped.cells.filter((c) => c.si === si); // ascending ci, as shape lays them out
+    const [cells, path] = [series[k]!, paths[k]!];
     const dash = spec.dash.has(ser);
     let d = "";
     let gap = true;
@@ -78,64 +132,9 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
       ? ((ts.at(-1) ?? 0) - (ts[0] ?? 0)) * (6 / (ts.length || 1))
       : (gaps[gaps.length >> 1] ?? Infinity) * 5;
     let prev = -Infinity;
-    const path = cells.flatMap((c) =>
-      c.value === null ? [] : [[px(c.ci), val.of(c.y1)] as const],
-    );
-    // Where cell i's label sits off the stroke: the first of above/below/left/right (a peak, trough,
-    // rise or fall prefers its own) whose estimated box meets no segment of this series.
-    const spot = (i: number, said?: string) => {
-      const c = cells[i]!;
-      const at = (j: number) => (cells[j]?.value == null ? c.y1 : cells[j]!.y1);
-      const [p, q] = [at(i - 1), at(i + 1)];
-      const [lx, ly, text] = [+px(c.ci), val.of(c.y1), said ?? ctx.fmt(spec.y, c.value)];
-      const w = tw(text) + 4;
-      const f = p <= c.y1 && q <= c.y1 ? 0 : p >= c.y1 && q >= c.y1 ? 1 : p < c.y1 ? 2 : 3;
-      // k: 0 above, 1 below, 2 end (left), 3 start (right); l, t the box's left and top.
-      const k = [f, 0, 1, 2, 3].find((k) => {
-        const l = lx + [-w / 2, -w / 2, -5 - w, 5][k]!;
-        const t = ly + (k === 1 ? 2 : -16);
-        if (k === 1 && spec.yDomain && ly >= plot.y + plot.h) return false; // would sit on the axis
-        return path.every(([x1, y1], j) => {
-          const [x0, y0] = path[j - 1] ?? [x1, y1];
-          const [a, b] = [Math.max(x0, l), Math.min(x1, l + w)];
-          if (a > b || x1 === x0) return true;
-          const [ya, yb] = [a, b].map((x) => y0 + ((y1 - y0) * (x - x0)) / (x1 - x0)) as [
-            number,
-            number,
-          ];
-          return Math.max(ya, yb) < t || Math.min(ya, yb) > t + 14;
-        });
-      });
-      return k === undefined
-        ? null
-        : ([
-            lx + [0, 0, -5, 5][k]!,
-            ly - (k > 1 ? 9 : 0),
-            text,
-            (["above", "below", "end", "start"] as const)[k]!,
-            key(ser, shaped.categories[c.ci]),
-          ] as const);
-    };
-    // spec.annotate: the extremes and ends labelled first (ahead of plain value labels), each point once;
-    // the labelled point keeps its dot. ponytail: "last" is skipped beside end labels, which already say it.
-    const done = new Set<number>();
-    // annotate { x, text }: the note labels the first visible series' point at x (once), ahead of the extremes.
-    for (const [n, { x, text }] of spec.notes.entries()) {
-      const i = cells.findIndex((c) => c.value !== null && shaped.categories[c.ci] === String(x));
-      const sp = i < 0 || told.has(n) ? null : spot(i, text);
-      if (sp && ctx.label(...sp, "note")) (done.add(i), told.add(n));
-    }
-    const live = cells.flatMap((c, i) => (c.value === null ? [] : [i]));
-    for (const [a, k] of marked(
-      live.map((i) => cells[i]!.value!),
-      ctx.gutter ? spec.annotate.filter((a) => a !== "last") : spec.annotate,
-    )) {
-      const sp = spot(live[k]!);
-      if (sp && ctx.label(...sp, a)) done.add(live[k]!);
-    }
     // Area runs: stacked areas treat null as 0 (shape did), so they never break.
     const runs: Cell[][] = [[]];
-    for (const [i, c] of cells.entries()) {
+    for (const c of cells) {
       if (T && c.value !== null) {
         if (T[c.ci]! - prev > hole) {
           gap = true;
@@ -175,12 +174,12 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         "data-other": other,
         "data-more": more(ctx, (_, k) => tipOf[k]!(cname, ser)),
         "data-dash": dash,
-        "data-last": done.has(i), // an annotated point keeps its dot
+        "data-last": done.has(c), // an annotated point keeps its dot
         r: 3,
         cx: px(c.ci),
         cy: r(val.of(c.y1)),
       });
-      const sp = spec.labels && !done.has(i) ? spot(i) : null;
+      const sp = spec.labels && !done.has(c) ? spot(c) : null;
       if (sp) ctx.label(...sp);
     }
     const e = path.at(-1);

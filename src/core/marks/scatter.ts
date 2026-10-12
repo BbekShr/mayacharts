@@ -1,6 +1,6 @@
 import { cbField, el, memo, nameId, esc, key, r } from "../svg.ts";
 import { marked, more } from "./bar.ts";
-import type { Annotate, LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
+import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
 
 interface Pt {
@@ -238,29 +238,22 @@ export const scatter: Mark = {
     // Big bubbles first so small ones stay on top; stable for ties.
     const order = max > 0 ? [...pts].sort((a, b) => rad(b) - rad(a)) : pts;
 
-    // spec.annotate: per series the max and min y, the first and last by x, and { x, text } notes, labelled ahead of plain value labels.
-    const tag = (p: Pt, a: Annotate | "note", said?: string) =>
-      ctx.label(
-        sx.of(p.x),
-        sy.of(p.y) - rad(p),
-        said ?? ctx.fmt(spec.y, p.y),
-        "above",
-        key(shaped.series[p.si]!, ids?.get(p) ?? p.i),
-        a,
-      );
-    for (const { x, text } of spec.notes) {
-      const p = pts.find((q) => q.x === +x);
-      if (p) tag(p, "note", text);
-    }
-    if (spec.annotate.length)
-      for (const si of shaped.visible) {
-        const ps = pts.filter((p) => p.si === si).sort((a, b) => a.x - b.x);
-        for (const [a, i] of marked(
-          ps.map((p) => p.y),
-          spec.annotate,
-        ))
-          tag(ps[i]!, a);
-      }
+    // spec.annotate: per series the max and min y, the first and last by x, and { x, text } notes, ahead of plain value labels.
+    marked(
+      ctx,
+      shaped.visible.map((si) => pts.filter((p) => p.si === si).sort((a, b) => a.x - b.x)),
+      (p) => p.x,
+      (p) => p.y,
+      (p, a, said) =>
+        ctx.label(
+          sx.of(p.x),
+          sy.of(p.y) - rad(p),
+          said ?? ctx.fmt(spec.y, p.y),
+          "above",
+          key(shaped.series[p.si]!, ids?.get(p) ?? p.i),
+          a,
+        ),
+    );
 
     let marks = "";
     for (const p of order) {
@@ -325,14 +318,12 @@ export const scatter: Mark = {
         x2: r(px1),
         y2: r(py1),
       });
-      const name = label ?? (k === "mean" ? ctx.t("mean") : null);
       // Beside the line's upper end, on the side the line leaves from, so the diagonal never crosses its own label.
       const left = py0 < py1; // the left end is the upper one (a falling line)
-      const [ex, ey] = left ? [px0, py0] : [px1, py1];
       ctx.label(
-        ex + (left ? 6 : -6),
-        Math.max(ey - 8, plot.y + 8),
-        name ?? ctx.fmt("", +m.toPrecision(3)),
+        left ? px0 + 6 : px1 - 6,
+        Math.max((left ? py0 : py1) - 8, plot.y + 8),
+        label ?? (k === "mean" ? ctx.t("mean") : ctx.fmt("", +m.toPrecision(3))),
         left ? "start" : "end",
       );
     });
