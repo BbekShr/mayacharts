@@ -76,9 +76,10 @@
       <section id="unknown-field">
         <h2><code>unknown-field</code></h2>
         <p>
-          spec.x, spec.y, spec.series, spec.path, spec.size, spec.name, or spec.colorBy names a
-          field that no row has. The message lists the fields found in your data. Check spelling and
-          case.
+          spec.x, spec.y, spec.series, spec.path, spec.size, spec.name, spec.colorBy or a field of
+          spec.aggregate.ratio names a field that no row has. Under a ratio aggregate spec.y only
+          names the measure, so it may be missing from the rows. The message lists the fields found
+          in your data. Check spelling and case.
         </p>
         <pre><code>// rows have "month" and "revenue"
 { "x": "month", "y": "revenue" }</code></pre>
@@ -96,8 +97,9 @@
       <section id="non-numeric-field">
         <h2><code>non-numeric-field</code></h2>
         <p>
-          A numeric field (size for scatter, x for scatter, or colorBy when it names a field) must
-          hold finite numbers. null and undefined are allowed. Convert numeric strings first.
+          A numeric field (size for scatter, x for scatter, the two fields of a ratio aggregate, or
+          colorBy when it names a field) must hold finite numbers. null and undefined are allowed.
+          Convert numeric strings first.
         </p>
         <pre><code>// for scatter x domain
 data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
@@ -143,13 +145,20 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         </p>
         <pre><code>{ "type": "kpi", "colorBy": { "target": 100, "warn": 80 }, ... }
 { "type": "kpi", "colorBy": { "target": 5, "warn": 8, "better": "lower" }, ... }</code></pre>
+        <p>
+          A title or subtitle may hold only the data tokens {max.x} {max.y} {min.x} {min.y}
+          {first.x} {first.y} {last.x} {last.y} {total} {mean}. Write {{ for a literal brace.
+        </p>
+        <pre><code>{ "title": "{max.x} leads with {max.y}", "subtitle": "Plan {{2025}" }</code></pre>
       </section>
       <section id="option-unsupported">
         <h2><code>option-unsupported</code></h2>
         <p>
           This option is not valid for the chosen chart type or in combination with other options.
-          For example, size applies only to scatter charts, path cannot be used with x, and drill
-          cannot be combined with select.
+          For example, size applies only to scatter charts, path cannot be used with x (on heatmap,
+          path replaces series), depth is treemap only and minAngle sunburst only. A ratio aggregate
+          works where values sit side by side (bar line area heatmap dumbbell table kpi gauge
+          hexmap), not where sizes must add up to a whole, and not with stack, was or a y array.
         </p>
         <pre><code>// scatter chart with size field
 { "type": "scatter", "x": "x", "y": "y", "size": "population", ... }
@@ -157,10 +166,12 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
 { "type": "bar", "path": ["region", "state"], "y": "revenue", ... }
 // warn is a kpi and gauge threshold; other types take { "target": n }
 { "type": "bar", "colorBy": { "target": 100 }, ... }
-// yScale "log" is for line and scatter: bars start at zero, which a log axis cannot show
+// yScale "log" is for line and scatter: a bar encodes its value as length from zero
 { "type": "line", "yScale": "log", ... }
 // dash names series values, so it needs series
-{ "type": "line", "series": "year", "dash": ["2024"], ... }</code></pre>
+{ "type": "line", "series": "year", "dash": ["2024"], ... }
+// a ratio on a type whose values sit side by side
+{ "type": "bar", "x": "region", "y": "price", "aggregate": { "ratio": ["sales", "units"] }, ... }</code></pre>
       </section>
       <section id="stack-unsupported">
         <h2><code>stack-unsupported</code></h2>
@@ -194,7 +205,7 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <p>
           spec.theme contains a key that is not a theme token. Valid tokens are font, fontSize, fg,
           fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, warn, bad, line,
-          gridDash, and series1 through series8.
+          gridDash, titleSize, titleWeight, axisSize, and series1 through series8.
         </p>
         <pre><code>{ "theme": { "accent": "#7c3aed" } }</code></pre>
       </section>

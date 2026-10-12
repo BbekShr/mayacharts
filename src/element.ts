@@ -1,5 +1,6 @@
 import { VERSION } from "./core/registry.ts";
 import type {
+  MayaDrillLeafDetail,
   MayaErrorDetail,
   MayaSelectDetail,
   MayaSettledDetail,
@@ -17,6 +18,7 @@ declare global {
     "maya-error": CustomEvent<MayaErrorDetail>;
     "maya-render": CustomEvent<Record<string, never>>;
     "maya-settled": CustomEvent<MayaSettledDetail>;
+    "maya-drill-leaf": CustomEvent<MayaDrillLeafDetail>;
   }
 }
 

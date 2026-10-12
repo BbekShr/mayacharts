@@ -51,10 +51,29 @@
       "description": "Row objects."
     },
     "aggregate": {
-      "type": "string",
-      "enum": ["sum", "mean", "count", "min", "max"],
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["sum", "mean", "count", "min", "max"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ratio": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": ["ratio"],
+          "additionalProperties": false
+        }
+      ],
       "default": "sum",
-      "description": "How rows sharing a (category, series) combine. `count` counts non-null y."
+      "description": "How rows sharing a (category, series) combine. `count` counts non-null y. { ratio: [numerator, denominator] } sums both fields per group and divides (zero denominator: null), at every drill level, in Other and in \"mean\" rules; y then only names the measure and need not be in the rows; other fields sum. Ratio: bar line area heatmap dumbbell table kpi gauge hexmap; not with stack, was or a y array."
     },
     "sort": {
       "type": "string",
@@ -143,7 +162,18 @@
         "type": "string"
       },
       "minItems": 1,
-      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey chord; bar/line/area/dumbbell with `drill` (replaces `x`)."
+      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey chord; bar line area dumbbell table marimekko with drill (replaces x); heatmap with drill (replaces series, the rows)."
+    },
+    "depth": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Levels drawn at once below the current branch, each parent holding its children under a name strip; a click drills into the parent under the pointer. Default: 1 with drill, every level without. treemap only."
+    },
+    "minAngle": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 360,
+      "description": "Sunburst slices narrower than this many degrees fold into one \"Other (n)\" slice per ring (the largest sibling never folds). 0 folds nothing. Default: slices under 4 px across fold. sunburst only."
     },
     "size": {
       "type": "string",
@@ -273,6 +303,7 @@
           "reset",
           "showing",
           "drilledInto",
+          "drillInto",
           "zoomedTo",
           "selected",
           "selectionCleared",
@@ -350,7 +381,11 @@
     },
     "title": {
       "type": "string",
-      "description": "Visible heading, also the accessible name."
+      "description": "Visible heading, also the accessible name. Data tokens: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by format; {{ writes a literal brace."
+    },
+    "subtitle": {
+      "type": "string",
+      "description": "Second line under the title, smaller and muted; takes the same data tokens as title. Not in the bare render() SVG."
     },
     "description": {
       "type": "string",
@@ -419,6 +454,9 @@
                   }
                 ]
               },
+              "intercept": {
+                "type": "number"
+              },
               "label": {
                 "type": "string",
                 "maxLength": 40
@@ -426,15 +464,48 @@
             },
             "required": ["slope"],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": ["string", "number"]
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 40
+              }
+            },
+            "required": ["x"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "band": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 40
+              }
+            },
+            "required": ["band"],
+            "additionalProperties": false
           }
         ]
       },
-      "description": "Reference lines across the value axis (at most 4): a number, or \"mean\" of the visible values (stacked: of the category totals), optionally labelled. Scatter also takes { slope }: the line y = slope * x through the origin, \"mean\" = sum of y / sum of x. bar line area scatter."
+      "description": "Reference lines (at most 4): a number or \"mean\" across the value axis (mean of the visible values; stacked: of the category totals), { x } across the category axis at that x, { band: [lo, hi] } a shaded value range; each optionally labelled. Scatter also takes { slope, intercept? }: y = slope * x + intercept, slope \"mean\" = sum of y / sum of x. bar line area scatter dumbbell."
     },
     "yScale": {
       "type": "string",
       "enum": ["log"],
-      "description": "Log value axis (ticks at powers of 10); every plotted value must be above 0. line scatter (bars start at zero, so not bar)."
+      "description": "Log value axis (ticks at powers of 10); every plotted value must be above 0. line scatter (a bar encodes its value as length from zero, so bar, waterfall and area refuse it)."
     },
     "xScale": {
       "type": "string",
@@ -444,11 +515,29 @@
     "annotate": {
       "type": "array",
       "items": {
-        "enum": ["max", "min", "first", "last"]
+        "oneOf": [
+          {
+            "enum": ["max", "min", "first", "last"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": ["string", "number"]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "required": ["x", "text"],
+            "additionalProperties": false
+          }
+        ]
       },
       "minItems": 1,
-      "uniqueItems": true,
-      "description": "Label these points of each visible series with their value. bar line area."
+      "description": "Label these points of each visible series with their value: max, min, first, last (scatter: by y, first and last by x); { x, text } labels the mark at that x with the text. bar line area scatter."
     },
     "dash": {
       "type": "array",
@@ -482,8 +571,16 @@
       "description": "Hover/keyboard tooltip. { fields } adds those fields as tooltip rows and data table columns, formatted by format; bar, line and area combine numeric fields by aggregate. fields: bar line area scatter."
     },
     "legend": {
-      "type": "boolean",
-      "description": "Legend; clicking toggles series. Default: true when `series` is set, and for waffle, hexmap and units (toggles groups)."
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "enum": ["top", "bottom", "right"]
+        }
+      ],
+      "description": "Legend; clicking toggles series. \"top\", \"bottom\" or \"right\" places it (true is \"top\"). Default: true when `series` is set, and for waffle, hexmap and units (toggles groups)."
     },
     "endLabels": {
       "type": "boolean",
@@ -492,7 +589,7 @@
     },
     "drill": {
       "type": "boolean",
-      "description": "Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop."
+      "description": "Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With select too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires maya-drill-leaf. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap marimekko with path."
     },
     "drillOut": {
       "type": "boolean",
@@ -509,7 +606,7 @@
           "enum": ["multi"]
         }
       ],
-      "description": "Click/Enter/legend selects marks, others dim; Escape clears. Not with `drill`. bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
+      "description": "Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
     },
     "zoom": {
       "type": "boolean",
@@ -535,11 +632,11 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Colours by series value.",
+          "description": "Colours by series value (treemap, sunburst: by path[0] value; sankey, chord: by node name; waffle: by category).",
           "maxProperties": 8
         }
       ],
-      "description": "Palette or colours by series value."
+      "description": "Palette in series order, or colours by name: series value; treemap and sunburst path[0] value; sankey and chord node name (links and inner levels inherit); waffle category. Unmatched keys are ignored. Path types keep each name colour through drill."
     },
     "colorBy": {
       "anyOf": [
@@ -590,6 +687,9 @@
           "bad",
           "line",
           "gridDash",
+          "titleSize",
+          "titleWeight",
+          "axisSize",
           "series1",
           "series2",
           "series3",

@@ -6,8 +6,24 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
+### Breaking
+
+- A `{` in `title` (and the new `subtitle`) now opens a data token. A title with any other brace fails with `invalid-option`; write `{{` for a literal brace (#72).
+
+## Unreleased
+
 ### Added
 
+- `aggregate: { ratio: [numerator, denominator] }` sums both fields per group and divides, so a ratio measure such as price = sales / units is right in every category, drill level, Other bucket and "mean" rule. `y` names the measure and need not be in the rows (#69).
+- `drill` and `select` combine: a click or Enter selects, a double-click or Shift+Enter drills, and the pinned tooltip offers "Drill into" (text key `drillInto`) (#70).
+- `maya-drill-leaf` event: the drill gesture at the last level carries the full path, for a host drill-through (#70).
+- `path` with `drill` on table, heatmap (the rows), marimekko and chord (#70).
+- `colors` as a map by name on treemap and sunburst (`path[0]` value) and on sankey and chord (node name); path types keep each name's colour through drill (#71).
+- `depth` draws more than one treemap level at once; `minAngle` sets the sunburst's Other threshold in degrees (#71).
+- A sankey drills from any node but the last column, one step at a time (#71).
+- `rules` take `{ x }` (a line across the category axis), `{ band: [lo, hi] }` (a shaded value range), `intercept` on a scatter slope, and work on dumbbell (#72).
+- `annotate` takes `{ x, text }` items and works on scatter (#72).
+- `subtitle`, data tokens in `title` and `subtitle` (`{max.x}`, `{max.y}`, `{total}`, `{mean}` and the rest), `legend: "top" | "bottom" | "right"`, and theme tokens `titleSize`, `titleWeight`, `axisSize` (#72).
 - `was: { by, current?, previous? }` takes long data, one row per item and period: the latest period is current, the one before it previous, and the ghosts are titled by that period. No pivot before the spec (#60).
 - `maya-settled` event and the `el.settled` promise: the chart has drawn and its animations have finished, or it failed. Hosts that snapshot charts should wait for it instead of `maya-render` (#59, #62).
 - `mayacharts/host` (`maya.host` in the global builds): `thoughtspot(viz, spec)` and `columns({ schema, data }, spec)` build rows from a columnar result, match fields given as a RegExp or a case-insensitive name, and signal render-complete once settled (#61).
@@ -21,6 +37,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Docs
 
+- The sunburst's automatic "Other (n)" slice is documented next to `minAngle`; the drill gesture split, the leaf event and the sankey drill rule are documented under `drill` (#70, #71).
 - `format` options `prefix` and `suffix` are documented, with an example (#68).
 - "Embedding in hosts" and "Height" sections in the docs (#61, #63).
 

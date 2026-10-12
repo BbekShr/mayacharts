@@ -13,6 +13,8 @@ export const TEXT = {
   showing: "Showing {0}",
   /** Live region after drill: {0} = branch path joined with " / ". */
   drilledInto: "Drilled into {0}",
+  /** Pinned tooltip action when drill and select are both on: {0} = the mark's name. */
+  drillInto: "Drill into {0}",
   /** Live region after zoom: {0}, {1} = first and last category (or range ends). */
   zoomedTo: "Zoomed to {0} – {1}",
   /** Live region after selection: {0} = count. */

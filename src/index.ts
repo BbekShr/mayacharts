@@ -4,6 +4,8 @@ export { VERSION as version } from "./core/registry.ts";
 export type { ErrorCode } from "./core/validate.ts";
 export type {
   Aggregate,
+  Annotate,
+  AnnotateAt,
   ChartSpec,
   ChartType,
   DatePreset,
@@ -11,6 +13,7 @@ export type {
   FieldFormat,
   FormatPreset,
   Goal,
+  MayaDrillLeafDetail,
   MayaErrorDetail,
   MayaSelectDetail,
   MayaSettledDetail,
@@ -18,6 +21,7 @@ export type {
   NumberPreset,
   RenderOptions,
   Row,
+  Rule,
   Sel,
   TextKey,
   ThemeToken,

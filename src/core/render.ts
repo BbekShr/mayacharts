@@ -143,6 +143,31 @@
  *   by and marks read the wide form unchanged; titles default `by` to the previous period
  *   formatted by format[by] (ResolvedSpec.wasBy keeps the field and the explicit periods).
  *
+ * Contract #69-#72 (where it differs, this paragraph wins over the older text below):
+ *   Ratio: ResolvedSpec.ratio = [num, den] with aggregate "sum": wherever rows of y combine
+ *   (shape groups, Other, drill levels, kpi, gauge, table, "mean" rules, title tokens) the value
+ *   is sum(num) / sum(den), null when sum(den) is 0; rows read num and den, not y. renderShell's
+ *   JSON child projects both fields. Modules use ctx.agg("sum") on each and divide.
+ *   Drill + select: click/Enter select; double-click, Shift+Enter (Handlers.enter shift) and the
+ *   pinned tooltip's text.drillInto button drill. The drill gesture on a mark that cannot drill
+ *   further dispatches maya-drill-leaf { path } (bubbles, composed, not cancelable): drilled
+ *   values then the mark's own level values. Flows: only once drilled to their last branch.
+ *   Drill types: table and marimekko take x from path, heatmap takes series (rows) from it.
+ *   Flows (sankey, chord) drill to path.length - 1 values and draw full.slice(drilled - 1): the
+ *   drilled node stays as the first column; a click drills into a node of the next undrilled
+ *   column. Path types colour by ResolvedSpec.slots (all rows, before drill): data-s = slot % 8
+ *   of the path[0] value (treemap, sunburst) or of the coloured node (flows); a colors map sets
+ *   --maya-series-(slot % 8 + 1) per key found in slots. treemap depth: levels drawn below the
+ *   branch, parents carry their name strip; sunburst minAngle: fold threshold in degrees.
+ *   Rules group: an { x } rule is <line data-xrule> plus its <text>; a band is <rect data-band>
+ *   (drawn first, under the lines) plus its <text>; a slope adds intercept b. ctx.label ann
+ *   "note" writes data-ann="note" for an annotate { x, text } item. Title tokens are resolved in
+ *   a11y.ts titleText (aria-label and visible title both); Parts.title = .maya-title then
+ *   <p class="maya-sub"> (subtitle; bare render() leaves it out). Parts.legendAt goes on
+ *   .maya as data-legend="bottom|right" (absent for top); slot order never changes, CSS moves
+ *   it. Theme titleSize, titleWeight, axisSize are --maya-title-size, --maya-title-weight,
+ *   --maya-axis-size. The current crumb is a non-button span with aria-current="page".
+ *
  * Outputs
  *   render(spec, opts)      standalone `<svg class="maya-root">` with an embedded <style>.
  *                           Works as a file, in <img>, or rasterized by the hosted API.

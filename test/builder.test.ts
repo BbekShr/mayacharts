@@ -284,11 +284,9 @@ describe("guidance", () => {
   });
 
   it("disables, with the reason, an option that clashes with another one", () => {
+    // Drill and select combine since #70 (click selects, double-click drills).
     const drilled = { ...sample("treemap"), drill: true } as ChartSpec;
-    expect(prober(drilled)("select", true)).toEqual({
-      hide: false,
-      why: '"Select" cannot be combined with "Drill".',
-    });
+    expect(prober(drilled)("select", true)).toBeNull();
     expect(prober(sample("bar"))("xType", "time")).toMatchObject({ hide: false });
     expect(prober(sample("bar"))("xType", "category")).toBeNull();
     const twoAxes = { ...sample("bar"), series: undefined, y2: "Units" } as unknown as ChartSpec;
