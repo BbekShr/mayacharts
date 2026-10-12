@@ -281,7 +281,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `rules`       | array                                            | -                                                                                             | Up to 4 reference lines: n, "mean" or {y, label} across the value axis; {x, label} across the category axis; {band: [lo, hi], label} a shaded value range; bar line area scatter dumbbell. With stack "percent" n is a share (0.5) and "mean" the mean segment share. Scatter: `{ slope: k \| "mean", intercept, label }` draws y = k * x + intercept ("mean" = sum of y / sum of x) |
 | `yScale`      | "log"                                            | linear                                                                                        | Log value axis; values must be above 0. line scatter (a bar encodes its value as length from zero, so bars refuse it)                                                                                                                                                                                                                                                                |
 | `xScale`      | "log"                                            | linear                                                                                        | Log x axis; x must be above 0. scatter only                                                                                                                                                                                                                                                                                                                                          |
-| `annotate`    | ("max" / "min" / "first" / "last" / {x, text})[] | -                                                                                             | Label those points of each series with their value (scatter: max and min by y, first and last by x); `{ x, text }` labels the mark at that x. bar line area scatter                                                                                                                                                                                                                              |
+| `annotate`    | ("max" / "min" / "first" / "last" / {x, text})[] | -                                                                                             | Label those points of each series with their value (scatter: max and min by y, first and last by x); `{ x, text }` labels the mark at that x. bar line area scatter                                                                                                                                                                                                                  |
 
 ### Interaction
 
@@ -774,7 +774,7 @@ Motion: the first draw plays an entrance (bars rise in a stagger, lines and flow
 
 Opt-in: `drill`, `select`, `zoom`. Two-way: `el.view`, `el.selected`.
 
-Drill and select together: a click or Enter selects (to cross-filter a dashboard), a double-click or Shift+Enter drills, and a pinned tooltip offers a "Drill into" button for touch. At the deepest level the drill gesture fires `maya-drill-leaf` with the full path, for a host drill-through. A sankey drills from any node except the last column: the clicked node stays as the first column with its downstream flows. A chord drills into one group's flows.
+Drill and select together: a click or Enter selects (to cross-filter a dashboard), a double-click or Shift+Enter drills, and a pinned tooltip offers a "Drill into" button for touch. At the deepest level the drill gesture fires `maya-drill-leaf` with the full path, for a host drill-through. A sankey drill starts from the first column, then continues one column at a time through any non-final node: the clicked node stays as the first column with its downstream flows. A chord drills into one group's flows.
 
 ### Keyboard
 
@@ -1112,15 +1112,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 17,026 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 17,123 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,570,597,910 total, 3,222,751 output
-- claude-sonnet-5-5: 807,052,986 total, 107,281 output
+- claude-opus-5-5: 1,577,945,653 total, 3,228,248 output
+- claude-sonnet-5-5: 815,061,804 total, 107,675 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 30,518,833 total, 1,456 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,605,062,972 total, 3,766,716 output
+- all: 2,620,419,533 total, 3,772,607 output
 
 <!-- tokens:end -->
 

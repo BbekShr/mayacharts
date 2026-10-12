@@ -246,11 +246,11 @@ describe("slope rules, tooltip fields and log axes", () => {
     expect(y2).toBeGreaterThanOrEqual(py - 0.01);
     expect(y1).toBeLessThanOrEqual(py + ph + 0.01);
     expect(s.indexOf("data-slope")).toBeLessThan(s.indexOf('data-maya="mark"'));
-    expect(s).toContain(">2x 2<");
+    expect(s).toContain(">2x<");
   });
   it('"mean" is sum(y) / sum(x)', () => {
     const s = renderParts({ ...spec, rules: [{ slope: "mean" }] }).svg;
-    expect(s).toContain(`>Average ${+(3170 / 1110).toPrecision(3)}<`);
+    expect(s).toContain(">Average<");
   });
   it("is skipped when only one axis is logarithmic", () => {
     expect(

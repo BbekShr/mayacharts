@@ -121,6 +121,11 @@ const nodeAttrs = (ctx: MarkCtx, h: Reach, n: N, c: number, off: number, series 
   "data-y": n.v,
   "data-f": ctx.fmt(ctx.spec.y, n.v),
   "data-depth": n.lv,
+  // The next level to drill, short of the last column: the only nodes that take a click (cursor).
+  "data-dr":
+    ctx.spec.drill && n.lv + off === ctx.spec.drilled.length && n.lv < ctx.spec.path.length - 1
+      ? true
+      : null,
 });
 
 /** Rows to nodes (one per name per level) and links (one per adjacent pair, aggregated). */

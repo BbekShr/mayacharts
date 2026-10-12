@@ -638,12 +638,12 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   tile("headline", {
     type: "line",
     title: "Sales peaked at {max.y} in {max.x}",
-    subtitle: "The low was {min.y} in {min.x}, and December closed at {last.y}.",
+    subtitle: "The low was {min.y} in {min.x}, and {last.x} closed at {last.y}.",
     x: "monthMs",
     y: "sales",
     theme: { titleSize: "20px", titleWeight: "700" },
     format: { monthMs: "month", sales: "compact" },
-    titles: { sales: "Sales ($)" },
+    titles: { sales: "Sales ($)", monthMs: "Month" },
     data: monthTotals as Row[],
   });
 

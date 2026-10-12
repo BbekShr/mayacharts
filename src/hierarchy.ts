@@ -166,15 +166,15 @@ const treemap: Mark = {
     const tinted = nest || spec.drilled.length > 0;
     let marks = "";
     let hits = "";
-    const walk = (n: Node, x: number, y: number, w: number, h: number, i = 0, of = 1): void => {
+    const walk = (n: Node, x: number, y: number, w: number, h: number, top = 1): void => {
       // 0.5 px inset below the top level: siblings sit 1 px apart (stroke adds more).
       const g = n.depth > 1 ? 0.5 : 0;
       const [bx, by, bw, bh] = [x + g, y + g, Math.max(0, w - 2 * g), Math.max(0, h - 2 * g)];
       if (!n.children.length) {
         if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
         const a = attrs(n);
-        // ponytail: 8 tints, so a branch of more than 8 tiles repeats them in size order.
-        const lt = tinted ? Math.round((i * 7) / Math.max(1, of - 1)) : null;
+        // Lightness by value against the largest sibling, in 8 steps (ponytail: values within 1/8 share a tint).
+        const lt = tinted ? Math.round(7 * (1 - n.value / top)) : null;
         marks += el("rect", {
           ...a,
           "data-lt": lt,
@@ -194,7 +194,7 @@ const treemap: Mark = {
             text(f) <= bw &&
             ctx.label(lx, ly + 8, f, "center");
         else if (text(`${n.name} · ${f}`) <= bw) ctx.label(lx, ly, `${n.name} · ${f}`, "center");
-        else if (text(f) <= bw) ctx.label(lx, ly, f, "center");
+        else if (text(n.name) <= bw) ctx.label(lx, ly, n.name, "center"); // a value never stands without its name
         return;
       }
       let [ix, iy, iw, ih] = [bx, by, bw, bh];
@@ -222,7 +222,7 @@ const treemap: Mark = {
       } else if (n.depth === 1 && bw >= 28 && bh >= 30)
         ctx.label(bx + bw / 2, by + 9, clip(n.name, Math.floor((bw - 4) / 7.2)), "center");
       const sq = squarify(n.children, ix, iy, iw, ih);
-      for (const [j, [c, cx, cy, cw, ch]] of sq.entries()) walk(c, cx, cy, cw, ch, j, sq.length);
+      for (const [c, cx, cy, cw, ch] of sq) walk(c, cx, cy, cw, ch, sq[0]![0].value);
     };
     walk(root, plot.x, plot.y, plot.w, plot.h);
     return { marks, hits };

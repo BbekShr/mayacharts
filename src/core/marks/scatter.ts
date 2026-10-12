@@ -326,13 +326,14 @@ export const scatter: Mark = {
         y2: r(py1),
       });
       const name = label ?? (k === "mean" ? ctx.t("mean") : null);
-      const val = ctx.fmt("", +m.toPrecision(3));
-      // Above the line's far end, right-aligned (kept inside the plot's top edge).
+      // Beside the line's upper end, on the side the line leaves from, so the diagonal never crosses its own label.
+      const left = py0 < py1; // the left end is the upper one (a falling line)
+      const [ex, ey] = left ? [px0, py0] : [px1, py1];
       ctx.label(
-        Math.max(px0, px1) - 6,
-        Math.max(Math.min(py0, py1) - 8, plot.y + 8),
-        name ? `${name} ${val}` : val,
-        "end",
+        ex + (left ? 6 : -6),
+        Math.max(ey - 8, plot.y + 8),
+        name ?? ctx.fmt("", +m.toPrecision(3)),
+        left ? "start" : "end",
       );
     });
     // Size key: three reference circles drawn with the marks' own radius rule, values rounded to one digit.

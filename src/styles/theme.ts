@@ -191,7 +191,7 @@ export const css =
   "[data-maya=line][data-dash]{stroke-linecap:butt}.maya-legend [data-dash] i{width:14px;height:2px;border-radius:0;background:repeating-linear-gradient(90deg,var(--c) 0 5px,#0000 5px 8px)}[data-maya=labels] [data-ann]{font-weight:600}" +
   "line[data-slope]{stroke:var(--maya-fg-muted);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}" +
   // Rules across the category axis (an event) and shaded value ranges (a target band): quiet, behind the data's eye.
-  "[data-maya=rules] line[data-xrule]{stroke:var(--maya-fg-muted);stroke-dasharray:none}[data-maya=rules] rect[data-band]{fill:var(--maya-accent);fill-opacity:.1;stroke:none}[data-maya=labels] [data-ann=note]{font-weight:500;font-style:italic}" +
+  "[data-maya=rules] line[data-xrule]{stroke:var(--maya-fg-muted);stroke-dasharray:none}[data-maya=rules] rect[data-band]{fill:var(--maya-accent);fill-opacity:.1;stroke:var(--maya-accent);stroke-opacity:.45}[data-maya=labels] [data-ann=note]{font-weight:500;font-style:italic}" +
   // Break marks on a clipped Other bar; parallel tick halos and end-label leaders.
   "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
   // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.
@@ -209,7 +209,7 @@ export const css =
   // A dimmed mark fades toward the page: its in-bar label flips to the page ink (tooltip.ts dim()).
   ".maya-svg [data-maya=labels] [data-in][data-dim]{fill:var(--maya-fg)}" +
   "[data-maya=marks][data-hot=r] [data-depth]{opacity:1!important}" +
-  'svg[data-drill] :is([data-maya=mark],[data-maya=hit]),circle[data-depth="0"][data-s]{cursor:pointer}' +
+  'svg[data-drill] :is([data-maya=mark],[data-maya=hit]):not([data-n]),[data-dr],circle[data-depth="0"][data-s]{cursor:pointer}' +
   "[data-maya=marks]:has([data-selected]){--o:.35}" +
   "[data-selected]{stroke:var(--maya-fg);stroke-width:2;--o:1}" +
   "[data-maya=labels],[data-maya=cross],[data-maya=band]{pointer-events:none}[data-maya=rules],[data-maya=brush],[data-ghost],[data-brk],text[data-total]{pointer-events:none}[data-maya=rules] line{stroke:var(--maya-fg);stroke-dasharray:3 3}[data-maya=cross],[data-maya=band]{opacity:0;transition:opacity .2s}" +
@@ -225,6 +225,9 @@ export const css =
   ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
   "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}.maya-tip[data-side]{position-area:inline-end span-block-end;position-try-fallbacks:flip-inline;margin:0 12px}}" +
   ".maya-tip.maya-open{opacity:1;translate:none}" +
+  ".maya-tip button{" +
+  B +
+  ";display:block;margin:6px -4px -4px;padding:2px 4px;border-radius:6px;color:var(--maya-fg);pointer-events:auto}.maya-tip button:hover{background:var(--maya-grid)}" +
   ".maya-tip b{display:block;margin:0 0 4px;font-weight:600}" +
   ".maya-tip div{display:flex;align-items:center;gap:8px;color:color-mix(in oklab,var(--maya-tooltip-fg) 72%,transparent)}.maya-tip i{width:8px;height:8px;border-radius:50%}" +
   ".maya-tip [data-v]{margin-inline-start:auto;padding-inline-start:12px;font-weight:600;color:var(--maya-tooltip-fg)}.maya-tip [data-on]{color:var(--maya-tooltip-fg)}" +
@@ -233,7 +236,7 @@ export const css =
   // Constellation hover: links to the 3 nearest appear and those stars are ringed.
   "[data-maya=grid] line[data-a]{stroke:none}[data-maya=grid] line[data-a][data-lit]{stroke:var(--maya-fg);stroke-width:1.5;stroke-dasharray:none;shape-rendering:auto}circle[data-n][data-lit]{stroke:var(--maya-fg);stroke-width:2}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
-  "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend :not([data-line])>i{width:8px;height:8px}.maya-title{font-size:var(--maya-title-size,12px)}}" +
+  "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend :not([data-line],[data-dash])>i{width:8px;height:8px}.maya-title{font-size:var(--maya-title-size,12px)}}" +
   RADIAL +
   MEKKO +
   FLOW +
