@@ -111,6 +111,61 @@ test.describe("drill and select together", () => {
     await expect.poll(async () => (await prop(page, "view")).drill?.length).toBe(1);
   });
 
+  test("the Drill into button is not on hover, and not at the deepest level", async ({ page }) => {
+    const t = await make(page, "treemap", { select: true });
+    await click(page, mark(t, "h~West")); // hover shows the tooltip; select waits out the interval
+    await expect(t.locator(".maya-tip.maya-open")).toBeAttached();
+    await expect(t.locator(".maya-tip button")).toHaveCount(0);
+    await page.evaluate(() => ((document.getElementById("t") as any).view = { drill: ["West"] }));
+    await settled(page);
+    await t.locator(".maya-svg").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Space");
+    await expect(t.locator(".maya-tip.maya-open")).toBeAttached();
+    await expect(t.locator(".maya-tip button")).toHaveCount(0);
+  });
+
+  test("a double click drills with no maya-select; a single click selects once, after a beat", async ({
+    page,
+  }) => {
+    const t = await make(page, "treemap", { select: true });
+    await click(page, mark(t, "h~East"));
+    expect(await log(page, "maya-select")).toHaveLength(0);
+    await expect.poll(() => log(page, "maya-select")).toHaveLength(1);
+    await settled(page);
+    await page.evaluate(() => ((document.getElementById("t") as any).selected = []));
+    await settled(page);
+    const before = (await log(page, "maya-select")).length;
+    await click(page, mark(t, "h~West"), 2);
+    await expect.poll(async () => (await prop(page, "view")).drill).toEqual(["West"]);
+    await page.waitForTimeout(400);
+    // The drill's own selection clear is the only select event, and nothing was ever selected.
+    expect(await prop(page, "selected")).toEqual([]);
+    expect((await log(page, "maya-select")).length).toBe(before);
+  });
+
+  test("a heatmap's Drill into names the branch, not the cell", async ({ page }) => {
+    const t = await make(page, "heatmap", { select: true });
+    await t.locator(".maya-svg").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Space");
+    await expect(t.locator(".maya-tip button[data-drill]")).toHaveText(/Drill into (West|East)$/);
+  });
+
+  test("table drill swaps rows without zooming a row onto the plot", async ({ page }) => {
+    const t = await make(page, "table");
+    await settled(page);
+    await click(page, mark(t, "v~West"));
+    await expect.poll(async () => (await prop(page, "view")).drill).toEqual(["West"]);
+    // A zoom would scale the row's bar by (plot / bar); a key swap never scales by more than 1.
+    const scales = await t.evaluate((el) =>
+      [...el.shadowRoot!.querySelectorAll("rect")].flatMap((r) =>
+        r.getAnimations().map((a) => JSON.stringify((a.effect as any).getKeyframes())),
+      ),
+    );
+    expect(scales.some((k) => /scale\((?:[2-9]|\d\d)/.test(k))).toBe(false);
+  });
+
   test("maya-drill-leaf fires at the deepest level only", async ({ page }) => {
     const t = await make(page, "treemap");
     await click(page, mark(t, "h~West"));

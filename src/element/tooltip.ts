@@ -2,6 +2,7 @@ import { formatter } from "../core/format.ts";
 import { t as str } from "../core/strings.ts";
 import { resolve } from "../core/validate.ts";
 import type { ChartSpec, View } from "../core/types.ts";
+import { branchOf } from "./drill.ts";
 import { listen } from "./listen.ts";
 
 const a = (e: Element, k: string) => e.getAttribute(k) ?? "";
@@ -365,22 +366,21 @@ export function tooltip(
       ...(all.length > rows.length ? [h("div", `+${all.length - rows.length}`)] : []),
       ...(stk && sp ? [h("div", "", { "data-t": "" })] : []),
     );
-    // Select and drill together: click selects, so the tooltip carries the drill gesture for
-    // pointers that cannot double-click. Only pinned or touched (a hovering tooltip must not catch the pointer).
+    // Select and drill together: click selects, so a pinned or touched tooltip carries the drill
+    // gesture for pointers that cannot double-click. Not on hover, and not where nothing is deeper.
     const dk = a(m, "data-key");
+    const depth = (host as { view?: View }).view?.drill?.length ?? 0;
+    const to = sp && branchOf(dk, depth, sp.type);
     if (
+      (pin || coarse) &&
       sp?.drill &&
       sp.select &&
-      dk &&
+      to !== undefined &&
+      depth < (sp.path?.length ?? 0) - 1 &&
       a(m, "data-maya") === "mark" &&
       !m.hasAttribute("data-other")
     )
-      tip.append(
-        h("button", str(sp, "drillInto", a(m, "data-x") || a(m, "data-label")), {
-          type: "button",
-          "data-drill": dk,
-        }),
-      );
+      tip.append(h("button", str(sp, "drillInto", to), { type: "button", "data-drill": dk }));
     tip.style.setProperty("pointer-events", pin || coarse ? "auto" : "");
     if (stk && sp)
       tip.lastElementChild!.append(

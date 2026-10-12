@@ -79,15 +79,22 @@ export function mount(host: Host): Handlers {
     host.announce(n ? t(spec, "selected", n) : t(spec, "selectionCleared"));
   };
   let before: State["selected"] = [];
+  // With drill, a click's selection waits out the double-click interval: a double click then
+  // drills without a flash of selection or a second maya-select.
+  let wait: ReturnType<typeof setTimeout> | undefined;
+  let flush = () => {};
+  const cancel = () => (clearTimeout(wait), (wait = undefined), (flush = () => {}));
   const onClick = (e: Event) => {
     const spec = host.spec();
     if (!spec?.select) return;
     const el = e.target as Element;
     // With drill, the second click of a double click is the drill: the pair leaves the selection as it was.
     if (spec.drill && (e as MouseEvent).detail === 2 && host.mark(e)) {
+      if (wait) return cancel();
       if (host.state().selected !== before) host.commit({ ...host.state(), selected: before });
       return;
     }
+    flush();
     before = host.state().selected;
     const b = el.closest("[data-maya=legend] button");
     if (b) {
@@ -97,10 +104,14 @@ export function mount(host: Host): Handlers {
     }
     const m = host.mark(e);
     const sel = m && selOf(m, type());
-    if (m && sel) pick(sel, m);
+    if (m && sel && spec.drill && (e as MouseEvent).detail === 1) {
+      flush = () => (cancel(), pick(sel, m));
+      wait = setTimeout(flush, 250);
+    } else if (m && sel) pick(sel, m);
     else if (!m && !el.closest(BUSY)) clear(); // empty chart space deselects
   };
   const clear = () => {
+    cancel();
     if (!host.state().selected.length) return false;
     host.commit(reduce(host.state(), { type: "clear" }));
     host.announce(t(host.spec() ?? {}, "selectionCleared"));
@@ -127,7 +138,7 @@ export function mount(host: Host): Handlers {
       const a = listen(root, ["click", onClick]);
       // A click anywhere else on the page deselects too.
       const b = listen(document, ["click", (e) => e.composedPath().includes(root.host) || clear()]);
-      return () => (a(), b());
+      return () => (cancel(), a(), b());
     })(),
   };
 }

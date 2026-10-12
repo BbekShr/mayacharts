@@ -14,7 +14,7 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Intro, idle, patch, type PatchOptions } from "./animate.ts";
+import { type Intro, idle, patch, type PatchOptions, ZOOM } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import { listen } from "./listen.ts";
@@ -52,6 +52,7 @@ export class MayaChart extends HTMLElement {
   #unlisten: (() => void)[] = [];
   #tip: Tooltip | undefined;
   #zoom: PatchOptions["zoom"];
+  #fl = false; // a drill changed the breadcrumb row: glide the plot
   #vars = new Set<string>();
   #err = "";
   #drawn = false;
@@ -279,8 +280,11 @@ export class MayaChart extends HTMLElement {
     // Drilling zooms into the branch entered, or out of the branch left. Flows keep their
     // nodes in place across a drill (stable keys), so they morph instead.
     const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
+    this.#fl = d1.length !== d0.length;
+    // A table row is a thin bar, not a container: its rows swap by key instead of zooming.
     const flow = this.spec?.type === "sankey";
     if (flow) d1.length - d0.length && this.#tip?.hide();
+    else if (this.spec?.type === "table") this.#tip?.hide();
     else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
     else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
     this.#state = next;
@@ -406,6 +410,8 @@ export class MayaChart extends HTMLElement {
     };
     // Before #slots: a focused legend button or crumb may be replaced.
     const focus = this.#focusId();
+    // A drill adds or removes the breadcrumb row, which shifts the plot: measure to glide it.
+    const top0 = this.#drawn && this.#fl ? box.getBoundingClientRect().top : undefined;
     let parts;
     try {
       if (!this.#drawn && !box.querySelector("svg"))
@@ -492,6 +498,11 @@ export class MayaChart extends HTMLElement {
       instant: resized,
     });
     this.#zoom = undefined;
+    this.#fl = false;
+    if (top0 !== undefined && !still) {
+      const dy = top0 - box.getBoundingClientRect().top;
+      if (dy) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
+    }
     if (intro && !still) this.#intro = performance.now();
     this.#drawn = true;
     this.#restore(focus);

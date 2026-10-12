@@ -27,6 +27,7 @@ let zoom: [number, number] | undefined; // sunburst: span of the branch the patc
 let moved = false; // the patch moved, morphed, entered or exited a mark: labels and axes wait for it
 let plot = ""; // the outgoing svg's data-plot, read before sync copies the new one
 let zm: { P: Box; F: Box; out: boolean } | undefined;
+let drill = false; // this patch is a drill (opts.zoom): no stagger, marks seed from their centre, labels wait
 /** `r` in the frame `a` re-expressed in the frame `b`. */
 const map = (r: Box, a: Box, b: Box): Box => [
   b[0] + ((r[0] - a[0]) * b[2]) / a[2],
@@ -62,7 +63,7 @@ const SWEEP = "cubic-bezier(.65,0,.35,1)";
 const DATA: KeyframeAnimationOptions = { duration: 520, easing: EASE };
 const INTRO: KeyframeAnimationOptions = { duration: 760, easing: EASE };
 const UI: KeyframeAnimationOptions = { duration: 220, easing: EASE };
-const ZOOM: KeyframeAnimationOptions = { duration: 640, easing: SWEEP };
+export const ZOOM: KeyframeAnimationOptions = { duration: 640, easing: SWEEP };
 const SWEEP_MS = 1500; // orbit entrance
 const WIPE = 1100; // ms, line and area first draw
 const MAX = 1500; // ponytail: no animation above this many marks
@@ -165,7 +166,9 @@ const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () =
 /** Stagger: a mark's delay follows its category, so bars rise left to right. */
 // Only cartesian charts (svg carries data-n or data-xd): in space-filling and flow marks data-c is an index and a stagger overlaps neighbours.
 const delay = (e: Element) =>
-  e.hasAttribute("data-c") && e.closest("svg[data-n],svg[data-xd]") ? n(e, "data-c") * lag : 0;
+  !drill && e.hasAttribute("data-c") && e.closest("svg[data-n],svg[data-xd]")
+    ? n(e, "data-c") * lag
+    : 0;
 
 /** Make `o`'s subtree match `w`'s in place where the shapes agree, so nested nodes (and the CSS
  * animations on them, an orbit's rotation) survive an update; else replace the children. */
@@ -188,7 +191,7 @@ function sync(o: Element, w: Element): void {
 function seed(e: Element, g: Box, origin?: Box): Box {
   if (origin) return origin;
   const [x, y, w, h] = g;
-  if (e.localName === "circle") return [x + w / 2, y + h / 2, 0, 0];
+  if (e.localName === "circle" || drill) return [x + w / 2, y + h / 2, 0, 0];
   const neg = e.hasAttribute("data-neg");
   // A stack grows as one column: every segment starts at the baseline (the outer edge of its
   // column's non-negative segments), not at its own edge.
@@ -632,7 +635,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   // Sunburst: labels ghost and fade in late (as on a drill), never follow rings that sweep in angle.
   const sun = !!w.querySelector('circle[data-depth="0"]');
   const z = !!(zoom || zm || moved || sun);
-  const late = { ...UI, delay: Number((zoom || zm ? ZOOM : DATA).duration) * 0.75 };
+  const late = { ...UI, delay: Number((zoom || zm || drill ? ZOOM : DATA).duration) * 0.75 };
   const ghosts: Element[] = [];
   const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
   for (const c of [...w.children]) {
@@ -643,7 +646,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     const p = pool.get(id(c));
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
-    else if (p && !zoom && !zm && !sun && /^(labels|axis-[xy])$/.test(id(c))) {
+    else if (p && !zoom && !zm && !drill && !sun && /^(labels|axis-[xy])$/.test(id(c))) {
       follow(p, c, id(c) === "labels" ? late : { ...UI, delay: 160 }, id(c) === "labels");
       out.push(p);
     } else {
@@ -819,6 +822,8 @@ export function patch(
     instant = !!opts.instant;
     lag = wm.querySelector("[data-w]") ? 0 : spread(wm); // weave threads must meet their dots
     zm = undefined;
+    drill = !!opts.zoom;
+    lag = drill ? 0 : lag;
     const z = opts.zoom;
     if (z) {
       const F = (w.getAttribute("data-plot") ?? "").split(" ").map(Number) as Box;
@@ -847,6 +852,7 @@ export function patch(
     ui(o, w, om, wm);
     instant = false;
     zm = undefined;
+    drill = false;
   }
   opts.after?.(box.firstElementChild!);
 }

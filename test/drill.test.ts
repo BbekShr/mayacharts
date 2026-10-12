@@ -277,28 +277,34 @@ describe("drill with select, and maya-drill-leaf", () => {
   };
   const click = (m: Element, detail = 1) =>
     m.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail }));
-  it("click selects, the second click of a double click drills and leaves the selection as it was", async () => {
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  it("a click selects after the double-click interval; a double click drills with no selection event", async () => {
     const el = await mount(spec({ select: "multi" }));
     el.selected = [{ x: "East" }];
     await frame();
+    const sel = evs(el, "maya-select");
     click(byCat(el, "West"), 1);
-    await frame();
-    expect(el.view?.drill ?? []).toEqual([]);
+    expect(el.selected).toEqual([{ x: "East" }]); // not yet
+    await wait(300);
     expect(el.selected).toEqual([{ x: "East" }, { x: "West" }]);
-    click(byCat(el, "West"), 2);
-    await frame();
-    expect(el.view?.drill).toEqual(["West"]);
+    expect(sel).toHaveLength(1);
+    click(byCat(el, "East"), 1);
+    click(byCat(el, "East"), 2);
+    await wait(300);
+    expect(sel).toHaveLength(2); // the pair added none; the drill's own clear is the second
+    expect(el.view?.drill).toEqual(["East"]);
   });
-  it("a double click on a leaf restores the selection and reports the leaf", async () => {
+  it("a double click on a leaf selects nothing and reports the leaf", async () => {
     const el = await mount(spec({ select: true }));
     el.view = { drill: ["West"] };
     await frame();
     const leaf = evs(el, "maya-drill-leaf");
+    const sel = evs(el, "maya-select");
     click(byCat(el, "CA"), 1);
-    expect(el.selected).toEqual([{ x: "CA" }]);
     click(byCat(el, "CA"), 2);
-    await frame();
+    await wait(300);
     expect(el.selected).toEqual([]);
+    expect(sel).toEqual([]);
     expect(leaf).toEqual([{ path: ["West", "CA"] }]);
   });
   it("Enter selects, Shift+Enter drills", async () => {

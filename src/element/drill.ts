@@ -61,7 +61,7 @@ const decode = (raw: string) => {
  * Flow keys are `n~level~name` and `k~level~source~target` (level in the whole path); only
  * the outermost level on screen drills.
  */
-const branchOf = (key: string, depth: number, type = ""): string | undefined => {
+export const branchOf = (key: string, depth: number, type = ""): string | undefined => {
   const p = key.split("~");
   const raw = FLOW.includes(type)
     ? p[1] === String(depth) && (p[0] === "n" || p[0] === "k")
