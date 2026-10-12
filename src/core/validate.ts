@@ -1065,7 +1065,11 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     totals: [...(spec.totals ?? [])],
     stack: spec.stack ?? false,
     horizontal: spec.horizontal ?? false,
-    aggregate: ratio ? "sum" : ((spec.aggregate as Aggregate | undefined) ?? "sum"),
+    // A ratio sums both fields; long-form was has already counted its rows into y, so it sums those.
+    aggregate:
+      ratio || (pv && spec.aggregate === "count")
+        ? "sum"
+        : ((spec.aggregate as Aggregate | undefined) ?? "sum"),
     ratio: ratio ? [ratio[0], ratio[1]] : null,
     sort: spec.sort ?? null,
     sortBy: view.sortBy ?? null,

@@ -846,6 +846,14 @@ describe("#59-#68 contracts: was long form, log scales, slope rules, dash, toolt
     const r = resolve({ ...long, was: { by: "year", current: 2025 } } as ChartSpec);
     expect(r.wasBy).toEqual({ by: "year", current: "2025", previous: null });
     expect(r.was).toBe("year");
+    // count: the pivot counts rows per period, the marks then sum those counts.
+    const c = resolve({
+      ...long,
+      aggregate: "count",
+      was: { by: "year" },
+      data: [...long.data, { item: "Shirts", year: 2025, sales: 1, units: 1, region: "N" }],
+    } as ChartSpec);
+    expect([c.aggregate, c.data[0]!.sales, c.data[0]!.year]).toEqual(["sum", 2, 1]);
     const w = resolve({ ...long, was: "units" } as ChartSpec);
     expect([w.was, w.wasBy]).toEqual(["units", null]);
   });
