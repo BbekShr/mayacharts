@@ -18,6 +18,8 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 - **Columnar input past 4M rows** (2026-10-08): at 10M nine-field rows the host's row objects take about 7 GB, more than a browser tab gets, so the limit is the data, not the chart. Typed arrays per field is the only change that moves it, and it is a spec change. Measured: 1M 1.5 GB, 2M 2.6 GB, 3M 3.9 GB, 5M 4.4 GB, 10M 7 GB peak RSS (Node, eleven Scale specs). Wait for a real user. Owner: human, then core engineer.
 
+- **Trim decisions** (2026-10-12 light): HINTS text (about 520 B), the en-US fast format path (about 200 B) and the `light-dark()` fallback (about 100 B, sets the browser floor) are the only trims left above 50 B. Owner: human.
+
 ## Open
 
 - **README gauge picture**: the README gallery grid has no gauge (needs `scripts/readme-shots.mjs`). Owner: chart designer.
@@ -57,3 +59,5 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 - **Firefox flake**: "bar hover column sits under an unevenly spaced bar" failed 4 of 16 on base and 2 of 12 on the branch under load. Owner: element engineer.
 - **Hexmap sums aliases** ("CA" and "California" add up regardless of `aggregate`). Rare; document or leave. Owner: chart designer.
 - **Select clears on any document click**, including a host's own button outside the chart; document it in the select docs. Owner: core engineer.
+- **Element trims with motion risk** (2026-10-12): `run()` in animate.ts via `a.finished.then(then, then)` plus the timeout (about 45 B), and the tooltip crosshair opacity left to `[data-on]` (about 35 B). Frame checks at 0, 120 and 270 ms in chromium and webkit first. Owner: element engineer.
+- **Security LOW** (2026-10-12): host `cell()` unwraps any object with `v` or `value` (document it in the host docs); the release SRI loop should `test -e "$f"`. Owner: core engineer, human (workflow file).
