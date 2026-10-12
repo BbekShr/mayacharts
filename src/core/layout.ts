@@ -52,7 +52,7 @@ export interface Frame {
   /** Inner markup of the axis-y and axis-x groups. */
   ay: string;
   ax: string;
-  /** svg attributes: data-plot, data-n | data-xd + data-yd, data-t (time axis). */
+  /** svg attributes (render sets data-plot): data-n | data-xd + data-yd, data-t (time axis). */
   attrs: Record<string, string | number | boolean | null>;
 }
 
@@ -388,7 +388,6 @@ export function frame(
     ay,
     ax,
     attrs: {
-      "data-plot": `${r(plot.x)} ${r(plot.y)} ${r(plot.w)} ${r(plot.h)}`,
       "data-n": both || !band ? null : band.domain.length,
       "data-t": tt ? true : null,
       "data-xd": both ? bt.domain.join(" ") : null,

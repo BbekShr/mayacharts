@@ -522,7 +522,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
 
   for (const k in S) if (s[k] !== undefined && typeof s[k] !== S[k]) bad(k, s[k], `a ${S[k]}`);
   for (const [k, want, ok] of CHECKS) if (s[k] !== undefined && !ok(s[k])) bad(k, s[k], want);
-  const { y, path, select, colors, colorBy, theme, text } = s;
+  const { y, path, colors, colorBy, theme, text } = s;
   if (text !== undefined) {
     if (!isObj(text)) bad("text", text, "an object of strings");
     for (const [k, v] of Object.entries(text as object)) {

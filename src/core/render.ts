@@ -720,7 +720,6 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     fail,
     t: (k, ...a) => t(s, k, ...a),
   };
-  mark.check?.(spec, fail);
 
   let markLegend: string | null = null;
   let markTable: MarkOut["table"];
