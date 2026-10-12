@@ -143,8 +143,8 @@
     "tokens": "node scripts/tokens.mjs"
   },
   "mayaSize": {
-    "dist/index.js": 45990,
-    "dist/element.js": 64670,
+    "dist/index.js": 46790,
+    "dist/element.js": 65530,
     "dist/theme.css": 5230,
     "dist/hierarchy.js": 4690,
     "dist/flow.js": 4040,
@@ -158,7 +158,7 @@
     "dist/constellation.js": 3100,
     "dist/themes.js": 1800,
     "dist/maya.constellation.global.js": 3070,
-    "dist/maya.core.global.js": 65250,
+    "dist/maya.core.global.js": 66110,
     "dist/maya.flow.global.js": 4000,
     "dist/maya.geo.global.js": 2540,
     "dist/maya.hierarchy.global.js": 4650,

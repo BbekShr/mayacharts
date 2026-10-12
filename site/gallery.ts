@@ -716,7 +716,12 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     name: "stateName",
     rules: [{ slope: "mean", label: "Average price" }],
     tooltip: { fields: ["price"] },
-    format: { units: "compact", sales: "compact", price: { style: "currency", currency: "USD" } },
+    format: {
+      units: "compact",
+      sales: { style: "currency", currency: "USD", notation: "compact" },
+      price: { style: "currency", currency: "USD" },
+    },
+    text: { perX: "{0} per unit" },
     titles: { units: "Units", sales: "Sales ($)", price: "Price per unit" },
     data: perState,
   });

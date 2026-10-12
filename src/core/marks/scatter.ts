@@ -318,14 +318,38 @@ export const scatter: Mark = {
         x2: r(px1),
         y2: r(py1),
       });
-      // Beside the line's upper end, on the side the line leaves from, so the diagonal never crosses its own label.
-      const left = py0 < py1; // the left end is the upper one (a falling line)
-      ctx.label(
-        left ? px0 + 6 : px1 - 6,
-        Math.max((left ? py0 : py1) - 8, plot.y + 8),
-        label ?? (k === "mean" ? ctx.t("mean") : ctx.fmt("", +m.toPrecision(3))),
-        left ? "start" : "end",
+      // The value after the label ("Average price $38 per unit"), else the label alone, else the
+      // value alone. Spots lie along the line, 10 px off it on either side; the one covering the
+      // fewest points wins, and ctx.label (the collision queue) takes the first that fits.
+      const per = ctx.t(
+        "perX",
+        ctx.fmt(spec.y, +m.toPrecision(3)),
+        spec.titles.get(spec.x) ?? spec.x,
       );
+      const name = label ?? (k === "mean" ? ctx.t("mean") : "");
+      const rise = py0 > py1;
+      const spots = [0.5, 0.3, 0.7, 0.15, 0.85].flatMap((t) =>
+        [-10, 10].map((dy) => ({
+          x: px0 + (px1 - px0) * t + (rise === dy < 0 ? -4 : 4),
+          y: py0 + (py1 - py0) * t + dy,
+          a: (rise === dy < 0 ? "end" : "start") as "end" | "start", // away from the line
+        })),
+      );
+      for (const text of [`${name} ${per}`.trim(), name, per]) {
+        if (!text) continue;
+        const w = text.length * 6.5; // ponytail: width guess for the mark check only; the queue measures for real
+        const hit = (c: (typeof spots)[number]) => {
+          const [l, r2] = c.a === "end" ? [c.x - w, c.x] : [c.x, c.x + w];
+          if (c.y < plot.y + 8 || c.y > plot.y + plot.h - 8) return 1e9; // off the plot, onto the axis
+          return pts.filter((p) => {
+            const [qx, qy] = [sx.of(p.x), sy.of(p.y)];
+            const d = rad(p) + 2;
+            return qx + d > l && qx - d < r2 && qy + d > c.y - 8 && qy - d < c.y + 8;
+          }).length;
+        };
+        const ranked = spots.map((c) => [hit(c), c] as const).sort((u, v) => u[0] - v[0]);
+        if (ranked.some(([, c]) => ctx.label(c.x, c.y, text, c.a))) break;
+      }
     });
     // Size key: three reference circles drawn with the marks' own radius rule, values rounded to one digit.
     const ref = [0.1, 0.25, 0.5].map((f) => Number((max * f).toPrecision(1)));

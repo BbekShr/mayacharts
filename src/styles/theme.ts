@@ -129,6 +129,7 @@ export const css =
   ":host{display:block;position:relative;container-type:inline-size;min-height:min(200px,100%)}" +
   ".maya{display:flex;flex-direction:column;height:100%;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums;color:var(--maya-fg)}" +
   ".maya-title{font-weight:var(--maya-title-weight,600);font-size:var(--maya-title-size,15px);letter-spacing:-.01em;margin:0 0 6px}" +
+  ":host([data-compact]) .maya-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}:host([data-compact]) .maya-sub{display:none}" +
   ".maya-sub{margin:-3px 0 8px;color:var(--maya-fg-muted);line-height:1.35}" +
   // Legend placement (slot order never changes): bottom moves it after the chart; right makes the chart a grid whose last row holds the chart and the legend side by side (up to six rows above for title, subtitle, controls and crumbs).
   ".maya[data-legend=bottom] .maya-legend{order:1;margin:8px 0 0}" +

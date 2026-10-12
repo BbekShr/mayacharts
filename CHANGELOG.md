@@ -4,6 +4,25 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+Fixes #76.
+
+### Added
+
+- `aggregate` keyed by y field with a `y` array that toggles the measure, such as `aggregate: { price: { ratio: ["sales", "units"] } }`; the active measure uses its rule and unlisted fields sum (#76).
+- A series selector in data tokens: `{max.y:2025}`, `{last.y:2025}`, `{first.x:2025}`, `{total:2025}`, `{mean:2025}` read only that series. Without one, max, min, first and last read one point and `{total}` sums every series, as documented (#76).
+- Data tokens on scatter: max and min by y, first and last by x, `.x` the x value or `name` (#76).
+- Text key `perX` ("{0} per {1}") for the value of a slope rule (#76).
+
+### Fixed
+
+- Sankey under drill with a `colors` map keeps the map colours, and an unmapped root stays neutral, at every level (regression from 0.15.0) (#76).
+- With no rows, a title or subtitle holding a data token is dropped instead of printing the raw token; the empty state is unchanged (#76).
+- `annotate: []`, `dash: []` and any other empty array option are accepted as unset, also on types the option does not apply to (#76).
+- In an element under 200 px tall the title is one line with an ellipsis (full text on hover) and the subtitle is hidden (#76).
+- A scatter slope rule label shows its value as y per x ("Average price $38 per unit"), placed at an end or the middle of the line clear of the points; the description says the same (#76).
+
 ## 0.16.0 - 2026-10-12
 
 ### Added

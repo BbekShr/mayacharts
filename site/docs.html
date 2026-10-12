@@ -499,8 +499,10 @@
           normal flow with <code>height: auto</code>) it keeps a floor so it never collapses to
           nothing. A definite height, such as a BI tile or a fixed box, wins over that floor, so the
           chart never spills past its box. Under about 160 px the chart draws a compact frame: no
-          axis titles and fewer ticks. Older versions kept a 200 px floor everywhere; if a pinned
-          older version overflows a short box, set <code>maya-chart { min-height: 0 }</code>.
+          axis titles and fewer ticks. In an element under 200 px tall the title is one line with an
+          ellipsis (the full text shows on hover) and the subtitle is hidden. Older versions kept a
+          200 px floor everywhere; if a pinned older version overflows a short box, set
+          <code>maya-chart { min-height: 0 }</code>.
         </p>
 
         <h3 id="customise-css">The same tokens from CSS</h3>
@@ -631,7 +633,9 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><a class="spec-anchor" id="aggregate"></a><code>aggregate</code></td>
-              <td>sum / mean / count / min / max / {ratio: [field, field]}</td>
+              <td>
+                sum / mean / count / min / max / {ratio: [field, field]} / {[y field]: either}
+              </td>
               <td>sum</td>
               <td>
                 How rows sharing a (category, series) combine. <code>count</code> = SQL COUNT(y) on
@@ -641,8 +645,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 conversion), so the value is right in every category, drill level, Other bucket and
                 "mean" rule; a zero denominator gives null. <code>y</code> then only names the
                 measure for titles and format and need not be in the rows; other fields sum. Ratio:
-                bar line area heatmap dumbbell table kpi gauge hexmap; not with stack, was or a y
-                array, and not on part-to-whole types, whose sizes must add up
+                bar line area heatmap dumbbell table kpi gauge hexmap; not with stack or was, and
+                not on part-to-whole types, whose sizes must add up. With a y array that toggles the
+                measure, key it by y field: <code>{ price: { ratio: ["sales", "units"] } }</code>;
+                the active measure uses its rule and unlisted fields sum
               </td>
             </tr>
             <tr>
@@ -897,9 +903,9 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 drilledInto drillInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf
                 measures crumbs positive negative above below near onTrack atRisk offTrack vs change
                 pts target offBelow offAbove total shareOf sortedBy ascending descending fromTo
-                reduced points point range density perCell mean rule log play pause frameOf frame
-                was since forms waffle bars swarm perDot count rank speedBy gross alike nearest max
-                q3 median q1 min rows ofPrevious ofFirst first last labelled
+                reduced points point range density perCell mean perX rule log play pause frameOf
+                frame was since forms waffle bars swarm perDot count rank speedBy gross alike
+                nearest max q3 median q1 min rows ofPrevious ofFirst first last labelled
               </td>
             </tr>
             <tr>
@@ -920,9 +926,14 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>-</td>
               <td>
                 Visible heading and accessible name. Data tokens fill in from the chart: {max.x}
-                {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, the
-                active measure per category with series combined, formatted by <code>format</code>.
-                Only these exact names are replaced; any other brace text stays as written.
+                {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean} of the
+                active measure, formatted by <code>format</code>. Without a selector max, min, first
+                and last read one drawn point (stacked: the category totals) and total sums every
+                series. A series selector reads one series only, such as {last.y:2025} or
+                {total:2025}; an unknown series value stays as written. Scatter: max and min by y,
+                first and last by x, .x the x value or the name. With no rows a title holding a
+                token is dropped. Only these exact names are replaced; any other brace text stays as
+                written. In an element under 200 px tall it is one line with an ellipsis.
               </td>
             </tr>
             <tr>
@@ -930,8 +941,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>string</td>
               <td>-</td>
               <td>
-                A second line under the title, smaller and muted, with the same data tokens. The
-                bare <code>render()</code> SVG leaves it out
+                A second line under the title, smaller and muted, with the same data tokens; hidden
+                in an element under 200 px tall. The bare <code>render()</code> SVG leaves it out
               </td>
             </tr>
             <tr>
@@ -971,7 +982,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 rule across the category axis at that category, date or scatter x; one that matches
                 nothing draws nothing. <code>{ band: [lo, hi] }</code> shades a value range. Scatter
                 only: <code>{ slope, intercept }</code> draws y = slope * x + intercept (intercept 0
-                by default), slope "mean" = sum of y / sum of x. bar line area scatter dumbbell
+                by default), slope "mean" = sum of y / sum of x; its label shows the slope as y per
+                x ("Average price $38 per unit"; set <code>text.perX</code> to "{0} per unit" for a
+                singular unit) and sits clear of the points. <code>[]</code> is the same as unset.
+                bar line area scatter dumbbell
               </td>
             </tr>
             <tr>
@@ -998,7 +1012,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 Label those points of each visible series with their formatted value (scatter: max
                 and min by y, first and last by x). <code>{ x, text }</code> labels the mark at that
                 x with the text, at most 40 characters. They collide like value labels, and win over
-                them. bar line area scatter
+                them. <code>[]</code> is the same as unset. bar line area scatter
               </td>
             </tr>
           </tbody>
@@ -1154,9 +1168,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>
                 Max 8; 9+ slots wrap. A map is keyed by series value; treemap and sunburst by
                 <code>path[0]</code> value; sankey and chord by node name, with links and inner
-                levels inheriting; waffle by category. Keys that match nothing are ignored. Path
-                types give every name a slot from all rows, so a colour holds through drill; a host
-                filter that drops names can move array slots, a map never moves
+                levels inheriting (a sankey root missing from the map stays neutral at every drill
+                level); waffle by category. Keys that match nothing are ignored. Path types give
+                every name a slot from all rows, so a colour holds through drill; a host filter that
+                drops names can move array slots, a map never moves
               </td>
             </tr>
             <tr>
@@ -1164,7 +1179,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>string[]</td>
               <td>
                 Series values drawn dashed (the line, the area outline, the legend swatch and the
-                end label), such as last year against this year. Needs series. line area
+                end label), such as last year against this year. Needs series; <code>[]</code> is
+                the same as unset. line area
               </td>
             </tr>
             <tr>

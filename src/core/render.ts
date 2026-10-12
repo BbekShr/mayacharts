@@ -148,6 +148,9 @@
  *   (shape groups, Other, drill levels, kpi, gauge, table, "mean" rules, title tokens) the value
  *   is sum(num) / sum(den), null when sum(den) is 0; rows read num and den, not y. renderShell's
  *   JSON child projects both fields. Modules use ctx.agg("sum") on each and divide.
+ *   An aggregate keyed by y field (a y array that toggles the measure, #76) is resolved by
+ *   resolve() to the active measure's rule (validate.ts aggOf; unlisted fields "sum"), so
+ *   ResolvedSpec.aggregate and ratio are always one rule and marks never see the map.
  *   Drill + select: click/Enter select; double-click, Shift+Enter and the
  *   pinned tooltip's text.drillInto button drill. The drill gesture on a mark that cannot drill
  *   further dispatches maya-drill-leaf { path } (bubbles, composed, not cancelable): drilled
@@ -162,13 +165,23 @@
  *   --maya-series-(slot % 8 + 1) per key found in slots. treemap depth: levels drawn below the
  *   branch, parents carry their name strip; sunburst minAngle: fold threshold in degrees.
  *   Title tokens resolve in render.ts before the title is used (a11y.ts resolveTokens): only the
- *   exact names are replaced, other brace text stays as written. theme.axisSize scales layout's
+ *   exact names are replaced, other brace text stays as written. Without a selector max, min,
+ *   first and last read one drawn point (stacked: category totals) and total sums every series;
+ *   a selector {max.y:2025} reads only that series value (String compare), an unknown one stays
+ *   as written. Scatter reads its drawn points: max/min by y, first/last by x, .x the x value or
+ *   the name field. With no rows to draw a title or subtitle holding a token is dropped (null).
+ *   A sankey with a colors map that misses a root keeps neutral roots and map colours under
+ *   drill (the drilled-root hue rule needs every root mapped). theme.axisSize scales layout's
  *   label-width estimate (px; em and rem as 16 px).
  *   Rules group: an { x } rule is <line data-xrule> plus its <text>; a band is <rect data-band>
- *   (drawn first, under the lines) plus its <text>; a slope adds intercept b. ctx.label ann
+ *   (drawn first, under the lines) plus its <text>; a slope adds intercept b and its label
+ *   reads "label text.perX" (slope by format[y], x title), placed by ctx.label at the upper end,
+ *   lower end or middle, the first clear of marks; the description says the same. ctx.label ann
  *   "note" writes data-ann="note" for an annotate { x, text } item. Title tokens are resolved in
  *   a11y.ts titleText (aria-label and visible title both); Parts.title = .maya-title then
- *   <p class="maya-sub"> (subtitle; bare render() leaves it out). Parts.legendAt goes on
+ *   <p class="maya-sub"> (subtitle; bare render() leaves it out). Compact: the element sets
+ *   data-compact on the host under 200 px clientHeight; CSS clamps .maya-title to one line with
+ *   an ellipsis (full text in its title attribute) and hides .maya-sub. Parts.legendAt goes on
  *   .maya as data-legend="bottom|right" (absent for top); slot order never changes, CSS moves
  *   it. Theme titleSize, titleWeight, axisSize are --maya-title-size, --maya-title-weight,
  *   --maya-axis-size. The current crumb is a non-button span with aria-current="page".
@@ -403,7 +416,7 @@
  * Legend and title are HTML, not SVG (free wrapping and font metrics). render() — the
  * bare SVG — therefore has no legend; renderShell() is the full-fidelity output.
  */
-import { dataTable, describe, resolveTokens, titleText } from "./a11y.ts";
+import { dataTable, describe, resolveTokens, titleText, TOKEN } from "./a11y.ts";
 import { formatter } from "./format.ts";
 import { endFits, endGutter, frame } from "./layout.ts";
 import { bar } from "./marks/bar.ts";
@@ -427,6 +440,7 @@ import {
   fail,
   MAX_FRAMES,
   MAX_MARKS,
+  ratios,
   resolve,
   validateOptions,
   validateSpec,
@@ -571,8 +585,24 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       `${fr[1].length} frames exceed the limit of ${MAX_FRAMES}.`,
       "Aggregate or bin the frame field (year instead of day) so it has fewer distinct values.",
     );
+  // No rows to draw: the svg is the "no data" text.
+  const empty = !s.data.some((r) =>
+    [...(s.ratio ?? s.measures), s.y2].some((m) => typeof r[m!] === "number"),
+  );
   // Data tokens in the title and subtitle (a11y.ts resolveTokens), so the accessible name matches.
-  const tok = (v: string | null) => v && resolveTokens(v, s, shaped, fmt, () => average(s, shaped));
+  // With no rows a text holding a token is dropped rather than shown raw.
+  const tok = (v: string | null) =>
+    v &&
+    (empty && v.search(TOKEN) >= 0
+      ? null
+      : resolveTokens(
+          v,
+          s,
+          shaped,
+          fmt,
+          () => average(s, shaped),
+          s.type === "scatter" ? () => points(s, shaped) : undefined,
+        ));
   s = { ...s, title: tok(s.title), subtitle: tok(s.subtitle) };
   const fv = fr?.[1].length ? fmt(fr[0], fr[1][fr[2]]) : null;
   if (fv !== null) s = { ...s, title: t(s, "frameOf", titleText(s), fv) };
@@ -668,9 +698,6 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     ? endGutter(ends, W) ||
       (mark.ends === line.ends ? Math.max(...ends.map((e) => tw(e[1]))) + 14 : 0)
     : 0;
-  const empty = !s.data.some((r) =>
-    [...(s.ratio ?? s.measures), s.y2].some((m) => typeof r[m!] === "number"),
-  );
   const ax = mark.axes && !empty ? mark.axes(s, shaped) : null;
   // frame: each value axis spans every frame, so it holds still during playback.
   // ponytail: shapes every frame on every render (frames x rows); cache per spec if it shows.
@@ -832,8 +859,20 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         else tag(text, over ? at - 4 : at + 4, plot.y, over);
       });
     // Slope rules and annotations join the description, like bands and x rules.
-    for (const u of s.slopes)
-      say(u.label, `y = ${u.k === "mean" ? t(s, "mean") : u.k}x${u.b ? ` + ${u.b}` : ""}`);
+    // The slope as y per x (text.perX); "mean" is sum y / sum x of the drawn points, as scatter draws it.
+    if (s.slopes.length) {
+      const ps = points(s, shaped);
+      const mk = ps.reduce((a, p) => a + p.y, 0) / ps.reduce((a, p) => a + p.x, 0);
+      for (const u of s.slopes) {
+        const k = u.k === "mean" ? mk : u.k;
+        if (k && isFinite(k) && s.xScale === s.yScale)
+          say(
+            u.label ?? (u.k === "mean" ? t(s, "mean") : null),
+            t(s, "perX", fmt(s.y, +k.toPrecision(3)), s.titles.get(s.x) ?? s.x) +
+              (u.b ? ` + ${fmt(s.y, u.b)}` : ""),
+          );
+      }
+    }
     if (s.annotate.length)
       said += ` ${t(s, "labelled", s.annotate.map((k) => t(s, k)).join(", "))}.`;
     for (const n of s.notes) said += ` ${n.text}: ${fmt(s.x, n.x)}.`;
@@ -1098,7 +1137,7 @@ function project(spec: ChartSpec): ChartSpec {
     ...(typeof spec.y === "string" ? [spec.y] : spec.y),
     spec.series,
     spec.y2,
-    ...(typeof spec.aggregate === "object" ? spec.aggregate.ratio : []),
+    ...ratios(spec.aggregate).flatMap(([, r]) => r),
     typeof spec.was === "object" ? spec.was.by : spec.was,
     ...(typeof spec.tooltip === "object" ? spec.tooltip.fields : []),
     spec.frame,

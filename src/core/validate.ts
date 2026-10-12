@@ -43,6 +43,7 @@ import type {
   ErrorCode,
   FieldFormat,
   Goal,
+  Ratio,
   RenderOptions,
   ResolvedGoal,
   ResolvedSpec,
@@ -188,6 +189,7 @@ const FONT = new RegExp(`^${FAM}(?:,${FAM})*$`);
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined =>
   Object.hasOwn(o, k) ? o[k] : undefined;
+const isEmpty = (v: unknown) => Array.isArray(v) && !v.length;
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 const strs = (v: unknown, min = 0): v is string[] =>
@@ -196,6 +198,28 @@ const ty = (v: unknown) => (v === null ? "null" : Array.isArray(v) ? "array" : t
 /** Every key of `o` is in `ks`. */
 const only = (o: object, ks: readonly string[]) => Object.keys(o).every((k) => ks.includes(k));
 const fin = (n: unknown, m: number) => Number.isFinite(n) && Math.abs(n as number) <= m;
+const oneAgg = (v: any) =>
+  AGGS.includes(v) ||
+  (isObj(v) &&
+    Object.keys(v).length === 1 &&
+    strs(v.ratio) &&
+    v.ratio.length === 2 &&
+    v.ratio[0] !== v.ratio[1]);
+type Agg1 = Aggregate | Ratio;
+/** Measure m's aggregate: the entry of an aggregate keyed by y field (unlisted: undefined, so "sum"), else the one rule. */
+export const aggOf = (a: ChartSpec["aggregate"], m: string): Agg1 | undefined => {
+  const o: unknown = a;
+  return isObj(o) && !strs(o.ratio) ? own(o as Record<string, Agg1>, m) : (o as Agg1 | undefined);
+};
+/** Every { ratio } of an aggregate, keyed by the measure it applies to ("" for the one rule). */
+export const ratios = (a: ChartSpec["aggregate"]): [string, readonly string[]][] => {
+  const o: unknown = a;
+  if (!isObj(o)) return [];
+  if (strs(o.ratio)) return [["", o.ratio]];
+  return Object.entries(o as Record<string, Agg1>).flatMap(([m, v]) =>
+    typeof v === "object" ? [[m, v.ratio] as [string, readonly string[]]] : [],
+  );
+};
 const show = (v: unknown) => {
   const t = typeof v === "string" || isObj(v) || Array.isArray(v) ? JSON.stringify(v) : String(v);
   return t.length > 60 ? t.slice(0, 59) + "…" : t;
@@ -333,14 +357,8 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ["totals", "an array of x values (strings)", (v) => strs(v)],
   [
     "aggregate",
-    `one of ${AGGS.join(", ")}, or { ratio: [numerator field, denominator field] }`,
-    (v) =>
-      AGGS.includes(v) ||
-      (isObj(v) &&
-        Object.keys(v).length === 1 &&
-        strs(v.ratio) &&
-        v.ratio.length === 2 &&
-        v.ratio[0] !== v.ratio[1]),
+    `one of ${AGGS.join(", ")}, { ratio: [numerator field, denominator field] }, or either keyed by y field`,
+    (v) => oneAgg(v) || (isObj(v) && Object.keys(v).length > 0 && Object.values(v).every(oneAgg)),
   ],
   ["legend", 'a boolean, "top", "bottom" or "right"', (v) => v === !!v || LEG.includes(v)],
   ["depth", "a positive integer", (v) => Number.isInteger(v) && v > 0],
@@ -374,10 +392,9 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ["yScale", '"log"', (v) => v === "log"],
   [
     "annotate",
-    `a non-empty array of distinct ${ANN.join(", ")} or { x, text (40 characters) }`,
+    `an array of distinct ${ANN.join(", ")} or { x, text (40 characters) }`,
     (v) =>
       Array.isArray(v) &&
-      v.length > 0 &&
       new Set(v).size === v.length &&
       v.every((a) =>
         isObj(a)
@@ -389,7 +406,7 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
           : ANN.includes(a as string),
       ),
   ],
-  ["dash", "a non-empty array of series values (strings)", (v) => strs(v, 1)],
+  ["dash", "an array of series values (strings)", (v) => strs(v)],
   [
     "forms",
     `a non-empty array of distinct forms: ${FORMS.join(", ")}`,
@@ -649,10 +666,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (s.stack && t === "line")
     F("stack-unsupported", "stack", NS, 'Use type "area" (or "bar") to stack series.');
   for (const k in ONLY)
-    if (s[k] !== undefined && s[k] !== false && !ONLY[k]!.includes(t))
+    // An empty array is unset (code-built specs produce [] when nothing qualifies).
+    if (s[k] !== undefined && s[k] !== false && !isEmpty(s[k]) && !ONLY[k]!.includes(t))
       F("option-unsupported", k, NS, `spec.${k} works with: ${ONLY[k]!.join(", ")}.`);
   const cart = DRILLP.includes(t);
-  const ratio = isObj(s.aggregate) ? (s.aggregate.ratio as string[]) : null;
+  const agg = s.aggregate as ChartSpec["aggregate"];
+  const rs = ratios(agg);
+  // Measures whose y only names a ratio ("" for the one rule: y itself).
+  const rm = new Set(rs.map(([m]) => m || (y as string)));
+  const per = isObj(agg) && !strs(agg.ratio);
+  const ratio = rs.length > 0;
   const CB = "cannot be combined with";
   const pairs: [unknown, string, string, string?][] = [
     [colorBy != null && s.series != null && t !== "dumbbell", "colorBy", `${CB} spec.series.`],
@@ -670,9 +693,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       `A ratio works with: ${RATIO.join(", ")}.`,
     ],
     [
-      ratio && (s.stack || s.was != null || Array.isArray(y)),
+      ratio && (s.stack || s.was != null || (Array.isArray(y) && !per)),
       "aggregate",
       `= { ratio } ${CB} spec.stack, spec.was or a y array.`,
+      "With a y array, key it by y field: aggregate: { <y field>: { ratio: [...] } }.",
+    ],
+    [
+      per && (!Array.isArray(y) || ALL_Y.includes(t)),
+      "aggregate",
+      "keyed by y field needs a y array that toggles the measure.",
+      `Not on ${ALL_Y.join(", ")}, which show every measure at once.`,
     ],
     // ponytail: was ghosts are grouped bars only, not stacks or a measure toggle (NON-FEATURES).
     [s.was != null && (s.stack || Array.isArray(y)), "was", `${CB} spec.stack or a y array.`],
@@ -683,7 +713,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       `.fields ${NS}`,
       `It works with: ${TIPF.join(", ")}.`,
     ],
-    [s.dash != null && s.series === undefined, "dash", "needs spec.series."],
+    [strs(s.dash, 1) && s.series === undefined, "dash", "needs spec.series."],
     [s.y2 != null && s.horizontal === true, "y2", `${CB} spec.horizontal.`],
     [
       s.xType === "time" && (s.sort != null || s.limit != null || s.horizontal === true),
@@ -703,6 +733,15 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   for (const [hit, k, rest, detail] of pairs)
     if (hit)
       fail("option-unsupported", k, `spec.${k}${rest[0] === "." ? "" : " "}${rest}`, detail ?? "");
+  if (per)
+    for (const k of Object.keys(agg as object))
+      if (!(y as string[]).includes(k))
+        F(
+          "invalid-option",
+          `aggregate.${k}`,
+          `is not in spec.y: ${(y as string[]).join(", ")}.`,
+          dym(k, y as string[]),
+        );
   if (isObj(colorBy)) {
     // Threshold keys win; otherwise a kpi with a y array may key thresholds by measure.
     const ks = Object.keys(colorBy);
@@ -732,13 +771,15 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         );
       };
       // Under a ratio aggregate y only names the measure: its rows need not hold it.
-      const ys = ratio ? [] : typeof y === "string" ? [y] : (y as string[]);
-      const arr = (o: string, a: string[]): [string, string][] =>
+      const arr = (o: string, a: readonly string[]): [string, string][] =>
         a.map((f, i) => [`${o}[${i}]`, f]);
+      const yp: [string, string][] = typeof y === "string" ? [["y", y]] : arr("y", y as string[]);
+      const yk = yp.filter(([, f]) => !rm.has(f));
+      const ys = yk.map(([, f]) => f);
       const fields: [string, unknown][] = [
         ["x", s.x],
-        ...(typeof y === "string" ? (ratio ? [] : [["y", y] as [string, string]]) : arr("y", ys)),
-        ...arr("aggregate.ratio", ratio ?? []),
+        ...yk,
+        ...rs.flatMap(([m, r]) => arr(`aggregate${m && "." + m}.ratio`, r)),
         ["series", s.series],
         ["y2", s.y2],
         ["was", s.was],
@@ -754,7 +795,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       for (const opt of ["format", "titles"])
         if (isObj(s[opt]))
           for (const f of Object.keys(s[opt] as object))
-            if (!has(f) && !(ratio && f === y)) unk(`${opt}.${f}`, "", f);
+            if (!has(f) && !rm.has(f)) unk(`${opt}.${f}`, "", f);
       if (colorBy === "sign" && has("sign"))
         F(
           "invalid-option",
@@ -782,7 +823,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
           );
         });
       for (const f of ys) numeric(f, "non-numeric-y", "y");
-      for (const f of ratio ?? []) numeric(f, "non-numeric-field", "aggregate.ratio");
+      for (const [, r] of rs) for (const f of r) numeric(f, "non-numeric-field", "aggregate.ratio");
       if (typeof s.size === "string") numeric(s.size, "non-numeric-field", "size");
       for (const k of ["y2", "was"])
         if (typeof s[k] === "string") numeric(s[k] as string, "non-numeric-field", k);
@@ -935,7 +976,9 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const fv = F ? [...new Set(spec.data.flatMap((r) => (r[F] == null ? [] : [String(r[F])])))] : [];
   const fi = Math.min(view.frame ?? fv.length, fv.length - 1);
   const x = spec.x ?? (PATHX.includes(spec.type) ? (path[0] ?? "") : "");
-  const ratio = typeof spec.aggregate === "object" ? spec.aggregate.ratio : null;
+  // An aggregate keyed by y field resolves to the active measure's rule, so marks see one rule.
+  const ag = aggOf(spec.aggregate, measures[measure]!);
+  const ratio = typeof ag === "object" ? ag.ratio : null;
   // Path types: one palette slot per path value from all rows, so a name keeps its colour through drill.
   const slots = PATH.includes(spec.type)
     ? memo(spec.data, `slots${flow}${JSON.stringify(full)}`, () => {
@@ -982,7 +1025,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
         spec.series ?? null,
         measures[measure]!,
         wb,
-        (spec.aggregate as Aggregate) ?? "sum",
+        (ag as Aggregate | undefined) ?? "sum",
       )
     : null;
   const data = pv ? pv.rows : rows;
@@ -1066,10 +1109,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     stack: spec.stack ?? false,
     horizontal: spec.horizontal ?? false,
     // A ratio sums both fields; long-form was has already counted its rows into y, so it sums those.
-    aggregate:
-      ratio || (pv && spec.aggregate === "count")
-        ? "sum"
-        : ((spec.aggregate as Aggregate | undefined) ?? "sum"),
+    aggregate: ratio || (pv && ag === "count") ? "sum" : ((ag as Aggregate | undefined) ?? "sum"),
     ratio: ratio ? [ratio[0], ratio[1]] : null,
     sort: spec.sort ?? null,
     sortBy: view.sortBy ?? null,

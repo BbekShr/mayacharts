@@ -865,3 +865,47 @@ for (const type of ["line", "bar"])
     expect(r.at).toBeGreaterThan(r.renderAt + 300); // the entrance had time left at maya-render
     expect(r.at).toBeLessThan(4000);
   });
+
+test("a compact tile clamps the title to a line and hides the subtitle", async ({ page }) => {
+  await open(page);
+  const r = await page.evaluate(async () => {
+    const out: Record<string, unknown> = {};
+    for (const [k, w, h] of [
+      ["small", 200, 130],
+      ["big", 400, 300],
+    ] as const) {
+      const el = document.createElement("maya-chart") as any;
+      el.style.cssText = `display:block;width:${w}px;height:${h}px`;
+      el.spec = {
+        type: "bar",
+        x: "c",
+        y: "v",
+        title: "A rather long title for a tiny tile",
+        subtitle: "And a subtitle that would wrap",
+        data: [
+          { c: "a", v: 1 },
+          { c: "b", v: 2 },
+        ],
+      };
+      document.body.prepend(el);
+      await el.settled;
+      const q = (s: string) => el.shadowRoot.querySelector(s) as HTMLElement;
+      out[k] = {
+        compact: el.hasAttribute("data-compact"),
+        titleH: q(".maya-title").getBoundingClientRect().height,
+        sub: getComputedStyle(q(".maya-sub")).display,
+        plotH: q(".maya-box").clientHeight,
+        tip: q(".maya-title").title,
+      };
+    }
+    return out as Record<string, any>;
+  });
+  console.log(JSON.stringify(r));
+  expect(r.small.compact).toBe(true);
+  expect(r.small.sub).toBe("none");
+  expect(r.small.titleH).toBeLessThan(24);
+  expect(r.small.tip).toContain("tiny tile");
+  expect(r.big.compact).toBe(false);
+  expect(r.big.sub).not.toBe("none");
+  expect(r.big.tip).toBe("");
+});

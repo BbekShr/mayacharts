@@ -907,7 +907,7 @@ describe("#59-#68 contracts: was long form, log scales, slope rules, dash, toolt
     ok({ ...line, dash: ["N"] });
     ok({ ...line, type: "area", dash: ["N", "S"] });
     expect(code({ ...line, dash: ["X"] })).toEqual(["invalid-option", "dash[0]"]);
-    expect(code({ ...line, dash: [] })).toEqual(["invalid-option", "dash"]);
+    ok({ ...line, dash: [] }); // [] is unset (#76)
     expect(code({ ...long, type: "line", dash: ["N"] })).toEqual(["option-unsupported", "dash"]);
     expect(code({ ...long, series: "region", dash: ["N"] })).toEqual([
       "option-unsupported",
@@ -1148,5 +1148,45 @@ describe("#69-#72 contracts: ratio, drill + select, drill types, colour slots, d
     expect(err({ ...base, interaction: {} }).message).toContain("Shift+Enter");
     expect(err({ ...base, measures: {} }).message).toContain("ratio");
     expect(err({ ...base, styles: {} }).message).toContain("dash");
+  });
+});
+
+describe("#76 aggregate keyed by y field", () => {
+  const base = {
+    type: "bar",
+    x: "c",
+    y: ["gap", "price"],
+    data: [{ c: "A", gap: 1, s: 2, u: 1 }],
+  };
+  it("accepts a map of Aggregate or { ratio } by y field", () => {
+    ok({ ...base, aggregate: { price: { ratio: ["s", "u"] } } });
+    ok({ ...base, aggregate: { gap: "mean", price: { ratio: ["s", "u"] } } });
+  });
+  it("refuses unknown keys, bad values, a single y and all-y types", () => {
+    expect(code({ ...base, aggregate: { nope: "sum" } })).toEqual([
+      "invalid-option",
+      "aggregate.nope",
+    ]);
+    expect(code({ ...base, aggregate: { gap: "median" } })).toEqual([
+      "invalid-option",
+      "aggregate",
+    ]);
+    expect(code({ ...base, y: "gap", aggregate: { gap: "mean" } })).toEqual([
+      "option-unsupported",
+      "aggregate",
+    ]);
+    expect(code({ ...base, type: "table", aggregate: { gap: "mean" } })).toEqual([
+      "option-unsupported",
+      "aggregate",
+    ]);
+    expect(code({ ...base, aggregate: { price: { ratio: ["s", "nope"] } } })).toEqual([
+      "unknown-field",
+      "aggregate.price.ratio[1]",
+    ]);
+    // The one-rule ratio still refuses a y array, and says how to key it.
+    expect(code({ ...base, aggregate: { ratio: ["s", "u"] } })).toEqual([
+      "option-unsupported",
+      "aggregate",
+    ]);
   });
 });

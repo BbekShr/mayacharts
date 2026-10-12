@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render } from "../src/index.ts";
+import { render, renderParts } from "../src/index.ts";
 import "../src/flow.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
@@ -232,5 +232,28 @@ describe("sankey", () => {
   it("200k distinct nodes fail as too-many-marks, not RangeError", () => {
     const big = Array.from({ length: 200000 }, (_, i) => ({ a: "s" + i, b: "M", c: "P", v: 1 }));
     expect(() => render(spec(big))).toThrow(expect.objectContaining({ code: "too-many-marks" }));
+  });
+  it("a colors map survives a drill: unmapped root neutral, mapped nodes keep their colour (#76)", () => {
+    const data = ["West", "East"].flatMap((r) => [
+      { r, f: "Outerwear", i: "Jackets", v: 5 },
+      { r, f: "Bottoms", i: "Jeans", v: 3 },
+    ]);
+    const s = {
+      type: "sankey",
+      path: ["r", "f", "i"],
+      y: "v",
+      drill: true,
+      colors: { Outerwear: "rgb(209, 84, 58)", Bottoms: "rgb(15, 157, 138)" },
+      data,
+    } as ChartSpec;
+    for (const view of [undefined, { drill: ["West"] }]) {
+      const m = tags(renderParts(s, view ? { view } : {}).svg, "mark");
+      const t = (n: string) => m.find((x) => at(x, "data-x") === n)!;
+      expect(t(view ? "West" : "West"), String(view)).toContain("data-neu");
+      expect(at(t("Outerwear"), "data-s")).toBe(at(t("Jackets"), "data-s"));
+      expect(at(t("Bottoms"), "data-s")).toBe(at(t("Jeans"), "data-s"));
+      expect(at(t("Outerwear"), "data-s")).not.toBe(at(t("Bottoms"), "data-s"));
+      expect(at(t("Outerwear"), "data-s")).toBeDefined();
+    }
   });
 });

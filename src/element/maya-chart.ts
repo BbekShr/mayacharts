@@ -203,6 +203,7 @@ export class MayaChart extends HTMLElement {
       }
     });
     this.#ro.observe(box);
+    this.#ro.observe(this); // the host's height drives data-compact
     this.#schedule();
   }
 
@@ -392,6 +393,10 @@ export class MayaChart extends HTMLElement {
       this.#seen = spec;
     }
     const draw = (s = spec) => {
+      // Compact tile: CSS clamps the title to a line and hides the subtitle. Keyed on the host's own height, which they do not change.
+      // ponytail: SSR (Declarative Shadow DOM) tiles show the full title until hydration sets this.
+      this.toggleAttribute("data-compact", this.clientHeight < 200);
+      this.#clamp(root);
       this.#size = [box.clientWidth, box.clientHeight];
       return renderParts(s, {
         width: box.clientWidth || 640,
@@ -499,6 +504,13 @@ export class MayaChart extends HTMLElement {
   }
 
   /** Slots in shell order; each is replaced only when its markup changed. True if any was. */
+  /** Native tooltip with the full title, only while it is clamped. */
+  #clamp(root: ShadowRoot): void {
+    const t = root.querySelector(".maya-title");
+    if (this.hasAttribute("data-compact")) t?.setAttribute("title", t.textContent!);
+    else t?.removeAttribute("title");
+  }
+
   #slots(root: ShadowRoot, parts: Parts): boolean {
     const box = root.querySelector(".maya-box")!;
     let changed = false;
@@ -509,6 +521,7 @@ export class MayaChart extends HTMLElement {
       root.querySelectorAll(sel).forEach((e) => e.remove());
       const next = SLOTS.slice(i + 1).map(([, s]) => root.querySelector(s));
       (next.find(Boolean) ?? box).insertAdjacentHTML("beforebegin", html(parts[k] as string));
+      if (!i) this.#clamp(root);
     });
     return changed;
   }
