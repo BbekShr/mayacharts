@@ -25,7 +25,6 @@ import * as sort from "./sort.ts";
 import { type Tooltip, tooltip } from "./tooltip.ts";
 import * as zoom from "./zoom.ts";
 
-type Deferred = { p: Promise<void>; ok(): void; no(e: Error): void };
 let sheet: CSSStyleSheet | undefined;
 
 export class MayaChart extends HTMLElement {
@@ -60,29 +59,26 @@ export class MayaChart extends HTMLElement {
   #idle: (() => void) | undefined; // cancels the queued data-table insert
 
   #gen = 0; // the latest paint; an older one's settle is dropped
-  #res: Error | null | undefined; // outcome of the last settle; undefined while a render is due
-  #sp: Deferred | undefined; // made only when read
+  #end: ((e: Error | null) => void) | undefined; // settles #sp; undefined once settled
+  #sp = this.#arm();
+  #arm(): Promise<void> {
+    const p = new Promise<void>((ok, no) => (this.#end = (e) => (e ? no(e) : ok())));
+    p.catch(() => {}); // a rejection nobody reads is not unhandled
+    return p;
+  }
 
   /** Resolves when the current or next render has finished animating; rejects with its error. */
   get settled(): Promise<void> {
-    if (this.#res !== undefined) return this.#res ? Promise.reject(this.#res) : Promise.resolve();
-    if (!this.#sp) {
-      const s = {} as Deferred;
-      s.p = new Promise((ok, no) => Object.assign(s, { ok, no }));
-      this.#sp = s;
-    }
-    return this.#sp.p;
+    return this.#sp;
   }
 
   #settle(error: Error | null, wait?: Promise<unknown>): void {
     const n = ++this.#gen;
     const fin = () => {
       if (n !== this.#gen) return;
-      this.#res = error;
       this.#emit("maya-settled", { error });
-      const s = this.#sp;
-      this.#sp = undefined;
-      error ? s?.no(error) : s?.ok();
+      this.#end?.(error);
+      this.#end = undefined;
     };
     wait ? wait.then(fin) : fin();
   }
@@ -282,9 +278,7 @@ export class MayaChart extends HTMLElement {
     const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
     this.#fl = d1.length !== d0.length;
     // A table row is a thin bar, not a container: its rows swap by key instead of zooming.
-    const flow = this.spec?.type === "sankey";
-    if (flow) d1.length - d0.length && this.#tip?.hide();
-    else if (this.spec?.type === "table") this.#tip?.hide();
+    if (/^(sankey|table)$/.test(this.spec?.type ?? "")) this.#fl && this.#tip?.hide();
     else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
     else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
     this.#state = next;
@@ -316,10 +310,10 @@ export class MayaChart extends HTMLElement {
       done = !!(
         m &&
         (e.target as Element).closest(".maya-svg") &&
-        // With both on, Enter selects and Shift+Enter drills.
-        (this.spec?.select && !(e as KeyboardEvent).shiftKey
-          ? ix.select.enter?.(m) || ix.drill.enter?.(m)
-          : ix.drill.enter?.(m, true) || ix.select.enter?.(m))
+        // Enter selects, else drills; Shift+Enter drills, else selects.
+        ((e as KeyboardEvent).shiftKey
+          ? ix.drill.enter?.(m) || ix.select.enter?.(m)
+          : ix.select.enter?.(m) || ix.drill.enter?.(m))
       );
     } else if (k === "+" || k === "=" || k === "-") {
       const { ctrlKey, metaKey, altKey } = e as KeyboardEvent;
@@ -348,7 +342,7 @@ export class MayaChart extends HTMLElement {
   /** Renders in a microtask (property sets in one task batch); ResizeObserver delivery waits a frame. */
   #schedule(raf = false): void {
     if (!this.isConnected || (raf ? this.#raf : this.#q)) return;
-    if (!raf) this.#res = undefined;
+    if (!raf && !this.#end) this.#sp = this.#arm();
     const run = () => {
       if (raf) this.#raf = false;
       else this.#q = false;
@@ -411,7 +405,8 @@ export class MayaChart extends HTMLElement {
     // Before #slots: a focused legend button or crumb may be replaced.
     const focus = this.#focusId();
     // A drill adds or removes the breadcrumb row, which shifts the plot: measure to glide it.
-    const top0 = this.#drawn && this.#fl ? box.getBoundingClientRect().top : undefined;
+    const top0 = this.#fl ? box.getBoundingClientRect().top : NaN;
+    this.#fl = false;
     let parts;
     try {
       if (!this.#drawn && !box.querySelector("svg"))
@@ -441,11 +436,10 @@ export class MayaChart extends HTMLElement {
       const d: MayaErrorDetail | null =
         e instanceof MayaSpecError ? { code: e.code, path: e.path, message: e.message } : null;
       // Cancelable: preventDefault() hides the box (the host shows its own error).
-      const fail = e instanceof Error ? e : new Error(String(e));
       if (d && !this.#emit("maya-error", d, true)) {
         box.replaceChildren();
         this.#drawn = false;
-        return this.#settle(fail);
+        return this.#settle(e as Error);
       }
       const pre = document.createElement("pre");
       pre.className = "maya-err"; // styled by theme.ts; never an inline style
@@ -454,7 +448,7 @@ export class MayaChart extends HTMLElement {
       this.#drawn = false;
       if (pre.textContent !== this.#err) console.error(e);
       this.#err = pre.textContent;
-      return this.#settle(fail);
+      return this.#settle(e as Error);
     }
     this.#err = "";
     const maya = root.querySelector<HTMLElement>(".maya")!;
@@ -480,9 +474,7 @@ export class MayaChart extends HTMLElement {
     // Nothing animates on resize: geometry must track the container immediately.
     const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
     maya.toggleAttribute("data-still", spec.animate === false); // CSS transitions off too
-    parts.legendAt && parts.legendAt !== "top"
-      ? maya.setAttribute("data-legend", parts.legendAt)
-      : maya.removeAttribute("data-legend");
+    maya.setAttribute("data-legend", parts.legendAt ?? ""); // absent: top
     // A microtask render beside a pending resize frame is not the resize's own: it animates.
     const resized = this.#resized && fromRaf;
     if (fromRaf) this.#resized = false;
@@ -498,11 +490,8 @@ export class MayaChart extends HTMLElement {
       instant: resized,
     });
     this.#zoom = undefined;
-    this.#fl = false;
-    if (top0 !== undefined && !still) {
-      const dy = top0 - box.getBoundingClientRect().top;
-      if (dy) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
-    }
+    const dy = top0 - box.getBoundingClientRect().top; // NaN: not measured
+    if (dy && !still) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
     if (intro && !still) this.#intro = performance.now();
     this.#drawn = true;
     this.#restore(focus);

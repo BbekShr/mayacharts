@@ -166,9 +166,7 @@ const run = (e: Element, k: Keyframe[], o: KeyframeAnimationOptions, then?: () =
 /** Stagger: a mark's delay follows its category, so bars rise left to right. */
 // Only cartesian charts (svg carries data-n or data-xd): in space-filling and flow marks data-c is an index and a stagger overlaps neighbours.
 const delay = (e: Element) =>
-  !drill && e.hasAttribute("data-c") && e.closest("svg[data-n],svg[data-xd]")
-    ? n(e, "data-c") * lag
-    : 0;
+  e.hasAttribute("data-c") && e.closest("svg[data-n],svg[data-xd]") ? n(e, "data-c") * lag : 0;
 
 /** Make `o`'s subtree match `w`'s in place where the shapes agree, so nested nodes (and the CSS
  * animations on them, an orbit's rotation) survive an update; else replace the children. */
@@ -318,9 +316,9 @@ function crossfade(
 // the locale's separators, prefix and suffix stay exactly as the formatter wrote them.
 const NUM = /\d(?:[\d.,'\u2019\s\u00a0\u202f]*\d)?/;
 const counts = new WeakMap<Element, number>(); // latest count per element; older loops stop
-const busyUntil = new WeakMap<Node, number>(); // per chart: performance.now() when its last count-up or text swap ends
-const hold = (e: Element, t: number) =>
-  busyUntil.set(e.getRootNode(), Math.max(busyUntil.get(e.getRootNode()) ?? 0, t));
+const busy = new WeakMap<Node, number>(); // per chart: performance.now() when its last count-up or text swap ends
+const hold = (e: Element, t: number, r = e.getRootNode()) =>
+  busy.set(r, Math.max(busy.get(r) ?? 0, t));
 function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   const to = e.textContent ?? "";
   const m = NUM.exec(to);
@@ -635,7 +633,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   // Sunburst: labels ghost and fade in late (as on a drill), never follow rings that sweep in angle.
   const sun = !!w.querySelector('circle[data-depth="0"]');
   const z = !!(zoom || zm || moved || sun);
-  const late = { ...UI, delay: Number((zoom || zm || drill ? ZOOM : DATA).duration) * 0.75 };
+  const late = { ...UI, delay: Number((zoom || drill ? ZOOM : DATA).duration) * 0.75 };
   const ghosts: Element[] = [];
   const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
   for (const c of [...w.children]) {
@@ -646,7 +644,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     const p = pool.get(id(c));
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
-    else if (p && !zoom && !zm && !drill && !sun && /^(labels|axis-[xy])$/.test(id(c))) {
+    else if (p && !zoom && !drill && !sun && /^(labels|axis-[xy])$/.test(id(c))) {
       follow(p, c, id(c) === "labels" ? late : { ...UI, delay: 160 }, id(c) === "labels");
       out.push(p);
     } else {
@@ -820,10 +818,9 @@ export function patch(
     }
   } else {
     instant = !!opts.instant;
-    lag = wm.querySelector("[data-w]") ? 0 : spread(wm); // weave threads must meet their dots
+    drill = !!opts.zoom; // a drill does not stagger; weave threads must meet their dots
+    lag = drill || wm.querySelector("[data-w]") ? 0 : spread(wm);
     zm = undefined;
-    drill = !!opts.zoom;
-    lag = drill ? 0 : lag;
     const z = opts.zoom;
     if (z) {
       const F = (w.getAttribute("data-plot") ?? "").split(" ").map(Number) as Box;
@@ -863,17 +860,16 @@ const live = (root: ShadowRoot) =>
     .filter(
       (a) => a.playState !== "finished" && a.effect?.getComputedTiming().iterations !== Infinity,
     ) ?? []; // the orbit's endless rotation is not motion to wait for
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const wait = (root: ShadowRoot): Promise<unknown> | undefined => {
+  const l = live(root),
+    t = (busy.get(root) ?? 0) - performance.now();
+  if (l.length || t > 0)
+    return Promise.allSettled([...l.map((a) => a.finished), sleep(t)]).then(() => wait(root));
+};
 
 /** Undefined when nothing animates; else resolves when every finite animation and count-up has ended (5 s cap). */
-export function idle(root: ShadowRoot): Promise<unknown> | undefined {
-  if (!live(root).length && (busyUntil.get(root) ?? 0) <= performance.now()) return;
-  const go = async () => {
-    for (let l; (l = live(root)).length || (busyUntil.get(root) ?? 0) > performance.now();) {
-      await Promise.allSettled(l.map((a) => a.finished));
-      await new Promise((r) =>
-        setTimeout(r, Math.max(0, (busyUntil.get(root) ?? 0) - performance.now())),
-      );
-    }
-  };
-  return Promise.race([go(), new Promise((r) => setTimeout(r, 5000))]);
-}
+export const idle = (root: ShadowRoot) => {
+  const w = wait(root);
+  return w && Promise.race([w, sleep(5000)]);
+};

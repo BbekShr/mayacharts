@@ -118,24 +118,21 @@ export const mount = (host: Host): Handlers => {
     // A hierarchy key holds the whole branch: push every level down to the mark.
     const p = key.split("~");
     // data-to: a nested treemap child drills only its parent (that many values).
-    const to = +(m.getAttribute("data-to") ?? 0) || 99;
-    const values = p[0] === "h" ? p.slice(1 + depth, 1 + depth + to).map(decode) : [];
+    const to = +m.getAttribute("data-to")! || 99;
     const first = branchOf(key, depth, spec.type);
     if (first === undefined) return false;
+    const values = p[0] === "h" ? p.slice(1 + depth, 1 + depth + to).map(decode) : [first];
     let next = s;
-    for (const value of values.length ? values : [first])
-      next = reduce(next, { type: "drill", value, spec });
-    if (next === s) {
+    for (const value of values) next = reduce(next, { type: "drill", value, spec });
+    if (next === s)
       // Nowhere deeper to go: the drill gesture reports the leaf (root to leaf).
-      host.el.dispatchEvent(
+      return !host.el.dispatchEvent(
         new CustomEvent("maya-drill-leaf", {
-          detail: { path: [...(s.view.drill ?? []), ...(values.length ? values : [first])] },
+          detail: { path: [...(s.view.drill ?? []), ...values] },
           bubbles: true,
           composed: true,
         }),
       );
-      return false;
-    }
     want = ptr ? { svg: true } : { first: true };
     host.commit(next);
     say(next);
@@ -144,23 +141,19 @@ export const mount = (host: Host): Handlers => {
 
   const click = (e: Event) => {
     const el = e.target as Element | null;
-    const crumb = el?.closest(".maya-crumbs button[data-depth],.maya-crumbs a[data-depth]");
+    const crumb = el?.closest(".maya-crumbs [data-depth]");
     const { detail } = e as MouseEvent; // 0: a keyboard-activated button; a double click acts once
     const both = host.spec()?.select; // a click selects then, the second click of a pair drills
-    if (detail > (both ? 2 : 1) || (both && detail === 2 && !host.mark(e))) return;
+    if (detail > (both ? 2 : 1) || (detail > 1 && !host.mark(e))) return;
     ptr = detail > 0;
-    const tipKey = el?.closest(".maya-tip button[data-drill]")?.getAttribute("data-drill");
+    // The tooltip's drill button (select and drill together) names its mark.
+    const tk = el?.closest(".maya-tip [data-drill]")?.getAttribute("data-drill");
+    const m = tk ? marks().find((x) => x.getAttribute("data-key") === tk) : host.mark(e);
     if (crumb) pop(Number(crumb.getAttribute("data-depth")));
-    else if (tipKey) {
-      const m = marks().find((x) => x.getAttribute("data-key") === tipKey);
-      if (m) push(m);
-    } else {
-      const m = host.mark(e); // a link never drills (sankey and chord links are not keyboard-reachable)
-      if (m && m.getAttribute("data-maya") !== "link") {
-        if (!both || detail !== 1) push(m);
-      } else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false && detail < 2)
-        pop((host.state().view.drill ?? []).length - 1);
-    }
+    // A link never drills (sankey and chord links are not keyboard-reachable).
+    else if (m && m.getAttribute("data-maya") !== "link") (tk || !both || detail > 1) && push(m);
+    else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false)
+      pop((host.state().view.drill ?? []).length - 1);
     ptr = false;
   };
 

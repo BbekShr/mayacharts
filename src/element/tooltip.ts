@@ -366,22 +366,6 @@ export function tooltip(
       ...(all.length > rows.length ? [h("div", `+${all.length - rows.length}`)] : []),
       ...(stk && sp ? [h("div", "", { "data-t": "" })] : []),
     );
-    // Select and drill together: click selects, so a pinned or touched tooltip carries the drill
-    // gesture for pointers that cannot double-click. Not on hover, and not where nothing is deeper.
-    const dk = a(m, "data-key");
-    const depth = (host as { view?: View }).view?.drill?.length ?? 0;
-    const to = sp && branchOf(dk, depth, sp.type);
-    if (
-      (pin || coarse) &&
-      sp?.drill &&
-      sp.select &&
-      to !== undefined &&
-      depth < (sp.path?.length ?? 0) - 1 &&
-      a(m, "data-maya") === "mark" &&
-      !m.hasAttribute("data-other")
-    )
-      tip.append(h("button", str(sp, "drillInto", to), { type: "button", "data-drill": dk }));
-    tip.style.setProperty("pointer-events", pin || coarse ? "auto" : "");
     if (stk && sp)
       tip.lastElementChild!.append(
         h("span", str(sp, "total")),
@@ -394,6 +378,22 @@ export function tooltip(
           { "data-v": "" },
         ),
       );
+    // Select and drill together: click selects, so a pinned or touched tooltip carries the drill
+    // gesture for pointers that cannot double-click. Not on hover, and not where nothing is deeper.
+    const dk = a(m, "data-key"),
+      depth = (host as { view?: View }).view?.drill?.length ?? 0,
+      to = sp && branchOf(dk, depth, sp.type),
+      b =
+        (pin || coarse) &&
+        sp?.select &&
+        sp.drill &&
+        to != null &&
+        depth < (sp.path?.length ?? 0) - 1 &&
+        m.matches("[data-maya=mark]:not([data-other])") &&
+        tip.appendChild(
+          h("button", str(sp, "drillInto", to), { type: "button", "data-drill": dk }),
+        );
+    tip.style.pointerEvents = b ? "auto" : ""; // only the button takes the pointer
     cross(m);
     shade(m);
     // The probe's containing block is the host's padding box (:host is position:relative).
@@ -497,8 +497,7 @@ export function tooltip(
   const down = (e: Event) => {
     kb = false;
     const p = e as PointerEvent;
-    coarse = p.pointerType !== "mouse";
-    down0 = p.pointerType === "mouse" ? undefined : [p.clientX, p.clientY];
+    down0 = (coarse = p.pointerType != "mouse") ? [p.clientX, p.clientY] : undefined;
   };
   const up = (e: Event) => {
     const p = e as PointerEvent;
