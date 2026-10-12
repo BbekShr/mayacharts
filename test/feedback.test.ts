@@ -198,3 +198,42 @@ describe("#63 compact frame", () => {
     expect(labels(small, "axis-y").length).toBeLessThan(labels(big, "axis-y").length);
   });
 });
+
+describe("round 2 hooks", () => {
+  it("tooltip fields emit data-more", () => {
+    const svg = render({
+      type: "bar",
+      x: "a",
+      y: "v",
+      tooltip: { fields: ["w"] },
+      format: { w: "integer" },
+      data: [{ a: "x", v: 1, w: 7 }],
+    });
+    expect(svg).toMatch(/data-more="w\t7"/);
+  });
+  it("legend buttons carry data-dash, annotate labels data-ann", () => {
+    const data = ["a", "b"].flatMap((k) => [1, 2, 3].map((m) => ({ m, k, v: m * 2 })));
+    const p = renderParts({
+      type: "line",
+      x: "m",
+      y: "v",
+      series: "k",
+      dash: ["b"],
+      annotate: ["first"],
+      legend: true,
+      data,
+    });
+    expect(p.legend).toMatch(/<button[^>]*data-dash[^>]*data-key="b"/);
+    expect(p.svg).toContain('data-ann="first"');
+  });
+  it("an end label keeps its value; a name that cannot fit brings the legend back", () => {
+    const rows = (n: string) => [1, 2].map((m) => ({ m, k: n, v: m * 123456789.12 }));
+    const long = "x".repeat(60);
+    const p = renderParts(
+      { type: "line", x: "m", y: "v", series: "k", data: [...rows("a"), ...rows(long)] },
+      { width: 400 },
+    );
+    expect(p.legend).toContain("maya-legend");
+    expect(p.svg).toContain(">246,913,578.24</text>");
+  });
+});

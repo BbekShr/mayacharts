@@ -31,12 +31,17 @@ export function clip(s: string, max: number): string {
 
 /**
  * Right gutter (px) for direct end labels of `[name, value]` pairs; 0 when the chart is too narrow
- * (< 400). Name and value when that fits in 30% of the width, else the name alone (clipped at 30%).
+ * (< 400). The widest "name value" up to 25% of the width: a longer name is ellipsized by the mark.
  */
 export function endGutter(p: readonly [string, string][], W: number): number {
-  const m = (k: number) => Math.max(...p.map((a) => tw(a.slice(0, k).join(" ")))) + 14;
-  return W < 400 ? 0 : Math.min(W * 0.3, m(2) <= W * 0.3 ? m(2) : m(1));
+  return W < 400 ? 0 : Math.min(W * 0.25, Math.max(...p.map((a) => tw(a.join(" ")))) + 14);
 }
+
+/** Whether an end label keeps its name in a gutter (line.ts: whole, or ellipsized into at least 56 px). */
+export const endFits = ([n, v]: readonly [string, string], gutter: number) => {
+  const room = gutter - 12 - tw(v) - 4;
+  return tw(n) <= room || room >= 56;
+};
 
 export interface Frame {
   plot: Box;

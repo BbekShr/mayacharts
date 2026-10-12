@@ -200,9 +200,10 @@
  *                              (stacked: the category totals; Other left out). Numeric rules widen
  *                              the value domain; a yDomain wins and hides rules outside it. No
  *                              data-key: animate.ts diffs only marks, so the group crossfades with
- *                              the other non-mark groups. A scatter { slope } rule draws
- *                              <line data-slope> from the plot edge to edge along y = k * x, then
- *                              its <text> at the line's far end.
+ *                              the other non-mark groups. A scatter { slope } rule is not in
+ *                              this group: its <line data-slope> (key \0slope~i, like the data-past
+ *                              ghosts, no data-maya) sits in the marks group and its label in the
+ *                              labels group.
  *     <g data-maya="labels">   value labels (text), from ctx.label and the marks' own m.labels. A label
  *                              carries data-key = the data-key of the mark it labels (bar and
  *                              waterfall incl. y2 dots, heatmap, dumbbell, scatter, beeswarm, ridgeline
@@ -362,8 +363,9 @@
  *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
  *   Direct end labels: a mark with `ends(spec, shaped, fmt)` returning [name, last value] pairs
  *   (line and area: 2 to 8 series, all visible, no value labels, no y2) gets a right gutter of
- *   endGutter() px (30% of the width at most; below 400 px just the widest value, the labels show the
- *   value alone and the legend stays to name the series). It draws <text data-end data-s>
+ *   endGutter() px (25% of the width at most; below 400 px just the widest value, the labels show the
+ *   value alone and the legend stays to name the series). A long name is ellipsized, the value always
+ *   stays; when a name would be dropped (under 56 px left beside the value) the legend stays too. It draws <text data-end data-s>
  *   (and a <line data-lead> when nudged more than 3 px) into the labels group, and the legend is
  *   dropped unless the spec sets legend:true explicitly (then both show). A hidden series or
  *   labels:true keep the legend and draw no end labels; endLabels:false turns them off.
@@ -373,7 +375,7 @@
  */
 import { dataTable, describe, titleText } from "./a11y.ts";
 import { formatter } from "./format.ts";
-import { endGutter, frame } from "./layout.ts";
+import { endFits, endGutter, frame } from "./layout.ts";
 import { bar } from "./marks/bar.ts";
 import { beeswarm } from "./marks/beeswarm.ts";
 import { dumbbell } from "./marks/dumbbell.ts";
@@ -400,6 +402,7 @@ import {
 } from "./validate.ts";
 import type {
   Aggregate,
+  Annotate,
   Axis,
   ChartSpec,
   LabelPlace,
@@ -569,7 +572,14 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
   const boxes: number[][] = [];
   let labels = "";
-  const label = (x: number, y: number, text: string, place: LabelPlace, k?: string) => {
+  const label = (
+    x: number,
+    y: number,
+    text: string,
+    place: LabelPlace,
+    k?: string,
+    ann?: Annotate,
+  ) => {
     const w = tw(text);
     const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
     const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
@@ -592,6 +602,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         "dominant-baseline": place === "above" || place === "below" ? null : "middle",
         "data-in": place === "center", // sits on a mark: no halo
         "data-key": k,
+        "data-ann": ann,
       },
       esc(text),
     );
@@ -805,7 +816,11 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let legend = "";
   let tbl: string | undefined;
-  if ((s.series !== null || s.y2 !== null) && s.legend && (!gutter || W < 400 || spec.legend))
+  if (
+    (s.series !== null || s.y2 !== null) &&
+    s.legend &&
+    (!gutter || W < 400 || spec.legend || ends!.some((e) => !endFits(e, gutter)))
+  )
     legend =
       `<div class="maya-legend" data-maya="legend">` +
       (s.series === null && s.y2 !== null
@@ -819,6 +834,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
               type: "button",
               "data-si": i,
               "data-s": i % 8,
+              "data-dash": s.dash.has(k),
               "data-key": k,
               "aria-pressed": String(shaped.visible.includes(i)),
             },
