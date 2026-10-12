@@ -1049,11 +1049,11 @@ describe("#69-#72 contracts: ratio, drill + select, drill types, colour slots, d
     const sk = { type: "sankey", path: ["region", "state"], y: "sales", drill: true, data: rows };
     const r = resolve(sk as ChartSpec);
     expect([...r.slots]).toEqual([
-      ["West", 0],
-      ["East", 1],
-      ["CA", 2],
-      ["OR", 3],
-      ["NY", 4],
+      ["CA", 0],
+      ["OR", 1],
+      ["NY", 2],
+      ["West", 3],
+      ["East", 4],
     ]);
     const d = resolve(tree as ChartSpec, {});
     expect(d.slots.get("S")).toBe(1);
@@ -1132,15 +1132,9 @@ describe("#69-#72 contracts: ratio, drill + select, drill types, colour slots, d
     ok({ ...base, theme: { titleSize: "16px", titleWeight: "600", axisSize: "11px" } });
   });
 
-  it("title and subtitle data tokens", () => {
-    ok({
-      ...base,
-      title: "{max.x} leads with {max.y}",
-      subtitle: "Total {total}, mean {mean}, {{literal}",
-    });
-    expect(code({ ...base, title: "{peak.x}" })).toEqual(["invalid-option", "title"]);
-    expect(err({ ...base, title: "{max.z}" }).message).toContain("Write {{ for a literal brace");
-    expect(code({ ...base, subtitle: "open { brace" })).toEqual(["invalid-option", "subtitle"]);
+  it("title and subtitle take any text: only exact token names are replaced at render", () => {
+    ok({ ...base, title: "{max.x} leads with {max.y}", subtitle: "Total {total}, {{literal}" });
+    ok({ ...base, title: "{peak.x} and { open" });
   });
 
   it("hints for foreign option names", () => {

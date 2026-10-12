@@ -916,7 +916,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 Visible heading and accessible name. Data tokens fill in from the chart: {max.x}
                 {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, the
                 active measure per category with series combined, formatted by <code>format</code>.
-                Write {{ for a literal brace; any other brace is an invalid-option error
+                Only these exact names are replaced; any other brace text stays as written.
               </td>
             </tr>
             <tr>

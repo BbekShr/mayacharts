@@ -7,9 +7,13 @@ import type { Aggregate, Cell, ResolvedSpec, Row, Shaped, View } from "./types.t
 class Reducer {
   n = 0;
   acc = 0;
+  /** Ratio only: the denominator sum; value() is acc / den (null at 0). */
+  den = 0;
   kind: Aggregate;
-  constructor(kind: Aggregate) {
+  ratio: boolean;
+  constructor(kind: Aggregate, ratio = false) {
     this.kind = kind;
+    this.ratio = ratio;
   }
   add(v: number) {
     const k = this.kind;
@@ -23,6 +27,7 @@ class Reducer {
             : this.acc;
   }
   value(): number | null {
+    if (this.ratio) return this.n && this.den ? this.acc / this.den : null;
     return this.kind === "count"
       ? this.n
       : this.n === 0
@@ -32,7 +37,13 @@ class Reducer {
           : this.acc;
   }
 }
-export const agg = (kind: Aggregate): Reducer => new Reducer(kind);
+export const agg = (kind: Aggregate, ratio = false): Reducer => new Reducer(kind, ratio);
+/** Add a row's measure `f` to `r`; with a ratio, its numerator and denominator (spec.ratio). */
+export function feed(r: Reducer, row: Row, f: string, ratio: readonly [string, string] | null) {
+  const v = row[ratio ? ratio[0] : f];
+  if (typeof v === "number") r.add(v);
+  if (ratio && typeof row[ratio[1]] === "number") r.den += row[ratio[1]] as number;
+}
 
 interface Cat {
   label: string;
@@ -41,6 +52,9 @@ interface Cat {
   /** Mean only: the count behind each value and behind y2, so the Other bucket can merge. */
   ns?: number[];
   n2?: number;
+  /** Ratio only: numerator and denominator sums behind each value. */
+  nu?: number[];
+  de?: number[];
   /** UTC ms on a time axis. */
   t?: number;
   /** Position in the time-ordered list, before window and reduction. */
@@ -106,6 +120,7 @@ export function shape(
     s.y2,
     s.series,
     s.aggregate,
+    s.ratio,
     s.xType,
   ]);
   const fast = fastTime(s, window, target(1), rk);
@@ -306,13 +321,20 @@ function other(s: ResolvedSpec, series: string[], rest: Cat[]): Cat {
     }
     return acc === null ? null : k === "mean" ? acc / n : acc;
   };
+  // A ratio merges its sums, not the ratios.
+  const merged = (j: number) => {
+    const sum = (f: "nu" | "de") => rest.reduce((t, c) => t + c[f]![j]!, 0);
+    return sum("de") ? sum("nu") / sum("de") : null;
+  };
   return {
     label: OTHER,
     vals: series.map((_, j) =>
-      fold(
-        (c) => c.vals[j] ?? null,
-        (c) => c.ns![j]!,
-      ),
+      s.ratio
+        ? merged(j)
+        : fold(
+            (c) => c.vals[j] ?? null,
+            (c) => c.ns![j]!,
+          ),
     ),
     y2:
       s.y2 === null
@@ -351,9 +373,7 @@ function group(s: ResolvedSpec, time: boolean) {
     }
     const a = acc[k]!;
     (ms ?? [s.y]).forEach((m, i) => {
-      const r = (a.rs[ms ? i : j] ??= agg(s.aggregate));
-      const v = row[m];
-      if (typeof v === "number") r.add(v);
+      feed((a.rs[ms ? i : j] ??= agg(s.aggregate, !!s.ratio)), row, m, s.ratio);
     });
     if (s.y2 !== null) {
       const v2 = row[s.y2];
@@ -365,6 +385,10 @@ function group(s: ResolvedSpec, time: boolean) {
     c.y2 = acc[k]!.a2?.value() ?? null;
     if (s.aggregate === "mean")
       ((c.ns = series.map((_, j) => acc[k]!.rs[j]?.n ?? 0)), (c.n2 = acc[k]!.a2?.n ?? 0));
+    if (s.ratio) {
+      c.nu = series.map((_, j) => acc[k]!.rs[j]?.acc ?? 0);
+      c.de = series.map((_, j) => acc[k]!.rs[j]?.den ?? 0);
+    }
   });
   let isTime = false;
   if (time && cats.length) {
@@ -410,6 +434,7 @@ function fastTime(
     s.limit !== null ||
     s.sort ||
     s.horizontal ||
+    s.ratio ||
     !(s.xType === "time" || s.xType === "auto")
   )
     return null;

@@ -273,7 +273,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `text`        | {[key]: string}                                  | English                                                                                       | Localisable UI strings with {0} placeholders                                                                                                                                                                                                                                                                                                                                         |
 | `locale`      | BCP 47                                           | en-US                                                                                         | Formatting locale                                                                                                                                                                                                                                                                                                                                                                    |
 | `currency`    | ISO 4217                                         | USD                                                                                           | Currency for the currency preset                                                                                                                                                                                                                                                                                                                                                     |
-| `title`       | string                                           | -                                                                                             | Visible heading and accessible name. Data tokens: `{max.x}` `{max.y}` `{min.x}` `{min.y}` `{first.x}` `{first.y}` `{last.x}` `{last.y}` `{total}` `{mean}`, formatted by `format`; `{{` is a literal brace                                                                                                                                                                           |
+| `title`       | string                                           | -                                                                                             | Visible heading and accessible name. Data tokens: `{max.x}` `{max.y}` `{min.x}` `{min.y}` `{first.x}` `{first.y}` `{last.x}` `{last.y}` `{total}` `{mean}`, formatted by `format`; any other brace text stays as written                                                                                                                                                             |
 | `subtitle`    | string                                           | -                                                                                             | Second line under the title, smaller and muted; same data tokens. Not in the bare `render()` SVG                                                                                                                                                                                                                                                                                     |
 | `description` | string                                           | auto                                                                                          | Accessible description                                                                                                                                                                                                                                                                                                                                                               |
 | `yDomain`     | [min, max]                                       | -                                                                                             | Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). kpi: bullet scale; gauge: dial range. Not with a `y` array                                                                                                                                                                                                                                                      |
@@ -1112,15 +1112,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 16,765 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 16,951 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,565,858,669 total, 3,206,479 output
-- claude-sonnet-5-5: 773,310,882 total, 104,733 output
+- claude-opus-5-5: 1,567,627,246 total, 3,217,294 output
+- claude-sonnet-5-5: 797,478,087 total, 106,737 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 30,518,833 total, 1,456 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,566,581,627 total, 3,747,896 output
+- all: 2,592,517,409 total, 3,760,715 output
 
 <!-- tokens:end -->
 

@@ -381,7 +381,7 @@
     },
     "title": {
       "type": "string",
-      "description": "Visible heading, also the accessible name. Data tokens: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by format; {{ writes a literal brace."
+      "description": "Visible heading, also the accessible name. Data tokens: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by format. Only these exact names are replaced; any other brace text stays as written."
     },
     "subtitle": {
       "type": "string",

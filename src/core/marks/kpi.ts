@@ -18,7 +18,14 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
   const live = cells.filter((c) => c.value !== null);
   const last = live[live.length - 1];
   const sum = (field: string) => ctx.agg(spec.aggregate)(spec.data.map((row) => num(row[field])));
-  const value = spec.x ? (last?.value ?? null) : sum(f);
+  const [nu, de] = spec.ratio?.map((r) => sum(r)) ?? [];
+  const value = spec.x
+    ? (last?.value ?? null)
+    : spec.ratio
+      ? nu != null && de
+        ? nu / de
+        : null
+      : sum(f);
   const L = X + PAD;
   const iw = W - 2 * PAD;
   const text = (a: Parameters<typeof el>[1], s: string) =>

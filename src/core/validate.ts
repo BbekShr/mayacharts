@@ -112,8 +112,6 @@ export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntr
     .map(([k, v]) => [k, v!.split(",")]),
 );
 const AGGS = w("sum mean count min max");
-/** Data tokens in title and subtitle. */
-const TOKS = [...w("max min first last").flatMap((k) => [`${k}.x`, `${k}.y`]), "total", "mean"];
 const ANN = w("max min first last");
 const LEG = w("top bottom right");
 /** Types whose tooltip takes extra fields (tooltip: { fields }). */
@@ -574,20 +572,6 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         );
       if (typeof v !== "string") bad(`text.${k}`, v, "a string");
     }
-  }
-  for (const k of ["title", "subtitle"]) {
-    // Data tokens: {max.x} … {mean}; "{{" is a literal brace, so a lone "{" must open a known token.
-    const v = s[k];
-    const ms = typeof v === "string" ? v.replace(/\{\{/g, "").match(/\{[^}]*\}?/g) : null;
-    const u = ms?.find((m) => !TOKS.includes(m.slice(1, -1)) || !m.endsWith("}"));
-    if (u)
-      fail(
-        "invalid-option",
-        k,
-        `spec.${k} has an unknown data token ${show(u)}.`,
-        `Tokens: ${TOKS.map((t) => `{${t}}`).join(" ")}. Write {{ for a literal brace.`,
-        dym(u.replace(/[{}]/g, ""), TOKS),
-      );
   }
   for (const k of ["yDomain", "xDomain"]) {
     const d = s[k] as number[] | undefined;
@@ -1137,10 +1121,11 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const measures = typeof spec.y === "string" ? [spec.y] : [...spec.y];
   const measure = Math.min(view.measure ?? 0, measures.length - 1);
   const full = [...(spec.path ?? [])];
-  // Flows need two levels left to draw, everything else one.
-  const keep = spec.type === "sankey" || spec.type === "chord" ? 2 : 1;
-  const drilled = spec.drill ? (view.drill ?? []).slice(0, Math.max(0, full.length - keep)) : [];
-  const path = full.slice(drilled.length);
+  // One drilled value per level but the last. A flow keeps the drilled node as its first column:
+  // it draws full.slice(drilled - 1), so a click on the next column's node drills one step further.
+  const flow = spec.type === "sankey" || spec.type === "chord";
+  const drilled = spec.drill ? (view.drill ?? []).slice(0, Math.max(0, full.length - 1)) : [];
+  const path = full.slice(flow ? Math.max(0, drilled.length - 1) : drilled.length);
   const f = spec.format;
   const F = spec.frame;
   const fv = F ? [...new Set(spec.data.flatMap((r) => (r[F] == null ? [] : [String(r[F])])))] : [];
@@ -1149,9 +1134,10 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const ratio = typeof spec.aggregate === "object" ? spec.aggregate.ratio : null;
   // Path types: one palette slot per path value from all rows, so a name keeps its colour through drill.
   const slots = PATH.includes(spec.type)
-    ? memo(spec.data, `slots${JSON.stringify(full)}`, () => {
+    ? memo(spec.data, `slots${flow}${JSON.stringify(full)}`, () => {
         const m = new Map<string, number>();
-        for (const f of full)
+        // A flow colours its second column (its first only in a branching tree): that one is numbered first.
+        for (const f of flow ? [full[1]!, full[0]!, ...full.slice(2)] : full)
           for (const r of spec.data) m.has(String(r[f])) || m.set(String(r[f]), m.size);
         return m;
       })

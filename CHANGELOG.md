@@ -6,12 +6,6 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
-### Breaking
-
-- A `{` in `title` (and the new `subtitle`) now opens a data token. A title with any other brace fails with `invalid-option`; write `{{` for a literal brace (#72).
-
-## Unreleased
-
 ### Added
 
 - `aggregate: { ratio: [numerator, denominator] }` sums both fields per group and divides, so a ratio measure such as price = sales / units is right in every category, drill level, Other bucket and "mean" rule. `y` names the measure and need not be in the rows (#69).
@@ -23,7 +17,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - A sankey drills from any node but the last column, one step at a time (#71).
 - `rules` take `{ x }` (a line across the category axis), `{ band: [lo, hi] }` (a shaded value range), `intercept` on a scatter slope, and work on dumbbell (#72).
 - `annotate` takes `{ x, text }` items and works on scatter (#72).
-- `subtitle`, data tokens in `title` and `subtitle` (`{max.x}`, `{max.y}`, `{total}`, `{mean}` and the rest), `legend: "top" | "bottom" | "right"`, and theme tokens `titleSize`, `titleWeight`, `axisSize` (#72).
+- `subtitle`, data tokens in `title` and `subtitle` (`{max.x}`, `{max.y}`, `{total}`, `{mean}` and the rest; only these exact names are replaced, any other brace text stays as written), `legend: "top" | "bottom" | "right"`, and theme tokens `titleSize`, `titleWeight`, `axisSize` (#72).
 - `was: { by, current?, previous? }` takes long data, one row per item and period: the latest period is current, the one before it previous, and the ghosts are titled by that period. No pivot before the spec (#60).
 - `maya-settled` event and the `el.settled` promise: the chart has drawn and its animations have finished, or it failed. Hosts that snapshot charts should wait for it instead of `maya-render` (#59, #62).
 - `mayacharts/host` (`maya.host` in the global builds): `thoughtspot(viz, spec)` and `columns({ schema, data }, spec)` build rows from a columnar result, match fields given as a RegExp or a case-insensitive name, and signal render-complete once settled (#61).

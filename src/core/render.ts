@@ -155,10 +155,15 @@
  *   Drill types: table and marimekko take x from path, heatmap takes series (rows) from it.
  *   Flows (sankey, chord) drill to path.length - 1 values and draw full.slice(drilled - 1): the
  *   drilled node stays as the first column; a click drills into a node of the next undrilled
- *   column. Path types colour by ResolvedSpec.slots (all rows, before drill): data-s = slot % 8
+ *   column. ResolvedSpec.slots numbers names first-seen over all rows, before drill (a flow
+ *   numbers its second column first, then its first, then the rest, so a sankey's palette starts
+ *   where it always did). Path types colour by it: data-s = slot % 8
  *   of the path[0] value (treemap, sunburst) or of the coloured node (flows); a colors map sets
  *   --maya-series-(slot % 8 + 1) per key found in slots. treemap depth: levels drawn below the
  *   branch, parents carry their name strip; sunburst minAngle: fold threshold in degrees.
+ *   Title tokens resolve in render.ts before the title is used (a11y.ts resolveTokens): only the
+ *   exact names are replaced, other brace text stays as written. theme.axisSize scales layout's
+ *   label-width estimate (px; em and rem as 16 px).
  *   Rules group: an { x } rule is <line data-xrule> plus its <text>; a band is <rect data-band>
  *   (drawn first, under the lines) plus its <text>; a slope adds intercept b. ctx.label ann
  *   "note" writes data-ann="note" for an annotate { x, text } item. Title tokens are resolved in
@@ -218,7 +223,7 @@
  *                              (either axis) carries data-key = key(category), the category part of
  *                              the mark keys, so a rank swap moves names with bars. Value ticks: none.
  *     <g data-maya="marks">    only [data-key] children, one tag per key
- *     <g data-maya="rules">    only with spec.rules, after marks: per drawn rule a <line>
+ *     <g data-maya="rules">    only with spec.rules, after marks: bands (<rect data-band>) first, then per drawn rule a <line>
  *                              across the value axis, then its <text text-anchor=end> (label and value, or the
  *                              value alone) above the line at the plot end (vertical line: beside it at the top). Labels dodge nothing, not
  *                              value labels either. "mean" averages the visible plotted values
@@ -398,7 +403,7 @@
  * Legend and title are HTML, not SVG (free wrapping and font metrics). render() — the
  * bare SVG — therefore has no legend; renderShell() is the full-fidelity output.
  */
-import { dataTable, describe, titleText } from "./a11y.ts";
+import { dataTable, describe, resolveTokens, titleText } from "./a11y.ts";
 import { formatter } from "./format.ts";
 import { endFits, endGutter, frame } from "./layout.ts";
 import { bar } from "./marks/bar.ts";
@@ -412,10 +417,11 @@ import { area, line } from "./marks/line.ts";
 import { points, scatter } from "./marks/scatter.ts";
 import { table } from "./marks/table.ts";
 import { MODULES } from "./registry.ts";
-import { agg, shape } from "./shape.ts";
+import { agg, feed, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
 import { el, esc, OTHER, r, tw } from "./svg.ts";
+import { toTime } from "./ticks.ts";
 import {
   ALL_Y,
   fail,
@@ -439,6 +445,7 @@ import type {
   ResolvedSpec,
   Row,
   Shaped,
+  TimeScale,
   Tone,
 } from "./types.ts";
 
@@ -459,11 +466,17 @@ const CORE: Readonly<Record<string, Mark>> = {
 
 /** Numeric rules widen the value axis (a target above the data stays visible); a yDomain still wins. */
 function withRules(s: ResolvedSpec, axes: [Axis, Axis, Axis?]): [Axis, Axis, Axis?] {
-  const n = s.rules.flatMap((u) => (u.y === "mean" ? [] : [u.y]));
+  const n = [
+    ...s.rules.flatMap((u) => (u.y === "mean" ? [] : [u.y])),
+    ...s.bands.flatMap((b) => [b.lo, b.hi]),
+  ];
   if (!n.length) return axes;
   return axes.map((a) =>
     a?.kind === "linear" && a.field === s.y
-      ? { ...a, domain: [Math.min(a.domain[0], ...n), Math.max(a.domain[1], ...n)] }
+      ? {
+          ...a,
+          domain: [Math.min(a.domain[0], ...n), Math.max(a.domain[1], ...n)],
+        }
       : a,
   ) as [Axis, Axis, Axis?];
 }
@@ -474,6 +487,14 @@ function withRules(s: ResolvedSpec, axes: [Axis, Axis, Axis?]): [Axis, Axis, Axi
  * Scatter averages y over the points it draws. NaN when nothing is plotted.
  */
 function average(s: ResolvedSpec, shaped: Shaped): number {
+  if (s.ratio) {
+    // Total numerator over total denominator of the rows of the visible series.
+    const on = new Set(shaped.visible.map((j) => shaped.series[j]));
+    const a = agg("sum", true);
+    for (const row of s.data)
+      if (s.series === null || on.has(String(row[s.series]))) feed(a, row, s.y, s.ratio);
+    return a.value() ?? NaN;
+  }
   const by = new Map<number, number>();
   const add = (k: number, v: number) => by.set(k, (by.get(k) ?? 0) + v);
   if (s.type === "scatter") points(s, shaped).forEach((p, i) => add(i, p.y));
@@ -554,6 +575,12 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       `${fr[1].length} frames exceed the limit of ${MAX_FRAMES}.`,
       "Aggregate or bin the frame field (year instead of day) so it has fewer distinct values.",
     );
+  // Data tokens in the title and subtitle (a11y.ts resolveTokens), so the accessible name matches.
+  if (s.title?.includes("{") || s.subtitle?.includes("{")) {
+    const tok = (v: string | null) =>
+      v && resolveTokens(v, s, shaped, fmt, () => average(s, shaped));
+    s = { ...s, title: tok(s.title), subtitle: tok(s.subtitle) };
+  }
   const fv = fr?.[1].length ? fmt(fr[0], fr[1][fr[2]]) : null;
   if (fv !== null) s = { ...s, title: t(s, "frameOf", titleText(s), fv) };
 
@@ -640,7 +667,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     ? endGutter(ends, W) ||
       (mark.ends === line.ends ? Math.max(...ends.map((e) => tw(e[1]))) + 14 : 0)
     : 0;
-  const empty = !s.data.some((r) => [...s.measures, s.y2].some((m) => typeof r[m!] === "number"));
+  const empty = !s.data.some((r) =>
+    [...(s.ratio ?? s.measures), s.y2].some((m) => typeof r[m!] === "number"),
+  );
   const ax = mark.axes && !empty ? mark.axes(s, shaped) : null;
   // frame: each value axis spans every frame, so it holds still during playback.
   // ponytail: shapes every frame on every render (frames x rows); cache per spec if it shows.
@@ -713,10 +742,38 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
     // Reference lines, drawn over the marks.
-    // ponytail: value axis only, at most 4, no bands or x rules; labels dodge nothing (NON-FEATURES).
+    // ponytail: at most 4, labels dodge nothing (NON-FEATURES). Bands first (under the lines), then
+    // value lines, then category (x) lines.
     let rules = "";
     const v = s.horizontal ? f?.x : f?.y;
-    if (v && !("bandwidth" in v))
+    const cat = s.horizontal ? f?.y : f?.x;
+    const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
+    if (v && !("bandwidth" in v)) {
+      s.bands.forEach((u) => {
+        const [lo, hi] = [Math.max(u.lo, v.domain[0]), Math.min(u.hi, v.domain[1])];
+        if (!(lo <= hi)) return;
+        const [p, q] = [v.of(lo), v.of(hi)].sort((a, b) => a - b) as [number, number];
+        const text = u.label ?? t(s, "rule");
+        said += ` ${text}: ${t(s, "fromTo", fmt(s.y, u.lo), fmt(s.y, u.hi))}.`;
+        rules +=
+          el(
+            "rect",
+            s.horizontal
+              ? { "data-band": true, x: r(p), y: y0, width: r(q - p), height: r(plot.h) }
+              : { "data-band": true, x: r(plot.x), y: r(p), width: r(plot.w), height: r(q - p) },
+          ) +
+          (u.label
+            ? el(
+                "text",
+                {
+                  x: s.horizontal ? r(q) - 4 : x0,
+                  y: s.horizontal ? y0 + 10 : r(p) + 12,
+                  "text-anchor": "end",
+                },
+                esc(u.label),
+              )
+            : "");
+      });
       s.rules.forEach((u) => {
         const at = u.y === "mean" ? average(s, shaped) : u.y;
         // outside a yDomain, or NaN (no data)
@@ -726,7 +783,6 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         const val = fmt(s.y, at);
         const text = name ? `${name} ${val}` : val;
         said += ` ${name ?? t(s, "rule")}: ${val}.`;
-        const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
         rules +=
           el(
             "line",
@@ -742,6 +798,44 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
               y: s.horizontal ? y0 + 10 : p - 4,
               "text-anchor": "end",
             },
+            esc(text),
+          );
+      });
+    }
+    // x rules: a band's centre (or a time or number's place) on the category axis.
+    if (cat)
+      s.xRules.forEach((u) => {
+        const k = String(u.x);
+        const i = "bandwidth" in cat ? cat.domain.indexOf(k) : -1;
+        const ms = toTime(u.x);
+        const p =
+          "bandwidth" in cat
+            ? i >= 0
+              ? cat.at(i) + cat.bandwidth / 2
+              : "kind" in cat && ms !== null
+                ? (cat as TimeScale).of(ms)
+                : NaN
+            : typeof u.x === "number" && (u.x - cat.domain[0]) * (u.x - cat.domain[1]) <= 0
+              ? cat.of(u.x)
+              : NaN;
+        const [lo, hi] = s.horizontal ? [plot.y, plot.y + plot.h] : [plot.x, plot.x + plot.w];
+        if (!(p >= lo && p <= hi)) return;
+        const at = r(p);
+        const val = fmt(s.x, u.x);
+        const text = u.label ? `${u.label} ${val}` : val;
+        said += ` ${u.label ?? t(s, "rule")}: ${val}.`;
+        rules +=
+          el(
+            "line",
+            s.horizontal
+              ? { "data-xrule": true, x1: r(plot.x), x2: x0, y1: at, y2: at }
+              : { "data-xrule": true, x1: at, x2: at, y1: y0, y2: r(plot.y + plot.h) },
+          ) +
+          el(
+            "text",
+            s.horizontal
+              ? { x: x0, y: at - 4, "text-anchor": "end" }
+              : { x: at + 4, y: y0 + 10, "text-anchor": "start" },
             esc(text),
           );
       });
@@ -791,7 +885,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     // ponytail: slot = the series' first-appearance index, so reordered rows move colours.
     // Waffle slots follow categories (data-s = category index), so its keys map against those.
     for (const [k, c] of s.colors as ReadonlyMap<string, string>) {
-      const j = (s.type === "waffle" ? shaped.categories : shaped.series).indexOf(k);
+      // Path types: the slot of the name among all rows (stable through drill and filters).
+      const j = s.slots.size
+        ? (s.slots.get(k) ?? -1)
+        : (s.type === "waffle" ? shaped.categories : shaped.series).indexOf(k);
       if (j >= 0) vars.push([`--maya-series-${(j % 8) + 1}`, c]);
     }
   for (const k in s.theme) vars.push([`--maya-${kebab(k)}`, s.theme[k as keyof typeof s.theme]!]);
@@ -824,7 +921,13 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       // ponytail: over 500 marks the svg is data-still: hover dim and glide are instant (theme.ts, NON-FEATURES.md).
       "data-still": body.split('data-maya="mark"').length > 501 || null,
       // A click can drill further (pointer cursor on marks).
-      "data-drill": (s.drill && s.path.length > (s.type === "sankey" ? 2 : 1)) || null,
+      // A flow shows one level more than it has left to drill: its drilled node is its first column.
+      "data-drill":
+        (s.drill &&
+          (s.type === "sankey" || s.type === "chord"
+            ? s.drilled.length < s.path.length + Math.max(0, s.drilled.length - 1) - 1
+            : s.path.length > 1)) ||
+        null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
       (sheet === null ? "" : el("title", {}, esc(titleText(s)))) +
@@ -928,7 +1031,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           s.drilled
             .map(
               (v, i) =>
-                `<span aria-hidden="true">›</span><button type="button" data-depth="${i + 1}"${i === s.drilled.length - 1 ? ' aria-current="page"' : ""}>${esc(String(v))}</button>`,
+                `<span aria-hidden="true">›</span>` +
+                (i === s.drilled.length - 1
+                  ? `<span aria-current="page">${esc(String(v))}</span>`
+                  : `<button type="button" data-depth="${i + 1}">${esc(String(v))}</button>`),
             )
             .join("") +
           `</nav>`
@@ -937,7 +1043,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     get table() {
       return (tbl ??= s.table ? dataTable(s, shaped, fmt, toneText, markTable) : "");
     },
-    title: s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`,
+    title:
+      (s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`) +
+      (s.subtitle === null ? "" : `<p class="maya-sub">${esc(s.subtitle)}</p>`),
+    ...(s.legendAt === "top" ? {} : { legendAt: s.legendAt }),
     style,
     vars,
     warnings: [
@@ -973,7 +1082,7 @@ export function shellInner(parts: Parts, css: string, nonce?: string): string {
   // Raw text, so esc would corrupt quoted fonts; the allowlist already bars `<`, escaped anyway.
   const sheet = css + (parts.style ? `.maya{${parts.style.replace(/</g, "\\3c ")}}` : "");
   return (
-    `${sheet ? `<style${n}>${sheet}</style>` : ""}<div class="maya">${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
+    `${sheet ? `<style${n}>${sheet}</style>` : ""}<div class="maya"${parts.legendAt ? ` data-legend="${parts.legendAt}"` : ""}>${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
     `<div class="maya-box">${parts.svg}</div>${parts.table}` +
     `<div class="maya-sr" data-maya="live" aria-live="polite"></div>` +
     `<div class="maya-probe" data-maya="probe"></div><div class="maya-tip" popover="manual" role="tooltip"></div></div>`
@@ -988,6 +1097,7 @@ function project(spec: ChartSpec): ChartSpec {
     ...(typeof spec.y === "string" ? [spec.y] : spec.y),
     spec.series,
     spec.y2,
+    ...(typeof spec.aggregate === "object" ? spec.aggregate.ratio : []),
     typeof spec.was === "object" ? spec.was.by : spec.was,
     ...(typeof spec.tooltip === "object" ? spec.tooltip.fields : []),
     spec.frame,

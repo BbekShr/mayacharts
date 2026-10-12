@@ -216,7 +216,7 @@ export interface ChartSpec<R extends object = Row> {
   /** ISO 4217 code for the "currency" preset. Default "USD".
    * @example currency: "EUR" */
   currency?: string;
-  /** Visible heading, also the accessible name. Data tokens fill in from the chart: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by `format`; `{{` writes a literal brace.
+  /** Visible heading, also the accessible name. Data tokens fill in from the chart: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by `format`. Only these exact names are replaced; any other brace text stays as written.
    * @example title: "{max.x} leads with {max.y}" */
   title?: string;
   /** Second line under the title, smaller and muted; takes the same data tokens. Not in the bare render() SVG.

@@ -13,8 +13,6 @@ export const tw = (s: string) => {
   for (const c of s) if (WIDE.test(c)) k++;
   return base(s, 0) + k * 4.8;
 };
-const w = (s: string) => tw(s) + 8;
-const maxW = (a: readonly string[]) => a.reduce((m, s) => Math.max(m, w(s)), 0);
 
 /** Cut `s` to `max` px (by code point), ending in an ellipsis. */
 export function clip(s: string, max: number): string {
@@ -157,6 +155,11 @@ export function frame(
   fmt: Fmt,
 ): Frame {
   const { width: W, height: H } = size;
+  // Label widths scale with theme.axisSize (px, or em/rem as 16 px); other units keep the 12 px estimate.
+  const px = /^(\d*\.?\d+)(px|r?em)?$/.exec(spec.theme.axisSize ?? "");
+  const k = px ? (+px[1]! * (px[2]?.endsWith("em") ? 16 : 1)) / 12 : 1;
+  const w = (s: string) => tw(s) * k + 8;
+  const maxW = (a: readonly string[]) => a.reduce((m, s) => Math.max(m, w(s)), 0);
   // Compact frame (#63): under about 160 px of plot height, no axis titles and fewer value ticks.
   const compact = H - 10 - (spec.xAxis && bx ? 24 : 8) < 160;
   const bt = bx && bx.kind === "linear" ? ticks(spec, bx, fmt) : null;
@@ -177,7 +180,7 @@ export function frame(
   // Without a left axis, still leave room for half of the first bottom tick label.
   const left = Math.max(
     (spec.yAxis && ly ? maxW(lLab) + 10 : 8) + (yTitle ? 18 : 0),
-    edge ? tw(edge.labels[0] ?? "") / 2 + 2 : 0,
+    edge ? (tw(edge.labels[0] ?? "") * k) / 2 + 2 : 0,
   );
   const bottom = (spec.xAxis && bx ? 24 : 8) + (xTitle ? 18 : 0);
   const plot = {
@@ -190,7 +193,7 @@ export function frame(
         left -
         (rt
           ? (spec.yAxis ? maxW(rt.labels) + 4 : 8) + (rTitle ? 18 : 0)
-          : Math.max(12, size.gutter ?? 0, edge ? tw(edge.labels.at(-1) ?? "") / 2 + 2 : 0)),
+          : Math.max(12, size.gutter ?? 0, edge ? (tw(edge.labels.at(-1) ?? "") * k) / 2 + 2 : 0)),
     ),
     h: Math.max(1, H - 10 - bottom),
   };

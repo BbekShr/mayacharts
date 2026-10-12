@@ -145,11 +145,6 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         </p>
         <pre><code>{ "type": "kpi", "colorBy": { "target": 100, "warn": 80 }, ... }
 { "type": "kpi", "colorBy": { "target": 5, "warn": 8, "better": "lower" }, ... }</code></pre>
-        <p>
-          A title or subtitle may hold only the data tokens {max.x} {max.y} {min.x} {min.y}
-          {first.x} {first.y} {last.x} {last.y} {total} {mean}. Write {{ for a literal brace.
-        </p>
-        <pre><code>{ "title": "{max.x} leads with {max.y}", "subtitle": "Plan {{2025}" }</code></pre>
       </section>
       <section id="option-unsupported">
         <h2><code>option-unsupported</code></h2>
