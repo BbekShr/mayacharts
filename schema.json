@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bbekshr.github.io/mayacharts/schema.json",
   "title": "mayaCharts spec",
+  "description": "A mayaCharts chart spec: plain JSON, no functions. Core types need no import; module types (treemap, sunburst, marimekko, waffle, sankey, chord, radial, gauge, hexmap, boxplot, funnel, weave, units, orbit, constellation) need their module or maya.<module>.global.js. Full reference: https://bbekshr.github.io/mayacharts/docs.html",
   "type": "object",
   "required": ["type", "data", "y"],
   "additionalProperties": false,

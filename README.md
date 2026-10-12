@@ -721,19 +721,38 @@ One working spec for each common shape. Paste any of them into the [builder](htt
 
 Each module extends the core with chart types and shares the same spec, theme, tooltip, a11y, and animation.
 
-| Module                     | Types                                                     | Size (gzip) |
-| -------------------------- | --------------------------------------------------------- | ----------- |
-| `mayacharts/hierarchy`     | treemap, sunburst, marimekko, waffle                      | 4.3 KB      |
-| `mayacharts/flow`          | sankey, chord                                             | 3.8 KB      |
-| `mayacharts/radial`        | radial, gauge                                             | 4.4 KB      |
-| `mayacharts/geo`           | hexmap (50 US states + DC + PR)                           | 2.5 KB      |
-| `mayacharts/stats`         | boxplot, funnel                                           | 3.9 KB      |
-| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.3 KB      |
-| `mayacharts/units`         | units (one dot per row: waffle, bars, swarm)              | 2.5 KB      |
-| `mayacharts/orbit`         | orbit (planets sized by value, speed by growth)           | 2.5 KB      |
-| `mayacharts/constellation` | constellation (rows placed by similarity across measures) | 3.0 KB      |
+| Module                     | Types                                                     | Size (gzip) | Classic script                 |
+| -------------------------- | --------------------------------------------------------- | ----------- | ------------------------------ |
+| `mayacharts/hierarchy`     | treemap, sunburst, marimekko, waffle                      | 4.3 KB      | `maya.hierarchy.global.js`     |
+| `mayacharts/flow`          | sankey, chord                                             | 3.8 KB      | `maya.flow.global.js`          |
+| `mayacharts/radial`        | radial, gauge                                             | 4.4 KB      | `maya.radial.global.js`        |
+| `mayacharts/geo`           | hexmap (50 US states + DC + PR)                           | 2.5 KB      | `maya.geo.global.js`           |
+| `mayacharts/stats`         | boxplot, funnel                                           | 3.9 KB      | `maya.stats.global.js`         |
+| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.3 KB      | `maya.weave.global.js`         |
+| `mayacharts/units`         | units (one dot per row: waffle, bars, swarm)              | 2.5 KB      | `maya.units.global.js`         |
+| `mayacharts/orbit`         | orbit (planets sized by value, speed by growth)           | 2.5 KB      | `maya.orbit.global.js`         |
+| `mayacharts/constellation` | constellation (rows placed by similarity across measures) | 3.0 KB      | `maya.constellation.global.js` |
+
+The twelve core types (bar, line, area, scatter, heatmap, waterfall, kpi, dumbbell, ridgeline, beeswarm, parallel, table) need no module: they ship with `mayacharts` and `mayacharts/element`, and in `maya.core.global.js`. A module type that is not loaded fails with `unknown-type`, and the message names the import and the classic script to add.
 
 Host adapters for BI tiles are in `mayacharts/host`, see [Embedding in hosts](#embedding-in-hosts).
+
+### Entry points and files
+
+| What                                                                                                               | Import or file                 |
+| ------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| `render`, `renderShell`, `renderParts`, `validateSpec`, `MayaSpecError`, `version` and all types; pure, no DOM     | `mayacharts`                   |
+| Registers `<maya-chart>` and the twelve core types                                                                 | `mayacharts/element`           |
+| One of the nine modules above; importing it registers its types                                                    | `mayacharts/<module>`          |
+| `thoughtspot(viz, spec)` and `columns(table, spec)` adapters                                                       | `mayacharts/host`              |
+| `themes`: 18 ready-made token sets as plain data (ESM only, in no global file)                                     | `mayacharts/themes`            |
+| The stylesheet as a file, for hosts that cannot run script                                                         | `mayacharts/theme.css`         |
+| JSON Schema of the spec, for editors and LLMs                                                                      | `mayacharts/schema.json`       |
+| Everything in one classic script; `globalThis.maya.render`, `maya.renderShell`, `maya.host`                        | `dist/maya.global.js`          |
+| Element, the twelve core types and `maya.host`                                                                     | `dist/maya.core.global.js`     |
+| One per module (hierarchy, flow, radial, geo, stats, weave, units, orbit, constellation); load after the core file | `dist/maya.<module>.global.js` |
+
+Every release prints an SRI hash for each `dist/*.global.js` file. Pin the version in the URL.
 
 ## Global build
 
@@ -795,16 +814,32 @@ Touch: show tooltip on pointerup if moved < 4 px.
 
 ## Events and two-way sync
 
-Six events, all `bubbles: true, composed: true`:
+Six events, all `bubbles: true, composed: true` and none carrying the spec:
 
 - `maya-select {selected: Sel[], target: (Sel & {value}) | null}` - mark selected
-- `maya-view {measure, drill, window, hidden, form}` - measure toggled, drilled, zoomed, a legend series hidden, or a units form picked (user actions only; `window` is the zoom slice)
+- `maya-view {measure, drill, window, hidden, form, sortBy}` - measure toggled, drilled, zoomed, a legend series hidden, or a units form picked (user actions only; `window` is the zoom slice)
 - `maya-drill-leaf {path}` - the drill gesture on a mark at the last level (one raw value per `path` level, root first), so a host can drill through to the rows behind it. Sankey and chord fire it once drilled to their last branch
 - `maya-error {code, path, message}` - spec error (cancelable; preventDefault() hides error box)
 - `maya-render {}` - after each paint; entrance and update animations may still be running
 - `maya-settled {error}` - after the last animation of that paint (in the same task when nothing animates), and after `maya-error` with the error. Tell a host the chart is ready on this one
 
 Properties: `el.view` and `el.selected` (getters and setters; no events on set). `await el.settled` waits for the current or next paint to settle and rejects with the `MayaSpecError` on an error.
+
+### The element
+
+| Member                                                                                                                                                   | Kind                | Meaning                                                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------ |
+| `spec`                                                                                                                                                   | attribute, property | The chart spec. The attribute is JSON text and the only observed attribute; the property wins once set |
+| `data`                                                                                                                                                   | property            | Assigning rows replaces `spec.data` and animates the update                                            |
+| `view`                                                                                                                                                   | property            | `{ measure, drill, window, hidden, form, sortBy, frame }`; set `{}` to reset; no events on set         |
+| `selected`                                                                                                                                               | property            | `Sel[]` of raw values; no events on set                                                                |
+| `settled`                                                                                                                                                | property (promise)  | Resolves when the current or next paint has finished animating; rejects with the `MayaSpecError`       |
+| `toSVG()`                                                                                                                                                | method              | A standalone SVG string with the custom properties resolved, so a dark chart exports dark              |
+| `MayaChart.version`                                                                                                                                      | static              | The library version                                                                                    |
+| `--maya-*`                                                                                                                                               | CSS custom property | Every theme token, in kebab case (see Theme tokens), plus `--maya-ease` for transitions                |
+| `.maya-title`, `.maya-sub`, `.maya-legend`, `.maya-crumbs`, `.maya-ctl`, `.maya-reset`, `.maya-box`, `.maya-svg`, `.maya-tip`, `.maya-err`, `.maya-play` | shadow classes      | Stable hooks inside the shadow root for tests and hosts; style the chart through the custom properties |
+
+Gestures: hover or tap shows the tooltip. With `drill` alone, click or Enter drills. With `select` alone, click or Enter selects. With both, a click selects (committed after about 250 ms, so a double-click can cancel it) and a double-click or Shift+Enter drills; the pinned tooltip has a "Drill into" button, which is not shown at the deepest level. Space pins the tooltip, Escape steps back, drag brushes a zoom window with `zoom`, and a legend click hides a series. The full key list is under [Keyboard](#keyboard).
 
 Example: selecting in one chart drives another:
 
@@ -1093,7 +1128,36 @@ Animation skips above 1500 marks. The 10000-mark hard cap names the count and th
 
 ## Errors
 
-Every error links to [errors.html](site/errors.html#<code>) with a one-paragraph cause and a fixed example. Error shape: `{code, path, message}`.
+Every error is a `MayaSpecError` with `{code, path, message}`, and the message links to [errors.html](site/errors.html) with a one-paragraph cause and a fixed example. The `maya-error` event carries the same three fields.
+
+| Code                                                                                        | Cause                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`spec-not-object`](https://bbekshr.github.io/mayacharts/errors.html#spec-not-object)       | spec must be a plain object                                                                                                                                                                                                  |
+| [`missing-field`](https://bbekshr.github.io/mayacharts/errors.html#missing-field)           | type/data/x (or path)/y is required but missing                                                                                                                                                                              |
+| [`unknown-type`](https://bbekshr.github.io/mayacharts/errors.html#unknown-type)             | chart type not recognized (with module hint if needed: the ESM import and the maya.<module>.global.js file)                                                                                                                  |
+| [`data-not-array`](https://bbekshr.github.io/mayacharts/errors.html#data-not-array)         | data must be an array of row objects                                                                                                                                                                                         |
+| [`row-not-object`](https://bbekshr.github.io/mayacharts/errors.html#row-not-object)         | data[i] must be a plain object                                                                                                                                                                                               |
+| [`unknown-field`](https://bbekshr.github.io/mayacharts/errors.html#unknown-field)           | field-valued option names no field in data                                                                                                                                                                                   |
+| [`non-numeric-y`](https://bbekshr.github.io/mayacharts/errors.html#non-numeric-y)           | y field value not a finite number (null allowed)                                                                                                                                                                             |
+| [`non-numeric-field`](https://bbekshr.github.io/mayacharts/errors.html#non-numeric-field)   | size/scatter x/colorBy field value not a finite number                                                                                                                                                                       |
+| [`non-positive-value`](https://bbekshr.github.io/mayacharts/errors.html#non-positive-value) | treemap/sunburst/sankey/chord y value must be positive; funnel and ridgeline y value must not be negative; a value on a log axis (yScale/xScale "log") must be above 0                                                       |
+| [`unknown-option`](https://bbekshr.github.io/mayacharts/errors.html#unknown-option)         | top-level spec key not recognized                                                                                                                                                                                            |
+| [`invalid-option`](https://bbekshr.github.io/mayacharts/errors.html#invalid-option)         | option value wrong type or invalid value                                                                                                                                                                                     |
+| [`option-unsupported`](https://bbekshr.github.io/mayacharts/errors.html#option-unsupported) | option not valid for this chart type or incompatible with another option                                                                                                                                                     |
+| [`stack-unsupported`](https://bbekshr.github.io/mayacharts/errors.html#stack-unsupported)   | stack (true or "percent") not allowed with type "line" (use "area" instead)                                                                                                                                                  |
+| [`invalid-domain`](https://bbekshr.github.io/mayacharts/errors.html#invalid-domain)         | xDomain not [min, max] with min < max; yDomain not two different numbers (reversed allowed); bounds within 1e300, span at least 1e-300                                                                                       |
+| [`invalid-format`](https://bbekshr.github.io/mayacharts/errors.html#invalid-format)         | format preset unknown, bad Intl options, or unsupported locale/currency                                                                                                                                                      |
+| [`invalid-theme`](https://bbekshr.github.io/mayacharts/errors.html#invalid-theme)           | theme token not recognized                                                                                                                                                                                                   |
+| [`unsafe-css-value`](https://bbekshr.github.io/mayacharts/errors.html#unsafe-css-value)     | colors/theme CSS value blocked by allowlist (no url(), other functions, ; { } < > \)                                                                                                                                         |
+| [`invalid-size`](https://bbekshr.github.io/mayacharts/errors.html#invalid-size)             | RenderOptions width/height not a finite number > 0                                                                                                                                                                           |
+| [`unknown-state`](https://bbekshr.github.io/mayacharts/errors.html#unknown-state)           | hexmap x value is not a US state (two-letter code or full name; 50 states, DC, PR)                                                                                                                                           |
+| [`too-many-marks`](https://bbekshr.github.io/mayacharts/errors.html#too-many-marks)         | more than 10000 marks (the message gives the count, the cap and the row count; suggest limit or aggregate). Bars roll up, categorical lines and kpi thin, scatter bins and tables draw the rows that fit instead of failing. |
+| [`invalid-date`](https://bbekshr.github.io/mayacharts/errors.html#invalid-date)             | xType "time" with an x value that is neither an ISO 8601 date nor epoch ms                                                                                                                                                   |
+| [`too-few-measures`](https://bbekshr.github.io/mayacharts/errors.html#too-few-measures)     | constellation y is not an array of at least 2 measures                                                                                                                                                                       |
+
+## Known ceilings
+
+Every cap and approximation is written down with its reason in [NON-FEATURES.md](NON-FEATURES.md#known-ceilings). The ones most likely to matter: 10000 marks (bars roll up, other types reduce or throw `too-many-marks`), 8 series colours, 4 rules, 12 tooltip rows, 1500 dots for `units`, UTC dates unless Intl options say otherwise, and no function-valued options.
 
 ## Development
 
@@ -1112,15 +1176,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 17,128 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 17,191 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,578,343,908 total, 3,229,062 output
-- claude-sonnet-5-5: 815,523,399 total, 107,715 output
+- claude-opus-5-5: 1,579,160,270 total, 3,231,570 output
+- claude-sonnet-5-5: 821,522,742 total, 108,397 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 30,518,833 total, 1,456 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,621,279,383 total, 3,773,461 output
+- all: 2,628,095,088 total, 3,776,651 output
 
 <!-- tokens:end -->
 

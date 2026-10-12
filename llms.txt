@@ -7,7 +7,18 @@ JavaScript: chart.spec = {type: "bar", data, x: "month", y: "revenue"}; chart.da
 SSR: import {render, renderShell} from "mayacharts"; render(spec, {width, height});
 Global: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script> (everything). Lighter: maya.core.global.js (element, the 12 core types, maya.host), then one maya.<module>.global.js per module type the spec needs, e.g. maya.hierarchy.global.js.
 Hosts: maya.host.thoughtspot(viz, spec) and maya.host.columns({schema, data}, spec) (ESM: import {thoughtspot, columns} from "mayacharts/host") build rows from a columnar result, match fields given as a RegExp or a case-insensitive name against the columns, unwrap {value()} cells, find or create #chart, and return the element. thoughtspot calls viz.events.emitRenderCompletedEvent() once the chart settles (also after an error).
-Modules: import "mayacharts/hierarchy" (treemap, sunburst, marimekko, waffle); "mayacharts/flow" (sankey, chord); "mayacharts/radial" (radial, gauge); "mayacharts/geo" (hexmap); "mayacharts/stats" (boxplot, funnel); "mayacharts/weave" (weave); "mayacharts/units" (units); "mayacharts/orbit" (orbit); "mayacharts/constellation" (constellation).
+Core types (12, in maya.core.global.js and every ESM build): bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table.
+Module types, ESM import then classic script (load it after maya.core.global.js; maya.global.js has all of them):
+  import "mayacharts/hierarchy" / maya.hierarchy.global.js: treemap sunburst marimekko waffle
+  import "mayacharts/flow" / maya.flow.global.js: sankey chord
+  import "mayacharts/radial" / maya.radial.global.js: radial gauge
+  import "mayacharts/geo" / maya.geo.global.js: hexmap (50 US states, DC, PR)
+  import "mayacharts/stats" / maya.stats.global.js: boxplot funnel
+  import "mayacharts/weave" / maya.weave.global.js: weave
+  import "mayacharts/units" / maya.units.global.js: units
+  import "mayacharts/orbit" / maya.orbit.global.js: orbit
+  import "mayacharts/constellation" / maya.constellation.global.js: constellation
+Other entry points: "mayacharts" (render, renderShell, renderParts, validateSpec, MayaSpecError, version, types), "mayacharts/element" (registers <maya-chart>), "mayacharts/host", "mayacharts/themes" (18 ready-made theme token sets, ESM only, not in any global file), "mayacharts/theme.css" (the stylesheet), "mayacharts/schema.json", "mayacharts/global" (maya.global.js). Each release publishes an SRI hash for every dist/*.global.js; pin the version in the CDN URL.
 
 SPEC FIELDS:
 type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial gauge hexmap boxplot funnel weave units orbit constellation
@@ -57,7 +68,7 @@ zoom: boolean = false. Drag to zoom. line area scatter. Reset, double-click, Esc
 animate: boolean = true. Animate the first draw and every update (element only; off under reduced motion).
 colors: string[]|{[name]: color} = null. Max 8. A map is keyed by series value; treemap and sunburst by path[0] value; sankey and chord by node name (links and inner levels inherit); waffle by category. Unmatched keys are ignored. Path types give every name a slot from all rows, so colours hold through drill; a host filter that drops names can move array slots, a map never moves. Example: colors: {Outerwear: "#d1543a"}
 colorBy: "sign"|{target?: n, warn?: n, better?: "higher"|"lower"}|{[y field]: {target?, warn?, better?}}|field = null. Tone by sign or target, or ramp by numeric field. Not with series. Target: at or past it is good, better "lower" flips it; types other than kpi and gauge need target and take no warn. kpi and gauge: any of target, warn, better; warn needs target and sits on the bad side (higher: warn < target; lower: warn > target); tones good, warn ("at risk"), bad, status words onTrack/atRisk/offTrack. kpi with a y array: also keyed by y field. Example: colorBy: {target: 100, warn: 80}. bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation.
-theme: {[token]: css} = {}. Theme token overrides (CSS values, allowlisted). Tokens: font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line (line width) gridDash (grid dash array) titleSize titleWeight axisSize (axis text) series1..series8. Ready-made sets: import { themes } from "mayacharts/themes".
+theme: {[token]: css} = {}. Theme token overrides (CSS values, allowlisted). Tokens: font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line (line width) gridDash (grid dash array) titleSize titleWeight axisSize (axis text) series1 series2 series3 series4 series5 series6 series7 series8. Ready-made sets: import { themes } from "mayacharts/themes".
 grid: boolean = true. Grid lines perpendicular to value axis.
 xAxis: boolean = true. Bottom axis.
 yAxis: boolean = true. Left axis.
@@ -139,7 +150,22 @@ Two-way sync properties:
   el.view: {measure?, drill?, window?, hidden?, sortBy?, frame?, form?} - getter/setter (no events on set; {} resets; sortBy = [field, "asc"|"desc"]; frame = index into the distinct frame values, default the last, larger clamps; form = index into units forms, default 0, larger clamps)
   el.selected: Sel[] - getter/setter (no events on set)
 
+ELEMENT <maya-chart>:
+Source of the spec, first set wins: el.spec property (el.data = rows sets it too), then a <script type="application/json"> child, then the spec attribute (the only observed attribute). el.spec = undefined falls back to the child or attribute. Property sets in one task render once (microtask); a resize renders on the next frame.
+Properties: spec, data, view, selected, settled (read-only promise). Static: MayaChart.version. Method: el.toSVG() returns a standalone SVG string with the CSS custom properties resolved (dark mode exports correctly). No other public methods.
+Gestures: hover or touch shows the tooltip; click or Enter on a mark drills (drill) else selects (select); with both, click or Enter selects and double-click or Shift+Enter drills (a click selection commits about 250 ms later unless a double-click turns it into a drill; the pinned tooltip has a "Drill into" button, not shown at the deepest level). Space pins the tooltip. Arrow keys move between categories and series; Home and End jump on the measure toggle. Escape pops, in order: pinned tooltip, brush, selection, zoom window, one drill level. Table header Enter or Space sorts. With zoom: drag a brush, + or = halves the window, - doubles it, double-click or Escape resets. A legend click toggles a series.
+Shadow DOM: parts you can style from outside are the --maya-* custom properties only (set them on maya-chart or an ancestor). Inside, stable hooks for tests and hosts: .maya-title .maya-sub .maya-ctl .maya-legend .maya-crumbs .maya-reset .maya-box .maya-svg .maya-sr .maya-tip .maya-err .maya-play; marks carry data-maya="mark", data-key, data-c, data-s, data-tone.
+Custom properties: --maya-<token> for each theme token in kebab case (fgMuted is --maya-fg-muted, series3 is --maya-series-3), plus --maya-ease for transitions. Height: the chart fills its container's height; with no definite height it keeps a floor; under about 160 px it draws a compact frame. Colour scheme follows color-scheme on the page or on the element.
+SSR: renderShell(spec, {width, height, view, selected, nonce}) returns <maya-chart> with a Declarative Shadow DOM and a JSON child holding only the fields the chart uses, so it works without JS and hydrates when the element loads. render(spec, opts) returns a bare SVG (no legend, title or controls). renderParts(spec, opts) returns the pieces. Pure: no window or document, safe in Node, workers and edge runtimes.
+Security: every string is escaped; spec CSS values pass an allowlist (unsafe-css-value otherwise); no inline style attributes; no network requests. Trusted Types: create the policy before the element loads, trustedTypes.createPolicy("mayacharts", {createHTML: s => s}), and use CSP trusted-types mayacharts. Pass nonce to renderShell for a strict style-src.
+Known ceilings (caps and approximations, each with its reason): https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md. Notable: at most 10000 marks (bars roll up, other types reduce or throw too-many-marks), 8 colours, 4 rules, 12 tooltip rows, units 1500 dots, UTC dates.
+
 RULES FOR AGENTS:
 1. Never put functions in spec: the spec is JSON, serializable, diffable, and hashable. No callbacks, formatters, or data transforms.
 2. Unknown types need imports: if a module type ("treemap", "sankey", "hexmap", "boxplot", "funnel", "weave", "units", "orbit", "constellation"...) fails with unknown-type, add the import the error names, e.g. import "mayacharts/weave", or without a bundler the script maya.weave.global.js after maya.core.global.js.
 3. Read errors.html when MayaSpecError thrown: every error links https://bbekshr.github.io/mayacharts/errors.html#<code> with cause and fixed example.
+4. Values are plain JSON. Pick the type from the question: compare categories bar, trend line or area, relationship scatter, composition treemap or waffle, flow sankey, status kpi or gauge, distribution boxplot or beeswarm. Map fields as x = category, y = value, series = split, whatever the orientation.
+5. Check the option table above for the chart type before adding an option: an option on a type that does not accept it throws option-unsupported. Do not invent keys; unknown-option names the closest valid one.
+6. For a ratio measure (average price, margin, conversion) use aggregate {ratio: [num, den]}, never a per-row ratio that gets summed or averaged.
+7. For a host that needs to know the chart is finished (screenshots, PDF, render-complete hooks) wait on maya-settled or await el.settled; for ThoughtSpot or any columnar result use maya.host.thoughtspot or maya.host.columns instead of hand-built rows.
+8. For drill-through into rows use drill with maya-drill-leaf; for cross-filtering use select with maya-select; add both on one chart and the gestures split (click selects, double-click or Shift+Enter drills).

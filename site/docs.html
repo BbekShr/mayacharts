@@ -72,6 +72,12 @@
       <a href="#time-axes">Time axes</a>
       <a href="#large-data">Large data</a>
       <a href="#style-fields">Style fields</a>
+      <a href="#chart-types">Chart types</a>
+      <a href="#element">The element</a>
+      <a href="#theme-tokens">Theme tokens</a>
+      <a href="#entry-points">Entry points</a>
+      <a href="#errors">Errors</a>
+      <a href="#known-ceilings">Known ceilings</a>
       <a href="#examples">Examples</a>
     </nav>
     <main>
@@ -1206,6 +1212,850 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
           </tbody>
         </table>
+      </section>
+
+      <section id="chart-types">
+        <h2>Chart types and modules</h2>
+        <p>
+          Twenty-seven types. The twelve core types come with the element. Each other type lives in
+          an optional module: import it, or load its classic script after
+          <code>maya.core.global.js</code>. <code>maya.global.js</code> holds everything. A type
+          whose module is not loaded fails with <code>unknown-type</code>, and the error names the
+          import and the file.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>ESM import</th>
+              <th>Classic script</th>
+              <th>What it draws</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>bar</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>
+                Category totals; grouped, stacked or percent; horizontal; <code>was</code> ghosts;
+                <code>y2</code> line; waterfall is its own type
+              </td>
+            </tr>
+            <tr>
+              <td><code>line</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>Trend over a category or time axis; several series; dashed series; zoom</td>
+            </tr>
+            <tr>
+              <td><code>area</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>A line filled to the axis; stack or percent</td>
+            </tr>
+            <tr>
+              <td><code>scatter</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>
+                Two numbers per row; <code>size</code> makes bubbles; log axes; slope rules; zoom
+              </td>
+            </tr>
+            <tr>
+              <td><code>heatmap</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>Cell value by row category (series) and column (x)</td>
+            </tr>
+            <tr>
+              <td><code>waterfall</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>Running total with <code>totals</code> bars</td>
+            </tr>
+            <tr>
+              <td><code>kpi</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>
+                Headline number, change, sparkline and goal; one tile per <code>y</code> field
+              </td>
+            </tr>
+            <tr>
+              <td><code>dumbbell</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>Two values per category, joined by a line</td>
+            </tr>
+            <tr>
+              <td><code>ridgeline</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>Distribution of each series along x</td>
+            </tr>
+            <tr>
+              <td><code>beeswarm</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>One dot per row along a value axis</td>
+            </tr>
+            <tr>
+              <td><code>parallel</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>One line per row across several measures</td>
+            </tr>
+            <tr>
+              <td><code>table</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>Rows and measures, sortable, with in-cell bars</td>
+            </tr>
+            <tr>
+              <td><code>treemap</code></td>
+              <td><code>mayacharts/hierarchy</code></td>
+              <td><code>maya.hierarchy.global.js</code></td>
+              <td>Nested rectangles sized by value; <code>depth</code> shows two levels</td>
+            </tr>
+            <tr>
+              <td><code>sunburst</code></td>
+              <td><code>mayacharts/hierarchy</code></td>
+              <td><code>maya.hierarchy.global.js</code></td>
+              <td>Rings of a hierarchy; <code>minAngle</code> folds thin slices into Other</td>
+            </tr>
+            <tr>
+              <td><code>marimekko</code></td>
+              <td><code>mayacharts/hierarchy</code></td>
+              <td><code>maya.hierarchy.global.js</code></td>
+              <td>Columns as wide as their total, stacked by series</td>
+            </tr>
+            <tr>
+              <td><code>waffle</code></td>
+              <td><code>mayacharts/hierarchy</code></td>
+              <td><code>maya.hierarchy.global.js</code></td>
+              <td>A grid of squares for shares of a whole</td>
+            </tr>
+            <tr>
+              <td><code>sankey</code></td>
+              <td><code>mayacharts/flow</code></td>
+              <td><code>maya.flow.global.js</code></td>
+              <td>Flows between stages</td>
+            </tr>
+            <tr>
+              <td><code>chord</code></td>
+              <td><code>mayacharts/flow</code></td>
+              <td><code>maya.flow.global.js</code></td>
+              <td>Flows between groups around a circle</td>
+            </tr>
+            <tr>
+              <td><code>radial</code></td>
+              <td><code>mayacharts/radial</code></td>
+              <td><code>maya.radial.global.js</code></td>
+              <td>Bars on a circle</td>
+            </tr>
+            <tr>
+              <td><code>gauge</code></td>
+              <td><code>mayacharts/radial</code></td>
+              <td><code>maya.radial.global.js</code></td>
+              <td>A dial for one value against a target</td>
+            </tr>
+            <tr>
+              <td><code>hexmap</code></td>
+              <td><code>mayacharts/geo</code></td>
+              <td><code>maya.geo.global.js</code></td>
+              <td>US states as hexagons (50 states, DC, PR)</td>
+            </tr>
+            <tr>
+              <td><code>boxplot</code></td>
+              <td><code>mayacharts/stats</code></td>
+              <td><code>maya.stats.global.js</code></td>
+              <td>Quartiles and outliers per category</td>
+            </tr>
+            <tr>
+              <td><code>funnel</code></td>
+              <td><code>mayacharts/stats</code></td>
+              <td><code>maya.stats.global.js</code></td>
+              <td>Stage by stage drop-off</td>
+            </tr>
+            <tr>
+              <td><code>weave</code></td>
+              <td><code>mayacharts/weave</code></td>
+              <td><code>maya.weave.global.js</code></td>
+              <td>A ranking over time where threads cross over and under</td>
+            </tr>
+            <tr>
+              <td><code>units</code></td>
+              <td><code>mayacharts/units</code></td>
+              <td><code>maya.units.global.js</code></td>
+              <td>One dot per row that flies between waffle, bars and swarm forms</td>
+            </tr>
+            <tr>
+              <td><code>orbit</code></td>
+              <td><code>mayacharts/orbit</code></td>
+              <td><code>maya.orbit.global.js</code></td>
+              <td>Categories as planets; size is value, speed is growth</td>
+            </tr>
+            <tr>
+              <td><code>constellation</code></td>
+              <td><code>mayacharts/constellation</code></td>
+              <td><code>maya.constellation.global.js</code></td>
+              <td>Rows placed by how alike their measures are</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+      <section id="element">
+        <h2>The element</h2>
+        <p>
+          Properties, methods and events of <code>&lt;maya-chart&gt;</code>. All events bubble and
+          are composed, so a listener on any ancestor or on <code>document</code> hears them. None
+          carries the spec.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Kind</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>spec</code></td>
+              <td>attribute, property</td>
+              <td>
+                The chart spec. The attribute is JSON text and the only observed attribute; once the
+                property is set it wins
+              </td>
+            </tr>
+            <tr>
+              <td><code>data</code></td>
+              <td>property</td>
+              <td>Assigning rows replaces <code>spec.data</code> and animates the update</td>
+            </tr>
+            <tr>
+              <td><code>view</code></td>
+              <td>property</td>
+              <td>
+                <code>{ measure, drill, window, hidden, form, sortBy, frame }</code>;
+                <code>{}</code> resets; no events on set
+              </td>
+            </tr>
+            <tr>
+              <td><code>selected</code></td>
+              <td>property</td>
+              <td><code>Sel[]</code> of raw values; no events on set</td>
+            </tr>
+            <tr>
+              <td><code>settled</code></td>
+              <td>property (promise)</td>
+              <td>
+                Resolves when the current or next paint has finished animating; rejects with the
+                <code>MayaSpecError</code> on maya-error
+              </td>
+            </tr>
+            <tr>
+              <td><code>toSVG()</code></td>
+              <td>method</td>
+              <td>
+                A standalone SVG string with the custom properties resolved, so a dark chart exports
+                dark
+              </td>
+            </tr>
+            <tr>
+              <td><code>MayaChart.version</code></td>
+              <td>static</td>
+              <td>The library version</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 id="events">Events</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>detail</th>
+              <th>When</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>maya-select</code></td>
+              <td><code>{ selected: Sel[], target: (Sel &amp; { value }) | null }</code></td>
+              <td>A mark was selected or the selection cleared (user actions only)</td>
+            </tr>
+            <tr>
+              <td><code>maya-view</code></td>
+              <td><code>{ measure, drill, window, hidden, form, sortBy }</code></td>
+              <td>
+                Measure toggled, drilled, zoomed, a legend series hidden, a units form picked or a
+                table sorted (user actions only)
+              </td>
+            </tr>
+            <tr>
+              <td><code>maya-drill-leaf</code></td>
+              <td><code>{ path: string[] }</code></td>
+              <td>
+                The drill gesture on a mark at the last level; one raw value per path level, root
+                first; sankey and chord fire it once drilled to their last branch
+              </td>
+            </tr>
+            <tr>
+              <td><code>maya-error</code></td>
+              <td><code>{ code, path, message }</code></td>
+              <td>
+                The spec failed validation; cancelable, call preventDefault() to hide the error box
+              </td>
+            </tr>
+            <tr>
+              <td><code>maya-render</code></td>
+              <td><code>{}</code></td>
+              <td>After each paint; entrance and update animations may still be running</td>
+            </tr>
+            <tr>
+              <td><code>maya-settled</code></td>
+              <td><code>{ error: Error | null }</code></td>
+              <td>
+                After the last animation of that paint (same task when nothing animates), and after
+                maya-error with the error
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <pre><code>chart.addEventListener("maya-select", (e) =&gt; filterDashboard(e.detail.selected));
+chart.addEventListener("maya-drill-leaf", (e) =&gt; openRows(e.detail.path)); // ["West", "CA"]
+chart.addEventListener("maya-error", (e) =&gt; { e.preventDefault(); show(e.detail.code); });
+await chart.settled; // drawn and still</code></pre>
+        <h3 id="gestures">Gestures and keyboard</h3>
+        <p>
+          Hover or tap shows the tooltip. With <code>drill</code> alone, a click or Enter drills.
+          With <code>select</code> alone, a click or Enter selects. With both, a click selects
+          (committed after about 250 ms, so a double-click can cancel it) and a double-click or
+          Shift+Enter drills. The pinned tooltip offers a "Drill into" button for touch, not shown
+          at the deepest level, where the gesture fires <code>maya-drill-leaf</code> instead.
+          Dragging with <code>zoom</code> brushes a window and a double-click resets it. A legend
+          click hides a series.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tab</td>
+              <td>
+                Move focus between the chart, legend buttons, measure toggle, breadcrumb and Reset
+                chip
+              </td>
+            </tr>
+            <tr>
+              <td>Arrow Left, Right</td>
+              <td>
+                Previous or next category in the same series; on the measure toggle, previous or
+                next measure
+              </td>
+            </tr>
+            <tr>
+              <td>Arrow Up, Down</td>
+              <td>
+                Previous or next series in the same category; on the measure toggle, previous or
+                next measure
+              </td>
+            </tr>
+            <tr>
+              <td>Home, End</td>
+              <td>First or last measure on the measure toggle</td>
+            </tr>
+            <tr>
+              <td>Enter</td>
+              <td>Drill into the focused mark, else select it (with both on: select)</td>
+            </tr>
+            <tr>
+              <td>Shift+Enter</td>
+              <td>With drill and select both on: drill into the focused mark</td>
+            </tr>
+            <tr>
+              <td>Space</td>
+              <td>Pin or unpin the tooltip on the focused mark</td>
+            </tr>
+            <tr>
+              <td>Enter, Space on a table header</td>
+              <td>Sort by that column</td>
+            </tr>
+            <tr>
+              <td>Escape</td>
+              <td>
+                First of: unpin the tooltip, cancel a brush, clear the selection, reset the zoom
+                window, pop one drill level
+              </td>
+            </tr>
+            <tr>
+              <td>+ or =, -</td>
+              <td>
+                With zoom: halve the window about the active mark, double it; Ctrl, Meta and Alt
+                combinations are left to the browser
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 id="hooks">CSS custom properties and hooks</h3>
+        <p>
+          Style a chart through the <code>--maya-*</code> custom properties (see Theme tokens) on
+          <code>maya-chart</code> or an ancestor; they cross the shadow boundary.
+          <code>--maya-ease</code> sets the easing of stylesheet transitions. Inside the shadow root
+          these classes are stable for tests and hosts: <code>.maya-title</code>,
+          <code>.maya-sub</code>, <code>.maya-legend</code>, <code>.maya-crumbs</code>,
+          <code>.maya-ctl</code>, <code>.maya-reset</code>, <code>.maya-box</code>,
+          <code>.maya-svg</code>, <code>.maya-tip</code>, <code>.maya-err</code> and
+          <code>.maya-play</code>. Marks carry <code>data-maya="mark"</code>, <code>data-key</code>,
+          <code>data-c</code>, <code>data-s</code> and <code>data-tone</code>.
+        </p>
+      </section>
+      <section id="theme-tokens">
+        <h2>Theme tokens</h2>
+        <p>
+          Every colour and font is a token. Set it in <code>spec.theme</code> (values pass the CSS
+          allowlist) or as the CSS custom property on the element. The eight series colours are
+          <code>series1</code> to <code>series8</code>, CSS <code>--maya-series-1</code> to
+          <code>--maya-series-8</code>. <code>mayacharts/themes</code> has 18 ready-made token sets.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>CSS variable</th>
+              <th>Light default</th>
+              <th>Dark default</th>
+              <th>Colours</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>font</code></td>
+              <td><code>--maya-font</code></td>
+              <td>system-ui, sans-serif</td>
+              <td>same as light</td>
+              <td>Axis labels, tooltip text</td>
+            </tr>
+            <tr>
+              <td><code>fontSize</code></td>
+              <td><code>--maya-font-size</code></td>
+              <td>12px</td>
+              <td>12px</td>
+              <td>All text</td>
+            </tr>
+            <tr>
+              <td><code>fg</code></td>
+              <td><code>--maya-fg</code></td>
+              <td>#1f2328</td>
+              <td>#e6edf3</td>
+              <td>Title, value labels</td>
+            </tr>
+            <tr>
+              <td><code>fgMuted</code></td>
+              <td><code>--maya-fg-muted</code></td>
+              <td>#656d76</td>
+              <td>#9198a1</td>
+              <td>Axis text, legend, breadcrumb</td>
+            </tr>
+            <tr>
+              <td><code>grid</code></td>
+              <td><code>--maya-grid</code></td>
+              <td>fg at 10% (color-mix)</td>
+              <td>fg at 10% (color-mix)</td>
+              <td>Grid lines</td>
+            </tr>
+            <tr>
+              <td><code>bg</code></td>
+              <td><code>--maya-bg</code></td>
+              <td>#fff</td>
+              <td>#0d1117</td>
+              <td>Background, tooltip text</td>
+            </tr>
+            <tr>
+              <td><code>accent</code></td>
+              <td><code>--maya-accent</code></td>
+              <td>oklch(.6 .17 255)</td>
+              <td>oklch(.6 .17 255)</td>
+              <td>Focus outline, series 1</td>
+            </tr>
+            <tr>
+              <td><code>radius</code></td>
+              <td><code>--maya-radius</code></td>
+              <td>3px</td>
+              <td>3px</td>
+              <td>Mark border radius</td>
+            </tr>
+            <tr>
+              <td><code>tooltipBg</code></td>
+              <td><code>--maya-tooltip-bg</code></td>
+              <td>--maya-bg at 92% (color-mix)</td>
+              <td>same as light</td>
+              <td>Tooltip card background</td>
+            </tr>
+            <tr>
+              <td><code>tooltipFg</code></td>
+              <td><code>--maya-tooltip-fg</code></td>
+              <td>--maya-fg</td>
+              <td>--maya-fg</td>
+              <td>Tooltip text</td>
+            </tr>
+            <tr>
+              <td><code>focus</code></td>
+              <td><code>--maya-focus</code></td>
+              <td>--maya-accent</td>
+              <td>--maya-accent</td>
+              <td>Keyboard focus ring</td>
+            </tr>
+            <tr>
+              <td><code>good</code></td>
+              <td><code>--maya-good</code></td>
+              <td>#1a7f37</td>
+              <td>#3fb950</td>
+              <td>colorBy positive / above target</td>
+            </tr>
+            <tr>
+              <td><code>warn</code></td>
+              <td><code>--maya-warn</code></td>
+              <td>#996600</td>
+              <td>#ffcc33</td>
+              <td>colorBy at risk (warn band)</td>
+            </tr>
+            <tr>
+              <td><code>bad</code></td>
+              <td><code>--maya-bad</code></td>
+              <td>#cf222e</td>
+              <td>#f85149</td>
+              <td>colorBy negative / below target</td>
+            </tr>
+            <tr>
+              <td>
+                <code>series1</code>, <code>series2</code>, <code>series3</code>,
+                <code>series4</code>, <code>series5</code>, <code>series6</code>,
+                <code>series7</code>, <code>series8</code>
+              </td>
+              <td><code>--maya-series-1 to --maya-series-8</code></td>
+              <td>1: --maya-accent; 2-8: oklch presets</td>
+              <td>same as light</td>
+              <td>Series colours (max 8)</td>
+            </tr>
+            <tr>
+              <td><code>line</code></td>
+              <td><code>--maya-line</code></td>
+              <td>2.25</td>
+              <td>2.25</td>
+              <td>Line width</td>
+            </tr>
+            <tr>
+              <td><code>gridDash</code></td>
+              <td><code>--maya-grid-dash</code></td>
+              <td>none</td>
+              <td>none</td>
+              <td>Grid dash array, e.g. <code>2 4</code></td>
+            </tr>
+            <tr>
+              <td><code>titleSize</code></td>
+              <td><code>--maya-title-size</code></td>
+              <td>15px</td>
+              <td>15px</td>
+              <td>Title text size</td>
+            </tr>
+            <tr>
+              <td><code>titleWeight</code></td>
+              <td><code>--maya-title-weight</code></td>
+              <td>600</td>
+              <td>600</td>
+              <td>Title weight</td>
+            </tr>
+            <tr>
+              <td><code>axisSize</code></td>
+              <td><code>--maya-axis-size</code></td>
+              <td>11px</td>
+              <td>11px</td>
+              <td>Axis tick label size</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+      <section id="entry-points">
+        <h2>Entry points, files and security</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Import or file</th>
+              <th>What it is</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>mayacharts</code></td>
+              <td>
+                <code>render</code>, <code>renderShell</code>, <code>renderParts</code>,
+                <code>validateSpec</code>, <code>MayaSpecError</code>, <code>version</code> and all
+                types; pure, no DOM
+              </td>
+            </tr>
+            <tr>
+              <td><code>mayacharts/element</code></td>
+              <td>Registers <code>&lt;maya-chart&gt;</code> and the twelve core types</td>
+            </tr>
+            <tr>
+              <td>
+                <code>mayacharts/hierarchy</code>, <code>mayacharts/flow</code>,
+                <code>mayacharts/radial</code>, <code>mayacharts/geo</code>,
+                <code>mayacharts/stats</code>, <code>mayacharts/weave</code>,
+                <code>mayacharts/units</code>, <code>mayacharts/orbit</code>,
+                <code>mayacharts/constellation</code>
+              </td>
+              <td>One module each; importing it registers its types</td>
+            </tr>
+            <tr>
+              <td><code>mayacharts/host</code></td>
+              <td>
+                <code>thoughtspot(viz, spec)</code> and <code>columns(table, spec)</code> adapters
+              </td>
+            </tr>
+            <tr>
+              <td><code>mayacharts/themes</code></td>
+              <td><code>themes</code>: 18 ready-made token sets, plain data, ESM only</td>
+            </tr>
+            <tr>
+              <td><code>mayacharts/theme.css</code></td>
+              <td>The stylesheet as a file</td>
+            </tr>
+            <tr>
+              <td><code>mayacharts/schema.json</code></td>
+              <td>JSON Schema of the spec</td>
+            </tr>
+            <tr>
+              <td><code>dist/maya.global.js</code></td>
+              <td>
+                Everything in one classic script: <code>maya.render</code>,
+                <code>maya.renderShell</code>, <code>maya.host</code>, the element
+              </td>
+            </tr>
+            <tr>
+              <td><code>dist/maya.core.global.js</code></td>
+              <td>Element, the twelve core types and <code>maya.host</code></td>
+            </tr>
+            <tr>
+              <td>
+                <code>dist/maya.hierarchy.global.js</code>, <code>maya.flow.global.js</code>,
+                <code>maya.radial.global.js</code>, <code>maya.geo.global.js</code>,
+                <code>maya.stats.global.js</code>, <code>maya.weave.global.js</code>,
+                <code>maya.units.global.js</code>, <code>maya.orbit.global.js</code>,
+                <code>maya.constellation.global.js</code>
+              </td>
+              <td>One classic script per module; load after the core file</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Each release prints an SRI hash for every <code>dist/*.global.js</code> file. Add
+          <code>integrity</code> and <code>crossorigin="anonymous"</code> to the script tag and pin
+          the version in the URL.
+        </p>
+        <p>
+          Server rendering:
+          <code>renderShell(spec, { width, height, view, selected, nonce })</code> returns a
+          <code>&lt;maya-chart&gt;</code> with a Declarative Shadow DOM and a JSON child that holds
+          only the fields the chart uses. It works without JS and hydrates when the element loads.
+          <code>render(spec, opts)</code> returns a bare SVG and <code>renderParts</code> returns
+          the pieces. Core never touches <code>window</code> or <code>document</code>.
+        </p>
+        <p>
+          Security: every string is escaped, spec CSS values pass an allowlist, there are no inline
+          style attributes and no network requests. Trusted Types: create the policy before the
+          element loads,
+          <code>trustedTypes.createPolicy("mayacharts", { createHTML: (s) =&gt; s })</code>, and
+          send the CSP <code>trusted-types mayacharts</code>. Pass <code>nonce</code> to
+          <code>renderShell</code> for a strict <code>style-src</code>.
+        </p>
+      </section>
+      <section id="errors">
+        <h2>Errors</h2>
+        <p>
+          A bad spec throws a <code>MayaSpecError</code> with <code>code</code>,
+          <code>path</code> and <code>message</code>. The element dispatches the same three fields
+          in <code>maya-error</code>. Each message links to <a href="./errors.html">errors.html</a>,
+          which has a cause and a fixed example for every code.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Cause</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <a href="./errors.html#unknown-type"><code>unknown-type</code></a>
+              </td>
+              <td>
+                The chart type is not recognised, or its module is not loaded; the message names the
+                import and the classic script
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#spec-not-object"><code>spec-not-object</code></a>
+              </td>
+              <td>spec must be a plain object</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#missing-field"><code>missing-field</code></a>
+              </td>
+              <td>type/data/x (or path)/y is required but missing</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#data-not-array"><code>data-not-array</code></a>
+              </td>
+              <td>data must be an array of row objects</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#row-not-object"><code>row-not-object</code></a>
+              </td>
+              <td>data[i] must be a plain object</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#unknown-field"><code>unknown-field</code></a>
+              </td>
+              <td>field-valued option names no field in data</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#non-numeric-y"><code>non-numeric-y</code></a>
+              </td>
+              <td>y field value not a finite number (null allowed)</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#non-numeric-field"><code>non-numeric-field</code></a>
+              </td>
+              <td>size/scatter x/colorBy field value not a finite number</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#non-positive-value"><code>non-positive-value</code></a>
+              </td>
+              <td>
+                treemap/sunburst/sankey/chord y value must be positive; funnel and ridgeline y value
+                must not be negative; a value on a log axis (yScale/xScale "log") must be above 0
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#unknown-option"><code>unknown-option</code></a>
+              </td>
+              <td>top-level spec key not recognized</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#invalid-option"><code>invalid-option</code></a>
+              </td>
+              <td>option value wrong type or invalid value</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#option-unsupported"><code>option-unsupported</code></a>
+              </td>
+              <td>option not valid for this chart type or incompatible with another option</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#stack-unsupported"><code>stack-unsupported</code></a>
+              </td>
+              <td>stack (true or "percent") not allowed with type "line" (use "area" instead)</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#invalid-domain"><code>invalid-domain</code></a>
+              </td>
+              <td>
+                xDomain not [min, max] with min &lt; max; yDomain not two different numbers
+                (reversed allowed); bounds within 1e300, span at least 1e-300
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#invalid-format"><code>invalid-format</code></a>
+              </td>
+              <td>format preset unknown, bad Intl options, or unsupported locale/currency</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#invalid-theme"><code>invalid-theme</code></a>
+              </td>
+              <td>theme token not recognized</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#unsafe-css-value"><code>unsafe-css-value</code></a>
+              </td>
+              <td>
+                colors/theme CSS value blocked by allowlist (no url(), other functions, ; { } &lt;
+                &gt; \)
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#invalid-size"><code>invalid-size</code></a>
+              </td>
+              <td>RenderOptions width/height not a finite number &gt; 0</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#unknown-state"><code>unknown-state</code></a>
+              </td>
+              <td>
+                hexmap x value is not a US state (two-letter code or full name; 50 states, DC, PR)
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#too-many-marks"><code>too-many-marks</code></a>
+              </td>
+              <td>
+                more than 10000 marks (the message gives the count, the cap and the row count;
+                suggest limit or aggregate). Bars roll up, categorical lines and kpi thin, scatter
+                bins and tables draw the rows that fit instead of failing.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#invalid-date"><code>invalid-date</code></a>
+              </td>
+              <td>xType "time" with an x value that is neither an ISO 8601 date nor epoch ms</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="./errors.html#too-few-measures"><code>too-few-measures</code></a>
+              </td>
+              <td>constellation y is not an array of at least 2 measures</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+      <section id="known-ceilings">
+        <h2>Known ceilings</h2>
+        <p>
+          Every cap and approximation is listed with its reason in
+          <a href="https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md#known-ceilings"
+            >NON-FEATURES.md</a
+          >. The ones most likely to matter: 10000 marks (bars roll up, other types reduce or throw
+          <code>too-many-marks</code>), 8 series colours, 4 rules, 12 tooltip rows, 1500 dots for
+          <code>units</code>, UTC dates unless Intl options say otherwise, and no function-valued
+          options.
+        </p>
       </section>
 
       <section id="examples">

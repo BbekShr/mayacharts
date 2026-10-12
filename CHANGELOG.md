@@ -34,6 +34,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - The sunburst's automatic "Other (n)" slice is documented next to `minAngle`; the drill gesture split, the leaf event and the sankey drill rule are documented under `drill` (#70, #71).
 - `format` options `prefix` and `suffix` are documented, with an example (#68).
 - "Embedding in hosts" and "Height" sections in the docs (#61, #63).
+- Complete reference: every chart type with its module and classic script, the element's properties, events with their detail shapes, gestures and keys, theme tokens, entry points, SRI, error codes and known ceilings in the README, `site/docs.html` and `llms.txt`. `test/docs-coverage.test.ts` fails when a spec key, type, event, error code, text key, theme token or global file is missing from them.
 
 ## 0.15.0 - 2026-10-10
 
