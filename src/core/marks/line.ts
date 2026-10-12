@@ -57,6 +57,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   let dots = "";
   const tx = ctx.ends;
   const ep: [number, number, number, [string, string]][] = [];
+  const told = new Set<number>(); // spec.notes already placed
   for (const si of shaped.visible) {
     const ser = shaped.series[si]!;
     const cells: Cell[] = shaped.cells.filter((c) => c.si === si); // ascending ci, as shape lays them out
@@ -82,11 +83,11 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     );
     // Where cell i's label sits off the stroke: the first of above/below/left/right (a peak, trough,
     // rise or fall prefers its own) whose estimated box meets no segment of this series.
-    const spot = (i: number) => {
+    const spot = (i: number, said?: string) => {
       const c = cells[i]!;
       const at = (j: number) => (cells[j]?.value == null ? c.y1 : cells[j]!.y1);
       const [p, q] = [at(i - 1), at(i + 1)];
-      const [lx, ly, text] = [+px(c.ci), val.of(c.y1), ctx.fmt(spec.y, c.value)];
+      const [lx, ly, text] = [+px(c.ci), val.of(c.y1), said ?? ctx.fmt(spec.y, c.value)];
       const w = tw(text) + 4;
       const f = p <= c.y1 && q <= c.y1 ? 0 : p >= c.y1 && q >= c.y1 ? 1 : p < c.y1 ? 2 : 3;
       // k: 0 above, 1 below, 2 end (left), 3 start (right); l, t the box's left and top.
@@ -118,6 +119,12 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     // spec.annotate: the extremes and ends labelled first (ahead of plain value labels), each point once;
     // the labelled point keeps its dot. ponytail: "last" is skipped beside end labels, which already say it.
     const done = new Set<number>();
+    // annotate { x, text }: the note labels the first visible series' point at x (once), ahead of the extremes.
+    for (const [n, { x, text }] of spec.notes.entries()) {
+      const i = cells.findIndex((c) => c.value !== null && shaped.categories[c.ci] === String(x));
+      const sp = i < 0 || told.has(n) ? null : spot(i, text);
+      if (sp && ctx.label(...sp, "note")) (done.add(i), told.add(n));
+    }
     const live = cells.flatMap((c, i) => (c.value === null ? [] : [i]));
     for (const [a, k] of marked(
       live.map((i) => cells[i]!.value!),

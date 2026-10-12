@@ -165,6 +165,36 @@
           </section>
           <section>
             <div class="tile-head">
+              <h2>Monthly sales and the normal range</h2>
+              <button type="button" data-reroll="rules-band">Re-roll</button>
+            </div>
+            <p>
+              A shaded band marks the range to expect, a vertical rule marks an event, and a note
+              names the month.
+            </p>
+            <maya-chart id="rules-band" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="rules-band-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>A headline that reads the data</h2>
+              <button type="button" data-reroll="headline">Re-roll</button>
+            </div>
+            <p>
+              Tokens in the title and subtitle are filled from the data, and the title size is a
+              theme token.
+            </p>
+            <maya-chart id="headline" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="headline-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
               <h2>Monthly units</h2>
               <button type="button" data-reroll="line-labels">Re-roll</button>
             </div>
@@ -300,6 +330,21 @@
             <details>
               <summary>Spec</summary>
               <pre><code id="hbar-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Average price by region and family</h2>
+              <button type="button" data-reroll="ratio-drill">Re-roll</button>
+            </div>
+            <p>
+              Price is total sales over total units at every level, not an average of averages.
+              Click a region for its families.
+            </p>
+            <maya-chart id="ratio-drill" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="ratio-drill-code"></code></pre>
             </details>
           </section>
           <section>
@@ -574,6 +619,21 @@
           </section>
           <section>
             <div class="tile-head">
+              <h2>Regions with their families inside</h2>
+              <button type="button" data-reroll="treemap-nested">Re-roll</button>
+            </div>
+            <p>
+              Each region is a frame with its families inside it. Click a region or a family to open
+              that region.
+            </p>
+            <maya-chart id="treemap-nested" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="treemap-nested-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
               <h2>The same hierarchy as rings</h2>
               <button type="button" data-reroll="sunburst">Re-roll</button>
             </div>
@@ -609,7 +669,10 @@
               <h2>Drill into a family</h2>
               <button type="button" data-reroll="sankey-drill">Re-roll</button>
             </div>
-            <p>Click a family to follow its items to the regions. Click empty space to go back.</p>
+            <p>
+              Each family has its own colour that its flows keep. Click a family or an item to
+              follow it, click empty space to go back.
+            </p>
             <maya-chart id="sankey-drill" style="height: 320px"></maya-chart>
             <details>
               <summary>Spec</summary>

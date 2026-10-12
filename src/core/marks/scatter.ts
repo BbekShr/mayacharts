@@ -1,6 +1,6 @@
 import { cbField, el, memo, nameId, esc, key, r } from "../svg.ts";
-import { more } from "./bar.ts";
-import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
+import { marked, more } from "./bar.ts";
+import type { Annotate, LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
 
 interface Pt {
@@ -238,6 +238,30 @@ export const scatter: Mark = {
     // Big bubbles first so small ones stay on top; stable for ties.
     const order = max > 0 ? [...pts].sort((a, b) => rad(b) - rad(a)) : pts;
 
+    // spec.annotate: per series the max and min y, the first and last by x, and { x, text } notes, labelled ahead of plain value labels.
+    const tag = (p: Pt, a: Annotate | "note", said?: string) =>
+      ctx.label(
+        sx.of(p.x),
+        sy.of(p.y) - rad(p),
+        said ?? ctx.fmt(spec.y, p.y),
+        "above",
+        key(shaped.series[p.si]!, ids?.get(p) ?? p.i),
+        a,
+      );
+    for (const { x, text } of spec.notes) {
+      const p = pts.find((q) => q.x === +x);
+      if (p) tag(p, "note", text);
+    }
+    if (spec.annotate.length)
+      for (const si of shaped.visible) {
+        const ps = pts.filter((p) => p.si === si).sort((a, b) => a.x - b.x);
+        for (const [a, i] of marked(
+          ps.map((p) => p.y),
+          spec.annotate,
+        ))
+          tag(ps[i]!, a);
+      }
+
     let marks = "";
     for (const p of order) {
       const ser = shaped.series[p.si]!;
@@ -281,18 +305,18 @@ export const scatter: Mark = {
       });
       if (spec.labels) ctx.label(cx, cy - rad(p), y, "above", key(ser, ids?.get(p) ?? p.i));
     }
-    // Slope rules: y = k * x through the origin ("mean": sum y / sum x of the drawn points), clipped to the plot.
+    // Slope rules: y = k * x + b (b defaults to 0, the origin) ("mean": sum y / sum x of the drawn points), clipped to the plot.
     // ponytail: straight only when both axes share a scale; with one log axis the line would be a curve, so it is skipped.
     const [dx, dy] = [(ctx.x as LinearScale).domain, (ctx.y as LinearScale).domain];
     const [tx, ty] = [pts.reduce((a, p) => a + p.x, 0), pts.reduce((a, p) => a + p.y, 0)];
     let under = "";
-    spec.slopes.forEach(({ k, label }, i) => {
+    spec.slopes.forEach(({ k, b, label }, i) => {
       const m = k === "mean" ? ty / tx : k;
       if (!m || !isFinite(m) || spec.xScale !== spec.yScale) return;
-      const [u, v] = [dy[0] / m, dy[1] / m];
+      const [u, v] = [(dy[0] - b) / m, (dy[1] - b) / m];
       const [x0, x1] = [Math.max(dx[0], Math.min(u, v)), Math.min(dx[1], Math.max(u, v))];
       if (!(x0 < x1)) return;
-      const [px0, py0, px1, py1] = [sx.of(x0), sy.of(m * x0), sx.of(x1), sy.of(m * x1)];
+      const [px0, py0, px1, py1] = [sx.of(x0), sy.of(m * x0 + b), sx.of(x1), sy.of(m * x1 + b)];
       under += el("line", {
         "data-key": key("\u0000slope", i),
         "data-slope": true,

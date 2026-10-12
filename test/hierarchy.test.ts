@@ -300,3 +300,31 @@ describe("empty waffle and marimekko", () => {
       expect(svg).not.toContain("maya-legend");
     });
 });
+
+describe("#71 nested treemap, minAngle, slots", () => {
+  it("depth 2 draws parents as frames, children point their click at the parent", () => {
+    const svg = renderParts({ ...tm, depth: 2, drill: true, path: ["g", "n", "n"] }).svg;
+    expect(svg).toContain("data-par");
+    expect(
+      /data-depth="2"[^>]*data-to="1"/.test(svg) || /data-to="1"[^>]*data-depth="2"/.test(svg),
+    ).toBe(true);
+  });
+  it("a drilled branch spreads its tints", () => {
+    const r = renderParts({ ...tm, drill: true }, { view: { drill: ["C"] } }).svg;
+    expect(r).toContain('data-lt="0"');
+  });
+  it("minAngle 0 never lumps Other", () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ g: "A", n: `n${i}`, v: i ? 1 : 500 }));
+    const sbm = { ...sb, data: many };
+    expect(renderParts(sbm).svg).toContain("data-other");
+    expect(renderParts({ ...sbm, minAngle: 0 }).svg).not.toContain("data-other");
+  });
+  it("colours follow slots from all rows through a drill", () => {
+    const s = (v?: string[]) =>
+      at(
+        tags(renderParts({ ...tm, drill: true }, v ? { view: { drill: v } } : {}).svg, "rect")[0]!,
+        "data-s",
+      );
+    expect(s(["C"])).toBe("2");
+  });
+});

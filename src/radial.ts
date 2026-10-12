@@ -288,7 +288,9 @@ export const gauge: Mark = {
   draw(ctx) {
     const { spec, plot } = ctx;
     const col = (f: string) => ctx.agg(spec.aggregate)(spec.data.map((row) => num(row[f])));
-    const value = col(spec.y);
+    // aggregate { ratio }: sum(numerator) / sum(denominator), null when the denominator is 0.
+    const [nu, de] = spec.ratio ? [col(spec.ratio[0]), col(spec.ratio[1])] : [];
+    const value = spec.ratio ? (nu != null && de ? nu / de : null) : col(spec.y);
     if (value === null)
       return {
         marks: "",

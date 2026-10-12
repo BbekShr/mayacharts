@@ -328,3 +328,19 @@ describe("dash, annotate, tooltip fields and log", () => {
     expect(s).not.toMatch(/data-yd="0 /);
   });
 });
+
+describe("annotate notes", () => {
+  it("label the mark at x with the note text", () => {
+    const data = [10, 20, 12, 40].map((v, i) => ({ m: i + 1, k: "a", v }));
+    const svg = renderParts({
+      type: "line",
+      x: "m",
+      y: "v",
+      series: "k",
+      legend: true,
+      annotate: [{ x: 2, text: "Launch" }],
+      data,
+    }).svg;
+    expect(svg).toMatch(/data-ann="note"[^>]*>Launch</);
+  });
+});

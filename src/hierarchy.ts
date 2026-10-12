@@ -98,7 +98,7 @@ function squarify(nodes: Node[], x: number, y: number, w: number, h: number) {
 }
 
 /** Validate values, build the tree, and compute attributes shared by both marks. */
-function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null) {
+function setup(ctx: MarkCtx, levels = Infinity, hue: number | null = null) {
   const { spec } = ctx;
   const cb = cbField(spec);
   // The validation pass and the tree are kept per data array: a re-render of the same rows (resize, hover, drill) skips them.
@@ -116,16 +116,17 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
     });
     return tree(spec.data, spec.path, spec.y, ctx.agg(spec.aggregate as Aggregate), cb);
   });
-  // The tree is shared between renders: drilling flattens a copy.
-  const root = flat
-    ? { ...whole, children: whole.children.map((n) => ({ ...n, children: [] })) }
-    : whole;
-  // Drilling: draw only the next level; a click pushes it, so each click goes one level deeper.
+  // The tree is shared between renders: a depth cut copies. Drilling shows `levels` (default 1) below the branch.
+  const cut = (n: Node, d: number): Node => ({
+    ...n,
+    children: d < levels ? n.children.map((k) => cut(k, d + 1)) : [],
+  });
+  const root = levels < Infinity ? cut(whole, 0) : whole;
   let c = 0;
-  // Colour slots follow first appearance, not size: a rank change on update keeps every branch its colour.
+  // Colour slots come from all rows (spec.slots), not size or the rows shown: a rank change, a filter or a drill keeps every branch its colour.
   const attrs = (n: Node, other = false) => {
     const parts = [...spec.drilled, ...n.parts];
-    const s = hue ?? root.children.findIndex((t) => t.name === n.parts[0]);
+    const s = hue ?? spec.slots.get(n.parts[0] ?? "") ?? -1;
     return {
       "data-maya": "mark",
       // The "Other (n)" lump is keyed by the sentinel, not its count, so a new count still sweeps.
@@ -139,6 +140,8 @@ function setup(ctx: MarkCtx, flat = !!ctx.spec.drill, hue: number | null = null)
       "data-tone": ctx.tone(n.value),
       "data-q": n.cv === null ? null : ctx.q(n.cv),
       "data-depth": n.depth,
+      // Nested treemap: below the first level a click drills into the parent under the pointer, one level (read by drill.ts).
+      "data-to": levels > 1 && levels < Infinity && n.depth > 1 ? 1 : null,
     };
   };
   return { root, attrs };
@@ -156,22 +159,25 @@ const treemap: Mark = {
   noun: "Treemap",
   draw(ctx): MarkOut {
     const { plot, spec } = ctx;
-    const { root, attrs } = setup(ctx, !!spec.drill, spec.hue); // a drilled branch keeps its colour
+    // depth: levels drawn below the branch (parents become header strips); default 1 with drill, all without.
+    const { root, attrs } = setup(ctx, spec.depth ?? (spec.drill ? 1 : Infinity), spec.hue);
+    const nest = (spec.depth ?? 1) > 1;
+    // Tiles of one hue step through 8 lightnesses by size rank (spread over their count).
+    const tinted = nest || spec.drilled.length > 0;
     let marks = "";
     let hits = "";
-    const walk = (n: Node, x: number, y: number, w: number, h: number): void => {
+    const walk = (n: Node, x: number, y: number, w: number, h: number, i = 0, of = 1): void => {
       // 0.5 px inset below the top level: siblings sit 1 px apart (stroke adds more).
       const g = n.depth > 1 ? 0.5 : 0;
       const [bx, by, bw, bh] = [x + g, y + g, Math.max(0, w - 2 * g), Math.max(0, h - 2 * g)];
       if (!n.children.length) {
         if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
         const a = attrs(n);
-        // A drilled branch is one hue: its tiles step through three tints in size order.
-        // ponytail: three tints by size rank; every tile past the second largest shares the lightest.
-        const tint = spec.drilled.length ? 1 + Math.min(a["data-c"], 2) : null;
+        // ponytail: 8 tints, so a branch of more than 8 tiles repeats them in size order.
+        const lt = tinted ? Math.round((i * 7) / Math.max(1, of - 1)) : null;
         marks += el("rect", {
           ...a,
-          "data-tint": tint,
+          "data-lt": lt,
           x: r(bx),
           y: r(by),
           width: r(bw),
@@ -191,10 +197,32 @@ const treemap: Mark = {
         else if (text(f) <= bw) ctx.label(lx, ly, f, "center");
         return;
       }
-      if (n.depth === 1 && bw >= 28 && bh >= 30)
+      let [ix, iy, iw, ih] = [bx, by, bw, bh];
+      if (nest && n.depth) {
+        // A parent is a quiet tinted frame with its name in a header strip; the pointer over its
+        // padding or header hits it, over a child the child (hits are drawn in order).
+        const a = attrs(n);
+        marks += el("rect", {
+          ...a,
+          "data-par": true,
+          x: r(bx),
+          y: r(by),
+          width: r(bw),
+          height: r(bh),
+        });
+        hits += hit({ ...a, "data-depth": null }, bx, by, bw, bh);
+        const head = bw >= 36 && bh >= 34 ? 17 : 2;
+        if (head > 2 && spec.labels !== false) {
+          const f = a["data-f"];
+          const cap = Math.floor((bw - 10) / 7.2);
+          const both = `${n.name} · ${f}`;
+          ctx.label(bx + 5, by + 9, both.length <= cap ? both : clip(n.name, cap), "start");
+        }
+        [ix, iy, iw, ih] = [bx + 2, by + head, Math.max(0, bw - 4), Math.max(0, bh - head - 2)];
+      } else if (n.depth === 1 && bw >= 28 && bh >= 30)
         ctx.label(bx + bw / 2, by + 9, clip(n.name, Math.floor((bw - 4) / 7.2)), "center");
-      for (const [c, cx, cy, cw, ch] of squarify(n.children, bx, by, bw, bh))
-        walk(c, cx, cy, cw, ch);
+      const sq = squarify(n.children, ix, iy, iw, ih);
+      for (const [j, [c, cx, cy, cw, ch]] of sq.entries()) walk(c, cx, cy, cw, ch, j, sq.length);
     };
     walk(root, plot.x, plot.y, plot.w, plot.h);
     return { marks, hits };
@@ -214,7 +242,7 @@ const sunburst: Mark = {
   noun: "Sunburst",
   draw(ctx): MarkOut {
     const { plot, spec } = ctx;
-    const { root, attrs } = setup(ctx, false, spec.hue); // a drilled branch keeps its colour
+    const { root, attrs } = setup(ctx, Infinity, spec.hue);
     const w = Math.min(plot.w, plot.h) / 2 / (spec.path.length + 1); // ring width; the disk is one
     const [cx, cy] = [plot.x + plot.w / 2, plot.y + plot.h / 2];
     const at = (rad: number, deg: number) => [
@@ -285,10 +313,13 @@ const sunburst: Mark = {
       let a = a0;
       for (const [i, c] of kids.entries()) {
         let s = (span * c.value) / n.value;
-        // Slivers under 4 px across read as hatching: the rest (all smaller) become one "Other (n)".
+        // Slivers under 4 px across (spec.minAngle degrees when set, 0 = never) read as hatching: the rest (all smaller) become one "Other (n)".
         // The largest child is never lumped: it keeps a 3 px tick, so a ring of slivers still names its head.
         if (!i) s = Math.max(s, (3 * DEG) / ((c.depth + 1) * w));
-        else if (kids[i + 1] && (s / DEG) * (c.depth + 0.5) * w < 4) {
+        else if (
+          kids[i + 1] &&
+          (spec.minAngle === null ? (s / DEG) * (c.depth + 0.5) * w < 4 : s < spec.minAngle)
+        ) {
           const name = `${ctx.t("other")} (${kids.length - i})`;
           const value = kids.slice(i).reduce((q, k) => q + k.value, 0); // by value: the tick moved the angle
           walk({ ...c, name, value, children: [], parts: [...n.parts, name] }, a, a1, n, true);

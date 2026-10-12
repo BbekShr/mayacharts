@@ -231,6 +231,18 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     format: "compact",
     data: tree,
   });
+  // 11b. Two levels at once: regions as frames, families inside; a click opens the region under the pointer.
+  tile("treemap-nested", {
+    type: "treemap",
+    title: "Sales by region and family",
+    titles: { sales: "Sales ($)" },
+    path: ["region", "family", "item"],
+    y: "sales",
+    depth: 2,
+    drill: true,
+    format: "compact",
+    data: tree,
+  });
   tile("sunburst", {
     type: "sunburst",
     title: "Sales by region, family and item",
@@ -266,6 +278,8 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     titles: { sales: "Sales ($)", family: "Family", item: "Item", region: "Region" },
     path: ["family", "item", "region"],
     y: "sales",
+    // One colour per family; its flows, and the items drilled from it, keep it.
+    colors: { Outerwear: "#2f6f8f", Tops: "#c0771d", Bottoms: "#8a4a8f", Accessories: "#3f8a5a" },
     drill: true,
     format: "compact",
     data: (rollup(FACTS, ["family", "item", "region"], { sales: sum("sales") }) as Row[]).filter(
@@ -512,6 +526,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     y: "sales",
     series: "family",
     stack: "percent",
+    legend: "bottom",
     labels: true,
     data: FACTS,
   });
@@ -554,6 +569,22 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     data: FACTS,
   });
 
+  // 26b. A ratio per group: price is sales / units at every level, never an average of averages.
+  tile("ratio-drill", {
+    type: "bar",
+    title: "Average price by region and family",
+    titles: { price: "Price ($)" },
+    horizontal: true,
+    path: ["region", "family"],
+    y: "price",
+    aggregate: { ratio: ["sales", "units"] },
+    format: { price: "currency" },
+    drill: true,
+    sort: "desc",
+    labels: true,
+    data: FACTS,
+  });
+
   // 27. Single-series area, which gets the gradient fill.
   tile("area", {
     type: "area",
@@ -581,6 +612,39 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     ],
     format: "compact",
     data: monthTotals.map((m) => ({ month: mon(m.monthMs), sales: m.sales })),
+  });
+
+  // 27c. A moment and a range on a line: an event across time, a shaded band for the normal range.
+  const normal = monthTotals.reduce((a, m) => a + m.sales, 0) / monthTotals.length;
+  tile("rules-band", {
+    type: "line",
+    title: "Monthly sales and the normal range",
+    titles: { sales: "Sales ($)" },
+    x: "monthMs",
+    y: "sales",
+    rules: [
+      {
+        band: [Math.round(normal * 0.9), Math.round(normal * 1.1)],
+        label: "Within 10% of average",
+      },
+      { x: monthTotals[6]!.monthMs, label: "New catalogue" },
+    ],
+    annotate: [{ x: monthTotals[6]!.monthMs, text: "Launch month" }],
+    format: { monthMs: "month", sales: "compact" },
+    data: monthTotals as Row[],
+  });
+
+  // 27d. A headline that reads the data: tokens in the title and subtitle, a larger title.
+  tile("headline", {
+    type: "line",
+    title: "Sales peaked at {max.y} in {max.x}",
+    subtitle: "The low was {min.y} in {min.x}, and December closed at {last.y}.",
+    x: "monthMs",
+    y: "sales",
+    theme: { titleSize: "20px", titleWeight: "700" },
+    format: { monthMs: "month", sales: "compact" },
+    titles: { sales: "Sales ($)" },
+    data: monthTotals as Row[],
   });
 
   // 28. Line with value labels.

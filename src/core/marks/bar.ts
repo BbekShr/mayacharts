@@ -251,54 +251,65 @@ export const bar: Mark = {
     // spec.annotate: per series, the max, min, first and last bar (not the Other roll-up) labelled at the bar end, ahead of the plain value labels.
     // ponytail: not on stacks (a segment's end is not a value to read).
     const noted = new Set<string>();
-    if (spec.annotate.length && !spec.stack)
+    if ((spec.annotate.length || spec.notes.length) && !spec.stack) {
+      // Notes ({ x, text }) first, on the first series' bar at x; then each series' extremes and ends.
+      const picks: [(typeof tags)[number], Annotate | "note", string?][] = spec.notes.flatMap(
+        (n) => {
+          const t = tags.find(
+            ([c, , , , , d]) => !d["data-other"] && shaped.categories[c.ci] === String(n.x),
+          );
+          return t ? [[t, "note", n.text] as const] : [];
+        },
+      );
       for (const si of shaped.visible) {
         const ts = tags.filter(([c, , , , , d]) => c.si === si && !d["data-other"]);
         for (const [a, i] of marked(
           ts.map((t) => t[0].v),
           spec.annotate,
-        )) {
-          const [c, x, y, w, h, d] = ts[i]!;
-          const [text, neg] = [ctx.fmt(spec.y, c.v), c.v < 0];
-          const pl = ctx.plot;
-          // Outside the bar end when it fits: a negative bar's label stays off the axis labels.
-          const ok =
-            (hz ? !neg || x - 4 - tw(text) >= pl.x : !neg || y + h + 14 <= pl.y + pl.h) &&
-            (hz
-              ? ctx.label(
-                  neg ? x - 4 : x + w + 4,
-                  y + h / 2,
-                  text,
-                  neg ? "end" : "start",
-                  d["data-key"],
-                  a,
-                )
-              : ctx.label(
-                  x + w / 2,
-                  neg ? y + h : y,
-                  text,
-                  neg ? "below" : "above",
-                  d["data-key"],
-                  a,
-                ));
-          if (ok) noted.add(d["data-key"]);
-          // No room outside (a bar at the plot's edge or the axis): the label goes inside its end.
-          else if (hz ? tw(text) + 8 <= w && h >= 10 : tw(text) <= w && h >= 16) {
-            noted.add(d["data-key"]);
-            labels += inText(
-              hz ? (neg ? x + 4 : x + w - 4) : x + w / 2,
-              hz ? y + h / 2 : neg ? y + h - 9 : y + 9,
-              text,
-              {
-                "data-ink": inkOf(d),
-                "data-key": d["data-key"],
-                "data-ann": a,
-                "text-anchor": hz ? (neg ? "start" : "end") : "middle",
-              },
-            );
-          }
+        ))
+          picks.push([ts[i]!, a]);
+      }
+      for (const [[c, x, y, w, h, d], a, said] of picks) {
+        const [text, neg] = [said ?? ctx.fmt(spec.y, c.v), c.v < 0];
+        const pl = ctx.plot;
+        // Outside the bar end when it fits: a negative bar's label stays off the axis labels.
+        const ok =
+          (hz ? !neg || x - 4 - tw(text) >= pl.x : !neg || y + h + 14 <= pl.y + pl.h) &&
+          (hz
+            ? ctx.label(
+                neg ? x - 4 : x + w + 4,
+                y + h / 2,
+                text,
+                neg ? "end" : "start",
+                d["data-key"],
+                a,
+              )
+            : ctx.label(
+                x + w / 2,
+                neg ? y + h : y,
+                text,
+                neg ? "below" : "above",
+                d["data-key"],
+                a,
+              ));
+        if (ok) noted.add(d["data-key"]);
+        // No room outside (a bar at the plot's edge or the axis): the label goes inside its end.
+        else if (hz ? tw(text) + 8 <= w && h >= 10 : tw(text) <= w && h >= 16) {
+          noted.add(d["data-key"]);
+          labels += inText(
+            hz ? (neg ? x + 4 : x + w - 4) : x + w / 2,
+            hz ? y + h / 2 : neg ? y + h - 9 : y + 9,
+            text,
+            {
+              "data-ink": inkOf(d),
+              "data-key": d["data-key"],
+              "data-ann": a,
+              "text-anchor": hz ? (neg ? "start" : "end") : "middle",
+            },
+          );
         }
       }
+    }
     if (spec.labels && tags.length) {
       // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
       // step label must fit inside its own column or it is dropped.

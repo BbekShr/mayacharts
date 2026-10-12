@@ -271,3 +271,22 @@ describe("slope rules, tooltip fields and log axes", () => {
     expect(s).toContain('data-log="x y"');
   });
 });
+
+describe("scatter annotate and intercept", () => {
+  const data = [
+    { a: 0, b: 0 },
+    { a: 5, b: 5 },
+    { a: 10, b: 10 },
+    { a: 20, b: 20 },
+  ];
+  it("labels the min and a note; slope uses its intercept", () => {
+    const a = renderParts({ ...base, data, annotate: ["min", { x: 10, text: "Start" }] }).svg;
+    expect(a).toMatch(/data-ann="min"/);
+    expect(a).toMatch(/data-ann="note"[^>]*>Start</);
+    const y = (b: number) =>
+      /data-slope[^>]*y1="([\d.]+)"/.exec(
+        renderParts({ ...base, data, rules: [{ slope: 1, intercept: b }] }).svg,
+      )?.[1];
+    expect(y(0)).not.toBe(y(5));
+  });
+});

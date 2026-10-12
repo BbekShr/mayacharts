@@ -127,9 +127,17 @@ export const css =
   `@supports not (color:light-dark(#000,#fff)){:host,.maya-root{${D}}@media (prefers-color-scheme:dark){:host,.maya-root{${N}}}}` +
   ":host{display:block;position:relative;container-type:inline-size;min-height:min(200px,100%)}" +
   ".maya{display:flex;flex-direction:column;height:100%;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums;color:var(--maya-fg)}" +
-  ".maya-title{font-weight:600;font-size:15px;letter-spacing:-.01em;margin:0 0 6px}" +
+  ".maya-title{font-weight:var(--maya-title-weight,600);font-size:var(--maya-title-size,15px);letter-spacing:-.01em;margin:0 0 6px}" +
+  ".maya-sub{margin:-3px 0 8px;color:var(--maya-fg-muted);line-height:1.35}" +
+  // Legend placement (slot order never changes): bottom moves it after the chart; right makes the chart a grid whose last row holds the chart and the legend side by side (up to six rows above for title, subtitle, controls and crumbs).
+  ".maya[data-legend=bottom] .maya-legend{order:1;margin:8px 0 0}" +
+  ".maya[data-legend=right]{display:grid;grid-template-columns:minmax(0,1fr) max-content;grid-template-rows:repeat(6,auto) minmax(0,1fr)}" +
+  ".maya[data-legend=right]>:not(.maya-box,.maya-legend){grid-column:1/-1}" +
+  ".maya[data-legend=right] :is(.maya-box,.maya-legend){grid-row:7}.maya[data-legend=right] .maya-box{grid-column:1}.maya[data-legend=right] .maya-legend{grid-column:2;flex-direction:column;align-items:flex-start;align-self:start;flex-wrap:nowrap;max-width:30cqw;margin:0 0 0 12px}" +
   ".maya-legend,.maya-crumbs{color:var(--maya-fg-muted);display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;margin:0 0 8px}" +
   ".maya-crumbs{min-height:1.25em;line-height:1.25}" +
+  // The current crumb is where you are, not a link: ink, bold, no hover.
+  ".maya-crumbs [aria-current]{padding:2px 6px;color:var(--maya-fg);font-weight:600}" +
   `.maya-legend :is(button,span),.maya-crumbs button,.maya-reset,.maya-play{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
   ":is(.maya-legend,.maya-crumbs) button:hover{background:var(--maya-grid);color:var(--maya-fg)}" +
   ".maya-legend [aria-pressed=false]{opacity:.5}.maya-legend [aria-pressed=false] i{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}" +
@@ -153,7 +161,7 @@ export const css =
   ".maya-box{flex:1;min-height:0;position:relative}" +
   ".maya-box svg{display:block;width:100%;height:100%;overflow:visible}" +
   ".maya-svg{direction:ltr;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}" +
-  ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:11px}" +
+  ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:var(--maya-axis-size,11px)}" +
   "[data-maya=grid] *{stroke:var(--maya-grid);stroke-dasharray:var(--maya-grid-dash);shape-rendering:crispEdges}" +
   S +
   "[data-other],[data-total],[data-neu],[data-tone=zero]{--c:var(--maya-fg-muted)}" +
@@ -182,6 +190,8 @@ export const css =
   // Dashed series (spec.dash): square caps so the gaps stay open (the dash itself is the path's stroke-dasharray, in pathLength units); the legend key is the same dash. Annotations (spec.annotate) are the quiet bold; a slope rule is a faint diagonal.
   "[data-maya=line][data-dash]{stroke-linecap:butt}.maya-legend [data-dash] i{width:14px;height:2px;border-radius:0;background:repeating-linear-gradient(90deg,var(--c) 0 5px,#0000 5px 8px)}[data-maya=labels] [data-ann]{font-weight:600}" +
   "line[data-slope]{stroke:var(--maya-fg-muted);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}" +
+  // Rules across the category axis (an event) and shaded value ranges (a target band): quiet, behind the data's eye.
+  "[data-maya=rules] line[data-xrule]{stroke:var(--maya-fg-muted);stroke-dasharray:none}[data-maya=rules] rect[data-band]{fill:var(--maya-accent);fill-opacity:.1;stroke:none}[data-maya=labels] [data-ann=note]{font-weight:500;font-style:italic}" +
   // Break marks on a clipped Other bar; parallel tick halos and end-label leaders.
   "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
   // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.
@@ -223,13 +233,18 @@ export const css =
   // Constellation hover: links to the 3 nearest appear and those stars are ringed.
   "[data-maya=grid] line[data-a]{stroke:none}[data-maya=grid] line[data-a][data-lit]{stroke:var(--maya-fg);stroke-width:1.5;stroke-dasharray:none;shape-rendering:auto}circle[data-n][data-lit]{stroke:var(--maya-fg);stroke-width:2}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
-  "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend :not([data-line])>i{width:8px;height:8px}.maya-title{font-size:12px}}" +
+  "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend :not([data-line])>i{width:8px;height:8px}.maya-title{font-size:var(--maya-title-size,12px)}}" +
   RADIAL +
   MEKKO +
   FLOW +
   // Treemap names: dark ink on full-strength slots; drilled tiles tint toward white so it holds.
   "svg:has(rect[data-depth]) [data-maya=labels] [data-in]{fill:#12161c}" +
-  "rect[data-tint]{fill:color-mix(in oklab,var(--c) var(--t,100%),#fff)}" +
+  "rect[data-lt]{fill:color-mix(in oklab,var(--c) var(--t),#fff)}" +
+  rng(8)
+    .map((n) => `[data-lt="${n}"]{--t:${100 - n * 8}%}`)
+    .join("") +
+  // Nested treemap parent: a quiet frame of its branch colour behind its children.
+  "rect[data-par]{fill:color-mix(in oklab,var(--c) 14%,var(--maya-bg))}" +
   // Hexmap label ink by ramp step (4.5:1 each): black on steps 8 and 9, white on dark steps 6 and 7.
   "[data-maya=labels] text[data-q][data-dark]{fill:light-dark(#12161c,#000)}" +
   '[data-maya=labels] :is([data-q="6"],[data-q="7"]){fill:light-dark(var(--maya-fg),#fff)}' +
