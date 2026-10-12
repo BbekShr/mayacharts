@@ -89,10 +89,7 @@
     },
     "./global": "./dist/maya.global.js",
     "./theme.css": "./dist/theme.css",
-    "./schema.json": "./schema.json",
-    "./jsx": {
-      "types": "./dist/jsx.d.ts"
-    }
+    "./schema.json": "./schema.json"
   },
   "sideEffects": [
     "./dist/element.js",
@@ -146,20 +143,31 @@
     "tokens": "node scripts/tokens.mjs"
   },
   "mayaSize": {
-    "dist/index.js": 40560,
-    "dist/element.js": 58260,
-    "dist/theme.css": 4800,
-    "dist/hierarchy.js": 4450,
-    "dist/flow.js": 3900,
+    "dist/index.js": 47550,
+    "dist/element.js": 66380,
+    "dist/theme.css": 5270,
+    "dist/hierarchy.js": 4690,
+    "dist/flow.js": 4040,
     "dist/geo.js": 3584,
     "dist/radial.js": 4780,
     "dist/stats.js": 4050,
-    "dist/maya.global.js": 77930,
+    "dist/maya.global.js": 87090,
     "dist/weave.js": 2560,
     "dist/units.js": 2560,
     "dist/orbit.js": 2600,
     "dist/constellation.js": 3100,
-    "dist/themes.js": 1800
+    "dist/themes.js": 1800,
+    "dist/maya.constellation.global.js": 3070,
+    "dist/maya.core.global.js": 66930,
+    "dist/maya.flow.global.js": 4010,
+    "dist/maya.geo.global.js": 2540,
+    "dist/maya.hierarchy.global.js": 4650,
+    "dist/maya.orbit.global.js": 2580,
+    "dist/maya.radial.global.js": 4770,
+    "dist/maya.stats.global.js": 4000,
+    "dist/maya.units.global.js": 2560,
+    "dist/maya.weave.global.js": 2410,
+    "dist/host.js": 810
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
