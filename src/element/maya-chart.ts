@@ -22,7 +22,7 @@ import * as measure from "./measure.ts";
 import * as play from "./play.ts";
 import * as select from "./select.ts";
 import * as sort from "./sort.ts";
-import { type Tooltip, tooltip } from "./tooltip.ts";
+import { still as reduced, type Tooltip, tooltip } from "./tooltip.ts";
 import * as zoom from "./zoom.ts";
 
 let sheet: CSSStyleSheet | undefined;
@@ -47,7 +47,6 @@ export class MayaChart extends HTMLElement {
   #raf = false;
   #ro: ResizeObserver | undefined;
   #resized = false;
-  #off: (() => void) | undefined;
   #unlisten: (() => void)[] = [];
   #tip: Tooltip | undefined;
   #zoom: PatchOptions["zoom"];
@@ -192,7 +191,7 @@ export class MayaChart extends HTMLElement {
       (t) => this.#announce(t),
       () => this.spec,
     );
-    this.#off = this.#tip.off;
+    this.#unlisten.push(this.#tip.off);
     this.#ro = new ResizeObserver(() => {
       if (
         Math.abs(box.clientWidth - this.#size[0]!) > 1 ||
@@ -220,7 +219,6 @@ export class MayaChart extends HTMLElement {
   disconnectedCallback(): void {
     this.#q = false;
     this.#ro?.disconnect();
-    this.#off?.();
     this.#unlisten.forEach((f) => f());
     clearTimeout(this.#say);
     for (const h of Object.values(this.#ix ?? {})) h.off();
@@ -472,7 +470,7 @@ export class MayaChart extends HTMLElement {
       if (!parts.vars.some(([n]) => n === k)) maya.style.removeProperty(k);
     this.#vars = new Set(parts.vars.map(([k]) => k));
     // Nothing animates on resize: geometry must track the container immediately.
-    const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const still = spec.animate === false || reduced();
     maya.toggleAttribute("data-still", spec.animate === false); // CSS transitions off too
     maya.setAttribute("data-legend", parts.legendAt ?? ""); // absent: top
     // A microtask render beside a pending resize frame is not the resize's own: it animates.
