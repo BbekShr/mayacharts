@@ -14,7 +14,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - `path` with `drill` on table, heatmap (the rows), marimekko and chord (#70).
 - `colors` as a map by name on treemap and sunburst (`path[0]` value) and on sankey and chord (node name); path types keep each name's colour through drill (#71).
 - `depth` draws more than one treemap level at once; `minAngle` sets the sunburst's Other threshold in degrees (#71).
-- A sankey drills from any node but the last column, one step at a time (#71).
+- A sankey drill starts from the first column, then continues one column at a time through any non-final node (#71).
 - `rules` take `{ x }` (a line across the category axis), `{ band: [lo, hi] }` (a shaded value range), `intercept` on a scatter slope, and work on dumbbell (#72).
 - `annotate` takes `{ x, text }` items and works on scatter (#72).
 - `subtitle`, data tokens in `title` and `subtitle` (`{max.x}`, `{max.y}`, `{total}`, `{mean}` and the rest; only these exact names are replaced, any other brace text stays as written), `legend: "top" | "bottom" | "right"`, and theme tokens `titleSize`, `titleWeight`, `axisSize` (#72).

@@ -365,7 +365,10 @@
           "min",
           "rows",
           "ofPrevious",
-          "ofFirst"
+          "ofFirst",
+          "first",
+          "last",
+          "labelled"
         ]
       }
     },

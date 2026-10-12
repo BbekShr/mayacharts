@@ -123,6 +123,10 @@ export const TEXT = {
   /** Funnel tooltip and table labels: step conversion. */
   ofPrevious: "% of previous",
   ofFirst: "% of first",
+  /** Description of annotate: first and last point, and the sentence ({0} = the kinds joined with ", "). */
+  first: "First",
+  last: "Last",
+  labelled: "Labelled points: {0}",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

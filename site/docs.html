@@ -893,7 +893,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 pts target offBelow offAbove total shareOf sortedBy ascending descending fromTo
                 reduced points point range density perCell mean rule log play pause frameOf frame
                 was since forms waffle bars swarm perDot count rank speedBy gross alike nearest max
-                q3 median q1 min rows ofPrevious ofFirst
+                q3 median q1 min rows ofPrevious ofFirst first last labelled
               </td>
             </tr>
             <tr>
@@ -1046,10 +1046,11 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 Click/Enter zooms into a branch of path; breadcrumb, Back and Escape pop. With
                 select on too, click and Enter select while double-click, Shift+Enter or the pinned
                 tooltip's "Drill into" button drill. At the last level the drill gesture fires
-                <code>maya-drill-leaf</code> with the full path. A sankey drills from any node
-                except the last column, keeping the clicked node as its first column; a chord drills
-                into one group's flows. treemap sunburst sankey chord; bar line area dumbbell table
-                heatmap marimekko with path
+                <code>maya-drill-leaf</code> with the full path. A sankey drill starts from the
+                first column, then continues one column at a time through any non-final node,
+                keeping the clicked node as its first column; a chord drills into one group's flows.
+                treemap sunburst sankey chord; bar line area dumbbell table heatmap marimekko with
+                path
               </td>
             </tr>
             <tr>

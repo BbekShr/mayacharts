@@ -108,8 +108,10 @@ describe("#65 tick precision", () => {
 describe("#68.5 log scale", () => {
   it("ticks at powers of ten, 2 and 5 when sparse", () => {
     expect(logTicks(1, 1e4).values).toEqual([1, 10, 100, 1000, 1e4]);
-    expect(logTicks(3, 80).values).toEqual([1, 2, 5, 10, 20, 50, 100]);
-    expect(logTicks(0.03, 0.5).domain).toEqual([0.01, 1]);
+    // the domain snaps to 1-2-5 bounds, not whole decades
+    expect(logTicks(3, 80).values).toEqual([2, 5, 10, 20, 50, 100]);
+    expect(logTicks(0.03, 0.5).domain).toEqual([0.02, 0.5]);
+    expect(logTicks(1e6, 7e6).domain).toEqual([1e6, 1e7]);
   });
   it("log scale maps log10 and keeps data units in the domain", () => {
     const s = linearScale([1, 100], [200, 0], true);

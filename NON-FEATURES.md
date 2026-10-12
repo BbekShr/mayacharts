@@ -142,7 +142,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Ratio aggregate scope**: `aggregate: { ratio }` defines one measure (no `y` array) on types whose values sit side by side; part-to-whole types (treemap, sunburst, sankey, chord, marimekko, waffle, funnel), stacks and `was` refuse it because ratios do not add up. Other fields (y2, tooltip fields, a colorBy field) sum.
 - **Per-series style is dash only**: `dash` names series drawn dashed; there is no per-series width or opacity map.
 - **Log scale on bars**: refused on purpose. A bar encodes its value as length from zero, and a log axis has no zero.
-- **Sankey drill**: a click drills into nodes of the next undrilled column (one step at a time); a deeper middle node cannot be the entry point at the root, because its upstream is not one branch. The drilled node stays as the first column.
+- **Sankey drill**: the drill starts from the first column, then continues one column at a time through any non-final node; a deeper middle node cannot be the entry point at the root, because its upstream is not one branch. The drilled node stays as the first column.
 - **Drill leaf on flows**: sankey and chord fire `maya-drill-leaf` only once drilled to their last branch, where a node has a single path.
 - **Title tokens**: `{max.x}` and the rest read the active measure per category of the drawn level (series combined), ignore hidden series and the zoom window, take no inline preset (`format` of the field applies) and read empty when there is no data.
 - **Nested treemap depth**: `depth` draws that many levels below the current branch; the name strip of a parent costs 16 px of its height and is dropped when the parent is too small.

@@ -126,7 +126,8 @@ describe("customisation (#72)", () => {
         { band: [1, 2], label: "Target" },
       ],
     });
-    expect(s).toMatch(/<line data-xrule=""[^>]*\/><text[^>]*>Launch b<\/text>/);
+    expect(s).toContain("<line data-xrule=");
+    expect(s).toMatch(/<text[^>]*>Launch b<\/text>/);
     expect(s).toMatch(/<rect data-band=""/);
     expect(s).toContain("Target");
     expect(render({ ...b, rules: [{ x: "zz" }] })).not.toContain("<line data-xrule");
@@ -202,5 +203,55 @@ describe("fix round", () => {
       data: rows,
     } as ChartSpec;
     expect(render(t)).toMatch(/data-maya="hit"[^>]*x="0"/);
+  });
+});
+
+describe("fix round 2", () => {
+  const b: ChartSpec = {
+    type: "line",
+    x: "m",
+    y: "v",
+    series: "r",
+    dash: ["B"],
+    data: ["a", "b"].flatMap((m, i) => ["A", "B"].map((r) => ({ m, r, v: i + 1 }))),
+  };
+  it("a dashed series gives the solid ones a line key", () => {
+    const leg = renderParts({ ...b, legend: true }).legend;
+    expect(leg).toMatch(
+      /<button[^>]*data-line=""[^>]*data-key="A"|<button[^>]*data-key="A"[^>]*data-line=""/,
+    );
+    expect(leg).not.toMatch(/data-dash=""[^>]*data-line|data-line[^>]*data-dash=""/);
+  });
+  it("colliding rule labels step down; an x label near the edge ends at its line", () => {
+    const s = render(
+      {
+        type: "bar",
+        x: "m",
+        y: "v",
+        rules: [
+          { x: "c", label: "A very long launch label" },
+          { band: [1, 2], label: "Within" },
+        ],
+        data: ["a", "b", "c"].map((m, i) => ({ m, v: i + 1 })),
+      },
+      { width: 360 },
+    );
+    expect(s).toMatch(/text-anchor="end"[^>]*>A very long launch label c</);
+  });
+  it("the description mentions slopes and annotations", () => {
+    const d = render({
+      type: "scatter",
+      x: "x",
+      y: "y",
+      rules: [{ slope: 2, label: "Trend" }],
+      annotate: ["max", { x: 1, text: "Peak" }],
+      data: [
+        { x: 1, y: 2 },
+        { x: 2, y: 5 },
+      ],
+    });
+    expect(d).toContain("Trend: y = 2x.");
+    expect(d).toContain("Labelled points: Max.");
+    expect(d).toContain("Peak: 1.");
   });
 });

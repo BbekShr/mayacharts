@@ -623,6 +623,20 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
   const boxes: number[][] = [];
+  // Claim the 14 px box at (l, tp) when it is inside the svg and free.
+  const fits = (l: number, tp: number, w: number) => {
+    // ponytail: O(n^2) overlap scan; MAX_MARKS bounds it.
+    if (
+      l < 0 ||
+      tp < 0 ||
+      l + w > W ||
+      tp + 14 > H ||
+      boxes.some((b) => l < b[2]! && l + w > b[0]! && tp < b[3]! && tp + 14 > b[1]!)
+    )
+      return false;
+    boxes.push([l, tp, l + w, tp + 14]);
+    return true;
+  };
   let labels = "";
   const label = (
     x: number,
@@ -635,16 +649,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     const w = tw(text);
     const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
     const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
-    // ponytail: O(n^2) overlap scan; MAX_MARKS bounds it.
-    if (
-      l < 0 ||
-      tp < 0 ||
-      l + w > W ||
-      tp + 14 > H ||
-      boxes.some((b) => l < b[2]! && l + w > b[0]! && tp < b[3]! && tp + 14 > b[1]!)
-    )
-      return false;
-    boxes.push([l, tp, l + w, tp + 14]);
+    if (!fits(l, tp, w)) return false;
     labels += el(
       "text",
       {
@@ -748,6 +753,20 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     // ponytail: at most 4, labels dodge nothing (NON-FEATURES). Bands first (under the lines), then
     // value lines, then category (x) lines.
     let rules = "";
+    // Band and x-rule labels claim their box after the marks' labels, and step down a row when it is taken.
+    const late: (() => string)[] = [];
+    const tag = (text: string, ax: number, tp: number, end: boolean) =>
+      late.push(() => {
+        const w = tw(text);
+        for (let k = 0; k < 4; k++)
+          if (fits(end ? ax - w : ax, tp + 14 * k, w))
+            return el(
+              "text",
+              { x: r(ax), y: r(tp + 14 * k + 10), "text-anchor": end ? "end" : "start" },
+              esc(text),
+            );
+        return "";
+      });
     const v = s.horizontal ? f?.x : f?.y;
     const cat = s.horizontal ? f?.y : f?.x;
     const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
@@ -758,24 +777,14 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         const [p, q] = [v.of(lo), v.of(hi)].sort((a, b) => a - b) as [number, number];
         const text = u.label ?? t(s, "rule");
         said += ` ${text}: ${t(s, "fromTo", fmt(s.y, u.lo), fmt(s.y, u.hi))}.`;
-        rules +=
-          el(
-            "rect",
-            s.horizontal
-              ? { "data-band": true, x: r(p), y: y0, width: r(q - p), height: r(plot.h) }
-              : { "data-band": true, x: r(plot.x), y: r(p), width: r(plot.w), height: r(q - p) },
-          ) +
-          (u.label
-            ? el(
-                "text",
-                {
-                  x: s.horizontal ? r(q) - 4 : x0,
-                  y: s.horizontal ? y0 + 10 : r(p) + 12,
-                  "text-anchor": "end",
-                },
-                esc(u.label),
-              )
-            : "");
+        rules += el(
+          "rect",
+          s.horizontal
+            ? { "data-band": true, x: r(p), y: y0, width: r(q - p), height: r(plot.h) }
+            : { "data-band": true, x: r(plot.x), y: r(p), width: r(plot.w), height: r(q - p) },
+        );
+        if (u.label)
+          tag(u.label, s.horizontal ? q - 4 : plot.x + plot.w, s.horizontal ? plot.y : p + 2, true);
       });
       s.rules.forEach((u) => {
         const at = u.y === "mean" ? average(s, shaped) : u.y;
@@ -827,22 +836,27 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         const val = fmt(s.x, u.x);
         const text = u.label ? `${u.label} ${val}` : val;
         said += ` ${u.label ?? t(s, "rule")}: ${val}.`;
-        rules +=
-          el(
-            "line",
-            s.horizontal
-              ? { "data-xrule": true, x1: r(plot.x), x2: x0, y1: at, y2: at }
-              : { "data-xrule": true, x1: at, x2: at, y1: y0, y2: r(plot.y + plot.h) },
-          ) +
-          el(
-            "text",
-            s.horizontal
-              ? { x: x0, y: at - 4, "text-anchor": "end" }
-              : { x: at + 4, y: y0 + 10, "text-anchor": "start" },
-            esc(text),
-          );
+        rules += el(
+          "line",
+          s.horizontal
+            ? { "data-xrule": true, x1: r(plot.x), x2: x0, y1: at, y2: at }
+            : { "data-xrule": true, x1: at, x2: at, y1: y0, y2: r(plot.y + plot.h) },
+        );
+        // Beside the line at the top; ends at the line instead of passing the plot's right edge.
+        if (s.horizontal) tag(text, plot.x + plot.w, at - 14, true);
+        else {
+          const over = at + 4 + tw(text) > plot.x + plot.w;
+          tag(text, over ? at - 4 : at + 4, plot.y, over);
+        }
       });
+    // Slope rules and annotations join the description, like bands and x rules.
+    for (const u of s.slopes)
+      said += ` ${u.label ?? t(s, "rule")}: y = ${u.k === "mean" ? t(s, "mean") : u.k}x${u.b ? ` + ${u.b}` : ""}.`;
+    if (s.annotate.length)
+      said += ` ${t(s, "labelled", s.annotate.map((k) => t(s, k)).join(", "))}.`;
+    for (const n of s.notes) said += ` ${n.text}: ${fmt(s.x, n.x)}.`;
     const m = mark.draw(ctx);
+    rules += late.map((f) => f()).join("");
     // Scatter and modules draw per row/node. Counted in place: a split would copy every mark.
     let nm = 0;
     for (let i = 0; (i = m.marks.indexOf(' data-maya="mark"', i) + 1);) nm++;
@@ -966,6 +980,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
               "data-si": i,
               "data-s": i % 8,
               "data-dash": s.dash.has(k),
+              // With a dashed series the solid ones get a line key too, so keys differ only solid vs dashed.
+              "data-line": s.dash.size > 0 && !s.dash.has(k) ? true : null,
               "data-key": k,
               "aria-pressed": String(shaped.visible.includes(i)),
             },
