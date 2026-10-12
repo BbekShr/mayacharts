@@ -78,10 +78,17 @@ export function mount(host: Host): Handlers {
     const n = next.selected.length;
     host.announce(n ? t(spec, "selected", n) : t(spec, "selectionCleared"));
   };
+  let before: State["selected"] = [];
   const onClick = (e: Event) => {
     const spec = host.spec();
     if (!spec?.select) return;
     const el = e.target as Element;
+    // With drill, the second click of a double click is the drill: the pair leaves the selection as it was.
+    if (spec.drill && (e as MouseEvent).detail === 2 && host.mark(e)) {
+      if (host.state().selected !== before) host.commit({ ...host.state(), selected: before });
+      return;
+    }
+    before = host.state().selected;
     const b = el.closest("[data-maya=legend] button");
     if (b) {
       const k = b.getAttribute("data-key");

@@ -63,14 +63,13 @@ describe("drill reducer", () => {
     const none = { ...a, data: [{ region: "East", state: "NY", city: "X", v: 1 }] };
     expect(reduce(s, ev(a, none)).view.drill).toEqual([]);
   });
-  it("flows keep two levels on screen", () => {
+  it("flows drill to path.length - 1 values, like every other type", () => {
     const three = spec({ type: "sankey", path: ["region", "state", "city"] });
-    expect(reduce(st(), { type: "drill", value: "West", spec: three }).view.drill).toEqual([
-      "West",
-    ]);
-    const s1 = st(["West"]);
-    expect(reduce(s1, { type: "drill", value: "CA", spec: three })).toBe(s1);
-    // chord is no longer special-cased: validate rejects `drill` on it, the reducer never sees one.
+    const s1 = reduce(st(), { type: "drill", value: "West", spec: three });
+    expect(s1.view.drill).toEqual(["West"]);
+    const s2 = reduce(s1, { type: "drill", value: "CA", spec: three });
+    expect(s2.view.drill).toEqual(["West", "CA"]);
+    expect(reduce(s2, { type: "drill", value: "LA", spec: three })).toBe(s2);
     expect(
       reduce(st(), { type: "drill", value: "West", spec: spec({ type: "chord" }) }).view.drill,
     ).toEqual(["West"]);
@@ -267,5 +266,88 @@ describe("drill in <maya-chart>", () => {
     await frame();
     expect(el.view?.drill).toEqual(["West"]);
     expect(tip.classList.contains("maya-open")).toBe(false);
+  });
+});
+
+describe("drill with select, and maya-drill-leaf", () => {
+  const evs = (el: Element, type: string) => {
+    const got: any[] = [];
+    el.addEventListener(type, (e) => got.push((e as CustomEvent).detail));
+    return got;
+  };
+  const click = (m: Element, detail = 1) =>
+    m.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail }));
+  it("click selects, the second click of a double click drills and leaves the selection as it was", async () => {
+    const el = await mount(spec({ select: "multi" }));
+    el.selected = [{ x: "East" }];
+    await frame();
+    click(byCat(el, "West"), 1);
+    await frame();
+    expect(el.view?.drill ?? []).toEqual([]);
+    expect(el.selected).toEqual([{ x: "East" }, { x: "West" }]);
+    click(byCat(el, "West"), 2);
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+  });
+  it("a double click on a leaf restores the selection and reports the leaf", async () => {
+    const el = await mount(spec({ select: true }));
+    el.view = { drill: ["West"] };
+    await frame();
+    const leaf = evs(el, "maya-drill-leaf");
+    click(byCat(el, "CA"), 1);
+    expect(el.selected).toEqual([{ x: "CA" }]);
+    click(byCat(el, "CA"), 2);
+    await frame();
+    expect(el.selected).toEqual([]);
+    expect(leaf).toEqual([{ path: ["West", "CA"] }]);
+  });
+  it("Enter selects, Shift+Enter drills", async () => {
+    const el = await mount(spec({ select: true }));
+    const m = byCat(el, "West");
+    const key = (shiftKey: boolean) => {
+      m.dispatchEvent(new PointerEvent("pointerover", { bubbles: true, composed: true }));
+      el.shadowRoot!.querySelector(".maya-svg")!.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        }),
+      );
+      el.shadowRoot!.querySelector(".maya-svg")!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", shiftKey, bubbles: true, composed: true }),
+      );
+    };
+    key(false);
+    await frame();
+    expect(el.selected.length).toBe(1);
+    expect(el.view?.drill ?? []).toEqual([]);
+    key(true);
+    await frame();
+    expect(el.view?.drill?.length).toBe(1);
+  });
+  it("the drill gesture at the deepest level fires maya-drill-leaf; without select a click does", async () => {
+    const el = await mount(spec());
+    const leaf = evs(el, "maya-drill-leaf");
+    click(byCat(el, "West"));
+    await frame();
+    expect(leaf).toEqual([]);
+    click(byCat(el, "OR"));
+    expect(leaf).toEqual([{ path: ["West", "OR"] }]);
+  });
+  it("a pinned or touched tooltip offers Drill into, and it drills", async () => {
+    const el = await mount(spec({ select: true }));
+    const m = byCat(el, "West");
+    m.dispatchEvent(
+      new PointerEvent("pointerdown", { pointerType: "touch", bubbles: true, composed: true }),
+    );
+    m.dispatchEvent(
+      new PointerEvent("pointerup", { pointerType: "touch", bubbles: true, composed: true }),
+    );
+    const b = el.shadowRoot!.querySelector<HTMLButtonElement>(".maya-tip button[data-drill]")!;
+    expect(b.textContent).toBe("Drill into West");
+    click(b, 1);
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
   });
 });

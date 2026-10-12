@@ -182,8 +182,8 @@ export class MayaChart extends HTMLElement {
     };
     this.#ix = {
       measure: measure.mount(host),
+      select: select.mount(host), // before drill: a double click restores the selection, then drills
       drill: drill.mount(host),
-      select: select.mount(host),
       zoom: zoom.mount(host),
       sort: sort.mount(host),
       play: play.mount(host),
@@ -295,8 +295,8 @@ export class MayaChart extends HTMLElement {
 
   /*
    * One keydown dispatcher. Escape priority: pinned tooltip (tooltip.ts, T2) -> brush in
-   * progress -> selection -> zoom window -> drill pop. Enter: drill, else select, on the
-   * keyboard-active mark. + or = halves the zoom window about the active mark, - doubles it. T2 routes the tooltip's own Escape/Enter/Space through here.
+   * progress -> selection -> zoom window -> drill pop. Enter: select, else drill (drill first without
+   * select; Shift+Enter drills), on the keyboard-active mark. + or = halves the zoom window about the active mark, - doubles it. T2 routes the tooltip's own Escape/Enter/Space through here.
    */
   #key = (e: Event) => {
     const ix = this.#ix;
@@ -312,7 +312,10 @@ export class MayaChart extends HTMLElement {
       done = !!(
         m &&
         (e.target as Element).closest(".maya-svg") &&
-        (ix.drill.enter?.(m) || ix.select.enter?.(m))
+        // With both on, Enter selects and Shift+Enter drills.
+        (this.spec?.select && !(e as KeyboardEvent).shiftKey
+          ? ix.select.enter?.(m) || ix.drill.enter?.(m)
+          : ix.drill.enter?.(m, true) || ix.select.enter?.(m))
       );
     } else if (k === "+" || k === "=" || k === "-") {
       const { ctrlKey, metaKey, altKey } = e as KeyboardEvent;
@@ -471,6 +474,9 @@ export class MayaChart extends HTMLElement {
     // Nothing animates on resize: geometry must track the container immediately.
     const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
     maya.toggleAttribute("data-still", spec.animate === false); // CSS transitions off too
+    parts.legendAt && parts.legendAt !== "top"
+      ? maya.setAttribute("data-legend", parts.legendAt)
+      : maya.removeAttribute("data-legend");
     // A microtask render beside a pending resize frame is not the resize's own: it animates.
     const resized = this.#resized && fromRaf;
     if (fromRaf) this.#resized = false;

@@ -55,6 +55,7 @@ export function tooltip(
   let cur: Element | undefined,
     open = false,
     pin = false,
+    coarse = false,
     clamped = false,
     kb = false,
     timer: ReturnType<typeof setTimeout> | undefined,
@@ -364,6 +365,23 @@ export function tooltip(
       ...(all.length > rows.length ? [h("div", `+${all.length - rows.length}`)] : []),
       ...(stk && sp ? [h("div", "", { "data-t": "" })] : []),
     );
+    // Select and drill together: click selects, so the tooltip carries the drill gesture for
+    // pointers that cannot double-click. Only pinned or touched (a hovering tooltip must not catch the pointer).
+    const dk = a(m, "data-key");
+    if (
+      sp?.drill &&
+      sp.select &&
+      dk &&
+      a(m, "data-maya") === "mark" &&
+      !m.hasAttribute("data-other")
+    )
+      tip.append(
+        h("button", str(sp, "drillInto", a(m, "data-x") || a(m, "data-label")), {
+          type: "button",
+          "data-drill": dk,
+        }),
+      );
+    tip.style.setProperty("pointer-events", pin || coarse ? "auto" : "");
     if (stk && sp)
       tip.lastElementChild!.append(
         h("span", str(sp, "total")),
@@ -479,6 +497,7 @@ export function tooltip(
   const down = (e: Event) => {
     kb = false;
     const p = e as PointerEvent;
+    coarse = p.pointerType !== "mouse";
     down0 = p.pointerType === "mouse" ? undefined : [p.clientX, p.clientY];
   };
   const up = (e: Event) => {
@@ -491,7 +510,7 @@ export function tooltip(
   };
   const outside = (e: Event) => {
     const p = e.composedPath();
-    if (!p.includes(box) || !markOf(p[0], e)) hide();
+    if (!p.includes(tip) && (!p.includes(box) || !markOf(p[0], e))) hide();
   };
   const leave = (e: Event) => (e as PointerEvent).pointerType === "mouse" && hide();
   let ring: Element[] = [];
