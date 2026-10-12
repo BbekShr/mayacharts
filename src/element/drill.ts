@@ -117,12 +117,13 @@ export const mount = (host: Host): Handlers => {
     if (spec.type === "sunburst" && m.getAttribute("data-depth") === "0") return pop(depth - 1);
     // A hierarchy key holds the whole branch: push every level down to the mark.
     const p = key.split("~");
-    const values = p[0] === "h" ? p.slice(1 + depth).map(decode) : [];
+    // data-to: a nested treemap child drills only its parent (that many values).
+    const to = +(m.getAttribute("data-to") ?? 0) || 99;
+    const values = p[0] === "h" ? p.slice(1 + depth, 1 + depth + to).map(decode) : [];
     const first = branchOf(key, depth, spec.type);
     if (first === undefined) return false;
     let next = s;
-    // A nested treemap (depth 2) draws children inside their parent: the parent under the pointer drills.
-    for (const value of (values.length ? values : [first]).slice(0, spec.depth === 2 ? 1 : 9))
+    for (const value of values.length ? values : [first])
       next = reduce(next, { type: "drill", value, spec });
     if (next === s) {
       // Nowhere deeper to go: the drill gesture reports the leaf (root to leaf).

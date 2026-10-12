@@ -545,7 +545,7 @@ const legend = (e: Event) => {
 };
 
 const SLOTS: [keyof Parts, string][] = [
-  ["title", ".maya-title"],
+  ["title", ".maya-title,.maya-sub"],
   ["controls", ".maya-ctl,.maya-play"],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],

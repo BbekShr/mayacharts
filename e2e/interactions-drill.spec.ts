@@ -153,5 +153,9 @@ test.describe("drill on more types", () => {
     await settled(page);
     await click(page, mark(t, "h~West~CA"));
     await expect.poll(async () => (await prop(page, "view")).drill).toEqual(["West"]);
+    await settled(page);
+    // Deeper: a child drills into its parent only, never straight to the leaf.
+    await click(page, mark(t, "h~West~CA~LA"));
+    await expect.poll(async () => (await prop(page, "view")).drill).toEqual(["West", "CA"]);
   });
 });

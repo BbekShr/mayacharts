@@ -281,7 +281,7 @@ Rule: `x` is always the category, `y` is always the value, whatever the orientat
 | `rules`       | array                                            | -                                                                                             | Up to 4 reference lines: n, "mean" or {y, label} across the value axis; {x, label} across the category axis; {band: [lo, hi], label} a shaded value range; bar line area scatter dumbbell. With stack "percent" n is a share (0.5) and "mean" the mean segment share. Scatter: `{ slope: k \| "mean", intercept, label }` draws y = k * x + intercept ("mean" = sum of y / sum of x) |
 | `yScale`      | "log"                                            | linear                                                                                        | Log value axis; values must be above 0. line scatter (a bar encodes its value as length from zero, so bars refuse it)                                                                                                                                                                                                                                                                |
 | `xScale`      | "log"                                            | linear                                                                                        | Log x axis; x must be above 0. scatter only                                                                                                                                                                                                                                                                                                                                          |
-| `annotate`    | ("max" / "min" / "first" / "last" / {x, text})[] | -                                                                                             | Label those points of each series with their value (scatter: by y, first and last by x); `{ x, text }` labels the mark at that x. bar line area scatter                                                                                                                                                                                                                              |
+| `annotate`    | ("max" / "min" / "first" / "last" / {x, text})[] | -                                                                                             | Label those points of each series with their value (scatter: max and min by y, first and last by x); `{ x, text }` labels the mark at that x. bar line area scatter                                                                                                                                                                                                                              |
 
 ### Interaction
 
@@ -1112,15 +1112,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 16,983 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 17,020 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,568,315,805 total, 3,218,805 output
-- claude-sonnet-5-5: 805,265,853 total, 107,123 output
+- claude-opus-5-5: 1,570,040,193 total, 3,222,313 output
+- claude-sonnet-5-5: 806,880,391 total, 107,255 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 30,518,833 total, 1,456 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,600,993,734 total, 3,762,612 output
+- all: 2,604,332,660 total, 3,766,252 output
 
 <!-- tokens:end -->
 

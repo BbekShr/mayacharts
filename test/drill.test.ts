@@ -351,3 +351,34 @@ describe("drill with select, and maya-drill-leaf", () => {
     expect(el.view?.drill).toEqual(["West"]);
   });
 });
+
+describe("nested treemap and title slot", () => {
+  it("a child tile (data-to) drills into its parent only", async () => {
+    const el = await mount(
+      spec({
+        type: "treemap",
+        path: ["region", "state", "city"],
+        depth: 2,
+        data: data.map((r) => ({ ...r, city: r.state + "c" })),
+      }),
+    );
+    const child = marks(el).find((m) => m.getAttribute("data-key") === "h~West~CA")!;
+    expect(child.getAttribute("data-to")).toBe("1");
+    child.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await frame();
+    expect(el.view?.drill).toEqual(["West"]);
+  });
+  it("title and subtitle are replaced together, whichever appears or goes", async () => {
+    const el = await mount(spec({ title: "T", subtitle: "S {total}" }));
+    const q = () =>
+      [...el.shadowRoot!.querySelectorAll(".maya-title,.maya-sub")].map((e) => e.className);
+    expect(q()).toEqual(["maya-title", "maya-sub"]);
+    el.spec = spec({ title: "T2" });
+    await frame();
+    expect(q()).toEqual(["maya-title"]);
+    el.spec = spec({ title: "T3", subtitle: "S2" });
+    await frame();
+    expect(q()).toEqual(["maya-title", "maya-sub"]);
+    expect(el.shadowRoot!.querySelector(".maya-sub")!.textContent).toBe("S2");
+  });
+});
