@@ -347,6 +347,8 @@ export const SKIP = new Set([
   "theme",
   "format", // set per field under Fields, see formatFields()
   "forms", // units: an array of forms, set in the copied code
+  "annotate", // arrays, set in the copied code
+  "dash",
   ...ROLES,
 ]);
 
@@ -843,72 +845,21 @@ export const cutNote = (spec: ChartSpec): string =>
     ? `The code holds the first ${SHOWN} of ${n(spec.data.length)} rows. Load your full data where it says data.`
     : "";
 
-/** Constant names for column names: "Total sales" -> TOTAL_SALES, unique, never a digit first. */
-function constNames(fields: readonly string[]): Map<string, string> {
-  const out = new Map<string, string>();
-  const taken = new Set<string>();
-  for (const f of fields) {
-    if (out.has(f)) continue;
-    let base =
-      f
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "") || "FIELD";
-    if (/^\d/.test(base)) base = `F_${base}`;
-    let name = base;
-    for (let i = 2; taken.has(name); i++) name = `${base}_${i}`;
-    taken.add(name);
-    out.set(f, name);
-  }
-  return out;
-}
-
 /**
- * chart.js for ThoughtSpot: the column names as constants, the spec with data from the search,
- * and the plumbing every tile shares. Cells may arrive wrapped ({ value } or { v }), so readRows
- * unwraps them.
+ * chart.js for ThoughtSpot: the spec without rows, and the host adapter. The tile loads the library
+ * itself, so the order of its tabs never matters, and a failed load still reports render-complete.
+ * Rows, cell unwrapping and the settled signal come from maya.host.thoughtspot.
  */
 export function thoughtSpotJs(spec: ChartSpec): string {
-  const { data: _, type, ...rest } = spec;
-  const q = (v: unknown) => JSON.stringify(v).replace(/</g, "\\u003c");
-  const used = ROLES.flatMap((k) => [spec[k] ?? []].flat() as string[]);
-  const names = constNames(used);
-  const ref = (f: string) => names.get(f) ?? q(f);
-  const value = (k: string, v: unknown): string => {
-    if ((ROLES as readonly string[]).includes(k))
-      return Array.isArray(v) ? `[${v.map(ref).join(", ")}]` : ref(v as string);
-    if (k === "format" && v && typeof v === "object")
-      return `{ ${Object.entries(v)
-        .map(([f, p]) => `${names.has(f) ? `[${ref(f)}]` : q(f)}: ${q(p)}`)
-        .join(", ")} }`;
-    return q(v);
-  };
-  const lines = [
-    `  type: ${q(type)},`,
-    "  data: readRows(),",
-    ...Object.entries(rest).map(([k, v]) => `  ${k}: ${value(k, v)},`),
-  ];
-  return `// Column names from your search. Rename the quoted names to match the "Available Columns"
-// list ThoughtSpot shows at the top of this tab.
-${[...names].map(([f, n]) => `const ${n} = ${q(f)};`).join("\n")}
-
-document.getElementById("chart").spec = {
-${lines.join("\n")}
-};
-renderDone();
-
-// ThoughtSpot plumbing (the same in every tile).
-function readRows() {
-  const result = viz?.getDataFromSearchQuery?.()?.getData() ?? { schema: [], data: [] };
-  const cell = (v) =>
-    v && typeof v === "object" ? (typeof v.value === "function" ? v.value() : (v.value ?? v.v)) : v;
-  return result.data.map((r) =>
-    Object.fromEntries(result.schema.map((col, i) => [col.name, cell(r[i])])),
-  );
-}
-function renderDone() {
-  customElements.whenDefined("maya-chart").then(() => viz?.events?.emitRenderCompletedEvent());
-}
+  const { data: _, ...rest } = spec;
+  return `// Column names match case-insensitively; a /regex/ works too (x: /item/i).
+const spec = ${flat(JSON.stringify(rest, null, 2)).replace(/</g, "\\u003c")};
+// Pin this file: add integrity: "sha384-..." and crossOrigin: "anonymous" from the release summary.
+document.head.append(Object.assign(document.createElement("script"), {
+  src: "${CDN}",
+  onload: () => maya.host.thoughtspot(viz, spec),
+  onerror: () => { document.getElementById("chart").textContent = "MayaCharts did not load"; viz?.events?.emitRenderCompletedEvent?.(); },
+}));
 `;
 }
 
@@ -934,14 +885,11 @@ export function snippets(spec: ChartSpec): Record<Tab, File[]> {
       },
     ],
     // A Muze Studio chart: the HTML, CSS and JS tabs of a ThoughtSpot custom chart, in the shape of
-    // the tiles already running there. Rows come from the search, so only the spec's shape is
-    // pasted, with each column name in a constant to rename.
+    // the tiles already running there. Rows come from the search, so only the spec's shape is pasted.
     ThoughtSpot: [
       {
         name: "chart.html",
-        code: `<!-- mayaCharts draws the chart into this element. -->
-<!-- Pin this file: add integrity="sha384-..." and crossorigin="anonymous" from the release summary at https://github.com/BbekShr/mayacharts/releases -->
-<script src="${CDN}"></script>
+        code: `<!-- chart.js loads mayaCharts and draws into this element. -->
 <maya-chart id="chart"></maya-chart>
 `,
       },

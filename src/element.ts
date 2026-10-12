@@ -1,5 +1,11 @@
 import { VERSION } from "./core/registry.ts";
-import type { MayaErrorDetail, MayaSelectDetail, MayaViewDetail } from "./core/types.ts";
+import type {
+  MayaDrillLeafDetail,
+  MayaErrorDetail,
+  MayaSelectDetail,
+  MayaSettledDetail,
+  MayaViewDetail,
+} from "./core/types.ts";
 import { MayaChart } from "./element/maya-chart.ts";
 
 declare global {
@@ -11,6 +17,8 @@ declare global {
     "maya-view": CustomEvent<MayaViewDetail>;
     "maya-error": CustomEvent<MayaErrorDetail>;
     "maya-render": CustomEvent<Record<string, never>>;
+    "maya-settled": CustomEvent<MayaSettledDetail>;
+    "maya-drill-leaf": CustomEvent<MayaDrillLeafDetail>;
   }
 }
 

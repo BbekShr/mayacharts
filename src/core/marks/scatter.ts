@@ -1,4 +1,5 @@
 import { cbField, el, memo, nameId, esc, key, r } from "../svg.ts";
+import { marked, more } from "./bar.ts";
 import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
 
@@ -136,8 +137,11 @@ function bins(ctx: MarkCtx, sel: ReturnType<typeof pick>) {
   const max = Math.max(...grid.values());
   const ti = (f: string) => spec.titles.get(f) ?? f;
   // Pixel to data, from the scale's own endpoints.
-  const inv = (s: LinearScale, px: number) =>
-    s.domain[0] + ((px - s.range[0]) / (s.range[1] - s.range[0])) * (s.domain[1] - s.domain[0]);
+  const inv = (s: LinearScale, px: number) => {
+    const [a, b] = s.log ? s.domain.map(Math.log10) : s.domain;
+    const v = a! + ((px - s.range[0]) / (s.range[1] - s.range[0])) * (b! - a!);
+    return s.log ? 10 ** v : v;
+  };
   // Formatted values at the grid lines, once each: cells read their two neighbours.
   const edges = (s: LinearScale, f: string, o: number, c: number, n: number) =>
     Array.from({ length: n + 1 }, (_, i) => ctx.fmt(f, inv(s, o + i * c)));
@@ -202,7 +206,9 @@ export const scatter: Mark = {
     const px = spec.size === null ? 0 : (x1 - x0) * 0.06;
     const py = spec.size === null ? 0 : (y1 - y0) * 0.06;
     const lo = (v: number, p: number) => (v >= 0 ? Math.max(0, v - p) : v - p);
-    [x0, x1, y0, y1] = [lo(x0, px), x1 + px, lo(y0, py), y1 + py];
+    // A log axis spans the data as is (no pad: 0 and negatives have no place on it).
+    [x0, x1] = spec.xScale === "log" ? [x0, x1] : [lo(x0, px), x1 + px];
+    [y0, y1] = spec.yScale === "log" ? [y0, y1] : [lo(y0, py), y1 + py];
     return [
       { kind: "linear", field: spec.x, domain: spec.xDomain ?? [x0, x1] },
       { kind: "linear", field: spec.y, domain: spec.yDomain ?? [y0, y1] },
@@ -231,6 +237,23 @@ export const scatter: Mark = {
     const rad = (p: Pt) => (p.sz !== null && max > 0 ? radius(p.sz) : flat);
     // Big bubbles first so small ones stay on top; stable for ties.
     const order = max > 0 ? [...pts].sort((a, b) => rad(b) - rad(a)) : pts;
+
+    // spec.annotate: per series the max and min y, the first and last by x, and { x, text } notes, ahead of plain value labels.
+    marked(
+      ctx,
+      shaped.visible.map((si) => pts.filter((p) => p.si === si).sort((a, b) => a.x - b.x)),
+      (p) => p.x,
+      (p) => p.y,
+      (p, a, said) =>
+        ctx.label(
+          sx.of(p.x),
+          sy.of(p.y) - rad(p),
+          said ?? ctx.fmt(spec.y, p.y),
+          "above",
+          key(shaped.series[p.si]!, ids?.get(p) ?? p.i),
+          a,
+        ),
+    );
 
     let marks = "";
     for (const p of order) {
@@ -263,6 +286,7 @@ export const scatter: Mark = {
         // Guide pills: only when data-x / data-f are not already the formatted x and y.
         "data-gx": named ? x : null,
         "data-gy": named ? y : null,
+        "data-more": more(ctx, (f) => p.row[f]),
         "data-neg": p.y < 0,
         "data-tone": ctx.tone(p.y),
         "data-q": typeof cv === "number" ? ctx.q(cv) : null,
@@ -274,6 +298,35 @@ export const scatter: Mark = {
       });
       if (spec.labels) ctx.label(cx, cy - rad(p), y, "above", key(ser, ids?.get(p) ?? p.i));
     }
+    // Slope rules: y = k * x + b (b defaults to 0, the origin) ("mean": sum y / sum x of the drawn points), clipped to the plot.
+    // ponytail: straight only when both axes share a scale; with one log axis the line would be a curve, so it is skipped.
+    const [dx, dy] = [(ctx.x as LinearScale).domain, (ctx.y as LinearScale).domain];
+    const [tx, ty] = [pts.reduce((a, p) => a + p.x, 0), pts.reduce((a, p) => a + p.y, 0)];
+    let under = "";
+    spec.slopes.forEach(({ k, b, label }, i) => {
+      const m = k === "mean" ? ty / tx : k;
+      if (!m || !isFinite(m) || spec.xScale !== spec.yScale) return;
+      const [u, v] = [(dy[0] - b) / m, (dy[1] - b) / m];
+      const [x0, x1] = [Math.max(dx[0], Math.min(u, v)), Math.min(dx[1], Math.max(u, v))];
+      if (!(x0 < x1)) return;
+      const [px0, py0, px1, py1] = [sx.of(x0), sy.of(m * x0 + b), sx.of(x1), sy.of(m * x1 + b)];
+      under += el("line", {
+        "data-key": key("\u0000slope", i),
+        "data-slope": true,
+        x1: r(px0),
+        y1: r(py0),
+        x2: r(px1),
+        y2: r(py1),
+      });
+      // Beside the line's upper end, on the side the line leaves from, so the diagonal never crosses its own label.
+      const left = py0 < py1; // the left end is the upper one (a falling line)
+      ctx.label(
+        left ? px0 + 6 : px1 - 6,
+        Math.max((left ? py0 : py1) - 8, plot.y + 8),
+        label ?? (k === "mean" ? ctx.t("mean") : ctx.fmt("", +m.toPrecision(3))),
+        left ? "start" : "end",
+      );
+    });
     // Size key: three reference circles drawn with the marks' own radius rule, values rounded to one digit.
     const ref = [0.1, 0.25, 0.5].map((f) => Number((max * f).toPrecision(1)));
     const key3 = (v: number) => {
@@ -286,6 +339,11 @@ export const scatter: Mark = {
       max > 0
         ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.size!) ?? spec.size!)}</b>${ref.map(key3).join("")}</div>`
         : null;
-    return { marks, hits: "", cross: pts.length ? cross(ctx) : "", ...(legend && { legend }) };
+    return {
+      marks: under + marks,
+      hits: "",
+      cross: pts.length ? cross(ctx) : "",
+      ...(legend && { legend }),
+    };
   },
 };

@@ -1,5 +1,5 @@
-// IIFE entry (dist/maya.global.js): element + every module, exposed as globalThis.maya.
-import * as maya from "./element.ts";
+// IIFE entry (dist/maya.global.js): core global plus every module.
+import "./global-core.ts";
 import "./hierarchy.ts";
 import "./flow.ts";
 import "./geo.ts";
@@ -9,7 +9,5 @@ import "./weave.ts";
 import "./units.ts";
 import "./orbit.ts";
 import "./constellation.ts";
-
-(globalThis as { maya?: typeof maya }).maya = maya;
 
 export {};

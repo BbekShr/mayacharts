@@ -49,7 +49,7 @@ const ok = (spec: unknown) => expect(() => validateSpec(spec)).not.toThrow();
 it("unloaded module type, then loaded", async () => {
   expect(err(tree).message).toMatchInlineSnapshot(`
     "mayacharts: spec.type = "treemap" needs the "hierarchy" module, which is not loaded.
-      Add: import "mayacharts/hierarchy"
+      Add: import "mayacharts/hierarchy" (or load maya.hierarchy.global.js).
       -> https://bbekshr.github.io/mayacharts/errors.html#unknown-type"
   `);
   expect(err({ ...tree, type: "treemp" }).message).toContain('Did you mean "treemap"?');
@@ -114,7 +114,6 @@ describe("one snapshot per error code", () => {
       "mayacharts: spec.y = "revenu" is not a field in spec.data.
         Fields found: month, revenue, region, units.
         Did you mean "revenue"?
-        spec.y names the field used for the plotted numbers.
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-field"
     `);
   });
@@ -143,8 +142,8 @@ describe("one snapshot per error code", () => {
     const e = err({ ...tree, data: [...tree.data, { region: "W", state: "CA", sales: -1 }] });
     expect([e.code, e.path]).toEqual(["non-positive-value", "data[2].sales"]);
     expect(e.message).toMatchInlineSnapshot(`
-      "mayacharts: spec.data[2].sales is -1, but treemap sizes must be positive.
-        Filter first: data.filter(r => r.sales > 0), or chart the signed values with "bar".
+      "mayacharts: spec.data[2].sales is -1, but treemap needs values above 0.
+        Filter first: data.filter(r => r.sales > 0).
         -> https://bbekshr.github.io/mayacharts/errors.html#non-positive-value"
     `);
   });
@@ -154,7 +153,7 @@ describe("one snapshot per error code", () => {
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.stacked is not a known option.
         Did you mean "stack"?
-        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, colors, colorBy, theme, $schema, x, y2, was, series, size, name, title, description, locale, currency, frame, horizontal, labels, legend, endLabels, tooltip, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate.
+        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, was, tooltip, xScale, yScale, annotate, dash, depth, minAngle, legend, colors, colorBy, theme, $schema, x, y2, series, size, name, title, subtitle, description, locale, currency, frame, horizontal, labels, endLabels, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate.
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-option"
     `);
   });
@@ -189,7 +188,7 @@ describe("one snapshot per error code", () => {
     expect(err({ ...base, type: "scatter", x: "units", xDomain: [1] }).message)
       .toMatchInlineSnapshot(`
         "mayacharts: spec.xDomain = [1] is not a valid domain.
-          Expected [min, max] with finite numbers and min < max, e.g. [0, 100].
+          Expected [min, max] of finite numbers, e.g. [1, 100].
           -> https://bbekshr.github.io/mayacharts/errors.html#invalid-domain"
       `);
   });
@@ -216,7 +215,7 @@ describe("one snapshot per error code", () => {
     expect([e.code, e.path]).toEqual(["invalid-theme", "theme.acent"]);
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.theme.acent is not a theme token.
-        Valid tokens: font, fontSize, fg, fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, warn, bad, line, gridDash, series1, series2, series3, series4, series5, series6, series7, series8.
+        Valid tokens: font, fontSize, fg, fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, warn, bad, line, gridDash, titleSize, titleWeight, axisSize, series1, series2, series3, series4, series5, series6, series7, series8.
         Did you mean "accent"?
         -> https://bbekshr.github.io/mayacharts/errors.html#invalid-theme"
     `);
@@ -353,10 +352,7 @@ describe("option-unsupported: ONLY table and pairs", () => {
       "yDomain",
     ]);
     const { x: _x, ...noX } = base;
-    expect(code({ ...noX, path: ["region", "month"], drill: true, select: true })).toEqual([
-      "option-unsupported",
-      "select",
-    ]);
+    ok({ ...noX, path: ["region", "month"], drill: true, select: true }); // #70: gestures split
     expect(code({ ...base, path: ["region", "month"] })).toEqual(["option-unsupported", "x"]);
     expect(code({ ...base, drill: true })).toEqual(["option-unsupported", "drill"]);
     expect(err({ ...base, drill: true }).message).toContain("needs spec.path");
@@ -787,8 +783,8 @@ describe("colorBy thresholds and gauge", () => {
   });
   it("names the bad side of the target", () => {
     expect(err({ ...kpi, colorBy: { target: 100, warn: 120 } }).message).toMatchInlineSnapshot(`
-      "mayacharts: spec.colorBy.warn = 120 must be on the bad side of the target 100 (below it, since higher is better).
-        Example: { target: 100, warn: 80 }. If lower is better, add better: "lower".
+      "mayacharts: spec.colorBy.warn = 120 must be below the target 100 (higher is better).
+        If lower is better, add better: "lower".
         -> https://bbekshr.github.io/mayacharts/errors.html#invalid-option"
     `);
     expect(err({ ...two, colorBy: { revenu: { target: 1 } } }).message).toContain(
@@ -808,5 +804,349 @@ describe("colorBy thresholds and gauge", () => {
     expect(out).toContain('data-key="v"');
     expect(out).not.toContain('data-maya="tone"');
     expect(out).not.toContain("<span data-past>");
+  });
+});
+
+describe("#59-#68 contracts: was long form, log scales, slope rules, dash, tooltip fields, annotate", () => {
+  const long = {
+    type: "bar",
+    x: "item",
+    y: "sales",
+    data: [
+      { item: "Shirts", year: 2024, sales: 2350, units: 10, region: "N" },
+      { item: "Shirts", year: 2025, sales: 2870, units: 12, region: "S" },
+    ],
+  };
+  const line = { ...long, type: "line", series: "region" };
+  const sc = { ...long, type: "scatter", x: "units" };
+
+  it("was: { by, current?, previous? }", () => {
+    ok({ ...long, was: { by: "year" } });
+    ok({ ...long, was: { by: "year", current: 2025, previous: "2024" } });
+    ok({ ...long, type: "kpi", x: undefined, was: { by: "year" } });
+    expect(code({ ...long, was: { by: "yr" } })).toEqual(["unknown-field", "was.by"]);
+    expect(code({ ...long, was: { by: "year", current: 2023 } })).toEqual([
+      "invalid-option",
+      "was.current",
+    ]);
+    expect(code({ ...long, was: { by: "year", previous: 2026 } })).toEqual([
+      "invalid-option",
+      "was.previous",
+    ]);
+    expect(code({ ...long, was: { by: "year", current: 2024, previous: 2024 } })).toEqual([
+      "invalid-option",
+      "was",
+    ]);
+    expect(code({ ...long, was: { by: "year", extra: 1 } })).toEqual(["invalid-option", "was"]);
+    expect(code({ ...long, was: { by: "item" } })).toEqual(["option-unsupported", "was"]);
+    expect(code({ ...long, type: "line", was: { by: "year" } })).toEqual([
+      "option-unsupported",
+      "was",
+    ]);
+    const r = resolve({ ...long, was: { by: "year", current: 2025 } } as ChartSpec);
+    expect(r.wasBy).toEqual({ by: "year", current: "2025", previous: null });
+    expect(r.was).toBe("year");
+    // count: the pivot counts rows per period, the marks then sum those counts.
+    const c = resolve({
+      ...long,
+      aggregate: "count",
+      was: { by: "year" },
+      data: [...long.data, { item: "Shirts", year: 2025, sales: 1, units: 1, region: "N" }],
+    } as ChartSpec);
+    expect([c.aggregate, c.data[0]!.sales, c.data[0]!.year]).toEqual(["sum", 2, 1]);
+    const w = resolve({ ...long, was: "units" } as ChartSpec);
+    expect([w.was, w.wasBy]).toEqual(["units", null]);
+  });
+
+  it("yScale / xScale log", () => {
+    ok({ ...line, yScale: "log" });
+    ok({ ...sc, xScale: "log", yScale: "log" });
+    const e = err({ ...long, yScale: "log" });
+    expect([e.code, e.path]).toEqual(["option-unsupported", "yScale"]);
+    expect(e.message).toContain("works with: line, scatter");
+    expect(code({ ...long, type: "area", yScale: "log" })).toEqual([
+      "option-unsupported",
+      "yScale",
+    ]);
+    expect(code({ ...line, xScale: "log" })).toEqual(["option-unsupported", "xScale"]);
+    expect(code({ ...line, yScale: "linear" })).toEqual(["invalid-option", "yScale"]);
+    const neg = { ...sc, data: [...sc.data, { item: "Hats", year: 2025, sales: 0, units: 3 }] };
+    expect(code({ ...neg, yScale: "log" })).toEqual(["non-positive-value", "data[2].sales"]);
+    expect(code({ ...sc, xScale: "log", data: [{ units: -1, sales: 1 }] })).toEqual([
+      "non-positive-value",
+      "data[0].units",
+    ]);
+    expect(code({ ...line, yScale: "log", yDomain: [0, 100] })).toEqual([
+      "invalid-domain",
+      "yDomain",
+    ]);
+    expect(code({ ...sc, xScale: "log", xDomain: [-1, 100] })).toEqual([
+      "invalid-domain",
+      "xDomain",
+    ]);
+    expect(code({ ...line, yScale: "log", rules: [0] })).toEqual(["invalid-option", "rules[0]"]);
+    expect(err({ scale: "log", ...line }).message).toContain('Use yScale: "log"');
+    const r = resolve({ ...sc, xScale: "log" } as ChartSpec);
+    expect([r.xScale, r.yScale]).toEqual(["log", "linear"]);
+  });
+
+  it("rules { slope } on scatter only", () => {
+    ok({ ...sc, rules: [{ slope: "mean", label: "Average price" }, { slope: 2 }, 100] });
+    expect(code({ ...line, rules: [{ slope: 2 }] })).toEqual([
+      "option-unsupported",
+      "rules[0].slope",
+    ]);
+    expect(code({ ...sc, rules: [{ slope: "max" }] })).toEqual(["invalid-option", "rules[0]"]);
+    expect(code({ ...sc, rules: [{ slope: 1, y: 2 }] })).toEqual(["invalid-option", "rules[0]"]);
+    const r = resolve({ ...sc, rules: [{ slope: "mean" }, { y: 5, label: "T" }] } as ChartSpec);
+    expect(r.slopes).toEqual([{ k: "mean", b: 0, label: null }]);
+    expect(r.rules).toEqual([{ y: 5, label: "T" }]);
+  });
+
+  it("dash: series values on line and area", () => {
+    ok({ ...line, dash: ["N"] });
+    ok({ ...line, type: "area", dash: ["N", "S"] });
+    expect(code({ ...line, dash: ["X"] })).toEqual(["invalid-option", "dash[0]"]);
+    expect(code({ ...line, dash: [] })).toEqual(["invalid-option", "dash"]);
+    expect(code({ ...long, type: "line", dash: ["N"] })).toEqual(["option-unsupported", "dash"]);
+    expect(code({ ...long, series: "region", dash: ["N"] })).toEqual([
+      "option-unsupported",
+      "dash",
+    ]);
+    expect([...resolve({ ...line, dash: ["N"] } as ChartSpec).dash]).toEqual(["N"]);
+  });
+
+  it("tooltip: { fields }", () => {
+    ok({ ...long, tooltip: { fields: ["units"] } });
+    ok({ ...sc, tooltip: { fields: ["region"] } }); // scatter shows the row's value, any type
+    expect(code({ ...long, tooltip: { fields: ["unit"] } })).toEqual([
+      "unknown-field",
+      "tooltip.fields[0]",
+    ]);
+    expect(code({ ...long, tooltip: { fields: ["region"] } })).toEqual([
+      "non-numeric-field",
+      "data[0].region",
+    ]);
+    expect(code({ ...long, tooltip: { fields: [] } })).toEqual(["invalid-option", "tooltip"]);
+    expect(code({ ...long, tooltip: "yes" })).toEqual(["invalid-option", "tooltip"]);
+    expect(code({ ...long, type: "heatmap", tooltip: { fields: ["units"] } })).toEqual([
+      "option-unsupported",
+      "tooltip",
+    ]);
+    const r = resolve({ ...long, tooltip: { fields: ["units"] } } as ChartSpec);
+    expect([r.tooltip, r.tipFields]).toEqual([true, ["units"]]);
+    expect(resolve({ ...long, tooltip: false } as ChartSpec).tipFields).toEqual([]);
+  });
+
+  it("annotate on bar, line, area", () => {
+    ok({ ...line, annotate: ["max", "last"] });
+    ok({ ...long, annotate: ["min"] });
+    ok({ ...sc, annotate: ["max"] }); // #72: scatter by y
+    expect(code({ ...line, annotate: ["peak"] })).toEqual(["invalid-option", "annotate"]);
+    expect(code({ ...line, annotate: ["max", "max"] })).toEqual(["invalid-option", "annotate"]);
+    expect(resolve({ ...line, annotate: ["first"] } as ChartSpec).annotate).toEqual(["first"]);
+  });
+});
+
+describe("#69-#72 contracts: ratio, drill + select, drill types, colour slots, depth, minAngle, rules, annotate, subtitle, legend, tokens", () => {
+  beforeAll(async () => {
+    await import("../src/flow.ts");
+    await import("../src/radial.ts");
+  });
+  const rows = [
+    { region: "West", state: "CA", sales: 70, units: 10, price: 7 },
+    { region: "West", state: "OR", sales: 40, units: 4, price: 10 },
+    { region: "East", state: "NY", sales: 30, units: 5, price: 6 },
+  ];
+  const bar = { type: "bar", path: ["region", "state"], y: "price", drill: true, data: rows };
+  const ratio = { ratio: ["sales", "units"] };
+
+  it("aggregate { ratio }: shape, fields, types, pairs, resolve", () => {
+    ok({ ...bar, aggregate: ratio });
+    // y only names the measure: absent from the rows is fine, and format/titles may key it.
+    ok({ ...bar, y: "avgPrice", aggregate: ratio, format: { avgPrice: "currency" } });
+    for (const t of ["kpi", "gauge", "table", "heatmap", "line"])
+      ok({ type: t, x: t === "gauge" ? undefined : "state", y: "p", aggregate: ratio, data: rows });
+    const r = resolve({ ...bar, aggregate: ratio } as unknown as ChartSpec);
+    expect([r.aggregate, r.ratio]).toEqual(["sum", ["sales", "units"]]);
+    expect(resolve(bar as ChartSpec).ratio).toBeNull();
+    for (const a of [{ ratio: ["sales"] }, { ratio: ["sales", "sales"] }, { ratio: "sales" }, {}])
+      expect(code({ ...bar, aggregate: a })).toEqual(["invalid-option", "aggregate"]);
+    expect(code({ ...bar, aggregate: { ratio: ["sales", "cost"] } })).toEqual([
+      "unknown-field",
+      "aggregate.ratio[1]",
+    ]);
+    expect(
+      code({ ...bar, aggregate: ratio, data: [...rows, { region: "W", sales: "x", units: 1 }] }),
+    ).toEqual(["non-numeric-field", "data[3].sales"]);
+    expect(code({ ...tree, aggregate: ratio, data: [{ ...tree.data[0], s: 1, u: 2 }] })).toEqual([
+      "option-unsupported",
+      "aggregate",
+    ]);
+    expect(
+      code({ ...base, series: "region", stack: true, aggregate: { ratio: ["revenue", "units"] } }),
+    ).toEqual(["option-unsupported", "aggregate"]);
+    expect(
+      code({ ...base, y: ["revenue", "units"], aggregate: { ratio: ["revenue", "units"] } }),
+    ).toEqual(["option-unsupported", "aggregate"]);
+  });
+
+  it("drill + select together; path + drill on table, heatmap, marimekko, chord", () => {
+    ok({ ...bar, select: true });
+    ok({ ...tree, drill: true, select: "multi" });
+    ok({ type: "table", path: ["region", "state"], y: "sales", drill: true, data: rows });
+    ok({
+      type: "heatmap",
+      x: "state",
+      path: ["region", "state"],
+      y: "sales",
+      drill: true,
+      data: rows,
+    });
+    ok({
+      type: "marimekko",
+      path: ["region", "state"],
+      series: "state",
+      y: "sales",
+      drill: true,
+      data: rows,
+    });
+    ok({ type: "chord", path: ["region", "state"], y: "sales", drill: true, data: rows });
+    const h = resolve(
+      {
+        type: "heatmap",
+        x: "units",
+        path: ["region", "state"],
+        y: "sales",
+        drill: true,
+        data: rows,
+      } as ChartSpec,
+      { drill: ["West"] },
+    );
+    expect([h.series, h.x, h.data.length]).toEqual(["state", "units", 2]);
+    const t = resolve({
+      type: "table",
+      path: ["region", "state"],
+      y: "sales",
+      drill: true,
+      data: rows,
+    } as ChartSpec);
+    expect(t.x).toBe("region");
+    expect(
+      code({
+        type: "heatmap",
+        x: "state",
+        series: "state",
+        path: ["region"],
+        y: "sales",
+        data: rows,
+      }),
+    ).toEqual(["option-unsupported", "series"]);
+    expect(code({ type: "table", x: "state", path: ["region"], y: "sales", data: rows })).toEqual([
+      "option-unsupported",
+      "x",
+    ]);
+    expect(code({ type: "heatmap", x: "state", y: "sales", drill: true, data: rows })).toEqual([
+      "option-unsupported",
+      "drill",
+    ]);
+  });
+
+  it("colour slots from all rows, kept through drill", () => {
+    const sk = { type: "sankey", path: ["region", "state"], y: "sales", drill: true, data: rows };
+    const r = resolve(sk as ChartSpec);
+    expect([...r.slots]).toEqual([
+      ["CA", 0],
+      ["OR", 1],
+      ["NY", 2],
+      ["West", 3],
+      ["East", 4],
+    ]);
+    const d = resolve(tree as ChartSpec, {});
+    expect(d.slots.get("S")).toBe(1);
+    expect(resolve({ ...tree, drill: true } as ChartSpec, { drill: ["S"] }).hue).toBe(1);
+    expect(resolve(base as ChartSpec).slots.size).toBe(0);
+  });
+
+  it("depth on treemap, minAngle on sunburst", () => {
+    expect(resolve({ ...tree, depth: 2 } as ChartSpec).depth).toBe(2);
+    expect(resolve(tree as ChartSpec).depth).toBeNull();
+    for (const v of [0, 1.5, "2"])
+      expect(code({ ...tree, depth: v })).toEqual(["invalid-option", "depth"]);
+    expect(code({ ...tree, type: "sunburst", depth: 2 })).toEqual(["option-unsupported", "depth"]);
+    expect(resolve({ ...tree, type: "sunburst", minAngle: 0 } as ChartSpec).minAngle).toBe(0);
+    for (const v of [-1, 361, 1.5, "3"])
+      expect(code({ ...tree, type: "sunburst", minAngle: v })).toEqual([
+        "invalid-option",
+        "minAngle",
+      ]);
+    expect(code({ ...tree, minAngle: 2 })).toEqual(["option-unsupported", "minAngle"]);
+  });
+
+  it("rules: { x }, { band }, { slope, intercept }", () => {
+    const r = resolve({
+      ...base,
+      rules: [{ x: "Feb", label: "Launch" }, { band: [9, 3] }, 5],
+    } as ChartSpec);
+    expect(r.xRules).toEqual([{ x: "Feb", label: "Launch" }]);
+    expect(r.bands).toEqual([{ lo: 3, hi: 9, label: null }]);
+    expect(r.rules).toEqual([{ y: 5, label: null }]);
+    const sc = { ...base, type: "scatter", x: "units" };
+    expect(resolve({ ...sc, rules: [{ slope: 2, intercept: 1 }] } as ChartSpec).slopes).toEqual([
+      { k: 2, b: 1, label: null },
+    ]);
+    ok({
+      type: "dumbbell",
+      x: "state",
+      series: "region",
+      y: "sales",
+      data: rows,
+      rules: [{ x: "CA" }],
+    });
+    for (const bad of [
+      { band: [1] },
+      { band: [2, 2] },
+      { x: null },
+      { y: 1, intercept: 2 },
+      { x: "a", y: 1 },
+      { slope: 1, intercept: "0" },
+    ])
+      expect(code({ ...sc, rules: [bad] })).toEqual(["invalid-option", "rules[0]"]);
+    expect(code({ ...base, type: "line", yScale: "log", rules: [{ band: [0, 5] }] })).toEqual([
+      "invalid-option",
+      "rules[0]",
+    ]);
+  });
+
+  it("annotate { x, text } items, scatter", () => {
+    const r = resolve({ ...base, annotate: ["max", { x: "Feb", text: "Best" }] } as ChartSpec);
+    expect([r.annotate, r.notes]).toEqual([["max"], [{ x: "Feb", text: "Best" }]]);
+    for (const a of [
+      { x: "Feb" },
+      { x: "Feb", text: "" },
+      { x: "Feb", text: "x".repeat(41) },
+      { x: [], text: "a" },
+    ])
+      expect(code({ ...base, annotate: [a] })).toEqual(["invalid-option", "annotate"]);
+  });
+
+  it("subtitle, legend placement, theme title and axis tokens", () => {
+    const r = resolve({ ...base, subtitle: "2025", legend: "right" } as ChartSpec);
+    expect([r.subtitle, r.legend, r.legendAt]).toEqual(["2025", true, "right"]);
+    expect(resolve({ ...base, legend: false } as ChartSpec).legendAt).toBe("top");
+    expect(code({ ...base, legend: "left" })).toEqual(["invalid-option", "legend"]);
+    expect(code({ ...base, subtitle: 1 })).toEqual(["invalid-option", "subtitle"]);
+    ok({ ...base, theme: { titleSize: "16px", titleWeight: "600", axisSize: "11px" } });
+  });
+
+  it("title and subtitle take any text: only exact token names are replaced at render", () => {
+    ok({ ...base, title: "{max.x} leads with {max.y}", subtitle: "Total {total}, {{literal}" });
+    ok({ ...base, title: "{peak.x} and { open" });
+  });
+
+  it("hints for foreign option names", () => {
+    expect(err({ ...base, interaction: {} }).message).toContain("Shift+Enter");
+    expect(err({ ...base, measures: {} }).message).toContain("ratio");
+    expect(err({ ...base, styles: {} }).message).toContain("dash");
   });
 });

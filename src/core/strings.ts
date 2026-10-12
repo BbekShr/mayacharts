@@ -13,6 +13,8 @@ export const TEXT = {
   showing: "Showing {0}",
   /** Live region after drill: {0} = branch path joined with " / ". */
   drilledInto: "Drilled into {0}",
+  /** Pinned tooltip action when drill and select are both on: {0} = the mark's name. */
+  drillInto: "Drill into {0}",
   /** Live region after zoom: {0}, {1} = first and last category (or range ends). */
   zoomedTo: "Zoomed to {0} – {1}",
   /** Live region after selection: {0} = count. */
@@ -79,6 +81,8 @@ export const TEXT = {
   mean: "Average",
   /** Description name of an unlabelled numeric rule ("Reference line: 100."). */
   rule: "Reference line",
+  /** Description with spec.xScale or spec.yScale "log": {0} = the axis title. */
+  log: "{0} on a log scale",
   /** Frame playback button (spec.frame), and its label while playing. */
   play: "Play",
   pause: "Pause",
@@ -119,6 +123,10 @@ export const TEXT = {
   /** Funnel tooltip and table labels: step conversion. */
   ofPrevious: "% of previous",
   ofFirst: "% of first",
+  /** Description of annotate: first and last point, and the sentence ({0} = the kinds joined with ", "). */
+  first: "First",
+  last: "Last",
+  labelled: "Labelled points: {0}",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

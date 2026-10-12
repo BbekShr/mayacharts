@@ -111,72 +111,44 @@ describe("snippets", () => {
     }
   });
 
-  it("ThoughtSpot gets the tile shape: script tag, light page, constants, rows from the search", () => {
+  it("ThoughtSpot gets the tile shape: bare chart element, light page, spec and the host adapter", () => {
     for (const t of TYPES) {
       const spec = sample(t);
       const [html, css, js] = snippets(spec).ThoughtSpot;
       expect([html!.name, css!.name, js!.name]).toEqual(["chart.html", "chart.css", "chart.js"]);
-      expect(html!.code).toContain(
-        `<script src="https://cdn.jsdelivr.net/npm/mayacharts@${pkg.version}/dist/maya.global.js"></script>`,
-      );
+      expect(html!.code).toContain('<maya-chart id="chart"></maya-chart>');
+      expect(html!.code).not.toContain("<script");
       expect(css!.code).toContain("color-scheme: light;");
 
-      // Run chart.js with ThoughtSpot's globals stubbed: cells may come wrapped.
-      const names = Object.keys(spec.data[0]!);
-      const wrap = [
-        (v: unknown) => v,
-        (v: unknown) => ({ value: () => v }),
-        (v: unknown) => ({ value: v }),
-        (v: unknown) => ({ v }),
-      ];
-      const search = {
-        schema: names.map((name) => ({ name })),
-        data: spec.data.map((r, i) => names.map((n) => wrap[i % 4]!(r[n]))),
-      };
+      // Run chart.js with ThoughtSpot's globals stubbed.
+      let script: any;
       let got: unknown;
       let done = 0;
-      const el = {
-        set spec(v: unknown) {
-          got = v;
+      const chart = { textContent: "" };
+      const viz = { events: { emitRenderCompletedEvent: () => done++ } };
+      new Function("document", "viz", "Object", "maya", js!.code).call(
+        null,
+        {
+          createElement: () => ({}),
+          getElementById: () => chart,
+          head: { append: (s: unknown) => (script = s) },
         },
-      };
-      const viz = {
-        getDataFromSearchQuery: () => ({ getData: () => search }),
-        events: { emitRenderCompletedEvent: () => done++ },
-      };
-      let defined: () => void = () => {};
-      new Function("document", "customElements", "viz", js!.code)(
-        { getElementById: () => el },
-        { whenDefined: () => ({ then: (f: () => void) => (defined = f) }) },
         viz,
+        Object,
+        { host: { thoughtspot: (_: unknown, s: unknown) => (got = s) } },
       );
-      expect(got, t).toEqual(spec);
-      defined();
+      expect(script.src).toBe(
+        `https://cdn.jsdelivr.net/npm/mayacharts@${pkg.version}/dist/maya.global.js`,
+      );
+      script.onload();
+      const { data: _, ...rest } = spec;
+      expect(got, t).toEqual(rest);
+      // A failed load still reports render-complete.
+      expect(done).toBe(0);
+      script.onerror();
       expect(done, t).toBe(1);
+      expect(chart.textContent).toContain("did not load");
     }
-  });
-
-  it("ThoughtSpot names each column once, as a constant to rename", () => {
-    const spec = { ...sample("scatter"), format: { Price: "currency" } } as ChartSpec;
-    const js = snippets(spec).ThoughtSpot[2]!.code;
-    expect(js).toContain('const PRICE = "Price";');
-    expect(js).toContain('const MARGIN = "Margin %";');
-    expect(js).toContain("x: PRICE,");
-    expect(js).toContain('format: { [PRICE]: "currency" },');
-    const two = snippets({
-      ...sample("table"),
-      x: "Margin %",
-      y: ["Margin %", "Price"],
-    } as ChartSpec).ThoughtSpot[2]!.code;
-    expect(two.match(/const MARGIN /g)).toHaveLength(1);
-    const clash = snippets({
-      type: "bar",
-      x: "a b",
-      y: "a-b",
-      data: [{ "a b": "x", "a-b": 1 }],
-    } as ChartSpec).ThoughtSpot[2]!.code;
-    expect(clash).toContain('const A_B = "a b";');
-    expect(clash).toContain('const A_B_2 = "a-b";');
   });
 
   it("imports the module a type needs", () => {
@@ -198,7 +170,7 @@ describe("snippets", () => {
       expect(code, t).not.toContain("<img");
       expect(code, t).not.toContain('"<!--');
       expect(code.toLowerCase().split("</script>").length - 1, t).toBe(
-        { HTML: 2, ThoughtSpot: 1, Vue: 1, Svelte: 1 }[t as string] ?? 0,
+        { HTML: 2, Vue: 1, Svelte: 1 }[t as string] ?? 0,
       );
     }
     expect(run(literal(spec))).toEqual(spec);
@@ -312,11 +284,9 @@ describe("guidance", () => {
   });
 
   it("disables, with the reason, an option that clashes with another one", () => {
+    // Drill and select combine since #70 (click selects, double-click drills).
     const drilled = { ...sample("treemap"), drill: true } as ChartSpec;
-    expect(prober(drilled)("select", true)).toEqual({
-      hide: false,
-      why: '"Select" cannot be combined with "Drill".',
-    });
+    expect(prober(drilled)("select", true)).toBeNull();
     expect(prober(sample("bar"))("xType", "time")).toMatchObject({ hide: false });
     expect(prober(sample("bar"))("xType", "category")).toBeNull();
     const twoAxes = { ...sample("bar"), series: undefined, y2: "Units" } as unknown as ChartSpec;

@@ -1,6 +1,6 @@
 import { colorVals } from "./shape.ts";
 import { t } from "./strings.ts";
-import { cbField, esc } from "./svg.ts";
+import { cbField, esc, OTHER } from "./svg.ts";
 import type { MarkOut, ResolvedSpec, Shaped } from "./types.ts";
 
 /** Density scatter stats [cells, fewest, most], left by the mark's draw for describe (same spec object). */
@@ -11,6 +11,48 @@ export const titleText = (spec: ResolvedSpec): string =>
     (spec.x || spec.path.length
       ? ` by ${spec.titles.get(spec.x) ?? (spec.x || spec.path.join(" / "))}`
       : "");
+
+/**
+ * Fill the exact data tokens in a title or subtitle: {max.x} {max.y} {min.x} {min.y} {first.x}
+ * {first.y} {last.x} {last.y} {total} {mean}, formatted by the field's format. Anything else in
+ * braces, and a token with no value (no categories), stays as written. max, min, first and last
+ * name one drawn point (category x series), or the category total when `stack` is set; Other is
+ * left out of them. `total` adds every drawn value; `mean` is the "mean" rule's value.
+ */
+export function resolveTokens(
+  text: string,
+  s: ResolvedSpec,
+  shaped: Shaped,
+  fmt: Fmt,
+  mean: () => number,
+): string {
+  if (!text.includes("{")) return text;
+  const by = new Map<number, number>();
+  const pts: [number, number][] = [];
+  let sum = 0;
+  for (const c of shaped.cells)
+    if (c.value !== null) {
+      by.set(c.ci, (by.get(c.ci) ?? 0) + c.value);
+      pts.push([c.ci, c.value]);
+      sum += c.value;
+    }
+  const cs = (s.stack ? [...by] : pts).filter(([i]) => shaped.categories[i] !== OTHER);
+  return text.replace(
+    /\{(?:(max|min|first|last)\.([xy])|(total|mean))\}/g,
+    (m, k?: string, a?: string, o?: string) => {
+      if (o) {
+        const v = o === "mean" ? mean() : sum;
+        return pts.length && Number.isFinite(v) ? fmt(s.y, v) : m;
+      }
+      const e = cs.reduce<[number, number] | undefined>(
+        (p, c) =>
+          !p || (k === "max" ? c[1] > p[1] : k === "min" ? c[1] < p[1] : k === "last") ? c : p,
+        undefined,
+      );
+      return e ? (a === "x" ? fmt(s.x, shaped.categories[e[0]]) : fmt(s.y, e[1])) : m;
+    },
+  );
+}
 
 /** Types whose a11y table lists the raw rows (no category x series grid). */
 const ROWS = [
@@ -147,6 +189,7 @@ export function dataTable(
           spec.name,
           spec.size,
           ...(spec.type === "constellation" ? spec.measures : [spec.y]),
+          ...(spec.ratio ?? []),
           spec.y2,
           cbField(spec),
         ].filter((f): f is string => !!f),

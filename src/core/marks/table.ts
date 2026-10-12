@@ -1,4 +1,4 @@
-import { agg } from "../shape.ts";
+import { agg, feed } from "../shape.ts";
 import { clip, el, esc, hit, key, memo, r } from "../svg.ts";
 import type { Mark } from "../types.ts";
 
@@ -17,19 +17,20 @@ export const table: Mark = {
     const ms = spec.measures;
     const title = (f: string) => spec.titles.get(f) ?? f;
     // One reducer per (category, measure), once per data array: a resize or re-sort reuses it.
-    const all = memo(spec.data, `t${JSON.stringify([spec.x, ms, spec.aggregate])}`, () => {
-      const groups = new Map<string, ReturnType<typeof agg>[]>();
-      for (const row of spec.data) {
-        const k = String(row[spec.x]);
-        let g = groups.get(k);
-        if (!g) groups.set(k, (g = ms.map(() => agg(spec.aggregate))));
-        ms.forEach((m, i) => {
-          const v = row[m];
-          if (typeof v === "number") g![i]!.add(v);
-        });
-      }
-      return [...groups].map(([name, g]) => ({ name, vals: g.map((a) => a.value()) }));
-    });
+    const all = memo(
+      spec.data,
+      `t${JSON.stringify([spec.x, ms, spec.aggregate, spec.ratio])}`,
+      () => {
+        const groups = new Map<string, ReturnType<typeof agg>[]>();
+        for (const row of spec.data) {
+          const k = String(row[spec.x]);
+          let g = groups.get(k);
+          if (!g) groups.set(k, (g = ms.map(() => agg(spec.aggregate, !!spec.ratio))));
+          ms.forEach((m, i) => feed(g![i]!, row, m, spec.ratio));
+        }
+        return [...groups].map(([name, g]) => ({ name, vals: g.map((a) => a.value()) }));
+      },
+    );
     type Row = (typeof all)[0];
 
     const nulls = (v: number | null, d: number) => (v === null ? Infinity : v * d);
@@ -166,6 +167,17 @@ export const table: Mark = {
           height: 4,
         });
         hits += hit(d, colX(mi) + PAD, y, bw, 4);
+        // The row label is part of the first measure's target, so a drill click on the name works.
+        if (!mi)
+          hits += el("rect", {
+            ...d,
+            "data-maya": "hit",
+            x: 0,
+            y: top,
+            width: r(lw),
+            height: ROW,
+            fill: "transparent",
+          });
       });
     });
     return { marks, hits, labels, grid };

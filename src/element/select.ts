@@ -78,10 +78,22 @@ export function mount(host: Host): Handlers {
     const n = next.selected.length;
     host.announce(n ? t(spec, "selected", n) : t(spec, "selectionCleared"));
   };
+  let before: State["selected"] = [];
+  // With drill, a click's selection waits out the double-click interval: a double click then
+  // drills without a flash of selection or a second maya-select.
+  let later: (() => unknown) | undefined; // the pending pick; cleared to drop it
   const onClick = (e: Event) => {
     const spec = host.spec();
     if (!spec?.select) return;
     const el = e.target as Element;
+    // With drill, the second click of a double click is the drill: the pair leaves the selection as it was.
+    if (spec.drill && (e as MouseEvent).detail === 2 && host.mark(e)) {
+      if (later) later = undefined;
+      else if (host.state().selected !== before) host.commit({ ...host.state(), selected: before });
+      return;
+    }
+    later?.();
+    before = host.state().selected;
     const b = el.closest("[data-maya=legend] button");
     if (b) {
       const k = b.getAttribute("data-key");
@@ -90,10 +102,14 @@ export function mount(host: Host): Handlers {
     }
     const m = host.mark(e);
     const sel = m && selOf(m, type());
-    if (m && sel) pick(sel, m);
+    if (m && sel && spec.drill && (e as MouseEvent).detail === 1) {
+      const f: () => unknown = (later = () => later === f && ((later = undefined), pick(sel, m)));
+      setTimeout(f, 250);
+    } else if (m && sel) pick(sel, m);
     else if (!m && !el.closest(BUSY)) clear(); // empty chart space deselects
   };
   const clear = () => {
+    later = undefined;
     if (!host.state().selected.length) return false;
     host.commit(reduce(host.state(), { type: "clear" }));
     host.announce(t(host.spec() ?? {}, "selectionCleared"));
@@ -120,7 +136,7 @@ export function mount(host: Host): Handlers {
       const a = listen(root, ["click", onClick]);
       // A click anywhere else on the page deselects too.
       const b = listen(document, ["click", (e) => e.composedPath().includes(root.host) || clear()]);
-      return () => (a(), b());
+      return () => ((later = undefined), a(), b());
     })(),
   };
 }

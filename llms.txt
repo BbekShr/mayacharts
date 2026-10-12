@@ -5,8 +5,20 @@ USAGE:
 HTML: <maya-chart><script type="application/json">{spec}</script></maya-chart>
 JavaScript: chart.spec = {type: "bar", data, x: "month", y: "revenue"}; chart.data = newRows;
 SSR: import {render, renderShell} from "mayacharts"; render(spec, {width, height});
-Global: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script>
-Modules: import "mayacharts/hierarchy" (treemap, sunburst, marimekko, waffle); "mayacharts/flow" (sankey, chord); "mayacharts/radial" (radial, gauge); "mayacharts/geo" (hexmap); "mayacharts/stats" (boxplot, funnel); "mayacharts/weave" (weave); "mayacharts/units" (units); "mayacharts/orbit" (orbit); "mayacharts/constellation" (constellation).
+Global: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script> (everything). Lighter: maya.core.global.js (element, the 12 core types, maya.host), then one maya.<module>.global.js per module type the spec needs, e.g. maya.hierarchy.global.js.
+Hosts: maya.host.thoughtspot(viz, spec) and maya.host.columns({schema, data}, spec) (ESM: import {thoughtspot, columns} from "mayacharts/host") build rows from a columnar result, match fields given as a RegExp or a case-insensitive name against the columns, unwrap {value()} cells, find or create #chart, and return the element. thoughtspot calls viz.events.emitRenderCompletedEvent() once the chart settles (also after an error).
+Core types (12, in maya.core.global.js and every ESM build): bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table.
+Module types, ESM import then classic script (load it after maya.core.global.js; maya.global.js has all of them):
+  import "mayacharts/hierarchy" / maya.hierarchy.global.js: treemap sunburst marimekko waffle
+  import "mayacharts/flow" / maya.flow.global.js: sankey chord
+  import "mayacharts/radial" / maya.radial.global.js: radial gauge
+  import "mayacharts/geo" / maya.geo.global.js: hexmap (50 US states, DC, PR)
+  import "mayacharts/stats" / maya.stats.global.js: boxplot funnel
+  import "mayacharts/weave" / maya.weave.global.js: weave
+  import "mayacharts/units" / maya.units.global.js: units
+  import "mayacharts/orbit" / maya.orbit.global.js: orbit
+  import "mayacharts/constellation" / maya.constellation.global.js: constellation
+Other entry points: "mayacharts" (render, renderShell, renderParts, validateSpec, MayaSpecError, version, types), "mayacharts/element" (registers <maya-chart>), "mayacharts/host", "mayacharts/themes" (18 ready-made theme token sets, ESM only, not in any global file), "mayacharts/theme.css" (the stylesheet), "mayacharts/schema.json", "mayacharts/global" (maya.global.js). Each release publishes an SRI hash for every dist/*.global.js; pin the version in the CDN URL.
 
 SPEC FIELDS:
 type: enum = required. bar line area scatter heatmap waterfall kpi dumbbell ridgeline beeswarm parallel table treemap sunburst sankey chord marimekko waffle radial gauge hexmap boxplot funnel weave units orbit constellation
@@ -14,42 +26,49 @@ data: Row[] = required. Row objects with field values.
 y: field | field[] = required. Value field; array adds measure toggle (funnel without x: one stage per field; kpi: one tile per field, shown together; gauge: one field only, no x, no series).
 x: field = "". Category field (scatter: numeric x; hexmap: state; boxplot: one box each; funnel: the stage, omitted when y lists the stages).
 xType: auto|category|time = auto. How x is spaced. "auto": time axis when every x is ISO 8601 date on line, area or vertical bar without sort/limit; else categories. "time" accepts epoch ms. Example: xType: "category"
-aggregate: sum|mean|count|min|max = sum. How rows sharing (category, series) combine. Not boxplot (it summarises raw rows).
+aggregate: sum|mean|count|min|max|{ratio: [field, field]} = sum. How rows sharing (category, series) combine. Not boxplot (it summarises raw rows). {ratio: [numerator, denominator]} sums both fields per group and divides, so a ratio measure (price = sales / units, margin, conversion) is right in every category, drill level, Other bucket and "mean" rule; a zero denominator gives null. y then only names the measure (titles, format) and need not be in the rows; other fields (y2, tooltip fields, a colorBy field) sum. Ratio: bar line area heatmap dumbbell table kpi gauge hexmap; not with stack, was or a y array (part-to-whole types need sizes that add up). Example: y: "price", aggregate: {ratio: ["sales", "units"]}
 sort: asc|desc = data order. Order categories by total across all series. bar line area heatmap dumbbell table radial waffle orbit.
 limit: positive integer = -. Keep top N categories; rest roll up into "Other". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in warnings. bar line area heatmap dumbbell table radial waffle orbit.
 series: field = null. Split into series (heatmap: row category; boxplot: boxes side by side; weave: one thread each, required; constellation: colours the stars by group). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation.
-path: field[] = []. Hierarchy outer to inner. treemap sunburst sankey chord; bar/line/area/dumbbell with drill.
+path: field[] = []. Hierarchy outer to inner. treemap sunburst sankey chord; bar line area dumbbell table marimekko with drill (replaces x); heatmap with drill (replaces series, the rows).
+depth: positive integer = 1 with drill, every level without. Levels drawn at once below the current branch, each parent holding its children under a name strip; a click drills into the parent under the pointer. treemap only. Example: depth: 2
+minAngle: whole degrees 0..360 = slices under 4 px across fold. Sunburst slices narrower than this fold into one grey "Other (n)" slice per ring (the largest sibling never folds; how many fold by default depends on the chart size). 0 folds nothing. sunburst only. Example: minAngle: 2
 size: field = null. Bubble or star area (sqrt scale). scatter constellation.
 name: field = null. Point identity and tooltip title (units: one dot per row). scatter beeswarm boxplot units.
 totals: string[] = []. x values drawn as running-total bars. waterfall only.
 stack: boolean|"percent" = false. Stack series instead of grouping. bar area only. "percent": each category's visible values as shares of its total (axis 0 to 100%, hidden series renormalise; negatives are shares of the summed magnitudes, below 0). Labels, tooltips and the table show the share, not the raw value. y is formatted "percent" unless format sets it. Numeric rules are shares (0.5 = 50%); "mean" is the mean share of the drawn segments. Example: stack: "percent"
 horizontal: boolean = false. Categories on left axis. bar dumbbell.
 y2: field = null. Second value field drawn as line on right axis (vertical bar). orbit: growth, which sets each planet's speed and direction. bar orbit.
-was: field = null. Previous value: a dashed ghost bar at the old value over each bar, keyed in the legend by the was title, "was {value}" in the tooltip (text.was), a data table column, and a description sentence naming the 2 largest relative moves (text.since: "Since Last week: North +12%, West -10%."). kpi: a second comparison (e.g. same period last year); gauge: a marker at the old value. bar kpi gauge; not with stack or a y array. Example: was: "lastWeek"
+was: field|{by: field, current?, previous?} = null. Previous value: a dashed ghost bar at the old value over each bar, keyed in the legend by the was title, "was {value}" in the tooltip (text.was), a data table column, and a description sentence naming the 2 largest relative moves (text.since: "Since Last week: North +12%, West -10%."). kpi: a second comparison (e.g. same period last year); gauge: a marker at the old value. Long data (one row per item and period): was: {by: "Year"}; the latest distinct by value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, rows sharing (x, period) combine by aggregate, and the ghosts are titled by the previous period formatted by format[by] (titles[by] overrides). current/previous pick periods, matched as strings. bar kpi gauge; not with stack or a y array; by is not x. Example: was: "lastWeek" or was: {by: "year"}
 forms: ("waffle"|"bars"|"swarm")[] = all three. Forms a units chart switches between, first shown (view.form picks another); with 2 or more a form control appears. units only. Example: forms: ["waffle", "swarm"]
 frame: field = null. Playback: one frame per distinct value (data order, matched as strings, null skipped, at most 200 or too-many-marks). Renders one frame, the last by default (view.frame picks another); the title becomes "{title}, {frame value}" (text.frameOf, value formatted by format[frame]); value axes span every frame so they hold still. The element adds a Play button. bar line area scatter dumbbell. Example: frame: "year"
-format: preset|template|{[field]: preset|template|Intl} = auto. Per field or one string for all measures. Template: "{value:percent} gross". Example: format: {margin: "{value:percent} gross"}
+format: preset|template|{[field]: preset|template|Intl} = auto. Per field or one string for all measures. Template: "{value:percent} gross". Intl options also take prefix and suffix text. Example: format: {margin: "{value:percent} gross", gap: {maximumFractionDigits: 1, signDisplay: "exceptZero", suffix: " pts"}, price: {style: "currency", currency: "USD", prefix: "~"}}
 titles: {[field]: string} = {}. Display names everywhere (axis, tooltip, legend, table).
 labels: boolean = null. Formatted value on marks. heatmap: true at ≥24 px. treemap and sunburst: names, marimekko: shares, on unless false.
-text: {[key]: string} = {}. Localised UI strings with {0} placeholders. Keys: noData other blank back reset showing drilledInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures crumbs positive negative above below near onTrack atRisk offTrack vs change pts target sortedBy ascending descending offBelow offAbove total shareOf fromTo reduced points point range density perCell mean rule play pause frameOf frame was since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3 median q1 min rows ofPrevious ofFirst.
+text: {[key]: string} = {}. Localised UI strings with {0} placeholders. Keys: noData other blank back reset showing drilledInto drillInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures crumbs positive negative above below near onTrack atRisk offTrack vs change pts target sortedBy ascending descending offBelow offAbove total shareOf fromTo reduced points point range density perCell mean rule log play pause frameOf frame was since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3 median q1 min rows ofPrevious ofFirst first last labelled.
 locale: BCP47 = en-US. Formatting locale.
 currency: ISO4217 = USD. Currency for "currency" preset.
-title: string = "". Visible heading and accessible name.
+title: string = "". Visible heading and accessible name. Data tokens fill in from the chart: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean} (y of the active measure per category, series combined; formatted by format); Only these exact names are replaced; any other brace text stays as written. Example: title: "{max.x} leads with {max.y}"
+subtitle: string = "". Second line under the title, smaller and muted; takes the same data tokens. Not in the bare render() SVG (renderShell and the element show it).
 description: string = "". Accessible description; auto-generated when omitted.
 yDomain: [min, max] = null. Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). kpi: the bullet scale; gauge: the dial range. Not with y array.
 xDomain: [min, max] = null. Fixed x domain. scatter only.
-rules: (number|"mean"|{y, label?})[] = []. Reference lines across the value axis, at most 4; label at most 40 characters. "mean" is the average of the visible values (stacked: of the category totals; stack "percent": of the segment shares); unlabelled it reads "Average". The line shows its formatted value after the label. Numbers widen the value axis; outside a yDomain they are not drawn. bar line area scatter. Example: rules: [{y: 100, label: "Target"}, "mean"]
-tooltip: boolean = true. Hover/keyboard tooltip.
-legend: boolean = true if series, waffle, hexmap, units (toggles groups). Legend; clicking toggles series. Line and area: dropped when direct end labels show, unless set to true explicitly.
+rules: (number|"mean"|{y, label?}|{x, label?}|{band: [lo, hi], label?}|{slope, intercept?, label?})[] = []. Reference lines, at most 4; label at most 40 characters. Numbers and "mean" run across the value axis; "mean" is the average of the visible values (stacked: of the category totals; stack "percent": of the segment shares; ratio aggregate: total numerator / total denominator); unlabelled it reads "Average". The line shows its formatted value after the label. Numbers widen the value axis; outside a yDomain they are not drawn. {x} draws a rule across the category axis at that category (time axis: that date; scatter: that x); an x matching nothing draws nothing. {band: [lo, hi]} shades a value range. Scatter only: {slope: k, intercept: b} draws y = k * x + b (intercept default 0); slope "mean" is sum(y) / sum(x). bar line area scatter dumbbell. Example: rules: [{y: 100, label: "Target"}, {x: "2025-06", label: "Launch"}, {band: [80, 100], label: "Target range"}]
+yScale: "log" = linear. Log value axis, ticks at powers of 10 (and 2, 5 when sparse). Every plotted value must be above 0 (non-positive-value). line scatter; a bar encodes its value as length from zero, so bar, waterfall and area refuse it. Example: yScale: "log"
+xScale: "log" = linear. Log x axis; every x must be above 0. scatter only.
+annotate: ("max"|"min"|"first"|"last"|{x, text})[] = []. Label those points of each visible series with their formatted value (scatter: max and min by y, first and last by x); {x, text} labels the mark at that x with the text (at most 40 characters). Labels collide like value labels and annotations win. bar line area scatter. Example: annotate: ["max", "last", {x: "CA", text: "Largest store"}]
+dash: string[] = []. Series values drawn dashed (line, the area outline, their legend swatch and end label). Needs series; each value must be a series value. line area. Example: dash: ["2024"]
+tooltip: boolean|{fields: field[]} = true. Hover/keyboard tooltip. {fields} adds those fields as rows (and data table columns), formatted by format; bar, line and area combine them by aggregate (numeric only), scatter shows the row's value. fields: bar line area scatter. Example: tooltip: {fields: ["pricePerUnit"]}
+legend: boolean|"top"|"bottom"|"right" = true if series, waffle, hexmap, units (toggles groups). Legend; clicking toggles series. A position places it (true is "top"). Line and area: dropped when direct end labels show, unless set explicitly.
 endLabels: boolean = true. line area. Name each series at its right end with its last value (2 to 8 visible series, no value labels, no y2; below 400 px the label is the value alone and the legend names the series). false brings back the legend.
-drill: boolean = false. Click/Enter zooms into branch of path; breadcrumb, Back, Escape pop. treemap sunburst sankey; bar line area dumbbell with path.
+drill: boolean = false. Click/Enter zooms into branch of path; breadcrumb, Back, Escape pop. With select too: click/Enter selects, double-click/Shift+Enter (or the pinned tooltip's "Drill into" button) drills. At the last level the drill gesture fires maya-drill-leaf {path}. Sankey: drill starts from the first column, then continues one column at a time through any non-final node (the drilled node stays as the first column). treemap sunburst sankey chord; bar line area dumbbell table heatmap marimekko with path.
 drillOut: boolean = true. With drill, a click on empty chart space goes back up one level.
-select: true|"multi" = off. Click/Enter/legend selects marks; Escape clears. Not with drill. bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
+select: true|"multi" = off. Click/Enter/legend selects marks; Escape clears. With drill: double-click/Shift+Enter drills. bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
 zoom: boolean = false. Drag to zoom. line area scatter. Reset, double-click, Escape restore.
 animate: boolean = true. Animate the first draw and every update (element only; off under reduced motion).
-colors: string[]|{[series]: color} = null. Max 8; slot assignment stable across updates.
+colors: string[]|{[name]: color} = null. Max 8. A map is keyed by series value; treemap and sunburst by path[0] value; sankey and chord by node name (links and inner levels inherit); waffle by category. Unmatched keys are ignored. Path types give every name a slot from all rows, so colours hold through drill; a host filter that drops names can move array slots, a map never moves. Example: colors: {Outerwear: "#d1543a"}
 colorBy: "sign"|{target?: n, warn?: n, better?: "higher"|"lower"}|{[y field]: {target?, warn?, better?}}|field = null. Tone by sign or target, or ramp by numeric field. Not with series. Target: at or past it is good, better "lower" flips it; types other than kpi and gauge need target and take no warn. kpi and gauge: any of target, warn, better; warn needs target and sits on the bad side (higher: warn < target; lower: warn > target); tones good, warn ("at risk"), bad, status words onTrack/atRisk/offTrack. kpi with a y array: also keyed by y field. Example: colorBy: {target: 100, warn: 80}. bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation.
-theme: {[token]: css} = {}. Theme token overrides (CSS values, allowlisted). Tokens: font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line (line width) gridDash (grid dash array) series1..series8. Ready-made sets: import { themes } from "mayacharts/themes".
+theme: {[token]: css} = {}. Theme token overrides (CSS values, allowlisted). Tokens: font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line (line width) gridDash (grid dash array) titleSize titleWeight axisSize (axis text) series1 series2 series3 series4 series5 series6 series7 series8. Ready-made sets: import { themes } from "mayacharts/themes".
 grid: boolean = true. Grid lines perpendicular to value axis.
 xAxis: boolean = true. Bottom axis.
 yAxis: boolean = true. Left axis.
@@ -87,17 +106,23 @@ EXAMPLES:
 28. Funnel, wide, stages are fields (import "mayacharts/stats"): {type: "funnel", y: ["visits", "signups", "paid"], data: [{visits: 12000, signups: 2900, paid: 1100}]}
 29. KPI tiles with thresholds, lower is better for churn: {type: "kpi", x: "month", y: ["revenue", "churn"], colorBy: {revenue: {target: 60000, warn: 50000}, churn: {better: "lower"}}, data: [{month: "Apr", revenue: 50700, churn: 0.031}, {month: "May", revenue: 54500, churn: 0.028}]}
 30. Gauge (import "mayacharts/radial"): {type: "gauge", y: "nps", yDomain: [0, 100], colorBy: {target: 60, warn: 40}, data: [{nps: 52}]}
+31. Bar against last period, long data: {type: "bar", x: "item", y: "sales", was: {by: "year"}, data: [{item: "Shirts", year: "2024", sales: 2350}, {item: "Shirts", year: "2025", sales: 2870}]}
+32. Log scatter with an average-ratio line and extra tooltip rows: {type: "scatter", x: "units", y: "sales", name: "state", xScale: "log", yScale: "log", rules: [{slope: "mean", label: "Average price"}], tooltip: {fields: ["price"]}, data: [{state: "CA", units: 900, sales: 45000, price: 50}, {state: "VT", units: 12, sales: 700, price: 58}]}
+33. This year against last year, last year dashed, max and last labelled: {type: "line", x: "month", y: "sales", series: "year", dash: ["2024"], annotate: ["max", "last"], data: [{month: "Jan", year: "2024", sales: 10}, {month: "Jan", year: "2025", sales: 12}]}
+34. Average price that stays right through a drill, drill and select together: {type: "bar", path: ["region", "state"], y: "price", aggregate: {ratio: ["sales", "units"]}, format: {price: "currency"}, drill: true, select: true, data: [{region: "West", state: "CA", sales: 70, units: 10}]}
+35. Nested treemap with fixed family colours: {type: "treemap", path: ["family", "type", "product"], y: "sales", drill: true, depth: 2, colors: {Outerwear: "#d1543a", Bottoms: "#2a7"}, data: [{family: "Outerwear", type: "Jackets", product: "Parka", sales: 120}]}
+36. Headline from the data, legend at the bottom, a launch rule: {type: "line", x: "month", y: "sales", series: "region", title: "{max.x} peaked at {max.y}", subtitle: "Sales by month, 2025", legend: "bottom", endLabels: false, rules: [{x: "2025-06", label: "Launch"}], data: [{month: "2025-05", region: "West", sales: 10}]}
 
 ERROR CODES:
 spec-not-object: spec must be a plain object
 missing-field: type/data/x (or path)/y is required but missing
-unknown-type: chart type not recognized (with module hint if needed)
+unknown-type: chart type not recognized (with module hint if needed: the ESM import and the maya.<module>.global.js file)
 data-not-array: data must be an array of row objects
 row-not-object: data[i] must be a plain object
 unknown-field: field-valued option names no field in data
 non-numeric-y: y field value not a finite number (null allowed)
 non-numeric-field: size/scatter x/colorBy field value not a finite number
-non-positive-value: treemap/sunburst/sankey/chord y value must be positive; funnel and ridgeline y value must not be negative
+non-positive-value: treemap/sunburst/sankey/chord y value must be positive; funnel and ridgeline y value must not be negative; a value on a log axis (yScale/xScale "log") must be above 0
 unknown-option: top-level spec key not recognized
 invalid-option: option value wrong type or invalid value
 option-unsupported: option not valid for this chart type or incompatible with another option
@@ -116,13 +141,31 @@ EVENTS AND STATE:
 Events (bubbles: true, composed: true):
   maya-select {selected: Sel[], target: (Sel & {value}) | null}
   maya-view {measure, drill, window, hidden, form, sortBy} (user actions only; window = zoom slice; sortBy = table header click sort)
+  maya-drill-leaf {path} (the drill gesture on a mark at the last level: path holds one raw value per path level, root first. Hosts drill through here, e.g. open the rows behind CA > Jackets. Sankey and chord fire it once drilled to their last branch)
   maya-error {code, path, message} (cancelable with preventDefault())
-  maya-render {} (signals host that render is complete)
+  maya-render {} (after each paint; entrance and update animations may still run)
+  maya-settled {error} (after the last animation of that paint, in the same task when nothing animates; also after maya-error, with the error). Hosts that snapshot (PDF export, screenshots, render-complete hooks) wait for this, or set animate: false.
+Promise: await el.settled (the current or next paint; resolves when settled, rejects with the MayaSpecError on maya-error).
 Two-way sync properties:
   el.view: {measure?, drill?, window?, hidden?, sortBy?, frame?, form?} - getter/setter (no events on set; {} resets; sortBy = [field, "asc"|"desc"]; frame = index into the distinct frame values, default the last, larger clamps; form = index into units forms, default 0, larger clamps)
   el.selected: Sel[] - getter/setter (no events on set)
 
+ELEMENT <maya-chart>:
+Source of the spec, first set wins: el.spec property (el.data = rows sets it too), then a <script type="application/json"> child, then the spec attribute (the only observed attribute). el.spec = undefined falls back to the child or attribute. Property sets in one task render once (microtask); a resize renders on the next frame.
+Properties: spec, data, view, selected, settled (read-only promise). Static: MayaChart.version. Method: el.toSVG() returns a standalone SVG string with the CSS custom properties resolved (dark mode exports correctly). No other public methods.
+Gestures: hover or touch shows the tooltip; click or Enter on a mark drills (drill) else selects (select); with both, click or Enter selects and double-click or Shift+Enter drills (a click selection commits about 250 ms later unless a double-click turns it into a drill; the pinned tooltip has a "Drill into" button, not shown at the deepest level). Space pins the tooltip. Arrow keys move between categories and series; Home and End jump on the measure toggle. Escape pops, in order: pinned tooltip, brush, selection, zoom window, one drill level. Table header Enter or Space sorts. With zoom: drag a brush, + or = halves the window, - doubles it, double-click or Escape resets. A legend click toggles a series.
+Shadow DOM: parts you can style from outside are the --maya-* custom properties only (set them on maya-chart or an ancestor). Inside, stable hooks for tests and hosts: .maya-title .maya-sub .maya-ctl .maya-legend .maya-crumbs .maya-reset .maya-box .maya-svg .maya-sr .maya-tip .maya-err .maya-play; marks carry data-maya="mark", data-key, data-c, data-s, data-tone.
+Custom properties: --maya-<token> for each theme token in kebab case (fgMuted is --maya-fg-muted, series3 is --maya-series-3), plus --maya-ease for transitions. Height: the chart fills its container's height; with no definite height it keeps a floor; under about 160 px it draws a compact frame. Colour scheme follows color-scheme on the page or on the element.
+SSR: renderShell(spec, {width, height, view, selected, nonce}) returns <maya-chart> with a Declarative Shadow DOM and a JSON child holding only the fields the chart uses, so it works without JS and hydrates when the element loads. render(spec, opts) returns a bare SVG (no legend, title or controls). renderParts(spec, opts) returns the pieces. Pure: no window or document, safe in Node, workers and edge runtimes.
+Security: every string is escaped; spec CSS values pass an allowlist (unsafe-css-value otherwise); no inline style attributes; no network requests. Trusted Types: create the policy before the element loads, trustedTypes.createPolicy("mayacharts", {createHTML: s => s}), and use CSP trusted-types mayacharts. Pass nonce to renderShell for a strict style-src.
+Known ceilings (caps and approximations, each with its reason): https://github.com/BbekShr/mayacharts/blob/main/NON-FEATURES.md. Notable: at most 10000 marks (bars roll up, other types reduce or throw too-many-marks), 8 colours, 4 rules, 12 tooltip rows, units 1500 dots, UTC dates.
+
 RULES FOR AGENTS:
 1. Never put functions in spec: the spec is JSON, serializable, diffable, and hashable. No callbacks, formatters, or data transforms.
-2. Unknown types need imports: if a module type ("treemap", "sankey", "hexmap", "boxplot", "funnel", "weave", "units", "orbit", "constellation"...) fails with unknown-type, add the import the error names, e.g. import "mayacharts/weave".
+2. Unknown types need imports: if a module type ("treemap", "sankey", "hexmap", "boxplot", "funnel", "weave", "units", "orbit", "constellation"...) fails with unknown-type, add the import the error names, e.g. import "mayacharts/weave", or without a bundler the script maya.weave.global.js after maya.core.global.js.
 3. Read errors.html when MayaSpecError thrown: every error links https://bbekshr.github.io/mayacharts/errors.html#<code> with cause and fixed example.
+4. Values are plain JSON. Pick the type from the question: compare categories bar, trend line or area, relationship scatter, composition treemap or waffle, flow sankey, status kpi or gauge, distribution boxplot or beeswarm. Map fields as x = category, y = value, series = split, whatever the orientation.
+5. Check the option table above for the chart type before adding an option: an option on a type that does not accept it throws option-unsupported. Do not invent keys; unknown-option names the closest valid one.
+6. For a ratio measure (average price, margin, conversion) use aggregate {ratio: [num, den]}, never a per-row ratio that gets summed or averaged.
+7. For a host that needs to know the chart is finished (screenshots, PDF, render-complete hooks) wait on maya-settled or await el.settled; for ThoughtSpot or any columnar result use maya.host.thoughtspot or maya.host.columns instead of hand-built rows.
+8. For drill-through into rows use drill with maya-drill-leaf; for cross-filtering use select with maya-select; add both on one chart and the gestures split (click selects, double-click or Shift+Enter drills).

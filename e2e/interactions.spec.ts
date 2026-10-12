@@ -824,3 +824,44 @@ test.describe("update", () => {
     expect(same).toEqual({ desc: true, group: true, focus: true });
   });
 });
+
+for (const type of ["line", "bar"])
+  test(`maya-settled fires after the last animation, and el.settled resolves (${type})`, async ({
+    page,
+  }) => {
+    await page.goto("gallery.html");
+    const r = await page.evaluate(async (type) => {
+      const el = document.createElement("maya-chart") as any;
+      el.style.height = "300px";
+      document.body.append(el);
+      const t0 = performance.now();
+      let renderAt = 0;
+      let left = -1;
+      let at = 0;
+      el.addEventListener("maya-render", () => (renderAt = performance.now() - t0));
+      el.addEventListener("maya-settled", () => {
+        at = performance.now() - t0;
+        left = el.shadowRoot
+          .getAnimations()
+          .filter(
+            (a: Animation) =>
+              a.effect?.getTiming().iterations !== Infinity && a.playState !== "finished",
+          ).length;
+      });
+      el.spec = {
+        type,
+        x: "m",
+        y: "v",
+        series: "s",
+        data: ["a", "b", "c", "d"].flatMap((m, i) => [
+          { m, s: "S", v: i + 1 },
+          { m, s: "T", v: 4 - i },
+        ]),
+      };
+      await el.settled;
+      return { renderAt, at, left };
+    }, type);
+    expect(r.left).toBe(0);
+    expect(r.at).toBeGreaterThan(r.renderAt + 300); // the entrance had time left at maya-render
+    expect(r.at).toBeLessThan(4000);
+  });

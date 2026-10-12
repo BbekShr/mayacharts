@@ -27,6 +27,7 @@ let zoom: [number, number] | undefined; // sunburst: span of the branch the patc
 let moved = false; // the patch moved, morphed, entered or exited a mark: labels and axes wait for it
 let plot = ""; // the outgoing svg's data-plot, read before sync copies the new one
 let zm: { P: Box; F: Box; out: boolean } | undefined;
+let drill = false; // this patch is a drill (opts.zoom): no stagger, marks seed from their centre, labels wait
 /** `r` in the frame `a` re-expressed in the frame `b`. */
 const map = (r: Box, a: Box, b: Box): Box => [
   b[0] + ((r[0] - a[0]) * b[2]) / a[2],
@@ -62,7 +63,7 @@ const SWEEP = "cubic-bezier(.65,0,.35,1)";
 const DATA: KeyframeAnimationOptions = { duration: 520, easing: EASE };
 const INTRO: KeyframeAnimationOptions = { duration: 760, easing: EASE };
 const UI: KeyframeAnimationOptions = { duration: 220, easing: EASE };
-const ZOOM: KeyframeAnimationOptions = { duration: 640, easing: SWEEP };
+export const ZOOM: KeyframeAnimationOptions = { duration: 640, easing: SWEEP };
 const SWEEP_MS = 1500; // orbit entrance
 const WIPE = 1100; // ms, line and area first draw
 const MAX = 1500; // ponytail: no animation above this many marks
@@ -188,7 +189,7 @@ function sync(o: Element, w: Element): void {
 function seed(e: Element, g: Box, origin?: Box): Box {
   if (origin) return origin;
   const [x, y, w, h] = g;
-  if (e.localName === "circle") return [x + w / 2, y + h / 2, 0, 0];
+  if (e.localName === "circle" || drill) return [x + w / 2, y + h / 2, 0, 0];
   const neg = e.hasAttribute("data-neg");
   // A stack grows as one column: every segment starts at the baseline (the outer edge of its
   // column's non-negative segments), not at its own edge.
@@ -315,6 +316,9 @@ function crossfade(
 // the locale's separators, prefix and suffix stay exactly as the formatter wrote them.
 const NUM = /\d(?:[\d.,'\u2019\s\u00a0\u202f]*\d)?/;
 const counts = new WeakMap<Element, number>(); // latest count per element; older loops stop
+const busy = new WeakMap<Node, number>(); // per chart: performance.now() when its last count-up or text swap ends
+const hold = (e: Element, t: number, r = e.getRootNode()) =>
+  busy.set(r, Math.max(busy.get(r) ?? 0, t));
 function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   const to = e.textContent ?? "";
   const m = NUM.exec(to);
@@ -346,6 +350,7 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   if (f && (fh.replace(SG, "") !== base || from.slice(f.index + f[0].length) !== tail)) {
     // Another unit (K to M) would contradict the number: swap once the mark has landed.
     e.textContent = from;
+    hold(e, performance.now() + Number(o.duration));
     setTimeout(() => e.textContent === from && (e.textContent = to), Number(o.duration));
     return;
   }
@@ -362,6 +367,7 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
     t0 = performance.now() + Number(o.delay ?? 0);
   const id = (counts.get(e) ?? 0) + 1;
   counts.set(e, id);
+  hold(e, t0 + ms);
   let cur = shape(A);
   e.textContent = cur;
   const step = (now: number) => {
@@ -627,7 +633,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   // Sunburst: labels ghost and fade in late (as on a drill), never follow rings that sweep in angle.
   const sun = !!w.querySelector('circle[data-depth="0"]');
   const z = !!(zoom || zm || moved || sun);
-  const late = { ...UI, delay: Number((zoom || zm ? ZOOM : DATA).duration) * 0.75 };
+  const late = { ...UI, delay: Number((zoom || drill ? ZOOM : DATA).duration) * 0.75 };
   const ghosts: Element[] = [];
   const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
   for (const c of [...w.children]) {
@@ -638,7 +644,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     const p = pool.get(id(c));
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
-    else if (p && !zoom && !zm && !sun && /^(labels|axis-[xy])$/.test(id(c))) {
+    else if (p && !zoom && !drill && !sun && /^(labels|axis-[xy])$/.test(id(c))) {
       follow(p, c, id(c) === "labels" ? late : { ...UI, delay: 160 }, id(c) === "labels");
       out.push(p);
     } else {
@@ -812,7 +818,8 @@ export function patch(
     }
   } else {
     instant = !!opts.instant;
-    lag = wm.querySelector("[data-w]") ? 0 : spread(wm); // weave threads must meet their dots
+    drill = !!opts.zoom; // a drill does not stagger; weave threads must meet their dots
+    lag = drill || wm.querySelector("[data-w]") ? 0 : spread(wm);
     zm = undefined;
     const z = opts.zoom;
     if (z) {
@@ -842,6 +849,27 @@ export function patch(
     ui(o, w, om, wm);
     instant = false;
     zm = undefined;
+    drill = false;
   }
   opts.after?.(box.firstElementChild!);
 }
+
+const live = (root: ShadowRoot) =>
+  root
+    .getAnimations?.()
+    .filter(
+      (a) => a.playState !== "finished" && a.effect?.getComputedTiming().iterations !== Infinity,
+    ) ?? []; // the orbit's endless rotation is not motion to wait for
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const wait = (root: ShadowRoot): Promise<unknown> | undefined => {
+  const l = live(root),
+    t = (busy.get(root) ?? 0) - performance.now();
+  if (l.length || t > 0)
+    return Promise.allSettled([...l.map((a) => a.finished), sleep(t)]).then(() => wait(root));
+};
+
+/** Undefined when nothing animates; else resolves when every finite animation and count-up has ended (5 s cap). */
+export const idle = (root: ShadowRoot) => {
+  const w = wait(root);
+  return w && Promise.race([w, sleep(5000)]);
+};

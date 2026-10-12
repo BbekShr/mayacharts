@@ -81,6 +81,14 @@ const decimals = (s: number) => {
   return 8;
 };
 
+/** Tick precision (#65): keep the field's style, notation and affixes; the fraction digits come from the step. */
+const ticked = (o: Record<string, unknown>, step: number) => {
+  const n = o.notation === "compact" ? 2 : decimals(step * (o.style === "percent" ? 100 : 1));
+  const m =
+    o.style === "currency" && o.notation !== "compact" ? (step >= 1 ? 0 : Math.max(n, 2)) : null;
+  return { ...o, minimumFractionDigits: m ?? 0, maximumFractionDigits: m ?? n };
+};
+
 const DATE_PRESETS: Record<string, Intl.DateTimeFormatOptions> = {
   date: { dateStyle: "medium" },
   month: { month: "short", year: "numeric" },
@@ -112,7 +120,11 @@ export function formatter(
     [prefix, suffix] = [String(p), String(x)];
     if (isDateOpts(opts))
       date = dtf(locale, { timeZone: "UTC", ...opts } as Intl.DateTimeFormatOptions);
-    else num = nf(locale, opts as Intl.NumberFormatOptions);
+    else
+      num = nf(
+        locale,
+        (step === undefined ? opts : ticked(opts, step)) as Intl.NumberFormatOptions,
+      );
   }
   if (!date && !num) {
     const o: Intl.NumberFormatOptions =

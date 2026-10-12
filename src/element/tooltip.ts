@@ -2,6 +2,7 @@ import { formatter } from "../core/format.ts";
 import { t as str } from "../core/strings.ts";
 import { resolve } from "../core/validate.ts";
 import type { ChartSpec, View } from "../core/types.ts";
+import { branchOf } from "./drill.ts";
 import { listen } from "./listen.ts";
 
 const a = (e: Element, k: string) => e.getAttribute(k) ?? "";
@@ -55,6 +56,7 @@ export function tooltip(
   let cur: Element | undefined,
     open = false,
     pin = false,
+    coarse = false,
     clamped = false,
     kb = false,
     timer: ReturnType<typeof setTimeout> | undefined,
@@ -338,27 +340,27 @@ export function tooltip(
         if (!tab) row.append(h("span", f, { "data-v": "" }));
         const tn = tone(k);
         if (tn) row.append(h("span", tn));
-        const more = tab
-          ? f.split("\n").map((p) => {
-              // "label\tvalue[\tz]": z draws a bar either side of the average (constellation);
-              // an empty label is a note line under the rows.
-              const [l, v, z] = p.split("\t"),
-                d = h("div", l ? "" : v, l ? {} : { "data-note": "" });
-              if (!l) return d;
-              d.append(h("span", l));
-              if (z) {
-                // The star's group colour, through the same [data-s] rule as the swatch.
-                const b = h("span", "", {
-                  "data-z": "",
-                  ...(s ? { "data-s": a(k, "data-s") } : {}),
-                });
-                b.style.setProperty("--z", z);
-                d.append(b);
-              }
-              d.append(h("span", v, { "data-v": "" }));
-              return d;
-            })
-          : [];
+        const more = [tab ? f : "", a(k, "data-more")].filter(Boolean).flatMap((t) =>
+          t.split("\n").map((p) => {
+            // "label\tvalue[\tz]": z draws a bar either side of the average (constellation);
+            // an empty label is a note line under the rows.
+            const [l, v, z] = p.split("\t"),
+              d = h("div", l ? "" : v, l ? {} : { "data-note": "" });
+            if (!l) return d;
+            d.append(h("span", l));
+            if (z) {
+              // The star's group colour, through the same [data-s] rule as the swatch.
+              const b = h("span", "", {
+                "data-z": "",
+                ...(s ? { "data-s": a(k, "data-s") } : {}),
+              });
+              b.style.setProperty("--z", z);
+              d.append(b);
+            }
+            d.append(h("span", v, { "data-v": "" }));
+            return d;
+          }),
+        );
         return row.childElementCount ? [row, ...more] : more;
       }),
       ...(all.length > rows.length ? [h("div", `+${all.length - rows.length}`)] : []),
@@ -376,6 +378,22 @@ export function tooltip(
           { "data-v": "" },
         ),
       );
+    // Select and drill together: click selects, so a pinned or touched tooltip carries the drill
+    // gesture for pointers that cannot double-click. Not on hover, and not where nothing is deeper.
+    const dk = a(m, "data-key"),
+      depth = (host as { view?: View }).view?.drill?.length ?? 0,
+      to = sp && branchOf(dk, depth, sp.type),
+      b =
+        (pin || coarse) &&
+        sp?.select &&
+        sp.drill &&
+        to != null &&
+        depth < (sp.path?.length ?? 0) - 1 &&
+        m.matches("[data-maya=mark]:not([data-other])") &&
+        tip.appendChild(
+          h("button", str(sp, "drillInto", to), { type: "button", "data-drill": dk }),
+        );
+    tip.style.pointerEvents = b ? "auto" : ""; // only the button takes the pointer
     cross(m);
     shade(m);
     // The probe's containing block is the host's padding box (:host is position:relative).
@@ -479,7 +497,7 @@ export function tooltip(
   const down = (e: Event) => {
     kb = false;
     const p = e as PointerEvent;
-    down0 = p.pointerType === "mouse" ? undefined : [p.clientX, p.clientY];
+    down0 = (coarse = p.pointerType != "mouse") ? [p.clientX, p.clientY] : undefined;
   };
   const up = (e: Event) => {
     const p = e as PointerEvent;
@@ -491,7 +509,7 @@ export function tooltip(
   };
   const outside = (e: Event) => {
     const p = e.composedPath();
-    if (!p.includes(box) || !markOf(p[0], e)) hide();
+    if (!p.includes(tip) && (!p.includes(box) || !markOf(p[0], e))) hide();
   };
   const leave = (e: Event) => (e as PointerEvent).pointerType === "mouse" && hide();
   let ring: Element[] = [];

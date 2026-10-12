@@ -138,19 +138,56 @@
  *   title and the 2 largest relative moves (y - was) / |was| (zero or null was skipped, ties in
  *   data order), e.g. "Since Last week: North +12%, West -10%.". The element may treat a ghost's
  *   geometry as its bar's previous state on first paint.
+ *   Long form (was: { by, current?, previous? }): resolve() calls shape.ts pivotWas, which keeps
+ *   two periods and writes the previous period's value under the key `by`, so ResolvedSpec.was =
+ *   by and marks read the wide form unchanged; titles default `by` to the previous period
+ *   formatted by format[by] (ResolvedSpec.wasBy keeps the field and the explicit periods).
+ *
+ * Contract #69-#72 (where it differs, this paragraph wins over the older text below):
+ *   Ratio: ResolvedSpec.ratio = [num, den] with aggregate "sum": wherever rows of y combine
+ *   (shape groups, Other, drill levels, kpi, gauge, table, "mean" rules, title tokens) the value
+ *   is sum(num) / sum(den), null when sum(den) is 0; rows read num and den, not y. renderShell's
+ *   JSON child projects both fields. Modules use ctx.agg("sum") on each and divide.
+ *   Drill + select: click/Enter select; double-click, Shift+Enter and the
+ *   pinned tooltip's text.drillInto button drill. The drill gesture on a mark that cannot drill
+ *   further dispatches maya-drill-leaf { path } (bubbles, composed, not cancelable): drilled
+ *   values then the mark's own level values. Flows: only once drilled to their last branch.
+ *   Drill types: table and marimekko take x from path, heatmap takes series (rows) from it.
+ *   Flows (sankey, chord) drill to path.length - 1 values and draw full.slice(drilled - 1): the
+ *   drilled node stays as the first column; a click drills into a node of the next undrilled
+ *   column. ResolvedSpec.slots numbers names first-seen over all rows, before drill (a flow
+ *   numbers its second column first, then its first, then the rest, so a sankey's palette starts
+ *   where it always did). Path types colour by it: data-s = slot % 8
+ *   of the path[0] value (treemap, sunburst) or of the coloured node (flows); a colors map sets
+ *   --maya-series-(slot % 8 + 1) per key found in slots. treemap depth: levels drawn below the
+ *   branch, parents carry their name strip; sunburst minAngle: fold threshold in degrees.
+ *   Title tokens resolve in render.ts before the title is used (a11y.ts resolveTokens): only the
+ *   exact names are replaced, other brace text stays as written. theme.axisSize scales layout's
+ *   label-width estimate (px; em and rem as 16 px).
+ *   Rules group: an { x } rule is <line data-xrule> plus its <text>; a band is <rect data-band>
+ *   (drawn first, under the lines) plus its <text>; a slope adds intercept b. ctx.label ann
+ *   "note" writes data-ann="note" for an annotate { x, text } item. Title tokens are resolved in
+ *   a11y.ts titleText (aria-label and visible title both); Parts.title = .maya-title then
+ *   <p class="maya-sub"> (subtitle; bare render() leaves it out). Parts.legendAt goes on
+ *   .maya as data-legend="bottom|right" (absent for top); slot order never changes, CSS moves
+ *   it. Theme titleSize, titleWeight, axisSize are --maya-title-size, --maya-title-weight,
+ *   --maya-axis-size. The current crumb is a non-button span with aria-current="page".
  *
  * Outputs
  *   render(spec, opts)      standalone `<svg class="maya-root">` with an embedded <style>.
  *                           Works as a file, in <img>, or rasterized by the hosted API.
  *   renderShell(spec, opts) `<maya-chart>` with Declarative Shadow DOM + JSON spec child.
  *                           The JSON child is the spec with rows projected to referenced
- *                           fields only (x y series y2 was frame size name path colorBy,
- *                           format and titles keys). `opts.nonce` lands on the shell's <style>.
+ *                           fields only (x y series y2 was (or was.by) frame size name path
+ *                           colorBy, tooltip.fields, format and titles keys). `opts.nonce` lands on the shell's <style>.
  *   renderParts(spec, opts) the pieces (svg without <style>, legend, controls, crumbs, table,
  *                           title, override style + vars, warnings). `table` is a getter that
  *                           builds the data table on first read (the element reads it idle).
  *   The element renders in a microtask after a property set, and in the next frame after a
- *   resize or while it waits for its JSON spec child.
+ *   resize or while it waits for its JSON spec child. Each paint dispatches maya-render (or
+ *   maya-error); maya-settled { error: null } follows once that paint's animations finish (same
+ *   task when nothing animates) and maya-settled { error } follows a maya-error. el.settled is a
+ *   promise for the current or next paint: it resolves on settle, rejects with the MayaSpecError.
  *
  * Shadow content (identical from renderShell and the element, built by `shellInner`).
  * Slot order is fixed:
@@ -176,7 +213,9 @@
  *        data-plot="x y w h" data-n="categories" [data-xd="lo hi" data-yd="lo hi" for
  *        linear-x types instead of data-n] [data-dir="h" when horizontal]
  *        [data-drill when a click can drill one level further] [data-pt when the body holds a
- *        [data-maya=line] path: its point circles are hidden until active]>
+ *        [data-maya=line] path: its point circles are hidden until active]
+ *        [data-log="x", "y" or "x y" for log axes: data-xd/data-yd stay in data units, so the
+ *        element inverts pixels through log10 (zoom.ts)]>
  *     <desc id="maya-d">  (named by aria-label; standalone render() adds a <title>, no ids)
  *     <g data-maya="grid">     lines perpendicular to the value axis
  *     <g data-maya="axis-y">   tick labels (text-anchor end), axis title when titles has it
@@ -184,14 +223,17 @@
  *                              (either axis) carries data-key = key(category), the category part of
  *                              the mark keys, so a rank swap moves names with bars. Value ticks: none.
  *     <g data-maya="marks">    only [data-key] children, one tag per key
- *     <g data-maya="rules">    only with spec.rules, after marks: per drawn rule a <line>
+ *     <g data-maya="rules">    only with spec.rules, after marks: bands (<rect data-band>) first, then per drawn rule a <line>
  *                              across the value axis, then its <text text-anchor=end> (label and value, or the
  *                              value alone) above the line at the plot end (vertical line: beside it at the top). Labels dodge nothing, not
  *                              value labels either. "mean" averages the visible plotted values
  *                              (stacked: the category totals; Other left out). Numeric rules widen
  *                              the value domain; a yDomain wins and hides rules outside it. No
  *                              data-key: animate.ts diffs only marks, so the group crossfades with
- *                              the other non-mark groups.
+ *                              the other non-mark groups. A scatter { slope } rule is not in
+ *                              this group: its <line data-slope> (key \0slope~i, like the data-past
+ *                              ghosts, no data-maya) sits in the marks group and its label in the
+ *                              labels group.
  *     <g data-maya="labels">   value labels (text), from ctx.label and the marks' own m.labels. A label
  *                              carries data-key = the data-key of the mark it labels (bar and
  *                              waterfall incl. y2 dots, heatmap, dumbbell, scatter, beeswarm, ridgeline
@@ -199,6 +241,9 @@
  *                              its path's key (l~SERIES, l~ROW). Unkeyed (the element falls back to
  *                              index): kpi, table, parallel axis ticks and titles, rule labels, the
  *                              hierarchy, flow, radial and geo modules, density-bin plots, leaders.
+ *                              A spec.annotate label (ctx.label's ann argument) carries
+ *                              data-ann="max|min|first|last" and its point's data-key; it goes
+ *                              through the same collision queue, before plain value labels.
  *     <g data-maya="cross">    crosshair (line/area), moved via CSSOM transform
  *     <g data-maya="hits">     invisible enlarged targets (see below)
  *   Empty: no row holds a number in any measure or y2. Grid/axes/groups
@@ -213,7 +258,10 @@
  *                       none), data-f (formatted value). data-neg when value < 0.
  *                       Optional: data-tone="good|warn|bad|zero", data-q (ramp step), data-other
  *                       (limit roll-up), data-depth (breadcrumb button), data-selected (written by
- *                       the element on selected marks).
+ *                       the element on selected marks), data-more (spec.tooltip.fields: one
+ *                       "title\tvalue" line per field, joined by "\n", the scatter data-f grammar;
+ *                       on the hit too; the tooltip adds them as rows under the mark's row),
+ *                       data-dash (path marks and points of a spec.dash series).
  *   [data-maya=labels] text and band tick text in axis-x/axis-y: data-key only (see the groups above)
  *                       bar + y2: one `path[data-maya=line]` plus a point circle mark per
  *                       non-null category, data-s = series count % 8, data-series = the
@@ -256,6 +304,8 @@
  *                       Ramp/tone legends are non-button <div data-maya="ramp|tone">.
  *                       spec.was on bar (unless legend:false) appends <div class="maya-legend">
  *                       <span data-past><i></i>WAS TITLE</span></div>, the ghosts' key.
+ *                       A spec.dash series' button (and its end label) carries data-dash.
+ *                       No legend at all (series, was key, tone, ramp) when the chart is empty.
  *   The tooltip reads its content from these attributes; the element never sees rows.
  *
  * Key grammar (svg.ts key(...parts)): each part encodeURIComponent'ed with `~` -> %7E,
@@ -269,7 +319,8 @@
  * CSS hooks theme.ts styles (interaction modules never touch theme.ts):
  *   .maya-ctl [role=radio][aria-checked]  .maya-play  .maya-crumbs  .maya-reset  .maya-err
  *   [data-maya=brush]  [data-maya=cross] (scatter: guide lines + text pills, --x/--y)
- *   [data-maya=link]  [data-depth]  [data-selected]  [data-past] (was ghosts)
+ *   [data-maya=link]  [data-depth]  [data-selected]  [data-past] (was ghosts)  [data-dash] (dashed
+ *   series: path, legend swatch, end label)  [data-ann] (annotate labels)  line[data-slope]
  *   [data-maya=rules] line|text  svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   Theme-only hooks (set by a mark or module, styled in theme.ts, never read by the element):
  *   data-ink data-hm data-nm data-ring data-arc data-disc data-ridge data-kpi data-polar data-tint
@@ -342,18 +393,19 @@
  *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
  *   Direct end labels: a mark with `ends(spec, shaped, fmt)` returning [name, last value] pairs
  *   (line and area: 2 to 8 series, all visible, no value labels, no y2) gets a right gutter of
- *   endGutter() px (30% of the width at most; below 400 px just the widest value, the labels show the
- *   value alone and the legend stays to name the series). It draws <text data-end data-s>
+ *   endGutter() px (25% of the width at most; below 400 px just the widest value, the labels show the
+ *   value alone and the legend stays to name the series). A long name is ellipsized, the value always
+ *   stays; when a name would be dropped (under 56 px left beside the value) the legend stays too. It draws <text data-end data-s>
  *   (and a <line data-lead> when nudged more than 3 px) into the labels group, and the legend is
  *   dropped unless the spec sets legend:true explicitly (then both show). A hidden series or
- *   labels:true keep the legend and draw no end labels; endLabels:false turns them off.
+ *   labels:true keep the legend and draw no end labels; endLabels:false and a legend placement string turn them off.
  *
  * Legend and title are HTML, not SVG (free wrapping and font metrics). render() — the
  * bare SVG — therefore has no legend; renderShell() is the full-fidelity output.
  */
-import { dataTable, describe, titleText } from "./a11y.ts";
+import { dataTable, describe, resolveTokens, titleText } from "./a11y.ts";
 import { formatter } from "./format.ts";
-import { endGutter, frame } from "./layout.ts";
+import { endFits, endGutter, frame } from "./layout.ts";
 import { bar } from "./marks/bar.ts";
 import { beeswarm } from "./marks/beeswarm.ts";
 import { dumbbell } from "./marks/dumbbell.ts";
@@ -365,10 +417,11 @@ import { area, line } from "./marks/line.ts";
 import { points, scatter } from "./marks/scatter.ts";
 import { table } from "./marks/table.ts";
 import { MODULES } from "./registry.ts";
-import { agg, shape } from "./shape.ts";
+import { agg, feed, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
 import { el, esc, OTHER, r, tw } from "./svg.ts";
+import { toTime } from "./ticks.ts";
 import {
   ALL_Y,
   fail,
@@ -380,6 +433,7 @@ import {
 } from "./validate.ts";
 import type {
   Aggregate,
+  Annotate,
   Axis,
   ChartSpec,
   LabelPlace,
@@ -391,6 +445,7 @@ import type {
   ResolvedSpec,
   Row,
   Shaped,
+  TimeScale,
   Tone,
 } from "./types.ts";
 
@@ -411,7 +466,9 @@ const CORE: Readonly<Record<string, Mark>> = {
 
 /** Numeric rules widen the value axis (a target above the data stays visible); a yDomain still wins. */
 function withRules(s: ResolvedSpec, axes: [Axis, Axis, Axis?]): [Axis, Axis, Axis?] {
-  const n = s.rules.flatMap((u) => (u.y === "mean" ? [] : [u.y]));
+  const n = [...s.rules.map((u) => u.y), ...s.bands.flatMap((b) => [b.lo, b.hi])].filter(
+    (v) => v !== "mean",
+  );
   if (!n.length) return axes;
   return axes.map((a) =>
     a?.kind === "linear" && a.field === s.y
@@ -426,6 +483,14 @@ function withRules(s: ResolvedSpec, axes: [Axis, Axis, Axis?]): [Axis, Axis, Axi
  * Scatter averages y over the points it draws. NaN when nothing is plotted.
  */
 function average(s: ResolvedSpec, shaped: Shaped): number {
+  if (s.ratio) {
+    // Total numerator over total denominator of the rows of the visible series.
+    const on = new Set(shaped.visible.map((j) => shaped.series[j]));
+    const a = agg("sum", true);
+    for (const row of s.data)
+      if (s.series === null || on.has(String(row[s.series]))) feed(a, row, s.y, s.ratio);
+    return a.value() ?? NaN;
+  }
   const by = new Map<number, number>();
   const add = (k: number, v: number) => by.set(k, (by.get(k) ?? 0) + v);
   if (s.type === "scatter") points(s, shaped).forEach((p, i) => add(i, p.y));
@@ -460,7 +525,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const H = opts?.height ?? 320;
   // ponytail: plot width is only known after shape (tick labels set the margins); W - 56 is the
   // usual plot of a 4-digit y axis, and the point budget needs no more than that.
-  const shaped = shape(s0, { ...opts?.view, plotWidth: W - 56 });
+  const shaped = shape(s0, { ...opts?.view, plotWidth: W - 56, height: H });
   // Time axis without a format for x: the preset follows the smallest gap between categories.
   let s = s0;
   if (shaped.time && !s0.format.has(s0.x)) {
@@ -506,6 +571,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       `${fr[1].length} frames exceed the limit of ${MAX_FRAMES}.`,
       "Aggregate or bin the frame field (year instead of day) so it has fewer distinct values.",
     );
+  // Data tokens in the title and subtitle (a11y.ts resolveTokens), so the accessible name matches.
+  const tok = (v: string | null) => v && resolveTokens(v, s, shaped, fmt, () => average(s, shaped));
+  s = { ...s, title: tok(s.title), subtitle: tok(s.subtitle) };
   const fv = fr?.[1].length ? fmt(fr[0], fr[1][fr[2]]) : null;
   if (fv !== null) s = { ...s, title: t(s, "frameOf", titleText(s), fv) };
 
@@ -548,11 +616,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   // Value labels: estimated boxes, a later label that overlaps a placed one (or leaves the svg) is dropped.
   const boxes: number[][] = [];
-  let labels = "";
-  const label = (x: number, y: number, text: string, place: LabelPlace, k?: string) => {
-    const w = tw(text);
-    const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
-    const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
+  // Claim the 14 px box at (l, tp) when it is inside the svg and free.
+  const fits = (l: number, tp: number, w: number) => {
     // ponytail: O(n^2) overlap scan; MAX_MARKS bounds it.
     if (
       l < 0 ||
@@ -563,6 +628,21 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     )
       return false;
     boxes.push([l, tp, l + w, tp + 14]);
+    return true;
+  };
+  let labels = "";
+  const label = (
+    x: number,
+    y: number,
+    text: string,
+    place: LabelPlace,
+    k?: string,
+    ann?: Annotate,
+  ) => {
+    const w = tw(text);
+    const l = place === "start" ? x : place === "end" ? x - w : x - w / 2;
+    const tp = place === "above" ? y - 16 : place === "below" ? y + 2 : y - 7;
+    if (!fits(l, tp, w)) return false;
     labels += el(
       "text",
       {
@@ -572,6 +652,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         "dominant-baseline": place === "above" || place === "below" ? null : "middle",
         "data-in": place === "center", // sits on a mark: no halo
         "data-key": k,
+        "data-ann": ann,
       },
       esc(text),
     );
@@ -579,12 +660,17 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   };
 
   // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
-  const ends = spec.endLabels === false ? null : mark.ends?.(s, shaped, fmt);
+  const ends =
+    spec.endLabels === false || typeof spec.legend === "string"
+      ? null
+      : mark.ends?.(s, shaped, fmt);
   const gutter = ends?.length
     ? endGutter(ends, W) ||
       (mark.ends === line.ends ? Math.max(...ends.map((e) => tw(e[1]))) + 14 : 0)
     : 0;
-  const empty = !s.data.some((r) => [...s.measures, s.y2].some((m) => typeof r[m!] === "number"));
+  const empty = !s.data.some((r) =>
+    [...(s.ratio ?? s.measures), s.y2].some((m) => typeof r[m!] === "number"),
+  );
   const ax = mark.axes && !empty ? mark.axes(s, shaped) : null;
   // frame: each value axis spans every frame, so it holds still during playback.
   // ponytail: shapes every frame on every render (frames x rows); cache per spec if it shows.
@@ -657,10 +743,47 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
     // Reference lines, drawn over the marks.
-    // ponytail: value axis only, at most 4, no bands or x rules; labels dodge nothing (NON-FEATURES).
+    // ponytail: at most 4, labels dodge nothing (NON-FEATURES). Bands first (under the lines), then
+    // value lines, then category (x) lines.
     let rules = "";
+    // Band and x-rule labels claim their box after the marks' labels, and step down a row when it is taken.
+    const late: (() => string)[] = [];
+    const tag = (text: string, ax: number, tp: number, end: boolean) =>
+      late.push(() => {
+        const w = tw(text);
+        for (let k = 0; k < 4; k++)
+          if (fits(end ? ax - w : ax, tp + 14 * k, w))
+            return el(
+              "text",
+              { x: r(ax), y: r(tp + 14 * k + 10), "text-anchor": end ? "end" : "start" },
+              esc(text),
+            );
+        return "";
+      });
     const v = s.horizontal ? f?.x : f?.y;
-    if (v && !("bandwidth" in v))
+    const cat = s.horizontal ? f?.y : f?.x;
+    const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
+    // A line across the plot at p on the x axis (vertical) or the y axis, and the box from p to q.
+    const seg = (p: number, onX: boolean) =>
+      onX
+        ? { x1: r(p), x2: r(p), y1: y0, y2: r(plot.y + plot.h) }
+        : { x1: r(plot.x), x2: x0, y1: r(p), y2: r(p) };
+    const say = (name: string | null, val: string) => (said += ` ${name ?? t(s, "rule")}: ${val}.`);
+    if (v && !("bandwidth" in v)) {
+      s.bands.forEach((u) => {
+        const [lo, hi] = [Math.max(u.lo, v.domain[0]), Math.min(u.hi, v.domain[1])];
+        if (!(lo <= hi)) return;
+        const [p, q] = [v.of(lo), v.of(hi)].sort((a, b) => a - b) as [number, number];
+        say(u.label, t(s, "fromTo", fmt(s.y, u.lo), fmt(s.y, u.hi)));
+        rules += el(
+          "rect",
+          s.horizontal
+            ? { "data-band": true, x: r(p), y: y0, width: r(q - p), height: r(plot.h) }
+            : { "data-band": true, x: r(plot.x), y: r(p), width: r(plot.w), height: r(q - p) },
+        );
+        if (u.label)
+          tag(u.label, s.horizontal ? q - 4 : plot.x + plot.w, s.horizontal ? plot.y : p + 2, true);
+      });
       s.rules.forEach((u) => {
         const at = u.y === "mean" ? average(s, shaped) : u.y;
         // outside a yDomain, or NaN (no data)
@@ -668,16 +791,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         const p = r(v.of(at));
         const name = u.label ?? (u.y === "mean" ? t(s, "mean") : null);
         const val = fmt(s.y, at);
-        const text = name ? `${name} ${val}` : val;
-        said += ` ${name ?? t(s, "rule")}: ${val}.`;
-        const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
+        say(name, val);
         rules +=
-          el(
-            "line",
-            s.horizontal
-              ? { x1: p, x2: p, y1: y0, y2: r(plot.y + plot.h) }
-              : { x1: r(plot.x), x2: x0, y1: p, y2: p },
-          ) +
+          el("line", seg(p, s.horizontal)) +
           // above the line at its end; beside the line at the top for a vertical one
           el(
             "text",
@@ -686,10 +802,44 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
               y: s.horizontal ? y0 + 10 : p - 4,
               "text-anchor": "end",
             },
-            esc(text),
+            esc(name ? `${name} ${val}` : val),
           );
       });
+    }
+    // x rules: a band's centre (or a time or number's place) on the category axis.
+    if (cat)
+      s.xRules.forEach((u) => {
+        const ms = toTime(u.x);
+        const p =
+          "bandwidth" in cat
+            ? cat.domain.includes(String(u.x))
+              ? cat.at(cat.domain.indexOf(String(u.x))) + cat.bandwidth / 2
+              : "kind" in cat && ms !== null
+                ? (cat as TimeScale).of(ms)
+                : NaN
+            : typeof u.x === "number" && (u.x - cat.domain[0]) * (u.x - cat.domain[1]) <= 0
+              ? cat.of(u.x)
+              : NaN;
+        const [lo, hi] = s.horizontal ? [plot.y, plot.y + plot.h] : [plot.x, plot.x + plot.w];
+        if (!(p >= lo && p <= hi)) return;
+        const at = r(p);
+        const val = fmt(s.x, u.x);
+        const text = u.label ? `${u.label} ${val}` : val;
+        say(u.label, val);
+        rules += el("line", { "data-xrule": true, ...seg(at, !s.horizontal) });
+        // Beside the line at the top; ends at the line instead of passing the plot's right edge.
+        const over = !s.horizontal && at + 4 + tw(text) > plot.x + plot.w;
+        if (s.horizontal) tag(text, plot.x + plot.w, at - 14, true);
+        else tag(text, over ? at - 4 : at + 4, plot.y, over);
+      });
+    // Slope rules and annotations join the description, like bands and x rules.
+    for (const u of s.slopes)
+      say(u.label, `y = ${u.k === "mean" ? t(s, "mean") : u.k}x${u.b ? ` + ${u.b}` : ""}`);
+    if (s.annotate.length)
+      said += ` ${t(s, "labelled", s.annotate.map((k) => t(s, k)).join(", "))}.`;
+    for (const n of s.notes) said += ` ${n.text}: ${fmt(s.x, n.x)}.`;
     const m = mark.draw(ctx);
+    rules += late.map((f) => f()).join("");
     // Scatter and modules draw per row/node. Counted in place: a split would copy every mark.
     let nm = 0;
     for (let i = 0; (i = m.marks.indexOf(' data-maya="mark"', i) + 1);) nm++;
@@ -735,7 +885,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     // ponytail: slot = the series' first-appearance index, so reordered rows move colours.
     // Waffle slots follow categories (data-s = category index), so its keys map against those.
     for (const [k, c] of s.colors as ReadonlyMap<string, string>) {
-      const j = (s.type === "waffle" ? shaped.categories : shaped.series).indexOf(k);
+      // Path types: the slot of the name among all rows (stable through drill and filters).
+      const j = s.slots.size
+        ? (s.slots.get(k) ?? -1)
+        : (s.type === "waffle" ? shaped.categories : shaped.series).indexOf(k);
       if (j >= 0) vars.push([`--maya-series-${(j % 8) + 1}`, c]);
     }
   for (const k in s.theme) vars.push([`--maya-${kebab(k)}`, s.theme[k as keyof typeof s.theme]!]);
@@ -768,7 +921,13 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       // ponytail: over 500 marks the svg is data-still: hover dim and glide are instant (theme.ts, NON-FEATURES.md).
       "data-still": body.split('data-maya="mark"').length > 501 || null,
       // A click can drill further (pointer cursor on marks).
-      "data-drill": (s.drill && s.path.length > (s.type === "sankey" ? 2 : 1)) || null,
+      // A flow shows one level more than it has left to drill: its drilled node is its first column.
+      "data-drill":
+        (s.drill &&
+          (s.type === "sankey" || s.type === "chord"
+            ? s.drilled.length < s.path.length + Math.max(0, s.drilled.length - 1) - 1
+            : s.path.length > 1)) ||
+        null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
       (sheet === null ? "" : el("title", {}, esc(titleText(s)))) +
@@ -785,7 +944,11 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
 
   let legend = "";
   let tbl: string | undefined;
-  if ((s.series !== null || s.y2 !== null) && s.legend && (!gutter || W < 400 || spec.legend))
+  if (
+    (s.series !== null || s.y2 !== null) &&
+    s.legend &&
+    (!gutter || W < 400 || spec.legend || ends!.some((e) => !endFits(e, gutter)))
+  )
     legend =
       `<div class="maya-legend" data-maya="legend">` +
       (s.series === null && s.y2 !== null
@@ -799,6 +962,9 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
               type: "button",
               "data-si": i,
               "data-s": i % 8,
+              "data-dash": s.dash.has(k),
+              // With a dashed series the solid ones get a line key too, so keys differ only solid vs dashed.
+              "data-line": !!s.dash.size && !s.dash.has(k),
               "data-key": k,
               "aria-pressed": String(shaped.visible.includes(i)),
             },
@@ -839,7 +1005,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     legend += `<div class="maya-legend"><span data-past><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
   return {
     svg,
-    legend,
+    // Nothing to draw: the empty state stands alone (#64).
+    legend: empty ? "" : legend,
     controls:
       (s.measures.length > 1 && !ALL_Y.includes(s.type)
         ? radios(
@@ -866,18 +1033,22 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           s.drilled
             .map(
               (v, i) =>
-                `<span aria-hidden="true">›</span><button type="button" data-depth="${i + 1}"${i === s.drilled.length - 1 ? ' aria-current="page"' : ""}>${esc(String(v))}</button>`,
+                `<span aria-hidden="true">›</span>` +
+                (i === s.drilled.length - 1
+                  ? `<span aria-current="page">${esc(String(v))}</span>`
+                  : `<button type="button" data-depth="${i + 1}">${esc(String(v))}</button>`),
             )
             .join("") +
           `</nav>`
-        : s.drill
-          ? `<div class="maya-crumbs" aria-hidden="true"></div>` // holds the row: no shift on drill
-          : "",
+        : "", // root: nothing reserved (#66.3)
     // Built on first read: the element inserts the table when the browser is idle.
     get table() {
       return (tbl ??= s.table ? dataTable(s, shaped, fmt, toneText, markTable) : "");
     },
-    title: s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`,
+    title:
+      (s.title === null ? "" : `<div class="maya-title">${esc(s.title)}</div>`) +
+      (s.subtitle === null ? "" : `<p class="maya-sub">${esc(s.subtitle)}</p>`),
+    ...(s.legendAt === "top" ? {} : { legendAt: s.legendAt }),
     style,
     vars,
     warnings: [
@@ -913,7 +1084,7 @@ export function shellInner(parts: Parts, css: string, nonce?: string): string {
   // Raw text, so esc would corrupt quoted fonts; the allowlist already bars `<`, escaped anyway.
   const sheet = css + (parts.style ? `.maya{${parts.style.replace(/</g, "\\3c ")}}` : "");
   return (
-    `${sheet ? `<style${n}>${sheet}</style>` : ""}<div class="maya">${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
+    `${sheet ? `<style${n}>${sheet}</style>` : ""}<div class="maya"${parts.legendAt ? ` data-legend="${parts.legendAt}"` : ""}>${parts.title}${parts.controls}${parts.legend}${parts.crumbs}` +
     `<div class="maya-box">${parts.svg}</div>${parts.table}` +
     `<div class="maya-sr" data-maya="live" aria-live="polite"></div>` +
     `<div class="maya-probe" data-maya="probe"></div><div class="maya-tip" popover="manual" role="tooltip"></div></div>`
@@ -928,7 +1099,9 @@ function project(spec: ChartSpec): ChartSpec {
     ...(typeof spec.y === "string" ? [spec.y] : spec.y),
     spec.series,
     spec.y2,
-    spec.was,
+    ...(typeof spec.aggregate === "object" ? spec.aggregate.ratio : []),
+    typeof spec.was === "object" ? spec.was.by : spec.was,
+    ...(typeof spec.tooltip === "object" ? spec.tooltip.fields : []),
     spec.frame,
     spec.size,
     spec.name,

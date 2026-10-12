@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { render, renderParts, renderShell, version } from "../src/index.ts";
 import { nf } from "../src/core/format.ts";
 import { shape, thin } from "../src/core/shape.ts";
-import { resolve, MayaSpecError } from "../src/core/validate.ts";
+import { resolve, MayaSpecError, validateSpec } from "../src/core/validate.ts";
 import "../src/flow.ts";
 import "../src/hierarchy.ts";
 import type { ChartSpec } from "../src/core/types.ts";
@@ -102,14 +102,11 @@ describe("renderShell overrides", () => {
 });
 
 describe("chord drill and css allowlist", () => {
-  it("chord rejects drill", () => {
+  it("chord accepts drill (#70: drill into one group's flows)", () => {
     const data = [{ a: "x", b: "y", v: 1 }];
-    try {
-      render({ type: "chord", path: ["a", "b"], y: "v", drill: true, data } as ChartSpec);
-      expect.unreachable();
-    } catch (e) {
-      expect((e as MayaSpecError).code).toBe("option-unsupported");
-    }
+    expect(() =>
+      validateSpec({ type: "chord", path: ["a", "b"], y: "v", drill: true, data }),
+    ).not.toThrow();
   });
   it("comment sequences are not safe css", () => {
     for (const accent of ["red/*", "red*/"])

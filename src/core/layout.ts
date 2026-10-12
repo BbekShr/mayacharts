@@ -1,7 +1,7 @@
 import { dtf } from "./format.ts";
 import { bandScale, linearScale, timeScale } from "./scale.ts";
 import { el, esc, key, r, tw as base } from "./svg.ts";
-import { niceTicks, timeTicks } from "./ticks.ts";
+import { logTicks, niceTicks, timeTicks } from "./ticks.ts";
 import type { Axis, Box, LinearScale, ResolvedSpec, Scale, TimeScale } from "./types.ts";
 
 const WIDE =
@@ -13,8 +13,6 @@ export const tw = (s: string) => {
   for (const c of s) if (WIDE.test(c)) k++;
   return base(s, 0) + k * 4.8;
 };
-const w = (s: string) => tw(s) + 8;
-const maxW = (a: readonly string[]) => a.reduce((m, s) => Math.max(m, w(s)), 0);
 
 /** Cut `s` to `max` px (by code point), ending in an ellipsis. */
 export function clip(s: string, max: number): string {
@@ -31,12 +29,17 @@ export function clip(s: string, max: number): string {
 
 /**
  * Right gutter (px) for direct end labels of `[name, value]` pairs; 0 when the chart is too narrow
- * (< 400). Name and value when that fits in 30% of the width, else the name alone (clipped at 30%).
+ * (< 400). The widest "name value" up to 25% of the width: a longer name is ellipsized by the mark.
  */
 export function endGutter(p: readonly [string, string][], W: number): number {
-  const m = (k: number) => Math.max(...p.map((a) => tw(a.slice(0, k).join(" ")))) + 14;
-  return W < 400 ? 0 : Math.min(W * 0.3, m(2) <= W * 0.3 ? m(2) : m(1));
+  return W < 400 ? 0 : Math.min(W * 0.25, Math.max(...p.map((a) => tw(a.join(" ")))) + 14);
 }
+
+/** Whether an end label keeps its name in a gutter (line.ts: whole, or ellipsized into at least 56 px). */
+export const endFits = ([n, v]: readonly [string, string], gutter: number) => {
+  const room = gutter - 12 - tw(v) - 4;
+  return tw(n) <= room || room >= 56;
+};
 
 export interface Frame {
   plot: Box;
@@ -55,21 +58,36 @@ export interface Frame {
 
 type Fmt = (field: string, v: unknown, step?: number) => string;
 
-/** Ticks of a linear axis; an explicit domain (yDomain, xDomain) replaces the nice one. */
-function ticks(spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "linear" }>, fmt: Fmt) {
+/** spec.xScale / yScale "log" (or the mark's own Axis.log) for a linear axis. */
+const isLog = (spec: ResolvedSpec, a: Extract<NonNullable<Axis>, { kind: "linear" }>) =>
+  a.log === true ||
+  (a.field === spec.y ? spec.yScale : a.field === spec.x ? spec.xScale : "linear") === "log";
+
+/**
+ * Ticks of a linear axis; an explicit domain (yDomain, xDomain) replaces the nice one. A log axis
+ * has ticks at powers of 10 (and 2, 5 under 3 decades), over a domain of whole decades.
+ */
+function ticks(
+  spec: ResolvedSpec,
+  a: Extract<NonNullable<Axis>, { kind: "linear" }>,
+  fmt: Fmt,
+  target = 5,
+) {
+  const log = isLog(spec, a);
   const fixed = (a.field === spec.y ? spec.yDomain : spec.xDomain) ?? null;
   const [d0, d1] = fixed ?? a.domain;
   // A reversed yDomain ([hi, lo]) keeps its order for the scale; ticks are computed low to high.
   const [lo, hi] = d0 > d1 ? [d1, d0] : [d0, d1];
-  const tk = niceTicks(lo, hi);
+  const tk = log ? logTicks(lo, hi) : niceTicks(lo, hi, target);
   const values = fixed ? tk.values.filter((v) => v >= lo && v <= hi) : tk.values;
   // A fixed domain end at the top of the axis (rank 1 on [15, 1]) gets its tick when it is not
   // within half a step of a neighbour.
-  if (fixed && !values.some((v) => Math.abs(v - d1) < tk.step / 2)) {
+  if (fixed && !log && !values.some((v) => Math.abs(v - d1) < tk.step / 2)) {
     values.push(d1);
     values.sort((a, b) => a - b);
   }
   return {
+    log,
     domain: fixed ?? tk.domain,
     values,
     labels: values.map((v) => fmt(a.field, v, tk.step)),
@@ -137,25 +155,32 @@ export function frame(
   fmt: Fmt,
 ): Frame {
   const { width: W, height: H } = size;
+  // Label widths scale with theme.axisSize (px, or em/rem as 16 px); other units keep the 12 px estimate.
+  const px = /^(\d*\.?\d+)(px|r?em)?$/.exec(spec.theme.axisSize ?? "");
+  const k = px ? (+px[1]! * (px[2]?.endsWith("em") ? 16 : 1)) / 12 : 1;
+  const w = (s: string) => tw(s) * k + 8;
+  const maxW = (a: readonly string[]) => a.reduce((m, s) => Math.max(m, w(s)), 0);
+  // Compact frame (#63): under about 160 px of plot height, no axis titles and fewer value ticks.
+  const compact = H - 10 - (spec.xAxis && bx ? 24 : 8) < 160;
   const bt = bx && bx.kind === "linear" ? ticks(spec, bx, fmt) : null;
   // The plot is not known yet: size the first tick set from the full width (only its end labels matter here).
   const tt =
     bx && bx.kind === "time" ? timeAxis(spec, bx, fmt, Math.max(2, Math.round(W / 80))) : null;
   const edge = bt ?? tt; // tick labels centred on the plot's ends need half their width as margin
-  const lt = ly && ly.kind === "linear" ? ticks(spec, ly, fmt) : null;
+  const lt = ly && ly.kind === "linear" ? ticks(spec, ly, fmt, compact ? 3 : 5) : null;
   // Band labels go through the field's format (month presets on x); left ones are cut at 40%.
   const bLab =
     bx && !bt && !tt ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c)) : [];
   const lFull = ly && !lt ? (ly.domain as readonly string[]).map((c) => fmt(ly.field, c)) : [];
   const lLab = lt ? lt.labels : lFull.map((c) => clip(c, W * 0.4 - 8));
-  const rt = ry && ry.kind === "linear" ? ticks(spec, ry, fmt) : null;
-  const rTitle = rt && ry && spec.titles.get(ry.field);
-  const yTitle = ly && spec.titles.get(ly.field);
-  const xTitle = bx && spec.titles.get(bx.field);
+  const rt = ry && ry.kind === "linear" ? ticks(spec, ry, fmt, compact ? 3 : 5) : null;
+  const rTitle = !compact && rt && ry && spec.titles.get(ry.field);
+  const yTitle = !compact && ly && spec.titles.get(ly.field);
+  const xTitle = !compact && bx && spec.titles.get(bx.field);
   // Without a left axis, still leave room for half of the first bottom tick label.
   const left = Math.max(
     (spec.yAxis && ly ? maxW(lLab) + 10 : 8) + (yTitle ? 18 : 0),
-    edge ? tw(edge.labels[0] ?? "") / 2 + 2 : 0,
+    edge ? (tw(edge.labels[0] ?? "") * k) / 2 + 2 : 0,
   );
   const bottom = (spec.xAxis && bx ? 24 : 8) + (xTitle ? 18 : 0);
   const plot = {
@@ -168,7 +193,7 @@ export function frame(
         left -
         (rt
           ? (spec.yAxis ? maxW(rt.labels) + 4 : 8) + (rTitle ? 18 : 0)
-          : Math.max(12, size.gutter ?? 0, edge ? tw(edge.labels.at(-1) ?? "") / 2 + 2 : 0)),
+          : Math.max(12, size.gutter ?? 0, edge ? (tw(edge.labels.at(-1) ?? "") * k) / 2 + 2 : 0)),
     ),
     h: Math.max(1, H - 10 - bottom),
   };
@@ -177,15 +202,15 @@ export function frame(
       ? bandScale(bx.domain, [plot.x, plot.x + plot.w])
       : bx.kind === "time"
         ? timeScale(bx.domain, bx.t, [plot.x, plot.x + plot.w])
-        : linearScale(bt!.domain, [plot.x, plot.x + plot.w])
+        : linearScale(bt!.domain, [plot.x, plot.x + plot.w], bt!.log)
     : null;
   const y: Scale | null = ly
     ? ly.kind === "band"
       ? bandScale(ly.domain, [plot.y, plot.y + plot.h])
-      : linearScale(lt!.domain, [plot.y + plot.h, plot.y])
+      : linearScale(lt!.domain, [plot.y + plot.h, plot.y], lt!.log)
     : null;
 
-  const y2 = rt ? linearScale(rt.domain, [plot.y + plot.h, plot.y]) : null;
+  const y2 = rt ? linearScale(rt.domain, [plot.y + plot.h, plot.y], rt.log) : null;
 
   // Grid is perpendicular to each linear axis: one linear = value axis; two = both; none = none.
   let grid = "";
@@ -368,6 +393,7 @@ export function frame(
       "data-t": tt ? true : null,
       "data-xd": both ? bt.domain.join(" ") : null,
       "data-yd": both ? lt.domain.join(" ") : null,
+      "data-log": [bt?.log && "x", lt?.log && "y"].filter(Boolean).join(" ") || null,
     },
   };
 }

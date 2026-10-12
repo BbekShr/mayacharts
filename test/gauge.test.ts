@@ -145,3 +145,18 @@ describe("gauge", () => {
     expect(labels(svg(base()))).not.toContain('stroke="var(--maya-fg-muted)"');
   });
 });
+
+describe("gauge ratio", () => {
+  it("is sum(num) / sum(den)", () => {
+    const s = svg({
+      type: "gauge",
+      y: "r",
+      aggregate: { ratio: ["a", "b"] },
+      data: [
+        { a: 10, b: 4 },
+        { a: 20, b: 6 },
+      ],
+    } as ChartSpec);
+    expect(s).toContain(">3<");
+  });
+});

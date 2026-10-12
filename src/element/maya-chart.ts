@@ -14,7 +14,7 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Intro, patch, type PatchOptions } from "./animate.ts";
+import { type Intro, idle, patch, type PatchOptions, ZOOM } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import { listen } from "./listen.ts";
@@ -51,11 +51,37 @@ export class MayaChart extends HTMLElement {
   #unlisten: (() => void)[] = [];
   #tip: Tooltip | undefined;
   #zoom: PatchOptions["zoom"];
+  #fl = false; // a drill changed the breadcrumb row: glide the plot
   #vars = new Set<string>();
   #err = "";
   #drawn = false;
   #intro = 0; // performance.now() of the animated first draw
   #idle: (() => void) | undefined; // cancels the queued data-table insert
+
+  #gen = 0; // the latest paint; an older one's settle is dropped
+  #end: ((e: Error | null) => void) | undefined; // settles #sp; undefined once settled
+  #sp = this.#arm();
+  #arm(): Promise<void> {
+    const p = new Promise<void>((ok, no) => (this.#end = (e) => (e ? no(e) : ok())));
+    p.catch(() => {}); // a rejection nobody reads is not unhandled
+    return p;
+  }
+
+  /** Resolves when the current or next render has finished animating; rejects with its error. */
+  get settled(): Promise<void> {
+    return this.#sp;
+  }
+
+  #settle(error: Error | null, wait?: Promise<unknown>): void {
+    const n = ++this.#gen;
+    const fin = () => {
+      if (n !== this.#gen) return;
+      this.#emit("maya-settled", { error });
+      this.#end?.(error);
+      this.#end = undefined;
+    };
+    wait ? wait.then(fin) : fin();
+  }
 
   get spec(): ChartSpec | undefined {
     return this.#prop ?? this.#json ?? this.#attr;
@@ -153,8 +179,8 @@ export class MayaChart extends HTMLElement {
     };
     this.#ix = {
       measure: measure.mount(host),
+      select: select.mount(host), // before drill: a double click restores the selection, then drills
       drill: drill.mount(host),
-      select: select.mount(host),
       zoom: zoom.mount(host),
       sort: sort.mount(host),
       play: play.mount(host),
@@ -250,8 +276,9 @@ export class MayaChart extends HTMLElement {
     // Drilling zooms into the branch entered, or out of the branch left. Flows keep their
     // nodes in place across a drill (stable keys), so they morph instead.
     const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
-    const flow = this.spec?.type === "sankey";
-    if (flow) d1.length - d0.length && this.#tip?.hide();
+    this.#fl = d1.length !== d0.length;
+    // A table row is a thin bar, not a container: its rows swap by key instead of zooming.
+    if (/^(sankey|table)$/.test(this.spec?.type ?? "")) this.#fl && this.#tip?.hide();
     else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
     else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
     this.#state = next;
@@ -266,8 +293,8 @@ export class MayaChart extends HTMLElement {
 
   /*
    * One keydown dispatcher. Escape priority: pinned tooltip (tooltip.ts, T2) -> brush in
-   * progress -> selection -> zoom window -> drill pop. Enter: drill, else select, on the
-   * keyboard-active mark. + or = halves the zoom window about the active mark, - doubles it. T2 routes the tooltip's own Escape/Enter/Space through here.
+   * progress -> selection -> zoom window -> drill pop. Enter: select, else drill (drill first without
+   * select; Shift+Enter drills), on the keyboard-active mark. + or = halves the zoom window about the active mark, - doubles it. T2 routes the tooltip's own Escape/Enter/Space through here.
    */
   #key = (e: Event) => {
     const ix = this.#ix;
@@ -283,7 +310,10 @@ export class MayaChart extends HTMLElement {
       done = !!(
         m &&
         (e.target as Element).closest(".maya-svg") &&
-        (ix.drill.enter?.(m) || ix.select.enter?.(m))
+        // Enter selects, else drills; Shift+Enter drills, else selects.
+        ((e as KeyboardEvent).shiftKey
+          ? ix.drill.enter?.(m) || ix.select.enter?.(m)
+          : ix.select.enter?.(m) || ix.drill.enter?.(m))
       );
     } else if (k === "+" || k === "=" || k === "-") {
       const { ctrlKey, metaKey, altKey } = e as KeyboardEvent;
@@ -312,6 +342,7 @@ export class MayaChart extends HTMLElement {
   /** Renders in a microtask (property sets in one task batch); ResizeObserver delivery waits a frame. */
   #schedule(raf = false): void {
     if (!this.isConnected || (raf ? this.#raf : this.#q)) return;
+    if (!raf && !this.#end) this.#sp = this.#arm();
     const run = () => {
       if (raf) this.#raf = false;
       else this.#q = false;
@@ -373,6 +404,9 @@ export class MayaChart extends HTMLElement {
     };
     // Before #slots: a focused legend button or crumb may be replaced.
     const focus = this.#focusId();
+    // A drill adds or removes the breadcrumb row, which shifts the plot: measure to glide it.
+    const top0 = this.#fl ? box.getBoundingClientRect().top : NaN;
+    this.#fl = false;
     let parts;
     try {
       if (!this.#drawn && !box.querySelector("svg"))
@@ -405,7 +439,7 @@ export class MayaChart extends HTMLElement {
       if (d && !this.#emit("maya-error", d, true)) {
         box.replaceChildren();
         this.#drawn = false;
-        return;
+        return this.#settle(e as Error);
       }
       const pre = document.createElement("pre");
       pre.className = "maya-err"; // styled by theme.ts; never an inline style
@@ -414,7 +448,7 @@ export class MayaChart extends HTMLElement {
       this.#drawn = false;
       if (pre.textContent !== this.#err) console.error(e);
       this.#err = pre.textContent;
-      return;
+      return this.#settle(e as Error);
     }
     this.#err = "";
     const maya = root.querySelector<HTMLElement>(".maya")!;
@@ -440,6 +474,7 @@ export class MayaChart extends HTMLElement {
     // Nothing animates on resize: geometry must track the container immediately.
     const still = spec.animate === false || matchMedia("(prefers-reduced-motion: reduce)").matches;
     maya.toggleAttribute("data-still", spec.animate === false); // CSS transitions off too
+    maya.setAttribute("data-legend", parts.legendAt ?? ""); // absent: top
     // A microtask render beside a pending resize frame is not the resize's own: it animates.
     const resized = this.#resized && fromRaf;
     if (fromRaf) this.#resized = false;
@@ -455,11 +490,14 @@ export class MayaChart extends HTMLElement {
       instant: resized,
     });
     this.#zoom = undefined;
+    const dy = top0 - box.getBoundingClientRect().top; // NaN: not measured
+    if (dy && !still) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
     if (intro && !still) this.#intro = performance.now();
     this.#drawn = true;
     this.#restore(focus);
     for (const h of Object.values(this.#ix ?? {})) h.painted?.();
     this.#emit("maya-render", {});
+    this.#settle(null, idle(root));
   }
 
   /** Slots in shell order; each is replaced only when its markup changed. True if any was. */
@@ -507,7 +545,7 @@ const legend = (e: Event) => {
 };
 
 const SLOTS: [keyof Parts, string][] = [
-  ["title", ".maya-title"],
+  ["title", ".maya-title,.maya-sub"],
   ["controls", ".maya-ctl,.maya-play"],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],

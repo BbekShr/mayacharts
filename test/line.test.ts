@@ -131,7 +131,7 @@ describe("area", () => {
         "marks",
       ),
     ).toMatchInlineSnapshot(
-      `"<path data-maya="area" data-key="a~N" data-s="0" d="M73.4 62.8L141 49.6L141 76L73.4 76Z"/><path data-maya="area" data-key="a~S" data-s="1" d="M73.4 43L141 10L141 49.6L73.4 62.8Z"/><path data-maya="line" data-key="l~N" data-s="0" pathLength="1" d="M73.4 62.8L141 49.6"/><path data-maya="line" data-key="l~S" data-s="1" pathLength="1" d="M73.4 43L141 10"/><circle data-maya="mark" data-key="N~Jan" data-c="0" data-s="0" data-x="Jan" data-series="N" data-y="2" data-f="2" r="3" cx="73.4" cy="62.8"/><circle data-maya="mark" data-key="N~Feb" data-c="1" data-s="0" data-x="Feb" data-series="N" data-y="4" data-f="4" r="3" cx="141" cy="49.6"/><circle data-maya="mark" data-key="S~Jan" data-c="0" data-s="1" data-x="Jan" data-series="S" data-y="3" data-f="3" r="3" cx="73.4" cy="43"/><circle data-maya="mark" data-key="S~Feb" data-c="1" data-s="1" data-x="Feb" data-series="S" data-y="6" data-f="6" r="3" cx="141" cy="10"/>"`,
+      `"<path data-maya="area" data-key="a~N" data-s="0" d="M68 62.8L139.2 49.6L139.2 76L68 76Z"/><path data-maya="area" data-key="a~S" data-s="1" d="M68 43L139.2 10L139.2 49.6L68 62.8Z"/><path data-maya="line" data-key="l~N" data-s="0" pathLength="1" d="M68 62.8L139.2 49.6"/><path data-maya="line" data-key="l~S" data-s="1" pathLength="1" d="M68 43L139.2 10"/><circle data-maya="mark" data-key="N~Jan" data-c="0" data-s="0" data-x="Jan" data-series="N" data-y="2" data-f="2" r="3" cx="68" cy="62.8"/><circle data-maya="mark" data-key="N~Feb" data-c="1" data-s="0" data-x="Feb" data-series="N" data-y="4" data-f="4" r="3" cx="139.2" cy="49.6"/><circle data-maya="mark" data-key="S~Jan" data-c="0" data-s="1" data-x="Jan" data-series="S" data-y="3" data-f="3" r="3" cx="68" cy="43"/><circle data-maya="mark" data-key="S~Feb" data-c="1" data-s="1" data-x="Feb" data-series="S" data-y="6" data-f="6" r="3" cx="139.2" cy="10"/>"`,
     );
   });
 });
@@ -189,9 +189,11 @@ describe("line end labels", () => {
     expect(both.legend).toContain("maya-legend");
     expect(both.svg).toContain("data-end");
   });
-  it("drop the value when the name alone fits the gutter", () => {
+  it("keep the value when a long name is ellipsized to fit the gutter", () => {
     const long = data.map((d) => ({ ...d, s: d.s.repeat(18) }));
-    expect(ends({ ...spec, data: long }, 500).every((t) => !/\d/.test(t))).toBe(true);
+    const e = ends({ ...spec, data: long }, 500);
+    expect(e.every((t) => t.endsWith("31") || t.endsWith("30"))).toBe(true);
+    expect(e.some((t) => t.includes("…"))).toBe(true);
   });
 });
 
@@ -285,5 +287,60 @@ describe("thinned time series", () => {
     } as ChartSpec).svg;
     const d = svg.match(/<path data-maya="line"[^>]* d="([^"]*)"/)![1]!;
     expect(d.match(/M/g)).toHaveLength(3);
+  });
+});
+
+describe("dash, annotate, tooltip fields and log", () => {
+  const data = ["now", "ago"].flatMap((s, k) =>
+    [3, 9, 4, 7].map((v, i) => ({ m: `m${i}`, s, v: v + k, t: v * 2 })),
+  );
+  const spec: ChartSpec = { type: "line", x: "m", y: "v", series: "s", data };
+  const lone: ChartSpec = { type: "line", x: "m", y: "v", data: data.slice(0, 4) };
+  const svg = (c: ChartSpec) => renderParts(c).svg;
+  it("dashes a series: path with a pixel dash in pathLength units, points, end label", () => {
+    const s = svg({ ...spec, dash: ["ago"] });
+    expect(s).toMatch(
+      /data-key="l~ago" data-s="1" data-dash="" pathLength="1" stroke-dasharray="[\d.e-]+ [\d.e-]+"/,
+    );
+    expect(s.match(/data-dash/g)!.length).toBe(4 + 1 + 1); // points, path, end label
+    expect(svg(spec)).not.toContain("data-dash");
+  });
+  it("annotates the max, min, first and last of a series once each", () => {
+    const t = (c: Partial<ChartSpec>) =>
+      [...svg({ ...lone, ...c } as ChartSpec).matchAll(/<text[^>]*>([\d.]+)<\/text>/g)]
+        .map((m) => m[1])
+        .filter((v) => !["0", "2.5", "5", "7.5", "10"].includes(v!));
+    expect(t({ annotate: ["max", "min", "first", "last"], endLabels: false })).toEqual([
+      "9",
+      "3",
+      "7",
+    ]); // first is the min
+    expect(t({ annotate: ["last"] })).toEqual(["7"]); // the end label says it, no second one
+    expect(t({ annotate: ["last"], endLabels: false })).toEqual(["7"]);
+    expect(t({ endLabels: false })).toEqual([]);
+  });
+  it("writes data-more from tooltip fields", () => {
+    expect(svg({ ...spec, tooltip: { fields: ["t"] } })).toMatch(/data-more="t\t6"/);
+  });
+  it("log scale: the axis starts at the smallest value, never 0", () => {
+    const s = svg({ ...lone, yScale: "log" });
+    expect(s).toContain('data-log="y"');
+    expect(s).not.toMatch(/data-yd="0 /);
+  });
+});
+
+describe("annotate notes", () => {
+  it("label the mark at x with the note text", () => {
+    const data = [10, 20, 12, 40].map((v, i) => ({ m: i + 1, k: "a", v }));
+    const svg = renderParts({
+      type: "line",
+      x: "m",
+      y: "v",
+      series: "k",
+      legend: true,
+      annotate: [{ x: 2, text: "Launch" }],
+      data,
+    }).svg;
+    expect(svg).toMatch(/data-ann="note"[^>]*>Launch</);
   });
 });

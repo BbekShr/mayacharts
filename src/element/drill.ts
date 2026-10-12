@@ -19,14 +19,14 @@ const same = (a: readonly string[] = [], b: readonly string[] = []) =>
 const withDrill = (s: State, drill: readonly string[]): State =>
   same(s.view.drill, drill) ? s : { view: { ...s.view, drill }, selected: [] };
 
-/** A sankey needs two levels left to draw; everything else one. (chord has no drill.) */
-const FLOW = ["sankey"];
+/** Flow keys are `n~level~name` / `k~level~source~target`, level in the whole path. */
+const FLOW = ["sankey", "chord"];
 
 export const reduce = (s: State, e: DrillEvent): State => {
   const cur = s.view.drill ?? [];
   if (e.type === "pop") return withDrill(s, cur.slice(0, Math.max(0, e.depth)));
   if (e.type === "drill") {
-    const n = (e.spec?.path?.length ?? 0) - (FLOW.includes(e.spec?.type ?? "") ? 2 : 1);
+    const n = (e.spec?.path?.length ?? 0) - 1;
     return e.spec?.drill && cur.length < n ? withDrill(s, [...cur, e.value]) : s;
   }
   if (e.type !== "spec" || !cur.length) return s;
@@ -61,7 +61,7 @@ const decode = (raw: string) => {
  * Flow keys are `n~level~name` and `k~level~source~target` (level in the whole path); only
  * the outermost level on screen drills.
  */
-const branchOf = (key: string, depth: number, type = ""): string | undefined => {
+export const branchOf = (key: string, depth: number, type = ""): string | undefined => {
   const p = key.split("~");
   const raw = FLOW.includes(type)
     ? p[1] === String(depth) && (p[0] === "n" || p[0] === "k")
@@ -69,7 +69,7 @@ const branchOf = (key: string, depth: number, type = ""): string | undefined => 
       : undefined
     : p[0] === "h"
       ? (p[1 + depth] ?? p[p.length - 1])
-      : p[1];
+      : p[type === "heatmap" ? 0 : 1]; // a heatmap cell is `ROW~COLUMN`, and the path walks the rows
   return raw === undefined ? undefined : decode(raw);
 };
 
@@ -117,13 +117,22 @@ export const mount = (host: Host): Handlers => {
     if (spec.type === "sunburst" && m.getAttribute("data-depth") === "0") return pop(depth - 1);
     // A hierarchy key holds the whole branch: push every level down to the mark.
     const p = key.split("~");
-    const values = p[0] === "h" ? p.slice(1 + depth).map(decode) : [];
+    // data-to: a nested treemap child drills only its parent (that many values).
+    const to = +m.getAttribute("data-to")! || 99;
     const first = branchOf(key, depth, spec.type);
     if (first === undefined) return false;
+    const values = p[0] === "h" ? p.slice(1 + depth, 1 + depth + to).map(decode) : [first];
     let next = s;
-    for (const value of values.length ? values : [first])
-      next = reduce(next, { type: "drill", value, spec });
-    if (next === s) return false;
+    for (const value of values) next = reduce(next, { type: "drill", value, spec });
+    if (next === s)
+      // Nowhere deeper to go: the drill gesture reports the leaf (root to leaf).
+      return !host.el.dispatchEvent(
+        new CustomEvent("maya-drill-leaf", {
+          detail: { path: [...(s.view.drill ?? []), ...values] },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     want = ptr ? { svg: true } : { first: true };
     host.commit(next);
     say(next);
@@ -133,16 +142,18 @@ export const mount = (host: Host): Handlers => {
   const click = (e: Event) => {
     const el = e.target as Element | null;
     const crumb = el?.closest(".maya-crumbs [data-depth]");
-    const { detail } = e as MouseEvent; // 0: a keyboard-activated crumb button; a double click acts once
-    if (detail > 1) return;
+    const { detail } = e as MouseEvent; // 0: a keyboard-activated button; a double click acts once
+    const both = host.spec()?.select; // a click selects then, the second click of a pair drills
+    if (detail > (both ? 2 : 1) || (detail > 1 && !host.mark(e))) return;
     ptr = detail > 0;
+    // The tooltip's drill button (select and drill together) names its mark.
+    const tk = el?.closest(".maya-tip [data-drill]")?.getAttribute("data-drill");
+    const m = tk ? marks().find((x) => x.getAttribute("data-key") === tk) : host.mark(e);
     if (crumb) pop(Number(crumb.getAttribute("data-depth")));
-    else {
-      const m = host.mark(e); // a link never drills (sankey and chord links are not keyboard-reachable)
-      if (m && m.getAttribute("data-maya") !== "link") push(m);
-      else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false)
-        pop((host.state().view.drill ?? []).length - 1);
-    }
+    // A link never drills (sankey and chord links are not keyboard-reachable).
+    else if (m && m.getAttribute("data-maya") !== "link") (tk || !both || detail > 1) && push(m);
+    else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false)
+      pop((host.state().view.drill ?? []).length - 1);
     ptr = false;
   };
 

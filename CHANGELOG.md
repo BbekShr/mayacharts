@@ -4,6 +4,38 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Added
+
+- `aggregate: { ratio: [numerator, denominator] }` sums both fields per group and divides, so a ratio measure such as price = sales / units is right in every category, drill level, Other bucket and "mean" rule. `y` names the measure and need not be in the rows (#69).
+- `drill` and `select` combine: a click or Enter selects, a double-click or Shift+Enter drills, and the pinned tooltip offers "Drill into" (text key `drillInto`) (#70).
+- `maya-drill-leaf` event: the drill gesture at the last level carries the full path, for a host drill-through (#70).
+- `path` with `drill` on table, heatmap (the rows), marimekko and chord (#70).
+- `colors` as a map by name on treemap and sunburst (`path[0]` value) and on sankey and chord (node name); path types keep each name's colour through drill (#71).
+- `depth` draws more than one treemap level at once; `minAngle` sets the sunburst's Other threshold in degrees (#71).
+- A sankey drill starts from the first column, then continues one column at a time through any non-final node (#71).
+- `rules` take `{ x }` (a line across the category axis), `{ band: [lo, hi] }` (a shaded value range), `intercept` on a scatter slope, and work on dumbbell (#72).
+- `annotate` takes `{ x, text }` items and works on scatter (#72).
+- `subtitle`, data tokens in `title` and `subtitle` (`{max.x}`, `{max.y}`, `{total}`, `{mean}` and the rest; only these exact names are replaced, any other brace text stays as written), `legend: "top" | "bottom" | "right"`, and theme tokens `titleSize`, `titleWeight`, `axisSize` (#72).
+- `was: { by, current?, previous? }` takes long data, one row per item and period: the latest period is current, the one before it previous, and the ghosts are titled by that period. No pivot before the spec (#60).
+- `maya-settled` event and the `el.settled` promise: the chart has drawn and its animations have finished, or it failed. Hosts that snapshot charts should wait for it instead of `maya-render` (#59, #62).
+- `mayacharts/host` (`maya.host` in the global builds): `thoughtspot(viz, spec)` and `columns({ schema, data }, spec)` build rows from a columnar result, match fields given as a RegExp or a case-insensitive name, and signal render-complete once settled (#61).
+- `maya.core.global.js` plus one `maya.<module>.global.js` per module, so a page without a bundler loads only the types it draws. The unknown-type error names the file to add (#67).
+- `yScale: "log"` (line, scatter) and `xScale: "log"` (scatter). Bars refuse it with a hint, and values at or below 0 fail with `non-positive-value` (#68).
+- `rules: [{ slope }]` on scatter: the line y = slope * x through the origin, `"mean"` for the average ratio (#68).
+- `dash: [series values]` draws those series dashed on line and area (#68).
+- `tooltip: { fields }` adds fields to the tooltip and the data table (#68).
+- `annotate: ["max", "min", "first", "last"]` labels those points on bar, line and area (#68).
+- Text key `log` for the description of a log axis.
+
+### Docs
+
+- The sunburst's automatic "Other (n)" slice is documented next to `minAngle`; the drill gesture split, the leaf event and the sankey drill rule are documented under `drill` (#70, #71).
+- `format` options `prefix` and `suffix` are documented, with an example (#68).
+- "Embedding in hosts" and "Height" sections in the docs (#61, #63).
+- Complete reference: every chart type with its module and classic script, the element's properties, events with their detail shapes, gestures and keys, theme tokens, entry points, SRI, error codes and known ceilings in the README, `site/docs.html` and `llms.txt`. `test/docs-coverage.test.ts` fails when a spec key, type, event, error code, text key, theme token or global file is missing from them.
+
 ## 0.15.0 - 2026-10-10
 
 ### Breaking

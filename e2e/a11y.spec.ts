@@ -104,30 +104,31 @@ for (const path of PAGES) {
     test.setTimeout(120_000); // the scale page draws its eleven charts one after another
     await open(page, path);
     await page.evaluate(() => (document.documentElement.dir = "rtl"));
-    await page.waitForTimeout(100);
-    const bad = await page.evaluate(() => {
-      const out: string[] = [];
-      let seen = 0;
-      for (const c of document.querySelectorAll("maya-chart")) {
-        const svg = c.shadowRoot!.querySelector<SVGSVGElement>("svg[data-plot]");
-        if (!svg) continue;
-        const b = svg.getBoundingClientRect();
-        const vb = svg.viewBox.baseVal;
-        const k = b.width / (vb.width || b.width);
-        const [px, , pw] = svg.getAttribute("data-plot")!.split(" ").map(Number) as number[];
-        const plotLeft = b.left + px! * k;
-        for (const t of svg.querySelectorAll("[data-maya=axis-y] text")) {
-          // The y2 axis (bar + y2) sits right of the plot by design.
-          if (Number(t.getAttribute("x")) > px! + pw!) continue;
-          seen++;
-          const r = t.getBoundingClientRect();
-          if (r.right > plotLeft + 1)
-            out.push(`${c.id}: "${t.textContent}" right ${r.right} > ${plotLeft}`);
+    // A flip of direction can rewrap a title, which resizes the chart and redraws it: poll until it settles.
+    const check = () =>
+      page.evaluate(() => {
+        const out: string[] = [];
+        let seen = 0;
+        for (const c of document.querySelectorAll("maya-chart")) {
+          const svg = c.shadowRoot!.querySelector<SVGSVGElement>("svg[data-plot]");
+          if (!svg) continue;
+          const b = svg.getBoundingClientRect();
+          const vb = svg.viewBox.baseVal;
+          const k = b.width / (vb.width || b.width);
+          const [px, , pw] = svg.getAttribute("data-plot")!.split(" ").map(Number) as number[];
+          const plotLeft = b.left + px! * k;
+          for (const t of svg.querySelectorAll("[data-maya=axis-y] text")) {
+            // The y2 axis (bar + y2) sits right of the plot by design.
+            if (Number(t.getAttribute("x")) > px! + pw!) continue;
+            seen++;
+            const r = t.getBoundingClientRect();
+            if (r.right > plotLeft + 1)
+              out.push(`${c.id}: "${t.textContent}" right ${r.right} > ${plotLeft}`);
+          }
         }
-      }
-      return seen ? out : ["no y-axis labels found"];
-    });
-    expect(bad).toEqual([]);
+        return seen ? out : ["no y-axis labels found"];
+      });
+    await expect.poll(check, { timeout: 5000 }).toEqual([]);
   });
 }
 

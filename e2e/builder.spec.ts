@@ -90,13 +90,9 @@ test("options that cannot work are hidden, clashing ones disabled with the reaso
   await pick(page, "treemap");
   await expect(page.locator("#o-drill")).toBeEnabled();
   await page.locator("#o-drill").check();
-  await expect(page.locator("#o-select")).toBeDisabled();
-  await expect(page.locator("#o-select-why")).toHaveText(
-    '"Select" cannot be combined with "Drill".',
-  );
-  await page.locator("#o-drill").uncheck();
+  // Drill and select combine (click selects, double-click drills).
   await expect(page.locator("#o-select")).toBeEnabled();
-  await expect(page.locator("#o-select-why")).toBeHidden();
+  await page.locator("#o-drill").uncheck();
   await pick(page, "bar"); // text categories cannot be a time axis
   await expect(page.locator('#o-xType option[value="time"]')).toBeDisabled();
   await pick(page, "line"); // ISO months can
@@ -293,6 +289,7 @@ test("the HTML snippet runs on its own page for every type", async ({ page, brow
 
 test("the ThoughtSpot files run against a stub viz for every type", async ({ page, browser }) => {
   test.skip(!existsSync(G), "dist/maya.global.js missing: run `npm run build` first");
+  test.setTimeout(120_000); // each tile now waits for maya-settled (the entrance animation)
   await page.getByRole("tab", { name: "ThoughtSpot" }).click();
   for (const t of await types(page)) {
     await pick(page, t);

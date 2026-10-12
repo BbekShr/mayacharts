@@ -14,7 +14,13 @@ interface C {
   s: number; // palette slot, -1 for neutral
 }
 const paint = (n: C) => (n.s < 0 ? { "data-neu": true } : { "data-s": n.s });
-const neutral = (col: C[]) => col.forEach((n) => (n.s = -1));
+// A colors map (by node name) also paints the outer column; slots come from all rows (spec.slots), so a name keeps its colour through a drill.
+const slotOf = (ctx: MarkCtx, n: N) => (ctx.spec.slots.get(n.name) ?? 0) % 8;
+const neutral = (ctx: MarkCtx, col: N[]) =>
+  col.forEach((n) => {
+    const c = ctx.spec.colors;
+    n.s = c instanceof Map && c.has(n.name) ? slotOf(ctx, n) : -1;
+  });
 // Every node index upstream or downstream of a node along any path; hovering lights them.
 const reach = (ls: L[]) => {
   // Neighbours per node and direction, so a walk reads its own links, not every link per step.
@@ -114,6 +120,9 @@ const nodeAttrs = (ctx: MarkCtx, h: Reach, n: N, c: number, off: number, series 
   "data-y": n.v,
   "data-f": ctx.fmt(ctx.spec.y, n.v),
   "data-depth": n.lv,
+  // The next level to drill, short of the last column: the only nodes that take a click (cursor).
+  "data-dr":
+    ctx.spec.drill && n.lv + off === ctx.spec.drilled.length && n.lv < ctx.spec.path.length - 1,
 });
 
 /** Rows to nodes (one per name per level) and links (one per adjacent pair, aggregated). */
@@ -206,18 +215,21 @@ export const sankey: Mark = {
     // roots, every column-1 node with one parent) colours by root instead: colour follows the branch.
     const roots = nodes.filter((n) => n.lv === 0);
     const one = (n: N) => ls.filter((l) => l.t === n).length === 1; // a single parent
-    const tree = roots.length > 1 && nodes.every((n) => n.lv !== 1 || one(n));
-    tree ? roots.forEach((n, j) => (n.s = j % 8)) : neutral(roots);
-    let slot = 0;
+    // A drilled view has one root (the drilled node) and keeps its branch colour (spec.hue).
+    const tree =
+      (roots.length > 1 || spec.drilled.length > 0) && nodes.every((n) => n.lv !== 1 || one(n));
+    tree ? roots.forEach((n) => (n.s = (spec.hue ?? slotOf(ctx, n)) % 8)) : neutral(ctx, roots);
     for (let lv = 1; lv < cols; lv++)
       for (const n of nodes.filter((n) => n.lv === lv)) {
         const from = new Set(ls.filter((l) => l.t === n).map((l) => l.s.s));
         const [one] = from;
-        if (lv === 1) n.s = tree ? one! : slot++ % 8;
+        if (lv === 1) n.s = tree ? one! : slotOf(ctx, n);
         else n.s = from.size === 1 ? one! : -1;
       }
-    // A link takes its target's colour out of column 0, else its source's.
-    const tint = (l: L) => (l.s.lv === 0 ? l.t : l.s);
+    // A link takes its target's colour out of an uncoloured column 0, else its source's.
+    const tint = (l: L) => (l.s.lv === 0 && l.s.s < 0 ? l.t : l.s);
+    // The drilled node leads the columns, so keys carry the level in the whole path.
+    const off = Math.max(0, spec.drilled.length - 1);
     const hov = reach(ls);
 
     // Order: columns start sorted by value, then barycentre sweeps pull each node towards the
@@ -283,11 +295,11 @@ export const sankey: Mark = {
       const [x0, x1, th, m] = [x(l.s) + W, x(l.t), l.v * k, (x(l.s) + W + x(l.t)) / 2];
       const [a, b] = [l.sy, l.ty];
       const d = `M${r(x0)} ${r(a)}C${r(m)} ${r(a)} ${r(m)} ${r(b)} ${r(x1)} ${r(b)}L${r(x1)} ${r(b + th)}C${r(m)} ${r(b + th)} ${r(m)} ${r(a + th)} ${r(x0)} ${r(a + th)}Z`;
-      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, spec.drilled.length, tint(l)), d });
+      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, off, tint(l)), d });
     }
     for (const n of nodes) {
       marks += el("rect", {
-        ...nodeAttrs(ctx, hov, n, c++, spec.drilled.length),
+        ...nodeAttrs(ctx, hov, n, c++, off),
         x: r(x(n)),
         y: r(n.y),
         width: W,
@@ -312,7 +324,7 @@ export const sankey: Mark = {
             left ? x(n) - 6 : x(n) + W + 6,
             cy + d * slack,
             left ? "end" : "start",
-            nodeKey(n, spec.drilled.length), // the label glides with its node
+            nodeKey(n, off), // the label glides with its node
             n.name,
             val(n),
             cap,
@@ -338,8 +350,11 @@ export const chord: Mark = {
     const [P0, P1] = spec.path as [string, string];
     const { nodes, ls } = graph(ctx, "chord");
     // From-nodes neutral, to-nodes palette slots in first-seen order; ribbons take the to-node's colour.
-    neutral(nodes.filter((n) => n.lv === 0));
-    nodes.filter((n) => n.lv === 1).forEach((n, j) => (n.s = j % 8));
+    neutral(
+      ctx,
+      nodes.filter((n) => n.lv === 0),
+    );
+    nodes.filter((n) => n.lv === 1).forEach((n) => (n.s = slotOf(ctx, n)));
     const hov = reach(ls);
     const total = ls.reduce((a, l) => a + l.v, 0);
     if (!(total > 0)) return { marks: "", hits: "" };
@@ -409,7 +424,7 @@ export const chord: Mark = {
       const [sa, ta] = [l.sy, l.ty];
       const [sb, tb] = [sa + l.v * k, ta + l.v * k];
       const d = `M${pt(sa, R)}${arc(sa, sb, R, 1)}${edge(sb, ta)}${arc(ta, tb, R, 1)}${edge(tb, sa)}Z`;
-      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, 0, l.t), d });
+      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, 0, l.s.s < 0 ? l.t : l.s), d });
     }
     // The group arc is a 10 px band inset 2 px; CSS strokes it 4 px with round joins in its own
     // colour, which rounds the ends and lands the band at R + 4 .. R + RING (clear of the ribbons).

@@ -49,10 +49,13 @@
         <p>
           spec.type must be one of bar, line, area, scatter, heatmap, waterfall, treemap, sunburst,
           sankey, or hexmap. The message suggests the closest match when there is one, or the module
-          to import for unloaded types.
+          to import for unloaded types. Without a bundler, load that module's global file after the
+          core global file.
         </p>
         <pre><code>{ "type": "bar", ... }
-// For treemap: import "mayacharts/hierarchy" first</code></pre>
+// For treemap: import "mayacharts/hierarchy" first, or
+// &lt;script src=".../maya.core.global.js"&gt;&lt;/script&gt;
+// &lt;script src=".../maya.hierarchy.global.js"&gt;&lt;/script&gt;</code></pre>
       </section>
       <section id="data-not-array">
         <h2><code>data-not-array</code></h2>
@@ -73,9 +76,10 @@
       <section id="unknown-field">
         <h2><code>unknown-field</code></h2>
         <p>
-          spec.x, spec.y, spec.series, spec.path, spec.size, spec.name, or spec.colorBy names a
-          field that no row has. The message lists the fields found in your data. Check spelling and
-          case.
+          spec.x, spec.y, spec.series, spec.path, spec.size, spec.name, spec.colorBy or a field of
+          spec.aggregate.ratio names a field that no row has. Under a ratio aggregate spec.y only
+          names the measure, so it may be missing from the rows. The message lists the fields found
+          in your data. Check spelling and case.
         </p>
         <pre><code>// rows have "month" and "revenue"
 { "x": "month", "y": "revenue" }</code></pre>
@@ -93,8 +97,9 @@
       <section id="non-numeric-field">
         <h2><code>non-numeric-field</code></h2>
         <p>
-          A numeric field (size for scatter, x for scatter, or colorBy when it names a field) must
-          hold finite numbers. null and undefined are allowed. Convert numeric strings first.
+          A numeric field (size for scatter, x for scatter, the two fields of a ratio aggregate, or
+          colorBy when it names a field) must hold finite numbers. null and undefined are allowed.
+          Convert numeric strings first.
         </p>
         <pre><code>// for scatter x domain
 data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
@@ -112,6 +117,11 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
           zero in a funnel shows no percentage.
         </p>
         <pre><code>data: data.filter(r => r.users >= 0)</code></pre>
+        <p>
+          A log axis (yScale or xScale "log") shows values above 0 only, since the logarithm of 0 or
+          a negative number does not exist. Filter those rows, or drop the log scale.
+        </p>
+        <pre><code>{ "type": "scatter", "yScale": "log", "data": data.filter(r => r.sales > 0), ... }</code></pre>
       </section>
       <section id="unknown-option">
         <h2><code>unknown-option</code></h2>
@@ -140,15 +150,23 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <h2><code>option-unsupported</code></h2>
         <p>
           This option is not valid for the chosen chart type or in combination with other options.
-          For example, size applies only to scatter charts, path cannot be used with x, and drill
-          cannot be combined with select.
+          For example, size applies only to scatter charts, path cannot be used with x (on heatmap,
+          path replaces series), depth is treemap only and minAngle sunburst only. A ratio aggregate
+          works where values sit side by side (bar line area heatmap dumbbell table kpi gauge
+          hexmap), not where sizes must add up to a whole, and not with stack, was or a y array.
         </p>
         <pre><code>// scatter chart with size field
 { "type": "scatter", "x": "x", "y": "y", "size": "population", ... }
 // bar chart with path instead of x
 { "type": "bar", "path": ["region", "state"], "y": "revenue", ... }
 // warn is a kpi and gauge threshold; other types take { "target": n }
-{ "type": "bar", "colorBy": { "target": 100 }, ... }</code></pre>
+{ "type": "bar", "colorBy": { "target": 100 }, ... }
+// yScale "log" is for line and scatter: a bar encodes its value as length from zero
+{ "type": "line", "yScale": "log", ... }
+// dash names series values, so it needs series
+{ "type": "line", "series": "year", "dash": ["2024"], ... }
+// a ratio on a type whose values sit side by side
+{ "type": "bar", "x": "region", "y": "price", "aggregate": { "ratio": ["sales", "units"] }, ... }</code></pre>
       </section>
       <section id="stack-unsupported">
         <h2><code>stack-unsupported</code></h2>
@@ -162,7 +180,8 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <p>
           spec.xDomain must be [min, max] with two finite numbers and min less than max.
           spec.yDomain takes two different numbers, and [max, min] reverses the axis (ranks with 1
-          on top). Both bounds must be within 1e300 and the span at least 1e-300.
+          on top). Both bounds must be within 1e300 and the span at least 1e-300. On a log axis both
+          bounds must be above 0.
         </p>
         <pre><code>{ "yDomain": [0, 100] }</code></pre>
       </section>
@@ -181,7 +200,7 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <p>
           spec.theme contains a key that is not a theme token. Valid tokens are font, fontSize, fg,
           fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, warn, bad, line,
-          gridDash, and series1 through series8.
+          gridDash, titleSize, titleWeight, axisSize, and series1 through series8.
         </p>
         <pre><code>{ "theme": { "accent": "#7c3aed" } }</code></pre>
       </section>

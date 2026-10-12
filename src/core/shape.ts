@@ -1,15 +1,19 @@
 import { cbField, memo, OTHER } from "./svg.ts";
 import { toTime } from "./ticks.ts";
 import { MAX_MARKS, MAX_POINTS } from "./validate.ts";
-import type { Aggregate, Cell, ResolvedSpec, Shaped, View } from "./types.ts";
+import type { Aggregate, Cell, ResolvedSpec, Row, Shaped, View } from "./types.ts";
 
 /** Reducer for one aggregate; shared with hierarchy.ts. Empty: null (count: 0). A class: a million categories hold a million of these. */
 class Reducer {
   n = 0;
   acc = 0;
+  /** Ratio only: the denominator sum; value() is acc / den (null at 0). */
+  den = 0;
   kind: Aggregate;
-  constructor(kind: Aggregate) {
+  ratio: boolean;
+  constructor(kind: Aggregate, ratio = false) {
     this.kind = kind;
+    this.ratio = ratio;
   }
   add(v: number) {
     const k = this.kind;
@@ -23,6 +27,7 @@ class Reducer {
             : this.acc;
   }
   value(): number | null {
+    if (this.ratio) return this.n && this.den ? this.acc / this.den : null;
     return this.kind === "count"
       ? this.n
       : this.n === 0
@@ -32,15 +37,21 @@ class Reducer {
           : this.acc;
   }
 }
-export const agg = (kind: Aggregate): Reducer => new Reducer(kind);
+export const agg = (kind: Aggregate, ratio = false): Reducer => new Reducer(kind, ratio);
+/** Add a row's measure `f` to `r`; with a ratio, its numerator and denominator (spec.ratio). */
+export function feed(r: Reducer, row: Row, f: string, ratio: readonly [string, string] | null) {
+  const v = row[ratio ? ratio[0] : f];
+  if (typeof v === "number") r.add(v);
+  if (ratio && typeof row[ratio[1]] === "number") r.den += row[ratio[1]] as number;
+}
 
 interface Cat {
   label: string;
   vals: (number | null)[];
   y2?: number | null;
-  /** Mean only: the count behind each value and behind y2, so the Other bucket can merge. */
-  ns?: number[];
-  n2?: number;
+  /** Mean and ratio only: the reducers behind each value and behind y2, so the Other bucket can merge their sums. */
+  rs?: (Reducer | undefined)[];
+  a2?: Reducer | undefined;
   /** UTC ms on a time axis. */
   t?: number;
   /** Position in the time-ordered list, before window and reduction. */
@@ -52,11 +63,13 @@ interface Opts {
   window?: View["window"];
   /** Estimated plot width in px: a time axis keeps at most one point per 2 px. */
   plotWidth?: number;
+  /** Estimated svg height: horizontal bars too dense for a label each roll into Other. */
+  height?: number;
 }
 
 export function shape(
   s: ResolvedSpec,
-  { hidden = [], window, plotWidth = Infinity }: Opts = {},
+  { hidden = [], window, plotWidth = Infinity, height = Infinity }: Opts = {},
 ): Shaped {
   const series: string[] = [];
   const shown = () => series.flatMap((k, j) => (hidden.includes(k) ? [] : [j]));
@@ -104,6 +117,7 @@ export function shape(
     s.y2,
     s.series,
     s.aggregate,
+    s.ratio,
     s.xType,
   ]);
   const fast = fastTime(s, window, target(1), rk);
@@ -144,6 +158,22 @@ export function shape(
           Math.floor(MAX_MARKS / series.length) - 1,
         ),
       );
+      capped = [lim, cats.length];
+    }
+    // Dense horizontal bars (#66.1): bands under 14 px (one label each) roll the smallest nominal
+    // categories into Other rather than thin the labels. Not for dates, xType "time" or a set limit.
+    // ponytail: the height is estimated (24 px value axis, 18 px title), a layout surprise falls back to thinning.
+    // (Horizontal is never a time axis: validate refuses xType "time" with it.)
+    const room = Math.floor((height - 10 - (s.xAxis ? 24 : 8) - (s.titles.has(s.y) ? 18 : 0)) / 14);
+    if (
+      lim === null &&
+      s.type === "bar" &&
+      s.horizontal &&
+      room >= 3 &&
+      cats.length > room &&
+      cats.some((c) => toTime(c.label, false) === null)
+    ) {
+      lim = room - 1;
       capped = [lim, cats.length];
     }
     if (s.sort || (lim !== null && cats.length > lim))
@@ -265,43 +295,22 @@ export function shape(
   };
 }
 
-/** The Other bucket from the rolled-up categories' aggregates (a mean is weighted by its counts). */
+/** The Other bucket from the rolled-up categories' aggregates: values fold by the aggregate; a mean or ratio merges its reducers' sums. */
 function other(s: ResolvedSpec, series: string[], rest: Cat[]): Cat {
   const k = s.aggregate;
-  const fold = (get: (c: Cat) => number | null, w: (c: Cat) => number) => {
-    let acc: number | null = null;
-    let n = 0;
+  const fold = (get: (c: Cat) => Reducer | number | null | undefined, ratio = false) => {
+    const m = agg(k === "count" ? "sum" : k, ratio);
     for (const c of rest) {
       const v = get(c);
-      if (v === null) continue;
-      const m = k === "mean" ? w(c) : 1;
-      acc =
-        acc === null
-          ? v * m
-          : k === "min"
-            ? Math.min(acc, v)
-            : k === "max"
-              ? Math.max(acc, v)
-              : acc + v * m;
-      n += m;
+      if (typeof v === "number") m.add(v);
+      else if (v) ((m.n += v.n), (m.acc += v.acc), (m.den += v.den));
     }
-    return acc === null ? null : k === "mean" ? acc / n : acc;
+    return m.value();
   };
   return {
     label: OTHER,
-    vals: series.map((_, j) =>
-      fold(
-        (c) => c.vals[j] ?? null,
-        (c) => c.ns![j]!,
-      ),
-    ),
-    y2:
-      s.y2 === null
-        ? null
-        : fold(
-            (c) => c.y2 ?? null,
-            (c) => c.n2!,
-          ),
+    vals: series.map((_, j) => fold((c) => (c.rs ? c.rs[j] : c.vals[j]), !!s.ratio)),
+    y2: s.y2 === null ? null : fold((c) => c.a2 ?? c.y2),
   };
 }
 
@@ -332,9 +341,7 @@ function group(s: ResolvedSpec, time: boolean) {
     }
     const a = acc[k]!;
     (ms ?? [s.y]).forEach((m, i) => {
-      const r = (a.rs[ms ? i : j] ??= agg(s.aggregate));
-      const v = row[m];
-      if (typeof v === "number") r.add(v);
+      feed((a.rs[ms ? i : j] ??= agg(s.aggregate, !!s.ratio)), row, m, s.ratio);
     });
     if (s.y2 !== null) {
       const v2 = row[s.y2];
@@ -344,8 +351,7 @@ function group(s: ResolvedSpec, time: boolean) {
   cats.forEach((c, k) => {
     c.vals = series.map((_, j) => acc[k]!.rs[j]?.value() ?? null);
     c.y2 = acc[k]!.a2?.value() ?? null;
-    if (s.aggregate === "mean")
-      ((c.ns = series.map((_, j) => acc[k]!.rs[j]?.n ?? 0)), (c.n2 = acc[k]!.a2?.n ?? 0));
+    if (s.aggregate === "mean" || s.ratio) ((c.rs = acc[k]!.rs), (c.a2 = acc[k]!.a2));
   });
   let isTime = false;
   if (time && cats.length) {
@@ -391,6 +397,7 @@ function fastTime(
     s.limit !== null ||
     s.sort ||
     s.horizontal ||
+    s.ratio ||
     !(s.xType === "time" || s.xType === "auto")
   )
     return null;
@@ -543,6 +550,53 @@ function reduceTime(
     (_, k) => rest[Math.floor(((k + 0.5) * rest.length) / room)]!,
   );
   return [...pin, ...picked].sort((a, b) => a - b);
+}
+
+/**
+ * spec.was long form (#60), called by resolve() after frame and blank fill, before drill.
+ * Periods: `w.current` / `w.previous` when set (matched as String of the `w.by` value), else the
+ * latest distinct value and the one before it (all ISO dates or epoch ms: by time; else data order).
+ * Returns one row per (x, series) holding the current period's `y` combined by `aggregate` and,
+ * under the key `w.by`, the previous period's (missing when it has no rows), so marks read the
+ * wide form unchanged; other periods are dropped. `previous` is the previous period's raw value
+ * (the default ghost title), null when there is none. Memoise on `rows` (svg.ts memo).
+ */
+export function pivotWas(
+  rows: readonly Row[],
+  x: string,
+  series: string | null,
+  y: string,
+  w: { by: string; current: string | null; previous: string | null },
+  aggregate: Aggregate,
+): { rows: readonly Row[]; previous: Row[string] | null } {
+  return memo(rows, `w${x}\0${series}\0${y}\0${JSON.stringify(w)}\0${aggregate}`, () => {
+    // Distinct periods by String(value), first appearance; a null period is no period.
+    const raw = new Map<string, Row[string]>();
+    for (const r of rows)
+      if (r[w.by] != null) raw.has(String(r[w.by])) || raw.set(String(r[w.by]), r[w.by]);
+    const ks = [...raw.keys()];
+    const at = (k: string) => toTime(raw.get(k));
+    const order = ks.some((k) => at(k) === null) ? ks : ks.sort((a, b) => at(a)! - at(b)!);
+    const cur = w.current ?? order.at(-1) ?? null;
+    const prev = w.previous ?? order[order.indexOf(cur!) - 1] ?? null;
+    // ponytail: groups by (x, series) only, so a drill path with the same x under two parents merges.
+    // The first row of a group is its base: fields other than x, series, y and by come from it.
+    const g = new Map<string, [Row, Reducer, Reducer]>();
+    for (const r of rows) {
+      const k = String(r[w.by]);
+      if (r[w.by] == null || (k !== cur && k !== prev)) continue;
+      const id = `${r[x]}\0${series && r[series]}`;
+      const e = g.get(id) ?? g.set(id, [r, agg(aggregate), agg(aggregate)]).get(id)!;
+      const v = r[y];
+      if (typeof v === "number") e[k === cur ? 1 : 2].add(v);
+    }
+    const out = [...g.values()].map(([row, c, q]) => {
+      const { [w.by]: _, ...rest } = row;
+      const p = q.value();
+      return { ...rest, [y]: c.value(), ...(p === null ? {} : { [w.by]: p }) };
+    });
+    return { rows: out, previous: prev === null ? null : (raw.get(prev) ?? null) };
+  });
 }
 
 /** A field (default: the colorBy field; also spec.was) aggregated per (category, series) like the marks; null without one. */

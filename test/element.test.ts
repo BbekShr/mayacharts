@@ -785,3 +785,79 @@ describe("review fixes", () => {
       expect(parseFloat(probe.style.height)).toBeGreaterThanOrEqual((vs.length - 1) * 100 + 10);
   });
 });
+
+describe("maya-settled", () => {
+  const events = (el: Element) => {
+    const log: string[] = [];
+    for (const t of ["maya-render", "maya-error", "maya-settled"])
+      el.addEventListener(t, (e) => log.push(t + ((e as CustomEvent).detail?.error ? "!" : "")));
+    return log;
+  };
+  const withAnims = (list: unknown[]) => {
+    (ShadowRoot.prototype as any).getAnimations = () => list;
+  };
+  const running = () => {
+    let done!: () => void;
+    const finished = new Promise<void>((r) => (done = r));
+    const a = { playState: "running", effect: { getComputedTiming: () => ({}) }, finished };
+    return { a, end: () => ((a.playState = "finished"), done()) };
+  };
+
+  it("fires in the same task as maya-render when nothing animates", async () => {
+    withAnims([]);
+    const el = await mount(() => {});
+    const log = events(el);
+    el.spec = spec();
+    await Promise.resolve();
+    expect(log).toEqual(["maya-render", "maya-settled"]);
+  });
+
+  it("waits for running animations; a newer render supersedes", async () => {
+    const r = running();
+    withAnims([r.a]);
+    const el = await mount(() => {});
+    const log = events(el);
+    el.spec = spec();
+    const p = el.settled;
+    await frame();
+    expect(log).toEqual(["maya-render"]);
+    r.end();
+    await p;
+    expect(log).toEqual(["maya-render", "maya-settled"]);
+    const r2 = running();
+    withAnims([r2.a]);
+    el.spec = spec([{ q: "Q9", r: "N", v: 1 }]);
+    await frame();
+    withAnims([]);
+    el.spec = spec([{ q: "Q8", r: "N", v: 1 }]);
+    await frame();
+    r2.end();
+    await frame();
+    expect(log.filter((t) => t === "maya-settled")).toHaveLength(2); // the first render and the latest
+    withAnims([]);
+  });
+
+  it("a count-up holds it back", async () => {
+    withAnims([]);
+    const el = await mount((e) => (e.spec = { type: "kpi", y: "v", data: [{ v: 100 }] } as never));
+    const log = events(el);
+    el.spec = { type: "kpi", y: "v", data: [{ v: 5000 }] } as never;
+    await Promise.resolve();
+    expect(log).toEqual(["maya-render"]);
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(log).toEqual(["maya-render", "maya-settled"]);
+  });
+
+  it("error: maya-error then maya-settled { error }; el.settled rejects, resolved ones stay resolved", async () => {
+    withAnims([]);
+    const el = await mount(() => {});
+    const log = events(el);
+    el.spec = spec();
+    await expect(el.settled).resolves.toBeUndefined();
+    el.spec = spec(rows, { x: "nope" });
+    const p = el.settled;
+    await expect(p).rejects.toMatchObject({ code: "unknown-field" });
+    expect(log.slice(-2)).toEqual(["maya-error", "maya-settled!"]);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+});
