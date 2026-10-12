@@ -480,7 +480,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const H = opts?.height ?? 320;
   // ponytail: plot width is only known after shape (tick labels set the margins); W - 56 is the
   // usual plot of a 4-digit y axis, and the point budget needs no more than that.
-  const shaped = shape(s0, { ...opts?.view, plotWidth: W - 56 });
+  const shaped = shape(s0, { ...opts?.view, plotWidth: W - 56, height: H });
   // Time axis without a format for x: the preset follows the smallest gap between categories.
   let s = s0;
   if (shaped.time && !s0.format.has(s0.x)) {
@@ -859,7 +859,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     legend += `<div class="maya-legend"><span data-past><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
   return {
     svg,
-    legend,
+    // Nothing to draw: the empty state stands alone (#64).
+    legend: empty ? "" : legend,
     controls:
       (s.measures.length > 1 && !ALL_Y.includes(s.type)
         ? radios(
@@ -890,9 +891,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
             )
             .join("") +
           `</nav>`
-        : s.drill
-          ? `<div class="maya-crumbs" aria-hidden="true"></div>` // holds the row: no shift on drill
-          : "",
+        : "", // root: nothing reserved (#66.3)
     // Built on first read: the element inserts the table when the browser is idle.
     get table() {
       return (tbl ??= s.table ? dataTable(s, shaped, fmt, toneText, markTable) : "");

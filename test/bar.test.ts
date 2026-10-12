@@ -112,3 +112,27 @@ describe("bar", () => {
     expect(ins([100, 90, 0.5])).toBe(1); // only the top bar, which has no room outside
   });
 });
+
+describe("annotate and tooltip fields", () => {
+  const data = [3, 9, 4, 7, 2].map((v, i) => ({ c: `c${i}`, v, t: v * 10 }));
+  const spec: ChartSpec = { type: "bar", x: "c", y: "v", data };
+  it("labels the max, min, first and last bar once each, nothing else", () => {
+    expect(labels(renderParts({ ...spec, annotate: ["max", "min", "first", "last"] }).svg)).toEqual(
+      ["9", "2", "3"],
+    );
+    expect(labels(renderParts({ ...spec }).svg)).toEqual([]);
+  });
+  it("does not repeat a plain value label on an annotated bar", () => {
+    const l = labels(renderParts({ ...spec, labels: true, annotate: ["max"] }).svg);
+    expect(l.filter((t) => t === "9")).toHaveLength(1);
+    expect(l).toHaveLength(5);
+  });
+  it("horizontal: the longest bar's label goes inside its end when there is no room outside", () => {
+    const s = renderParts({ ...spec, horizontal: true, annotate: ["max"] }, { width: 200 }).svg;
+    expect(labels(s)).toEqual(["9"]);
+  });
+  it("writes data-more on the mark and its hit", () => {
+    const s = renderParts({ ...spec, tooltip: { fields: ["t"] } }).svg;
+    expect(s).toMatch(/data-maya="mark"[^>]*data-more="t\t30"/);
+  });
+});

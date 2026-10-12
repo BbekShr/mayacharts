@@ -1,14 +1,30 @@
 import { clip, tw } from "../layout.ts";
 import { colorVals } from "../shape.ts";
 import { el, esc, key, OTHER, plotHit, r, repel } from "../svg.ts";
-import type { Axis, BandScale, Cell, LinearScale, Mark, MarkCtx, MarkOut } from "../types.ts";
+import { marked, more } from "./bar.ts";
+import type {
+  Axis,
+  BandScale,
+  Cell,
+  LinearScale,
+  Mark,
+  MarkCtx,
+  MarkOut,
+  Shaped,
+} from "../types.ts";
+
+/** A log axis spans the smallest to the largest positive value (never 0); linear keeps shape's extent. */
+const positive = (scale: string, shaped: Shaped): [number, number] => {
+  const v = scale === "log" ? shaped.cells.flatMap((c) => (c.y1 > 0 ? [c.y1] : [])) : [];
+  return v.length ? [Math.min(...v), Math.max(...v)] : shaped.extent;
+};
 
 const axes: Mark["axes"] = (spec, shaped) => [
   shaped.time
     ? ({ kind: "time", field: spec.x, domain: shaped.categories, t: shaped.time } satisfies Axis)
     : ({ kind: "band", field: spec.x, domain: shaped.categories } satisfies Axis),
   // ponytail: 0-anchored via shape's extent (also for line); yDomain overrides in layout.
-  { kind: "linear", field: spec.y, domain: shaped.extent } satisfies Axis,
+  { kind: "linear", field: spec.y, domain: positive(spec.yScale, shaped) } satisfies Axis,
 ];
 
 // Direct end labels instead of a legend: 1 to 8 series, all visible (a hidden one needs the legend
@@ -34,6 +50,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   const val = { of: (v: number) => Math.min(Math.max(of(v), plot.y), plot.y + plot.h) };
   const cvOf = colorVals(spec);
   const px = (ci: number) => r(cat.at(ci) + cat.bandwidth / 2);
+  const tipOf = spec.tipFields.map((f) => colorVals(spec, f));
 
   let areas = "";
   let lines = "";
@@ -43,8 +60,11 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   for (const si of shaped.visible) {
     const ser = shaped.series[si]!;
     const cells: Cell[] = shaped.cells.filter((c) => c.si === si); // ascending ci, as shape lays them out
+    const dash = spec.dash.has(ser);
     let d = "";
     let gap = true;
+    let len = 0; // px length of the drawn polyline: a dashed series sets its dash in pathLength units
+    let [lx0, ly0] = [0, 0];
     // ponytail: on a time axis a hole wider than 5x the series' median gap breaks the line;
     // a fixed factor, not a spec option.
     const T = shaped.time;
@@ -60,6 +80,52 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
     const path = cells.flatMap((c) =>
       c.value === null ? [] : [[px(c.ci), val.of(c.y1)] as const],
     );
+    // Where cell i's label sits off the stroke: the first of above/below/left/right (a peak, trough,
+    // rise or fall prefers its own) whose estimated box meets no segment of this series.
+    const spot = (i: number) => {
+      const c = cells[i]!;
+      const at = (j: number) => (cells[j]?.value == null ? c.y1 : cells[j]!.y1);
+      const [p, q] = [at(i - 1), at(i + 1)];
+      const [lx, ly, text] = [+px(c.ci), val.of(c.y1), ctx.fmt(spec.y, c.value)];
+      const w = tw(text) + 4;
+      const f = p <= c.y1 && q <= c.y1 ? 0 : p >= c.y1 && q >= c.y1 ? 1 : p < c.y1 ? 2 : 3;
+      // k: 0 above, 1 below, 2 end (left), 3 start (right); l, t the box's left and top.
+      const k = [f, 0, 1, 2, 3].find((k) => {
+        const l = lx + [-w / 2, -w / 2, -5 - w, 5][k]!;
+        const t = ly + (k === 1 ? 2 : -16);
+        if (k === 1 && spec.yDomain && ly >= plot.y + plot.h) return false; // would sit on the axis
+        return path.every(([x1, y1], j) => {
+          const [x0, y0] = path[j - 1] ?? [x1, y1];
+          const [a, b] = [Math.max(x0, l), Math.min(x1, l + w)];
+          if (a > b || x1 === x0) return true;
+          const [ya, yb] = [a, b].map((x) => y0 + ((y1 - y0) * (x - x0)) / (x1 - x0)) as [
+            number,
+            number,
+          ];
+          return Math.max(ya, yb) < t || Math.min(ya, yb) > t + 14;
+        });
+      });
+      return k === undefined
+        ? null
+        : ([
+            lx + [0, 0, -5, 5][k]!,
+            ly - (k > 1 ? 9 : 0),
+            text,
+            (["above", "below", "end", "start"] as const)[k]!,
+            key(ser, shaped.categories[c.ci]),
+          ] as const);
+    };
+    // spec.annotate: the extremes and ends labelled first (ahead of plain value labels), each point once;
+    // the labelled point keeps its dot. ponytail: "last" is skipped beside end labels, which already say it.
+    const done = new Set<number>();
+    const live = cells.flatMap((c, i) => (c.value === null ? [] : [i]));
+    for (const [a, k] of marked(
+      live.map((i) => cells[i]!.value!),
+      ctx.gutter ? spec.annotate.filter((a) => a !== "last") : spec.annotate,
+    )) {
+      const sp = spot(live[k]!);
+      if (sp && ctx.label(...sp, a)) done.add(live[k]!);
+    }
     // Area runs: stacked areas treat null as 0 (shape did), so they never break.
     const runs: Cell[][] = [[]];
     for (const [i, c] of cells.entries()) {
@@ -76,7 +142,10 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         gap = true;
         continue;
       }
-      d += `${gap ? "M" : "L"}${px(c.ci)} ${r(val.of(c.y1))}`;
+      const [qx, qy] = [+px(c.ci), r(val.of(c.y1))];
+      if (!gap) len += Math.hypot(qx - lx0, qy - ly0);
+      [lx0, ly0] = [qx, qy];
+      d += `${gap ? "M" : "L"}${qx} ${qy}`;
       gap = false;
 
       const cname = shaped.categories[c.ci]!;
@@ -97,43 +166,15 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         "data-tone": ctx.tone(c.value),
         "data-q": cv === null ? null : ctx.q(cv),
         "data-other": other,
+        "data-more": more(ctx, (_, k) => tipOf[k]!(cname, ser)),
+        "data-dash": dash,
+        "data-last": done.has(i), // an annotated point keeps its dot
         r: 3,
         cx: px(c.ci),
         cy: r(val.of(c.y1)),
       });
-      if (spec.labels) {
-        // Off the stroke: the first of above/below/left/right (a peak, trough, rise or fall prefers
-        // its own) whose estimated box meets no segment of this series.
-        const at = (j: number) => (cells[j]?.value == null ? c.y1 : cells[j]!.y1);
-        const [p, q] = [at(i - 1), at(i + 1)];
-        const [lx, ly, text] = [+px(c.ci), val.of(c.y1), ctx.fmt(spec.y, c.value)];
-        const w = tw(text) + 4;
-        const f = p <= c.y1 && q <= c.y1 ? 0 : p >= c.y1 && q >= c.y1 ? 1 : p < c.y1 ? 2 : 3;
-        // k: 0 above, 1 below, 2 end (left), 3 start (right); l, t the box's left and top.
-        const k = [f, 0, 1, 2, 3].find((k) => {
-          const l = lx + [-w / 2, -w / 2, -5 - w, 5][k]!;
-          const t = ly + (k === 1 ? 2 : -16);
-          if (k === 1 && spec.yDomain && ly >= plot.y + plot.h) return false; // would sit on the axis
-          return path.every(([x1, y1], j) => {
-            const [x0, y0] = path[j - 1] ?? [x1, y1];
-            const [a, b] = [Math.max(x0, l), Math.min(x1, l + w)];
-            if (a > b || x1 === x0) return true;
-            const [ya, yb] = [a, b].map((x) => y0 + ((y1 - y0) * (x - x0)) / (x1 - x0)) as [
-              number,
-              number,
-            ];
-            return Math.max(ya, yb) < t || Math.min(ya, yb) > t + 14;
-          });
-        });
-        if (k !== undefined)
-          ctx.label(
-            lx + [0, 0, -5, 5][k]!,
-            ly - (k > 1 ? 9 : 0),
-            text,
-            (["above", "below", "end", "start"] as const)[k]!,
-            key(ser, cname),
-          );
-      }
+      const sp = spec.labels && !done.has(i) ? spot(i) : null;
+      if (sp) ctx.label(...sp);
     }
     const e = path.at(-1);
     if (e) ep.push([e[1], e[0], si, tx[ep.length]!]);
@@ -162,7 +203,11 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
       "data-maya": "line",
       "data-key": key("l", ser),
       "data-s": si % 8,
+      "data-dash": dash,
       pathLength: 1,
+      // pathLength 1 (the entrance wipe) makes a dash a fraction of the line: 6 px on, 4 off.
+      "stroke-dasharray":
+        dash && len ? `${+(6 / len).toPrecision(3)} ${+(4 / len).toPrecision(3)}` : null,
       d: d || null,
     });
   }
@@ -179,7 +224,10 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
       14,
     );
     o.forEach(([ey, x, si, [n, v]], i) => {
-      const ok = tw(`${n} ${v}`) <= ctx.gutter - 12;
+      // The value always stays; the name is whole if it fits beside it, else ellipsized into what is left
+      // of the gutter, else dropped (short of about 8 characters it says too little: the legend names it).
+      const room = ctx.gutter - 12 - tw(v) - 4;
+      const name = ctx.width < 400 ? "" : tw(n) <= room ? n : room < 56 ? "" : clip(n, room);
       if (Math.abs(ys[i]! - ey) > 3)
         end += el("line", {
           "data-lead": true,
@@ -195,14 +243,12 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
           "data-end": true,
           "data-key": key("l", shaped.series[si]),
           "data-s": si % 8,
+          "data-dash": spec.dash.has(shaped.series[si]!),
           x: r(x + 8),
           y: r(ys[i]!),
           "dominant-baseline": "middle",
         },
-        ctx.width < 400
-          ? esc(v)
-          : esc(ok ? n : clip(n, ctx.gutter - 12)) +
-              (ok ? `<tspan data-v="" dx="4">${esc(v)}</tspan>` : ""),
+        name ? `${esc(name)}<tspan data-v="" dx="4">${esc(v)}</tspan>` : esc(v),
       );
     });
   }

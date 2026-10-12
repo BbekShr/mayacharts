@@ -338,27 +338,27 @@ export function tooltip(
         if (!tab) row.append(h("span", f, { "data-v": "" }));
         const tn = tone(k);
         if (tn) row.append(h("span", tn));
-        const more = tab
-          ? f.split("\n").map((p) => {
-              // "label\tvalue[\tz]": z draws a bar either side of the average (constellation);
-              // an empty label is a note line under the rows.
-              const [l, v, z] = p.split("\t"),
-                d = h("div", l ? "" : v, l ? {} : { "data-note": "" });
-              if (!l) return d;
-              d.append(h("span", l));
-              if (z) {
-                // The star's group colour, through the same [data-s] rule as the swatch.
-                const b = h("span", "", {
-                  "data-z": "",
-                  ...(s ? { "data-s": a(k, "data-s") } : {}),
-                });
-                b.style.setProperty("--z", z);
-                d.append(b);
-              }
-              d.append(h("span", v, { "data-v": "" }));
-              return d;
-            })
-          : [];
+        const more = [tab ? f : "", a(k, "data-more")].filter(Boolean).flatMap((t) =>
+          t.split("\n").map((p) => {
+            // "label\tvalue[\tz]": z draws a bar either side of the average (constellation);
+            // an empty label is a note line under the rows.
+            const [l, v, z] = p.split("\t"),
+              d = h("div", l ? "" : v, l ? {} : { "data-note": "" });
+            if (!l) return d;
+            d.append(h("span", l));
+            if (z) {
+              // The star's group colour, through the same [data-s] rule as the swatch.
+              const b = h("span", "", {
+                "data-z": "",
+                ...(s ? { "data-s": a(k, "data-s") } : {}),
+              });
+              b.style.setProperty("--z", z);
+              d.append(b);
+            }
+            d.append(h("span", v, { "data-v": "" }));
+            return d;
+          }),
+        );
         return row.childElementCount ? [row, ...more] : more;
       }),
       ...(all.length > rows.length ? [h("div", `+${all.length - rows.length}`)] : []),

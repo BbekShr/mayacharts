@@ -67,8 +67,36 @@ export interface ThoughtSpotViz {
 /** Render a columnar table into `el` (default `#chart`, created when missing). Returns the element.
  * @example maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] }, { type: "bar", x: /item/i, y: "sales" }) */
 export function columns(table: HostTable, spec: HostSpec, el?: MayaChart): MayaChart {
-  void [table, spec, el];
-  throw new Error("mayacharts: host.columns is not implemented yet");
+  const names = (table.schema ?? []).map((c) => (typeof c === "string" ? c : c.name));
+  // First match wins; no match leaves the name so validation lists the columns.
+  const hit = (f: HostField): string =>
+    typeof f === "string"
+      ? (names.find((n) => n.toLowerCase() === f.toLowerCase()) ?? f)
+      : (names.find((n) => n.search(f) >= 0) ?? f.source);
+  const one = (f: any) => (Array.isArray(f) ? f.map(hit) : hit(f));
+  // Keyed maps (format, titles, colorBy goals) rename keys that match a column.
+  const keyed = (o: any) =>
+    o && typeof o === "object" && !(o instanceof RegExp)
+      ? Object.fromEntries(Object.entries(o).map(([k, v]) => [hit(k), v]))
+      : o;
+  const s: any = { ...spec };
+  for (const k of ["x", "y", "series", "y2", "size", "name", "frame", "path"])
+    if (s[k] != null) s[k] = one(s[k]);
+  if (s.was) s.was = s.was.by ? { ...s.was, by: hit(s.was.by) } : hit(s.was);
+  if (s.colorBy instanceof RegExp) s.colorBy = hit(s.colorBy);
+  else if (s.colorBy !== "sign") s.colorBy = keyed(s.colorBy);
+  if (s.tooltip?.fields) s.tooltip = { ...s.tooltip, fields: s.tooltip.fields.map(hit) };
+  s.format = keyed(s.format);
+  s.titles = keyed(s.titles);
+  for (const k of ["format", "titles", "colorBy"]) s[k] ?? delete s[k];
+  // A ThoughtSpot cell is a value, or { value() } / { value }.
+  const cell = (v: any) => (typeof v?.value === "function" ? v.value() : (v?.value ?? v));
+  s.data = (table.data ?? []).map((r) => Object.fromEntries(names.map((n, i) => [n, cell(r[i])])));
+  el ??=
+    (document.getElementById("chart") as MayaChart | null) ??
+    document.body.appendChild(Object.assign(document.createElement("maya-chart"), { id: "chart" }));
+  el.spec = s;
+  return el;
 }
 
 /** ThoughtSpot custom chart: read the search data, render, emit render-complete once settled.
@@ -78,6 +106,13 @@ export function thoughtspot(
   spec: HostSpec,
   el?: MayaChart,
 ): MayaChart {
-  void [viz, spec, el];
-  throw new Error("mayacharts: host.thoughtspot is not implemented yet");
+  const e = columns(
+    viz?.getDataFromSearchQuery?.()?.getData() ?? { schema: [], data: [] },
+    spec,
+    el,
+  );
+  e.addEventListener("maya-settled", () => viz?.events?.emitRenderCompletedEvent?.(), {
+    once: true,
+  });
+  return e;
 }

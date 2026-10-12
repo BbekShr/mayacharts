@@ -223,3 +223,51 @@ describe("scatter", () => {
     expect(Number(attr(c[0]!, "r"))).toBeLessThan(5);
   });
 });
+
+describe("slope rules, tooltip fields and log axes", () => {
+  const data = [
+    { a: 10, b: 20, c: 1 },
+    { a: 100, b: 150, c: 2 },
+    { a: 1000, b: 3000, c: 3 },
+  ];
+  const spec: ChartSpec = { type: "scatter", x: "a", y: "b", data };
+  const slope = (s: string) => s.match(/<line data-key="%00slope~0" data-slope[^>]*>/)?.[0];
+  it("draws y = k x through the origin, clipped to the plot, under the points", () => {
+    const s = renderParts({ ...spec, rules: [{ slope: 2, label: "2x" }] }).svg;
+    const m = slope(s)!.match(/x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)"/)!;
+    const [x1, y1, x2, y2] = m.slice(1).map(Number) as [number, number, number, number];
+    const [px, py, pw, ph] = s
+      .match(/data-plot="([^"]*)"/)![1]!
+      .split(" ")
+      .map(Number) as [number, number, number, number];
+    expect(x1).toBeCloseTo(px, 0); // starts at the origin end of the x axis
+    expect(y2).toBeLessThan(y1); // rises to the right
+    expect(x2).toBeLessThanOrEqual(px + pw + 0.01);
+    expect(y2).toBeGreaterThanOrEqual(py - 0.01);
+    expect(y1).toBeLessThanOrEqual(py + ph + 0.01);
+    expect(s.indexOf("data-slope")).toBeLessThan(s.indexOf('data-maya="mark"'));
+    expect(s).toContain(">2x 2<");
+  });
+  it('"mean" is sum(y) / sum(x)', () => {
+    const s = renderParts({ ...spec, rules: [{ slope: "mean" }] }).svg;
+    expect(s).toContain(`>Average ${+(3170 / 1110).toPrecision(3)}<`);
+  });
+  it("is skipped when only one axis is logarithmic", () => {
+    expect(
+      slope(renderParts({ ...spec, xScale: "log", rules: [{ slope: 1 }] }).svg),
+    ).toBeUndefined();
+    expect(
+      slope(renderParts({ ...spec, xScale: "log", yScale: "log", rules: [{ slope: 1 }] }).svg),
+    ).toBeDefined();
+  });
+  it("writes data-more from tooltip fields and keeps log axes inside the data range", () => {
+    const s = renderParts({
+      ...spec,
+      xScale: "log",
+      yScale: "log",
+      tooltip: { fields: ["c"] },
+    }).svg;
+    expect(s).toMatch(/data-more="c\t2"/);
+    expect(s).toContain('data-log="x y"');
+  });
+});

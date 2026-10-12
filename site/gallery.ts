@@ -595,6 +595,83 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
     data: rollup(FACTS, ["monthMs"], { units: sum("units") }) as Row[],
   });
 
+  // 28b. A line against its own past: last year dashed, the high and low labelled.
+  const byMonth = rollup(FACTS, ["monthMs"], { sales: sum("sales") }) as {
+    monthMs: number;
+    sales: number;
+  }[];
+  tile("dash-line", {
+    type: "line",
+    title: "Sales against the same month last year",
+    x: "monthMs",
+    y: "sales",
+    series: "period",
+    dash: ["Same month last year"],
+    annotate: ["max", "min"],
+    format: { monthMs: "month", sales: "compact" },
+    titles: { sales: "Sales ($)" },
+    data: byMonth.flatMap((r, i) => [
+      { monthMs: r.monthMs, period: "Sales", sales: R(r.sales) },
+      // Synthetic prior year: a steady 12 to 20 percent below, wobbling with the month.
+      {
+        monthMs: r.monthMs,
+        period: "Same month last year",
+        sales: R(r.sales * (0.83 + 0.03 * Math.sin(i * 1.7))),
+      },
+    ]),
+  });
+
+  // 28c. Bars with the extremes named.
+  tile("annotate-bars", {
+    type: "bar",
+    horizontal: true,
+    title: "Sales by state, top 12",
+    x: "stateName",
+    y: "sales",
+    sort: "desc",
+    limit: 12,
+    annotate: ["max", "min"],
+    format: { sales: "compact" },
+    titles: { sales: "Sales ($)" },
+    data: rollup(FACTS, ["stateName"], { sales: sum("sales") }) as Row[],
+  });
+
+  // 28d. Average price as a slope rule, and the price per unit in the tooltip.
+  const perState = (
+    rollup(FACTS, ["stateName"], { sales: sum("sales"), units: sum("units") }) as {
+      stateName: string;
+      sales: number;
+      units: number;
+    }[]
+  ).map((r) => ({ ...r, price: R(r.sales / r.units, 2) }));
+  tile("slope-scatter", {
+    type: "scatter",
+    title: "Sales against units by state",
+    x: "units",
+    y: "sales",
+    name: "stateName",
+    rules: [{ slope: "mean", label: "Average price" }],
+    tooltip: { fields: ["price"] },
+    format: { units: "compact", sales: "compact", price: { style: "currency", currency: "USD" } },
+    titles: { units: "Units", sales: "Sales ($)", price: "Price per unit" },
+    data: perState,
+  });
+
+  // 28e. The same on log axes: the 45 degree rule is the average price.
+  tile("log-scatter", {
+    type: "scatter",
+    title: "Sales against units, log scales",
+    x: "units",
+    y: "sales",
+    name: "stateName",
+    xScale: "log",
+    yScale: "log",
+    rules: [{ slope: "mean" }],
+    format: { units: "compact", sales: "compact" },
+    titles: { units: "Units", sales: "Sales ($)" },
+    data: perState,
+  });
+
   // 29. Scatter past the mark cap: 50 000 points become density cells; zoom brings circles back.
   tile("scatter-dense", {
     type: "scatter",

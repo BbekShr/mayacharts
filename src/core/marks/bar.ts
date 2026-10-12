@@ -2,7 +2,16 @@ import { nf } from "../format.ts";
 import { bandScale } from "../scale.ts";
 import { colorVals } from "../shape.ts";
 import { el, esc, hit, key, OTHER, r, tw } from "../svg.ts";
-import type { Axis, BandScale, LinearScale, Mark, ResolvedSpec, Shaped } from "../types.ts";
+import type {
+  Annotate,
+  Axis,
+  BandScale,
+  LinearScale,
+  Mark,
+  MarkCtx,
+  ResolvedSpec,
+  Shaped,
+} from "../types.ts";
 
 const MAX_BAR = 72;
 
@@ -25,6 +34,41 @@ export const inText = (
     },
     esc(text),
   );
+
+/** spec.tooltip.fields as `data-more`: "title\tvalue" lines (the data-f grammar), formatted by `format`; null when none has a value. */
+export const more = (ctx: MarkCtx, val: (f: string, i: number) => unknown) =>
+  ctx.spec.tipFields
+    .flatMap((f, i) => {
+      const v = val(f, i);
+      return v == null ? [] : [`${ctx.spec.titles.get(f) ?? f}\t${ctx.fmt(f, v)}`];
+    })
+    .join("\n") || null;
+
+/** spec.annotate: [kind, index into vs] in max, min, first, last order, each point once (first on ties). */
+export function marked(vs: readonly number[], want: readonly Annotate[]) {
+  const at = {
+    max: vs.indexOf(Math.max(...vs)),
+    min: vs.indexOf(Math.min(...vs)),
+    first: 0,
+    last: vs.length - 1,
+  };
+  const seen = new Set<number>();
+  return (["max", "min", "first", "last"] as const).flatMap((a) => {
+    if (!vs.length || !want.includes(a) || seen.has(at[a])) return [];
+    seen.add(at[a]);
+    return [[a, at[a]] as const];
+  });
+}
+
+/** Ink for a label over the bar's own fill, picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps). */
+const inkOf = (d: Record<string, any>) =>
+  d["data-q"] === null
+    ? d["data-other"] || d["data-total"] || d["data-tone"]
+      ? "b"
+      : ""
+    : d["data-q"] >= 6
+      ? ""
+      : null;
 
 interface Item {
   ci: number;
@@ -94,6 +138,7 @@ export const bar: Mark = {
     const hz = spec.horizontal;
     const cat = (hz ? ctx.y : ctx.x) as BandScale;
     const val = (hz ? ctx.x : ctx.y) as LinearScale;
+    const mv = spec.tipFields.map((f) => colorVals(spec, f));
     const keys = shaped.visible.map((j) => shaped.series[j]!);
     const inner = bandScale(keys, [0, cat.bandwidth], 0.1, 0);
     const cvOf = colorVals(spec);
@@ -173,6 +218,7 @@ export const bar: Mark = {
         "data-q": cv === null ? null : ctx.q(cv),
         "data-was": wv === null ? null : ctx.t("was", ctx.fmt(spec.y, wv)),
         "data-other": cname === OTHER,
+        "data-more": more(ctx, (_, k) => mv[k]!(cname, ser)),
         // waterfall start and running total: neutral, so colour keeps one meaning (up or down)
         "data-total": shaped.totals[c.ci] || (wf && !tags.length),
       };
@@ -200,6 +246,57 @@ export const bar: Mark = {
       // (A label left of the svg is dropped anyway, so a negative slice start costs nothing.)
       (grid[(x + MAX_BAR) >> 7] ??= []).push(tags.at(-1)!);
     }
+    // spec.annotate: per series, the max, min, first and last bar (not the Other roll-up) labelled at the bar end, ahead of the plain value labels.
+    // ponytail: not on stacks (a segment's end is not a value to read).
+    const noted = new Set<string>();
+    if (spec.annotate.length && !spec.stack)
+      for (const si of shaped.visible) {
+        const ts = tags.filter(([c, , , , , d]) => c.si === si && !d["data-other"]);
+        for (const [a, i] of marked(
+          ts.map((t) => t[0].v),
+          spec.annotate,
+        )) {
+          const [c, x, y, w, h, d] = ts[i]!;
+          const [text, neg] = [ctx.fmt(spec.y, c.v), c.v < 0];
+          const pl = ctx.plot;
+          // Outside the bar end when it fits: a negative bar's label stays off the axis labels.
+          const ok =
+            (hz ? !neg || x - 4 - tw(text) >= pl.x : !neg || y + h + 14 <= pl.y + pl.h) &&
+            (hz
+              ? ctx.label(
+                  neg ? x - 4 : x + w + 4,
+                  y + h / 2,
+                  text,
+                  neg ? "end" : "start",
+                  d["data-key"],
+                  a,
+                )
+              : ctx.label(
+                  x + w / 2,
+                  neg ? y + h : y,
+                  text,
+                  neg ? "below" : "above",
+                  d["data-key"],
+                  a,
+                ));
+          if (ok) noted.add(d["data-key"]);
+          // No room outside (a bar at the plot's edge or the axis): the label goes inside its end.
+          else if (hz ? tw(text) + 8 <= w && h >= 10 : tw(text) <= w && h >= 16) {
+            noted.add(d["data-key"]);
+            labels += inText(
+              hz ? (neg ? x + 4 : x + w - 4) : x + w / 2,
+              hz ? y + h / 2 : neg ? y + h - 9 : y + 9,
+              text,
+              {
+                "data-ink": inkOf(d),
+                "data-key": d["data-key"],
+                "data-ann": a,
+                "text-anchor": hz ? (neg ? "start" : "end") : "middle",
+              },
+            );
+          }
+        }
+      }
     if (spec.labels && tags.length) {
       // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
       // step label must fit inside its own column or it is dropped.
@@ -214,21 +311,13 @@ export const bar: Mark = {
       for (const t of wf ? new Set([first, last, ...tags]) : tags) {
         const [c, x, y, w, h, d] = t;
         const dk = d["data-key"];
+        if (noted.has(dk)) continue;
         // Inside when it fits, else outside the bar end (collisions are dropped by ctx.label).
         const text = ctx.fmt(spec.y, c.v);
         const est = tw(text);
         if (wf && est > cat.step && t !== first && t !== last) continue;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;
-        // Over the bar's own fill: ink picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps).
-        const ink =
-          d["data-q"] === null
-            ? d["data-other"] || d["data-total"] || d["data-tone"]
-              ? "b"
-              : ""
-            : d["data-q"] >= 6
-              ? ""
-              : null;
         if (hz && !spec.stack ? all : est <= w && h >= (hz ? 14 : 16)) {
           // At the bar's end, where the eye reads a value; a stack segment keeps its middle.
           // A bar cut at the plot edge keeps the middle, clear of its break slashes.
@@ -241,7 +330,7 @@ export const bar: Mark = {
             pin && !hz ? (neg ? y + h - 10 : y + 10) : cy,
             text,
             {
-              "data-ink": ink,
+              "data-ink": inkOf(d),
               "data-key": dk,
               "text-anchor": pin && hz ? (neg ? "start" : "end") : "middle",
             },
@@ -260,7 +349,7 @@ export const bar: Mark = {
           )
             labels += inText(neg ? x + 4 : x + w - (d["data-other"] ? 14 : 4), cy, text, {
               // the roll-up bar is often cut: clear of its break mark
-              "data-ink": ink,
+              "data-ink": inkOf(d),
               "data-key": dk,
               "text-anchor": neg ? "start" : "end",
             });

@@ -52,11 +52,13 @@ interface Opts {
   window?: View["window"];
   /** Estimated plot width in px: a time axis keeps at most one point per 2 px. */
   plotWidth?: number;
+  /** Estimated svg height: horizontal bars too dense for a label each roll into Other. */
+  height?: number;
 }
 
 export function shape(
   s: ResolvedSpec,
-  { hidden = [], window, plotWidth = Infinity }: Opts = {},
+  { hidden = [], window, plotWidth = Infinity, height = Infinity }: Opts = {},
 ): Shaped {
   const series: string[] = [];
   const shown = () => series.flatMap((k, j) => (hidden.includes(k) ? [] : [j]));
@@ -144,6 +146,23 @@ export function shape(
           Math.floor(MAX_MARKS / series.length) - 1,
         ),
       );
+      capped = [lim, cats.length];
+    }
+    // Dense horizontal bars (#66.1): bands under 14 px (one label each) roll the smallest nominal
+    // categories into Other rather than thin the labels. Not for dates, xType "time" or a set limit.
+    // ponytail: the height is estimated (24 px value axis, 18 px title), a layout surprise falls back to thinning.
+    const room = Math.floor((height - 10 - (s.xAxis ? 24 : 8) - (s.titles.has(s.y) ? 18 : 0)) / 14);
+    if (
+      lim === null &&
+      s.type === "bar" &&
+      s.horizontal &&
+      !isTime &&
+      s.xType !== "time" &&
+      room >= 3 &&
+      cats.length > room &&
+      !cats.every((c) => toTime(c.label, false) !== null)
+    ) {
+      lim = room - 1;
       capped = [lim, cats.length];
     }
     if (s.sort || (lim !== null && cats.length > lim))
@@ -562,8 +581,38 @@ export function pivotWas(
   w: { by: string; current: string | null; previous: string | null },
   aggregate: Aggregate,
 ): { rows: readonly Row[]; previous: Row[string] | null } {
-  void [x, series, y, w, aggregate]; // TODO(#60): stub from the contract phase
-  return { rows, previous: null };
+  return memo(rows, `w${x}\0${series}\0${y}\0${JSON.stringify(w)}\0${aggregate}`, () => {
+    // Distinct periods by String(value), first appearance; a null period is no period.
+    const raw = new Map<string, Row[string]>();
+    for (const r of rows)
+      if (r[w.by] != null && !raw.has(String(r[w.by]))) raw.set(String(r[w.by]), r[w.by]);
+    let order = [...raw.keys()];
+    const ts = order.map((k) => toTime(raw.get(k)));
+    if (ts.every((t) => t !== null))
+      order = order
+        .map((k, i) => [k, ts[i]!] as const)
+        .sort((a, b) => a[1] - b[1])
+        .map((e) => e[0]);
+    const cur = w.current ?? order.at(-1) ?? null;
+    const prev = w.previous ?? order[order.indexOf(cur ?? "") - 1] ?? null;
+    // ponytail: groups by (x, series) only, so a drill path with the same x under two parents merges.
+    // The first row of a group is its base: fields other than x, series, y and by come from it.
+    const g = new Map<string, { row: Row; c: ReturnType<typeof agg>; p: ReturnType<typeof agg> }>();
+    for (const r of rows) {
+      const k = r[w.by] == null ? "" : String(r[w.by]);
+      if (k === "" || (k !== cur && k !== prev)) continue;
+      const id = String(r[x]) + "\0" + (series === null ? "" : String(r[series]));
+      const e = g.get(id) ?? g.set(id, { row: r, c: agg(aggregate), p: agg(aggregate) }).get(id)!;
+      const v = r[y];
+      if (typeof v === "number") (k === cur ? e.c : e.p).add(v);
+    }
+    const out = [...g.values()].map((e) => {
+      const { [w.by]: _, ...rest } = e.row;
+      const p = e.p.value();
+      return { ...rest, [y]: e.c.value(), ...(p === null ? {} : { [w.by]: p }) };
+    });
+    return { rows: out, previous: prev === null ? null : (raw.get(prev) ?? null) };
+  });
 }
 
 /** A field (default: the colorBy field; also spec.was) aggregated per (category, series) like the marks; null without one. */

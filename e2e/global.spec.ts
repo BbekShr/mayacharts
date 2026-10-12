@@ -80,3 +80,28 @@ test.describe("types", () => {
     });
   }
 });
+
+test.describe("split globals (core + module files)", () => {
+  const CORE = "dist/maya.core.global.js";
+  const HIER = "dist/maya.hierarchy.global.js";
+  test.skip(!existsSync(CORE) || !existsSync(HIER), "split globals missing: run `npm run build`");
+
+  test("C. core then hierarchy: treemap renders, maya.host exists", async ({ page }) => {
+    await page.setContent("<!doctype html><body></body>");
+    await page.addScriptTag({ path: CORE });
+    await page.addScriptTag({ path: HIER });
+    const res = await mount(page, { treemap: SPECS.treemap! });
+    expect(res.treemap!.marks).toBeGreaterThan(0);
+    expect(res.treemap!.err).toBe(0);
+    expect(await page.evaluate(() => typeof (globalThis as any).maya.host)).toBe("object");
+  });
+
+  test("D. core only: treemap reports unknown-type naming the global file", async ({ page }) => {
+    await page.setContent("<!doctype html><body></body>");
+    await page.addScriptTag({ path: CORE });
+    const res = await mount(page, { treemap: SPECS.treemap! });
+    expect(res.treemap!.err).toBe(1);
+    const text = await page.locator("#treemap").evaluate((e) => e.shadowRoot!.textContent);
+    expect(text).toContain("maya.hierarchy.global.js");
+  });
+});

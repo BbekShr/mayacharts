@@ -177,6 +177,63 @@
           </section>
           <section>
             <div class="tile-head">
+              <h2>Sales against last year</h2>
+              <button type="button" data-reroll="dash-line">Re-roll</button>
+            </div>
+            <p>
+              The earlier series is dashed (<code>dash</code>), and <code>annotate</code> labels the
+              high and the low.
+            </p>
+            <maya-chart id="dash-line" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="dash-line-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Top states by sales</h2>
+              <button type="button" data-reroll="annotate-bars">Re-roll</button>
+            </div>
+            <p>
+              <code>annotate</code> names the largest and smallest bar and leaves the rest to the
+              hover.
+            </p>
+            <maya-chart id="annotate-bars" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="annotate-bars-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Sales against units</h2>
+              <button type="button" data-reroll="slope-scatter">Re-roll</button>
+            </div>
+            <p>
+              A slope rule through the origin is the average price, and the tooltip adds the price
+              per unit.
+            </p>
+            <maya-chart id="slope-scatter" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="slope-scatter-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Skewed sales on log axes</h2>
+              <button type="button" data-reroll="log-scatter">Re-roll</button>
+            </div>
+            <p>Both axes are logarithmic, so small and large states share the plot.</p>
+            <maya-chart id="log-scatter" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="log-scatter-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
               <h2>Sales by product family</h2>
               <button type="button" data-reroll="stacked-area">Re-roll</button>
             </div>

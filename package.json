@@ -83,6 +83,10 @@
       "types": "./dist/themes.d.ts",
       "default": "./dist/themes.js"
     },
+    "./host": {
+      "types": "./dist/host.d.ts",
+      "default": "./dist/host.js"
+    },
     "./global": "./dist/maya.global.js",
     "./theme.css": "./dist/theme.css",
     "./schema.json": "./schema.json",
@@ -102,6 +106,7 @@
     "./dist/orbit.js",
     "./dist/constellation.js",
     "./dist/maya.global.js",
+    "./dist/maya.*.global.js",
     "./src/element.ts",
     "./src/hierarchy.ts",
     "./src/flow.ts",
@@ -112,7 +117,8 @@
     "./src/constellation.ts",
     "./src/geo.ts",
     "./src/stats.ts",
-    "./src/global.ts"
+    "./src/global.ts",
+    "./src/global-*.ts"
   ],
   "files": [
     "dist",
@@ -128,7 +134,7 @@
   "scripts": {
     "readme:shots": "node scripts/readme-shots.mjs",
     "dev": "node scripts/ssr-demo.ts && vite --config site/vite.config.ts",
-    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode stats && vite build --mode weave && vite build --mode units && vite build --mode orbit && vite build --mode constellation && vite build --mode themes && vite build --mode global && tsc -p tsconfig.build.json",
+    "build": "vite build --mode index && vite build --mode element && vite build --mode hierarchy && vite build --mode flow && vite build --mode geo && vite build --mode radial && vite build --mode stats && vite build --mode weave && vite build --mode units && vite build --mode orbit && vite build --mode constellation && vite build --mode host && vite build --mode themes && vite build --mode global && vite build --mode global-core && vite build --mode global-hierarchy && vite build --mode global-flow && vite build --mode global-geo && vite build --mode global-radial && vite build --mode global-stats && vite build --mode global-weave && vite build --mode global-units && vite build --mode global-orbit && vite build --mode global-constellation && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

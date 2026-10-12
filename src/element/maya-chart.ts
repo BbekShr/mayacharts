@@ -14,7 +14,7 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Intro, patch, type PatchOptions } from "./animate.ts";
+import { type Intro, idle, patch, type PatchOptions } from "./animate.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import { listen } from "./listen.ts";
@@ -25,6 +25,7 @@ import * as sort from "./sort.ts";
 import { type Tooltip, tooltip } from "./tooltip.ts";
 import * as zoom from "./zoom.ts";
 
+type Deferred = { p: Promise<void>; ok(): void; no(e: Error): void };
 let sheet: CSSStyleSheet | undefined;
 
 export class MayaChart extends HTMLElement {
@@ -56,6 +57,34 @@ export class MayaChart extends HTMLElement {
   #drawn = false;
   #intro = 0; // performance.now() of the animated first draw
   #idle: (() => void) | undefined; // cancels the queued data-table insert
+
+  #gen = 0; // the latest paint; an older one's settle is dropped
+  #res: Error | null | undefined; // outcome of the last settle; undefined while a render is due
+  #sp: Deferred | undefined; // made only when read
+
+  /** Resolves when the current or next render has finished animating; rejects with its error. */
+  get settled(): Promise<void> {
+    if (this.#res !== undefined) return this.#res ? Promise.reject(this.#res) : Promise.resolve();
+    if (!this.#sp) {
+      const s = {} as Deferred;
+      s.p = new Promise((ok, no) => Object.assign(s, { ok, no }));
+      this.#sp = s;
+    }
+    return this.#sp.p;
+  }
+
+  #settle(error: Error | null, wait?: Promise<unknown>): void {
+    const n = ++this.#gen;
+    const fin = () => {
+      if (n !== this.#gen) return;
+      this.#res = error;
+      this.#emit("maya-settled", { error });
+      const s = this.#sp;
+      this.#sp = undefined;
+      error ? s?.no(error) : s?.ok();
+    };
+    wait ? wait.then(fin) : fin();
+  }
 
   get spec(): ChartSpec | undefined {
     return this.#prop ?? this.#json ?? this.#attr;
@@ -312,6 +341,7 @@ export class MayaChart extends HTMLElement {
   /** Renders in a microtask (property sets in one task batch); ResizeObserver delivery waits a frame. */
   #schedule(raf = false): void {
     if (!this.isConnected || (raf ? this.#raf : this.#q)) return;
+    if (!raf) this.#res = undefined;
     const run = () => {
       if (raf) this.#raf = false;
       else this.#q = false;
@@ -402,10 +432,11 @@ export class MayaChart extends HTMLElement {
       const d: MayaErrorDetail | null =
         e instanceof MayaSpecError ? { code: e.code, path: e.path, message: e.message } : null;
       // Cancelable: preventDefault() hides the box (the host shows its own error).
+      const fail = e instanceof Error ? e : new Error(String(e));
       if (d && !this.#emit("maya-error", d, true)) {
         box.replaceChildren();
         this.#drawn = false;
-        return;
+        return this.#settle(fail);
       }
       const pre = document.createElement("pre");
       pre.className = "maya-err"; // styled by theme.ts; never an inline style
@@ -414,7 +445,7 @@ export class MayaChart extends HTMLElement {
       this.#drawn = false;
       if (pre.textContent !== this.#err) console.error(e);
       this.#err = pre.textContent;
-      return;
+      return this.#settle(fail);
     }
     this.#err = "";
     const maya = root.querySelector<HTMLElement>(".maya")!;
@@ -460,6 +491,7 @@ export class MayaChart extends HTMLElement {
     this.#restore(focus);
     for (const h of Object.values(this.#ix ?? {})) h.painted?.();
     this.#emit("maya-render", {});
+    this.#settle(null, idle(root));
   }
 
   /** Slots in shell order; each is replaced only when its markup changed. True if any was. */

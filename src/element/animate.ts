@@ -315,6 +315,9 @@ function crossfade(
 // the locale's separators, prefix and suffix stay exactly as the formatter wrote them.
 const NUM = /\d(?:[\d.,'\u2019\s\u00a0\u202f]*\d)?/;
 const counts = new WeakMap<Element, number>(); // latest count per element; older loops stop
+const busyUntil = new WeakMap<Node, number>(); // per chart: performance.now() when its last count-up or text swap ends
+const hold = (e: Element, t: number) =>
+  busyUntil.set(e.getRootNode(), Math.max(busyUntil.get(e.getRootNode()) ?? 0, t));
 function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   const to = e.textContent ?? "";
   const m = NUM.exec(to);
@@ -346,6 +349,7 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   if (f && (fh.replace(SG, "") !== base || from.slice(f.index + f[0].length) !== tail)) {
     // Another unit (K to M) would contradict the number: swap once the mark has landed.
     e.textContent = from;
+    hold(e, performance.now() + Number(o.duration));
     setTimeout(() => e.textContent === from && (e.textContent = to), Number(o.duration));
     return;
   }
@@ -362,6 +366,7 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
     t0 = performance.now() + Number(o.delay ?? 0);
   const id = (counts.get(e) ?? 0) + 1;
   counts.set(e, id);
+  hold(e, t0 + ms);
   let cur = shape(A);
   e.textContent = cur;
   const step = (now: number) => {
@@ -844,4 +849,25 @@ export function patch(
     zm = undefined;
   }
   opts.after?.(box.firstElementChild!);
+}
+
+const live = (root: ShadowRoot) =>
+  root
+    .getAnimations?.()
+    .filter(
+      (a) => a.playState !== "finished" && a.effect?.getComputedTiming().iterations !== Infinity,
+    ) ?? []; // the orbit's endless rotation is not motion to wait for
+
+/** Undefined when nothing animates; else resolves when every finite animation and count-up has ended (5 s cap). */
+export function idle(root: ShadowRoot): Promise<unknown> | undefined {
+  if (!live(root).length && (busyUntil.get(root) ?? 0) <= performance.now()) return;
+  const go = async () => {
+    for (let l; (l = live(root)).length || (busyUntil.get(root) ?? 0) > performance.now();) {
+      await Promise.allSettled(l.map((a) => a.finished));
+      await new Promise((r) =>
+        setTimeout(r, Math.max(0, (busyUntil.get(root) ?? 0) - performance.now())),
+      );
+    }
+  };
+  return Promise.race([go(), new Promise((r) => setTimeout(r, 5000))]);
 }

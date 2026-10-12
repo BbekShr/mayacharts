@@ -125,7 +125,7 @@ const ORBIT =
 export const css =
   L +
   `@supports not (color:light-dark(#000,#fff)){:host,.maya-root{${D}}@media (prefers-color-scheme:dark){:host,.maya-root{${N}}}}` +
-  ":host{display:block;position:relative;container-type:inline-size;min-height:200px}" +
+  ":host{display:block;position:relative;container-type:inline-size;min-height:min(200px,100%)}" +
   ".maya{display:flex;flex-direction:column;height:100%;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums;color:var(--maya-fg)}" +
   ".maya-title{font-weight:600;font-size:15px;letter-spacing:-.01em;margin:0 0 6px}" +
   ".maya-legend,.maya-crumbs{color:var(--maya-fg-muted);display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;margin:0 0 8px}" +
@@ -179,6 +179,9 @@ export const css =
   "[data-line] i{height:2px;border-radius:1px}" +
   // Direct end labels of line and area, in their series colour.
   "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
+  // Dashed series (spec.dash): square caps so the gaps stay open (the dash itself is the path's stroke-dasharray, in pathLength units); the legend key is the same dash. Annotations (spec.annotate) are the quiet bold; a slope rule is a faint diagonal.
+  "[data-maya=line][data-dash]{stroke-linecap:butt}.maya-legend [data-dash] i{width:14px;height:2px;border-radius:0;background:repeating-linear-gradient(90deg,var(--c) 0 5px,#0000 5px 8px)}[data-maya=labels] [data-ann]{font-weight:600}" +
+  "line[data-slope]{stroke:var(--maya-fg-muted);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}" +
   // Break marks on a clipped Other bar; parallel tick halos and end-label leaders.
   "[data-brk]{stroke:var(--maya-bg);stroke-width:2.5;fill:none}[data-ax][data-h]{stroke:var(--maya-bg);stroke-width:3;paint-order:stroke;stroke-linejoin:round}[data-maya=grid] line[data-s]{stroke:var(--c)}" +
   // 0.2 types: ridgeline fill, radial rings, table header and row text, parallel line focus.
