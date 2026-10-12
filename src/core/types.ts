@@ -240,7 +240,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Log x axis; every x must be above 0. scatter only.
    * @example xScale: "log" */
   xScale?: "log";
-  /** Label these points of each visible series with their value: "max", "min", "first", "last" (scatter: by y, first and last by x); `{ x, text }` labels the mark at that x with the text. bar line area scatter.
+  /** Label these points of each visible series with their value: "max", "min", "first", "last" (scatter: max and min by y, first and last by x); `{ x, text }` labels the mark at that x with the text. bar line area scatter.
    * @example annotate: ["max", "last", { x: "CA", text: "Largest store" }] */
   annotate?: readonly (Annotate | AnnotateAt)[];
   /** Series values drawn dashed (line, the area outline), e.g. last year against this year. line area; needs `series`.

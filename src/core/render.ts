@@ -398,7 +398,7 @@
  *   stays; when a name would be dropped (under 56 px left beside the value) the legend stays too. It draws <text data-end data-s>
  *   (and a <line data-lead> when nudged more than 3 px) into the labels group, and the legend is
  *   dropped unless the spec sets legend:true explicitly (then both show). A hidden series or
- *   labels:true keep the legend and draw no end labels; endLabels:false turns them off.
+ *   labels:true keep the legend and draw no end labels; endLabels:false and a legend placement string turn them off.
  *
  * Legend and title are HTML, not SVG (free wrapping and font metrics). render() — the
  * bare SVG — therefore has no legend; renderShell() is the full-fidelity output.
@@ -662,7 +662,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   };
 
   // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
-  const ends = spec.endLabels === false ? null : mark.ends?.(s, shaped, fmt);
+  const ends =
+    spec.endLabels === false || typeof spec.legend === "string"
+      ? null
+      : mark.ends?.(s, shaped, fmt);
   const gutter = ends?.length
     ? endGutter(ends, W) ||
       (mark.ends === line.ends ? Math.max(...ends.map((e) => tw(e[1]))) + 14 : 0)

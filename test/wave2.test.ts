@@ -167,3 +167,40 @@ describe("sankey drill clamp", () => {
     expect(s.crumbs).toContain("aria-current");
   });
 });
+
+describe("fix round", () => {
+  const two: ChartSpec = {
+    type: "line",
+    x: "m",
+    y: "v",
+    series: "r",
+    title: "{max.y} at {max.x}, {min.y}, {first.x}, {last.y}, {total}, {mean}",
+    data: [
+      { m: "2025-01-01", r: "A", v: 10 },
+      { m: "2025-01-01", r: "B", v: 5 },
+      { m: "2025-02-01", r: "A", v: 7 },
+      { m: "2025-02-01", r: "B", v: 20 },
+    ],
+  };
+  it("tokens name one drawn point, not the category sum", () => {
+    const t = renderParts(two).title;
+    expect(t).toContain("20 at");
+    expect(t).toContain(", 5,");
+    expect(t).toContain(", 20, 42, 10.5");
+    expect(renderParts({ ...two, type: "area", stack: true }).title).toContain("27 at");
+  });
+  it("a legend placement drops end labels", () => {
+    expect(render(two)).toContain("data-end");
+    expect(render({ ...two, legend: "right" })).not.toContain("<text data-end");
+  });
+  it("a table row label is a drill target", () => {
+    const t = {
+      type: "table",
+      y: "sales",
+      path: ["region", "state"],
+      drill: true,
+      data: rows,
+    } as ChartSpec;
+    expect(render(t)).toMatch(/data-maya="hit"[^>]*x="0"/);
+  });
+});

@@ -15,9 +15,9 @@ export const titleText = (spec: ResolvedSpec): string =>
 /**
  * Fill the exact data tokens in a title or subtitle: {max.x} {max.y} {min.x} {min.y} {first.x}
  * {first.y} {last.x} {last.y} {total} {mean}, formatted by the field's format. Anything else in
- * braces, and a token with no value (no categories), stays as written. A category's value is
- * its visible series added up; Other counts in {total} only. `mean` is the "mean" rule's value.
- * ponytail: with a ratio and several series the per-category figure is the series' ratios added.
+ * braces, and a token with no value (no categories), stays as written. max, min, first and last
+ * name one drawn point (category x series), or the category total when `stack` is set; Other is
+ * left out of them. `total` adds every drawn value; `mean` is the "mean" rule's value.
  */
 export function resolveTokens(
   text: string,
@@ -28,14 +28,21 @@ export function resolveTokens(
 ): string {
   if (!text.includes("{")) return text;
   const by = new Map<number, number>();
-  for (const c of shaped.cells) if (c.value !== null) by.set(c.ci, (by.get(c.ci) ?? 0) + c.value);
-  const cs = [...by].filter(([i]) => shaped.categories[i] !== OTHER);
+  const pts: [number, number][] = [];
+  let sum = 0;
+  for (const c of shaped.cells)
+    if (c.value !== null) {
+      by.set(c.ci, (by.get(c.ci) ?? 0) + c.value);
+      pts.push([c.ci, c.value]);
+      sum += c.value;
+    }
+  const cs = (s.stack ? [...by] : pts).filter(([i]) => shaped.categories[i] !== OTHER);
   return text.replace(
     /\{(?:(max|min|first|last)\.([xy])|(total|mean))\}/g,
     (m, k?: string, a?: string, o?: string) => {
       if (o) {
-        const v = o === "mean" ? mean() : [...by.values()].reduce((x, y) => x + y, 0);
-        return by.size && Number.isFinite(v) ? fmt(s.y, v) : m;
+        const v = o === "mean" ? mean() : sum;
+        return pts.length && Number.isFinite(v) ? fmt(s.y, v) : m;
       }
       const e = cs.reduce<[number, number] | undefined>(
         (p, c) =>

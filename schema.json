@@ -537,7 +537,7 @@
         ]
       },
       "minItems": 1,
-      "description": "Label these points of each visible series with their value: max, min, first, last (scatter: by y, first and last by x); { x, text } labels the mark at that x with the text. bar line area scatter."
+      "description": "Label these points of each visible series with their value: max, min, first, last (scatter: max and min by y, first and last by x); { x, text } labels the mark at that x with the text. bar line area scatter."
     },
     "dash": {
       "type": "array",

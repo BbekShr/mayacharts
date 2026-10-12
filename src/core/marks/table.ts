@@ -167,6 +167,17 @@ export const table: Mark = {
           height: 4,
         });
         hits += hit(d, colX(mi) + PAD, y, bw, 4);
+        // The row label is part of the first measure's target, so a drill click on the name works.
+        if (!mi)
+          hits += el("rect", {
+            ...d,
+            "data-maya": "hit",
+            x: 0,
+            y: top,
+            width: r(lw),
+            height: ROW,
+            fill: "transparent",
+          });
       });
     });
     return { marks, hits, labels, grid };
