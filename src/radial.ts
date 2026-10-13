@@ -507,7 +507,11 @@ export const gauge: Mark = {
     const below = wide ? (open ? 16 : 0) : 18 + (wasV !== null || status ? 16 : 0);
     const dn = SW === 180 ? 0 : SW === 270 ? Math.SQRT1_2 : 1; // how far the dial hangs below its centre, in radii
     const top = target === null ? 6 : 18;
-    const side = 6 + ex + (target === null ? 0 : Math.min(plot.w * 0.2, tl.length * 6.2));
+    // The target text stands 9 px beyond the band ring (the tag offset), so 12 + ex of reach and then its width.
+    const side =
+      (target === null ? 6 : 12) +
+      ex +
+      (target === null ? 0 : Math.min(plot.w * 0.2, tl.length * 6.2));
     const R = Math.max(14, Math.min(plot.w / 2 - side, (plot.h - below - top - ex) / (1 + dn)));
     const t = Math.min(26, Math.max(6, R * 0.2));
     const [cx, cy] = [

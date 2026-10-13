@@ -486,7 +486,8 @@ export const chord: Mark = {
       const [lx, ly] = [cx + rad * sn, cy - rad * cs];
       const pole = Math.abs(sn) < 0.25;
       // Top and bottom labels grow away from the ring; side labels centre on the arc.
-      const cyy = pole ? ly + (cs > 0 ? -20 : 18) : ly;
+      // A side label near the top or bottom leans away from the ring (its two lines would touch the arc that curves under them).
+      const cyy = pole ? ly + (cs > 0 ? -20 : 18) : ly - cs * 10;
       const anchor = pole ? "middle" : sn > 0 ? "start" : "end";
       labels += lines(
         lx,

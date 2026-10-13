@@ -94,7 +94,7 @@ describe("gauge", () => {
     // warn near an end of a narrow dial would leave the svg
     const c = { colorBy: { target: 70, warn: 1 }, format: "currency" } as const;
     expect(labels(svg(base(c, 40), { width: 360 }))).toContain(">$1.00<");
-    expect(labels(svg(base(c, 40), { width: 150, height: 120 }))).not.toContain(">$1.00<");
+    expect(labels(svg(base(c, 40), { width: 110, height: 100 }))).not.toContain(">$1.00<");
   });
   it("a value of zero draws no round cap", () => {
     expect(arc(svg(base({}, 0)))).toContain('stroke-linecap="butt"');

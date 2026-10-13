@@ -435,6 +435,7 @@ export const marimekko: Mark = {
     let grid = "";
     let labels = "";
     const on = spec.labels !== false;
+    const drilled = spec.drilled.length > 0;
     const txt = (x: number, y: number, s: string, a: Record<string, string | number>) =>
       el("text", { x: r(x), y: r(y), "text-anchor": "middle", "data-in": true, ...a }, esc(s));
     // Scale: gridlines behind the columns show through the gaps; ticks stay inside the plot.
@@ -464,7 +465,11 @@ export const marimekko: Mark = {
           "data-maya": "mark",
           "data-key": key(series[si], cat),
           "data-c": ci,
-          "data-s": si % 8,
+          // ponytail: tint steps repeat after 8 siblings; the legend keeps the plain slots.
+          // Drilled: the column is the colour (its slot), the segments are tints of it, so more than 8
+          // children never repeat a slot and the hue keeps the parent's meaning.
+          "data-s": (drilled ? ci : si) % 8,
+          "data-lt": drilled ? si % 8 : null,
           "data-x": name,
           "data-series": series[si],
           "data-y": v,
@@ -480,14 +485,18 @@ export const marimekko: Mark = {
         // Share, plus the series name above it when the segment is tall and wide enough.
         if (on && h >= 18 && text(share) <= w) {
           const two = h >= 40 && text(series[si]!) <= w;
+          // A tinted segment's label carries its colour attributes: the ink follows the fill (data-ink=a).
+          const k = drilled ? { "data-s": a["data-s"], "data-lt": si % 8 } : {};
           if (two)
             labels += txt(cx, cy - 8, series[si]!, {
               "dominant-baseline": "middle",
-              "data-ink": "n",
+              "data-ink": drilled ? "a" : "n",
+              ...k,
             });
           labels += txt(cx, cy + (two ? 8 : 0), share, {
             "dominant-baseline": "middle",
-            "data-ink": "",
+            "data-ink": drilled ? "a" : "",
+            ...k,
           });
         }
       }

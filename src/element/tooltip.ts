@@ -23,6 +23,11 @@ const unit = (svg: Element, s: DOMRect) => {
   const w = +(a(svg, "viewBox").split(" ")[2] || s.width) || 1;
   return w / (s.width || w);
 };
+const PANEL = "svg[data-maya=panel]";
+/** The facet panel a node sits in. */
+const panelOf = (e: Element) => e.closest(PANEL);
+/** data-c scoped to its panel: panels repeat the same categories. */
+const pk = (m: Element) => (panelOf(m)?.getAttribute("data-facet") ?? "") + "\0" + a(m, "data-c");
 export const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export interface Tooltip {
@@ -76,13 +81,13 @@ export function tooltip(
     for (const m of list) {
       byKey.set(a(m, "data-key"), m);
       if (!m.hasAttribute("data-c")) continue;
-      const c = a(m, "data-c");
+      const c = pk(m);
       // Push, not spread: a group of 1500 dots would copy the array per dot.
       (byC.get(c) ?? byC.set(c, []).get(c)!).push(m);
     }
   };
   const group = (m: Element) =>
-    (a(m, "data-maya") !== "link" && m.hasAttribute("data-c") && byC.get(a(m, "data-c"))) || [m];
+    (a(m, "data-maya") !== "link" && m.hasAttribute("data-c") && byC.get(pk(m))) || [m];
   // Lines that belong to one category (parallel coordinates) light up with it.
   // The hovered mark's category stays lit (its tooltip rows) while the rest dims.
   let lit: Element[] = [],
@@ -135,8 +140,7 @@ export function tooltip(
     }
   };
 
-  const cross = (m: Element | undefined) => {
-    const g = box.querySelector<SVGElement>("[data-maya=cross]");
+  const cross1 = (g: SVGElement | undefined, m: Element | undefined) => {
     if (!g || (!m && g.style.opacity !== "1")) return; // hidden by CSS until first shown
     const was = g.style.opacity === "1";
     g.style.opacity = m ? "1" : "0";
@@ -163,10 +167,21 @@ export function tooltip(
     if (!was) getComputedStyle(g).transform;
     g.setAttribute("data-on", "");
   };
+  /** Facet panels share the crosshair: each shows its own mark of the hovered category. */
+  const cross = (m: Element | undefined) => {
+    const p = m && panelOf(m);
+    for (const g of box.querySelectorAll<SVGElement>("[data-maya=cross]")) {
+      const q = panelOf(g);
+      cross1(
+        g,
+        !p || !q || p === q ? m : byC.get(a(q, "data-facet") + "\0" + a(m!, "data-c"))?.[0],
+      );
+    }
+  };
 
   /** Bar charts: a soft column behind the hovered category, gliding between categories. */
   const shade = (m: Element | undefined) => {
-    const svg = box.querySelector("svg");
+    const svg = (m && panelOf(m)) || box.querySelector("svg");
     const t = spec()?.type;
     if (!m || !svg || m.localName !== "rect" || (t !== "bar" && t !== "waterfall")) {
       band?.removeAttribute("data-on");
@@ -228,7 +243,8 @@ export function tooltip(
    * the pointer's x, then nearest its y.
    */
   const nearest = (ev?: Event, band = false) => {
-    const svg = box.querySelector("svg"),
+    const pn = ev?.target instanceof Element ? panelOf(ev.target) : null,
+      svg = pn ?? box.querySelector("svg"),
       p = ev as PointerEvent | undefined;
     if (
       (!band && !/^(scatter|beeswarm|units|constellation)$/.test(spec()?.type ?? "")) ||
@@ -237,7 +253,11 @@ export function tooltip(
     )
       return;
     index();
-    cxy ??= list.flatMap((m) => ["cx", "cy"].map((k) => +(m.getAttribute(k) ?? "x")));
+    const L = pn ? list.filter((m) => pn.contains(m)) : list;
+    const pts =
+      (pn ? undefined : cxy) ??
+      L.flatMap((m) => ["cx", "cy"].map((k) => +(m.getAttribute(k) ?? "x")));
+    if (!pn) cxy = pts;
     const s = svg.getBoundingClientRect(),
       k = unit(svg, s),
       px = (p.clientX - s.left) * k,
@@ -245,13 +265,13 @@ export function tooltip(
     let best = -1,
       bx = Infinity,
       bd = band ? Infinity : (NEAR * k) ** 2;
-    for (let i = 0; i < cxy.length; i += 2) {
-      const dx = Math.abs(cxy[i]! - px),
-        dy = Math.abs(cxy[i + 1]! - py),
+    for (let i = 0; i < pts.length; i += 2) {
+      const dx = Math.abs(pts[i]! - px),
+        dy = Math.abs(pts[i + 1]! - py),
         d = band ? dy : dx * dx + dy * dy;
       if (band ? dx < bx || (dx === bx && d < bd) : d < bd) ((bx = dx), (bd = d), (best = i));
     }
-    return list[best / 2];
+    return L[best / 2];
   };
 
   const markOf = (t: EventTarget | null | undefined, ev?: Event) => {
@@ -265,7 +285,7 @@ export function tooltip(
     const y = (ev as PointerEvent | undefined)?.clientY ?? 0;
     let best: Element | undefined,
       bd = Infinity;
-    for (const m of byC.get(a(e, "data-c")) ?? []) {
+    for (const m of byC.get(pk(e)) ?? []) {
       const r = m.getBoundingClientRect(),
         d = Math.abs(y - (r.top + r.height / 2));
       if (d < bd) ((bd = d), (best = m));
@@ -305,9 +325,10 @@ export function tooltip(
     );
     dim(m);
     const g = group(m);
+    const pn = panelOf(m);
     const speak = () =>
       announce(
-        `${a(m, "data-x") && a(m, "data-x") + ": "}${g.map((k) => [a(k, "data-label") || a(k, "data-series"), a(k, "data-f"), tone(k)].filter(Boolean).join(" ")).join(", ")}`
+        `${pn ? a(pn, "data-facet") + ", " : ""}${a(m, "data-x") && a(m, "data-x") + ": "}${g.map((k) => [a(k, "data-label") || a(k, "data-series"), a(k, "data-f"), tone(k)].filter(Boolean).join(" ")).join(", ")}`
           .replace(/\n/g, ", ")
           .replace(/\t/g, " "),
       );
@@ -337,7 +358,7 @@ export function tooltip(
     // ponytail: 12 rows at most (a tooltip must fit the viewport), from 6 before the hovered row; "+N" counts the rest.
     const rows = all.slice(Math.max(0, all.indexOf(m) - 6)).slice(0, 12);
     tip.replaceChildren(
-      h("b", a(m, "data-x")),
+      h("b", (pn ? a(pn, "data-facet") + " · " : "") + a(m, "data-x")),
       ...rows.flatMap((k) => {
         const row = h("div", "", k === m ? { "data-on": "" } : {});
         const s = a(k, "data-label") || a(k, "data-series");
@@ -406,13 +427,13 @@ export function tooltip(
     // gesture for pointers that cannot double-click. Not on hover, and not where nothing is deeper.
     const dk = a(m, "data-key"),
       depth = (host as { view?: View }).view?.drill?.length ?? 0,
-      to = sp && branchOf(dk, depth, sp.type),
+      to = pn ? a(pn, "data-facet") : sp && branchOf(dk, depth, sp.type),
       b =
         (pin || coarse) &&
         sp?.select &&
         sp.drill &&
         to != null &&
-        depth < (sp.path?.length ?? 0) - 1 &&
+        (pn ? !depth : depth < (sp.path?.length ?? 0) - 1) &&
         m.matches("[data-maya=mark]:not([data-other])") &&
         tip.appendChild(
           h("button", str(sp, "drillInto", to), { type: "button", "data-drill": dk }),
@@ -422,7 +443,7 @@ export function tooltip(
     shade(m);
     // The probe's containing block is the host's padding box (:host is position:relative).
     // Charts with a crosshair anchor to it: the tooltip sits beside the line, never over the points.
-    const svg = box.querySelector("svg"),
+    const svg = pn ?? box.querySelector("svg"),
       // Weave: beside the hovered column like a crosshair, so it stays inside the chart.
       side = sp?.type === "weave" || !!svg?.querySelector("[data-maya=cross] :not(text,[data-g])");
     let r: {
@@ -548,14 +569,18 @@ export function tooltip(
       return hide();
     }
     let next: Element | undefined;
+    // Facet panels: the keys move within the focused panel.
+    const P = (e.target as Element).closest?.(PANEL),
+      L = P ? list.filter((m) => P.contains(m)) : list,
+      own = cur && L.includes(cur) ? cur : undefined;
     if (k === " " && on()) {
-      next = cur ?? list[0];
+      next = own ?? L[0];
       if (!next) return;
       pin = !pin;
       if (pin) show(next, true);
     } else if (k.startsWith("Arrow")) {
       const d = k === "ArrowRight" || k === "ArrowDown" ? 1 : -1;
-      const i = cur ? list.indexOf(cur) : -1;
+      const i = own ? L.indexOf(own) : -1;
       const ty = spec()?.type;
       const v = k === "ArrowUp" || k === "ArrowDown";
       // Orbit: clockwise by angle (rank order is golden-angle scattered). Constellation up/down:
@@ -566,7 +591,7 @@ export function tooltip(
         ty === "orbit"
           ? list.filter((e) => e.localName === "circle").sort((p, q) => ang(p) - ang(q))
           : ty === "constellation" && v && ring;
-      if (i < 0) next = list[0];
+      if (i < 0) next = L[0];
       else if (c) next = c[(c.indexOf(cur!) + d + c.length) % c.length];
       else if (v && (ty === "list" || ty === "table")) {
         // Rows: a list's headlines (its evidence bars share their indices), a table's first mark per row.
@@ -581,12 +606,13 @@ export function tooltip(
             ) + d
           ];
       } else if (v) {
-        const g = group(list[i]!);
-        next = g[g.indexOf(list[i]!) + d];
+        const g = group(L[i]!);
+        next = g[g.indexOf(L[i]!) + d];
       } else {
-        const cs = [...byC.keys()];
-        const g = byC.get(cs[cs.indexOf(a(list[i]!, "data-c")) + d]!);
-        next = g?.find((m) => a(m, "data-s") === a(list[i]!, "data-s")) ?? g?.[0];
+        const px = pk(L[i]!).slice(0, pk(L[i]!).indexOf("\0") + 1),
+          cs = [...byC.keys()].filter((c) => c.startsWith(px));
+        const g = byC.get(cs[cs.indexOf(pk(L[i]!)) + d]!);
+        next = g?.find((m) => a(m, "data-s") === a(L[i]!, "data-s")) ?? g?.[0];
       }
       if (next) show(next, true);
     } else return;

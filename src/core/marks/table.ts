@@ -135,15 +135,22 @@ export const table: Mark = {
         min: c.labels.length * (SQ + GAP) - GAP + 2 * PAD,
       })),
     ];
-    let nc = 0;
-    for (let room = W - lw; nc < cols.length; nc++) {
-      room -= cols[nc]!.min;
-      if (room < 0 && nc) break;
-    }
+    const fit = (W2: number) => {
+      let nc = 0;
+      for (let room = W2 - lw; nc < cols.length; nc++) {
+        room -= cols[nc]!.min;
+        if (room < 0 && nc) break;
+      }
+      return nc;
+    };
+    // Columns that did not fit leave an 18 px strip at the right edge holding "+n" (their count).
+    let nc = fit(W);
+    const spare = nc < cols.length ? 18 : 0;
+    if (spare) nc = fit(W - spare);
     const kept = cols.slice(0, nc);
     const nm = kept.filter((c) => c.k === "m").length;
     const fixed = kept.reduce((a, c) => a + (c.k === "m" ? 0 : c.min), 0);
-    const mw = Math.max(0, W - lw - fixed) / (nm || 1);
+    const mw = Math.max(0, W - spare - lw - fixed) / (nm || 1);
     const wd = kept.map((c) => (c.k === "m" ? mw : c.min));
     const at = wd.map((_, i) => lw + wd.slice(0, i).reduce((a, w) => a + w, 0));
     const max = ms.map((_, i) => {
@@ -195,6 +202,20 @@ export const table: Mark = {
             ),
       );
     });
+    if (spare)
+      thead.push(
+        el(
+          "text",
+          {
+            "data-th": true,
+            x: r(W - PAD),
+            y: HEAD / 2,
+            "text-anchor": "end",
+            "dominant-baseline": "middle",
+          },
+          `+${cols.length - nc}`,
+        ),
+      );
     // The header holds its own rule and page-coloured ground: the element can pin it over scrolled rows.
     const rule = el("line", { x1: 0, x2: W, y1: HEAD, y2: HEAD });
     hits += el(

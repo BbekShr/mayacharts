@@ -51,6 +51,7 @@ Fixes #76, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #88, #89, #90, #91,
 - `rules: [{ y2, label }]` runs a rule across the right axis of a bar with `y2`. Fixes #87.
 - Tooltip fields take `{ field, ratio: [numerator, denominator] }`, shown as sum(numerator) / sum(denominator) wherever rows combine. Fixes #87.
 - Text keys `peerMean`, `brushed` and `brushCleared`.
+- A table whose `filter` matches no row says "No rows match \"{0}\"" (text key `noMatch`) and keeps the search box. Text key `moreMoves` ("+{0} more") for the insight list's dropped rows. Fixes #84.
 
 - `aggregate` keyed by y field with a `y` array that toggles the measure, such as `aggregate: { price: { ratio: ["sales", "units"] } }`; the active measure uses its rule and unlisted fields sum (#76).
 - A series selector in data tokens: `{max.y:2025}`, `{last.y:2025}`, `{first.x:2025}`, `{total:2025}`, `{mean:2025}` read only that series. Without one, max, min, first and last read one point and `{total}` sums every series, as documented (#76).

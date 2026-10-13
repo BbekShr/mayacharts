@@ -174,14 +174,14 @@ const delay = (e: Element) =>
 
 /** Make `o`'s subtree match `w`'s in place where the shapes agree, so nested nodes (and the CSS
  * animations on them, an orbit's rotation) survive an update; else replace the children. */
-function mend(o: Element, w: Element): void {
+export function mend(o: Element, w: Element): void {
   const [a, b] = [[...o.children], [...w.children]];
   if (a.length && a.length === b.length && a.every((c, i) => c.localName === b[i]!.localName))
     a.forEach((c, i) => (sync(c, b[i]!), mend(c, b[i]!)));
   else o.replaceChildren(...w.childNodes);
 }
 
-function sync(o: Element, w: Element): void {
+export function sync(o: Element, w: Element): void {
   // `style` holds element-owned CSSOM writes (bloom origin), never markup: keep it.
   for (const a of [...o.attributes])
     if (!w.hasAttribute(a.name) && !/^(style|data-active|tabindex)$/.test(a.name))
@@ -714,8 +714,15 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   const id = (c: Element) => c.getAttribute("data-maya") ?? c.localName;
   // Groups already fading out keep fading; they are neither pooled nor ghosted again.
   const out = [...o.children].filter((c) => c.hasAttribute("data-ghost"));
+  // Facet panels (nested svgs) are diffed one by one, by their value.
+  const isP = (c: Element) => c.matches("svg[data-maya=panel]");
   const pool = new Map(
-    [...o.children].filter((c) => c !== om && !out.includes(c)).map((c) => [id(c), c]),
+    [...o.children].filter((c) => c !== om && !out.includes(c) && !isP(c)).map((c) => [id(c), c]),
+  );
+  const panels = new Map(
+    [...o.children]
+      .filter((c) => isP(c) && !out.includes(c))
+      .map((c) => [c.getAttribute("data-facet"), c]),
   );
   const fadeIn: Element[] = [];
   // Sunburst: labels ghost and fade in late (as on a drill), never follow rings that sweep in angle.
@@ -732,6 +739,13 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
       out.push(om);
       continue;
     }
+    if (isP(c)) {
+      const q = panels.get(c.getAttribute("data-facet"));
+      panels.delete(c.getAttribute("data-facet"));
+      if (q) (panel(q, c), out.push(q));
+      else (out.push(c), fadeIn.push(c));
+      continue;
+    }
     const p = pool.get(id(c));
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
@@ -745,6 +759,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     }
   }
   for (const p of pool.values()) if (fadeable(p)) (ghosts.push(p), out.push(p));
+  for (const p of panels.values()) (ghosts.push(p), out.push(p));
   // Reconcile in place: re-inserting the marks group would restart every CSS animation in it (the orbit).
   for (const c of [...o.children]) out.includes(c) || c.remove();
   let ref = o.firstChild;
@@ -765,6 +780,17 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
           : { ...UI, delay: 160 }
         : UI,
     );
+}
+
+/** A facet panel that stays: its marks diff by their (prefixed) keys, the rest crossfades. */
+function panel(o: Element, w: Element): void {
+  const [om, wm] = [o, w].map((e) => e.querySelector(":scope > [data-maya=marks]"));
+  lag = !wm || drill ? 0 : spread(wm);
+  sync(o, w);
+  if (!om || !wm) return mend(o, w);
+  sync(om, wm);
+  marks(om, wm);
+  ui(o, w, om, wm);
 }
 
 /** An outgoing group: unaddressable while it fades, then removed. */
@@ -925,6 +951,10 @@ export function patch(
     if (animate && opts.intro && wm && (!many || opts.intro !== "marks")) {
       lag = spread(wm);
       intro(box.firstElementChild!, opts.intro);
+      for (const p of box.querySelectorAll("svg[data-maya=panel]")) {
+        lag = spread(p.querySelector(":scope > [data-maya=marks]") ?? p);
+        intro(p, opts.intro);
+      }
     }
   } else {
     instant = !!opts.instant;

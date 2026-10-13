@@ -15,6 +15,16 @@ export const heatmap: Mark = {
     ];
   },
   draw(ctx) {
+    // A value that does not fit its cell: two significant digits, then the locale's compact form (1.2K).
+    let nf: Intl.NumberFormat | undefined;
+    const fit = (v: number, w: number) => {
+      const full = ctx.fmt(spec.y, v);
+      if (tw(full) <= w) return full;
+      const two = ctx.fmt(spec.y, +v.toPrecision(2));
+      return tw(two) <= w
+        ? two
+        : (nf ??= new Intl.NumberFormat(spec.locale, { notation: "compact" })).format(v);
+    };
     const { spec, shaped } = ctx;
     const cx = ctx.x as BandScale;
     const cy = ctx.y as BandScale;
@@ -71,8 +81,7 @@ export const heatmap: Mark = {
       });
       hits += hit(d, x, y, w, h);
       // Drawn here (not ctx.label): no halo, the ink follows the cell's own fill (theme.ts, data-ink="a").
-      let text = ctx.fmt(spec.y, v);
-      if (tw(text) > w) text = ctx.fmt(spec.y, +v.toPrecision(2));
+      const text = fit(v, w);
       if (spec.labels !== false && w >= 24 && h >= 24 && tw(text) <= w)
         labels += inText(x + w / 2, y + h / 2, text, {
           ...inkOf(d),
@@ -106,7 +115,7 @@ export const heatmap: Mark = {
           "stroke-width": sw,
         });
         hits += hit(d, x, y, w, h);
-        const text = ctx.fmt(spec.y, v);
+        const text = fit(v, w);
         if (spec.labels !== false && w >= 24 && h >= 24 && tw(text) <= w)
           labels += inText(x + w / 2, y + h / 2, text, { "data-ink": "a", ...o, "data-key": k });
       };

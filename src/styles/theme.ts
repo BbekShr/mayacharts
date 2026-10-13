@@ -106,7 +106,7 @@ const DIM =
 // ponytail: five speed buckets, one period each (--p).
 const ORBIT =
   "g[data-v]{transform-box:view-box;transform-origin:0 0}" +
-  "[data-trail]{fill:none;stroke:var(--c);stroke-width:2;stroke-opacity:.5;stroke-linecap:round}" +
+  "[data-trail]{fill:none;stroke:var(--c,var(--maya-series-1));pointer-events:none;stroke-width:2;stroke-opacity:.5;stroke-linecap:round}" +
   "g[data-s] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1.5}g[data-s] circle[data-maya=mark]:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2}" +
   "[data-maya=marks][data-hot] g[data-s]:not([data-lit],:has([data-active])) :is(g[data-up],[data-trail]){opacity:.4}" +
   "g[data-s] circle[data-below]{fill-opacity:.45;stroke:var(--c)}[data-up] text{font-size:var(--maya-label-size,11px);font-weight:600}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
@@ -141,13 +141,14 @@ export const css =
   ".maya-crumbs{min-height:1.25em;line-height:1.25}" +
   // The current crumb is where you are, not a link: ink, bold, no hover.
   ".maya-crumbs [aria-current]{padding:2px 6px;color:var(--maya-fg);font-weight:600}" +
-  `.maya-legend :is(button,span),:is(.maya-crumbs,.maya-tip) button,.maya-reset,.maya-play,.maya-flip{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
+  `.maya-legend :is(button,span),:is(.maya-crumbs,.maya-tip) button,.maya-reset,.maya-play,.maya-flip,.maya-params-btn,.maya-params-reset{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
   ":is(.maya-legend,.maya-crumbs,.maya-tip) button:hover{background:var(--maya-grid);color:var(--maya-fg)}" +
   ".maya-legend [aria-pressed=false]{opacity:.5}.maya-legend [aria-pressed=false] i{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}" +
   ":is(button,a):focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
   "i{width:10px;height:10px;border-radius:3px;background:var(--c)}" +
   "[data-maya=ramp]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}[data-maya=ramp] span{unicode-bidi:plaintext}.maya-legend b{font-weight:500;color:var(--maya-fg);unicode-bidi:plaintext}[data-maya=ramp]:dir(rtl) i{scale:-1 1}" +
   ".maya-legend [data-past] i{background:color-mix(in oklab,var(--maya-fg) 12%,transparent);outline:1px dashed var(--maya-fg-muted);outline-offset:-1px}" +
+  ".maya-legend [data-past][data-tick] i{height:2px;border-radius:0;background:var(--maya-fg);outline:0}" +
   "[data-maya=ramp] circle{fill:none;stroke:var(--maya-fg-muted)}" +
   // The ramp legend is the cells' ramp (low, mid, high); quantile classes are swatches; a constellation's stars use the density ramp.
   `[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,var(--rl),var(--rm),var(--rh))}[data-maya=ramp] i[data-q]{width:16px;background:var(--c)}.maya:has(circle[data-key^="c~"]) [data-maya=ramp] i{background:linear-gradient(90deg,var(--maya-accent),${DENS("75%")})}` +
@@ -155,11 +156,11 @@ export const css =
   // Declared once where the theme overrides live, not on every ramp mark (speed).
   // Ramp stops: tokens rampLow, rampMid, rampHigh; unset, the accent from 35% (--fl) over --b, the 50% mix of the two ends.
   ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)));--rl:var(--maya-ramp-low,color-mix(in oklab,var(--maya-accent) var(--fl,35%),var(--b)));--rh:var(--maya-ramp-high,var(--maya-accent));--rm:var(--maya-ramp-mid,color-mix(in oklab,var(--rh),var(--rl)))}" +
-  ".maya-reset,.maya-play,.maya-flip{border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-reset{position:absolute;top:4px;right:4px}" +
-  ".maya-ctl,.maya-play,.maya-flip{margin:0 0 8px;align-self:flex-start}.maya-play,.maya-flip{min-height:24px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
+  ".maya-reset,.maya-play,.maya-flip,.maya-params-btn,.maya-params-reset{border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-reset{position:absolute;top:4px;right:4px}" +
+  ".maya-ctl,.maya-play,.maya-flip,.maya-params-btn{margin:0 0 8px;align-self:flex-start}.maya-play,.maya-flip{min-height:24px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
   ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a;transition:transform .3s var(--maya-ease)}" +
   C +
-  `.maya-ctl [role=radio]{${B};position:relative;padding:4px 12px;border-radius:6px;transition:color .2s}` +
+  `.maya-ctl [role=radio]{${B};color:color-mix(in oklab,var(--maya-fg-muted),var(--maya-fg) 20%);position:relative;padding:4px 12px;border-radius:6px;transition:color .2s}` +
   ".maya-ctl [aria-checked=true]{color:var(--maya-fg);font-weight:600}" +
   // The kpi Details button is a toggle: pressed (the back face shows) it is ink on the control track.
   ".maya-flip[aria-pressed=true]{background:var(--maya-grid);color:var(--maya-fg);font-weight:600}" +
@@ -170,7 +171,7 @@ export const css =
   ".maya-svg{backface-visibility:hidden}.maya-box svg[data-roll]{overflow:hidden}[data-roll] text{fill:var(--maya-fg);font-variant-numeric:var(--maya-numeric,tabular-nums)}" +
   ".maya-err{margin:0;padding:8px;color:var(--maya-bad);white-space:pre-wrap;font:12px monospace}" +
   ".maya-box{flex:1;min-height:0;position:relative}" +
-  ".maya-box svg{display:block;overflow:visible}.maya-box svg:not([data-roll]){width:100%;height:100%}" +
+  ".maya-box svg{display:block;overflow:visible}.maya-box svg:not([data-roll],[data-maya=panel]){width:100%;height:100%}" +
   ".maya-svg{direction:ltr;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:var(--maya-numeric,tabular-nums);-webkit-user-select:none;user-select:none}" +
   ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:var(--maya-axis-size,11px)}" +
   "[data-maya=grid] *{stroke:var(--maya-grid);stroke-dasharray:var(--maya-grid-dash);shape-rendering:crispEdges}" +
@@ -292,8 +293,10 @@ export const css =
   // WebKit paints each per-element opacity as its own group: dense dumbbell connectors dim through the stroke.
   "[data-still] [data-hot] line[data-maya=link]{opacity:1;stroke-opacity:.08}" +
   "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}" +
+  // M5: line/area was ghost, scatter trails, frame controls, params, facet panels (wip-y: list cue).
+  "path[data-past]{fill:none;stroke:var(--c,var(--maya-fg));stroke-opacity:.6;stroke-width:1.5}circle[data-trail=dot]{fill:var(--c,var(--maya-series-1));stroke:none}input.maya-frame{accent-color:var(--maya-accent);width:min(240px,100%);margin:0 0 8px;align-self:flex-start}select.maya-frame{font:inherit;color:var(--maya-fg);background:var(--maya-bg);border:1px solid color-mix(in oklab,var(--maya-fg) 55%,transparent);border-radius:8px;padding:3px 8px;margin:0 0 8px;align-self:flex-start}.maya-ctl[data-maya=frame]{max-width:100%;overflow-x:auto;scrollbar-width:none}.maya-ctl[data-maya=frame]::before{display:none}.maya-ctl[data-maya=frame] [aria-checked=true]{background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-params:not([popover]),.maya-params:popover-open{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px}.maya-params:not([popover]){margin:0 0 8px}.maya-param{display:flex;align-items:center;gap:8px;color:var(--maya-fg-muted)}.maya-param input{accent-color:var(--maya-accent);width:120px}.maya-param output{min-width:4ch;color:var(--maya-fg);font-weight:600}.maya-params[popover]{inset:auto;margin:0;flex-direction:column;align-items:stretch;width:max-content;max-width:calc(100cqw - 16px);padding:10px 12px;border:1px solid var(--maya-grid);border-radius:8px;background:var(--maya-bg);color:var(--maya-fg);box-shadow:0 10px 28px -8px #0000004d}@supports (anchor-name:--x){.maya-params[popover]{position-area:block-end span-inline-end;position-try-fallbacks:flip-block}}svg[data-maya=panel]{overflow:hidden}svg[data-maya=panel]:focus{outline:none}svg[data-maya=panel]:focus-visible{outline:2px solid var(--maya-focus);outline-offset:-2px}text[data-facet]{font-weight:600}svg[data-drill=facet] svg[data-maya=panel]{cursor:pointer}[data-maya=marks] text[data-more]{fill:var(--maya-fg-muted);font-size:12px}" +
   // M4: table filter, scrolling table, show-more row, open-row sub-chart, heatmap column drill and Total margins.
-  ".maya-filter{font:inherit;color:var(--maya-fg);background:var(--maya-grid);border:0;border-radius:8px;padding:4px 10px;margin:0 0 8px;min-width:9em;max-width:100%;align-self:flex-start}.maya-filter::placeholder{color:var(--maya-fg-muted)}.maya-filter:focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
+  ".maya-filter{font:inherit;color:var(--maya-fg);background:var(--maya-bg);border:1px solid color-mix(in oklab,var(--maya-fg) 55%,transparent);border-radius:8px;padding:3px 10px;margin:0 0 8px;min-width:9em;max-width:100%;align-self:flex-start}.maya-filter::placeholder{color:var(--maya-fg-muted)}.maya-filter:focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
   ".maya-box:has(svg[data-scroll]){overflow:auto;max-height:100%}.maya-box svg[data-scroll]{height:auto}" +
   "svg[data-maya=expand]{overflow:hidden}" +
   "svg[data-xdrill] [data-maya=axis-x] text[data-key]{pointer-events:auto;cursor:pointer}svg[data-xdrill] [data-maya=axis-x] text[data-key]:hover{text-decoration:underline}" +
@@ -305,7 +308,7 @@ export const css =
   "[data-maya=marks] text[data-chev]{fill:var(--maya-fg-muted);font-size:10px}[data-maya=grid] line[data-centre]{stroke:var(--maya-fg-muted);stroke-opacity:.5}" +
   "[data-way=zero]{--c:var(--maya-fg-muted)}rect[data-way][data-maya=mark]:not([data-s]){rx:2px}rect[data-nil]{fill:none;stroke:var(--maya-fg-muted);stroke-opacity:.4;rx:2px}" +
   // Table: the Show more row.
-  "[data-maya=more]{cursor:pointer}[data-maya=more] text{fill:var(--maya-accent);font-weight:600}[data-maya=more]:is(:hover,:focus-visible) text{text-decoration:underline}[data-maya=more]:focus-visible{outline:2px solid var(--maya-focus)}" +
+  "[data-maya=more]{cursor:pointer}[data-maya=more] text{fill:color-mix(in oklab,var(--maya-accent),var(--maya-fg) 30%);font-weight:600}[data-maya=more]:is(:hover,:focus-visible) text{text-decoration:underline}[data-maya=more]:focus-visible{outline:2px solid var(--maya-focus)}" +
   // List: bold headline over muted body, the value in its own weight, evidence names muted.
   "[data-maya=marks] text tspan[data-num]{fill:var(--maya-fg-muted);font-variant-numeric:var(--maya-numeric,tabular-nums)}[data-maya=marks] text tspan[data-hd]{font-size:14px;font-weight:600}" +
   "[data-maya=marks] text[data-v]{font-size:14px;font-weight:600;font-variant-numeric:var(--maya-numeric,tabular-nums)}[data-maya=marks] text[data-body],[data-maya=marks] text[data-ev=name]{fill:var(--maya-fg-muted)}" +

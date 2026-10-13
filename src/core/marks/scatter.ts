@@ -255,6 +255,35 @@ export const scatter: Mark = {
         ),
     );
 
+    // spec.trail: where each name was in earlier frames, a line to its current point and dots that
+    // fade with age (no data-maya: the tooltip and hits never see them).
+    let trails = "";
+    for (const [n, tr] of ctx.trails) {
+      const now = pts.find((p) => String(p.name) === n);
+      if (!now) continue;
+      const q = [...tr.map((t) => t), { x: now.x, y: now.y, frame: -1 }];
+      const sd = spec.series === null ? null : now.si % 8;
+      trails +=
+        el("path", {
+          "data-key": key("\u0000trail", n),
+          "data-trail": true,
+          "data-s": sd,
+          d: q.map((t, i) => `${i ? "L" : "M"}${r(sx.of(t.x))} ${r(sy.of(t.y))}`).join(""),
+        }) +
+        tr
+          .map((t, i) =>
+            el("circle", {
+              "data-key": key("\u0000trail", n, t.frame),
+              "data-trail": "dot",
+              "data-s": sd,
+              "fill-opacity": r(0.2 + (0.5 * (i + 1)) / tr.length),
+              r: 2.5,
+              cx: r(sx.of(t.x)),
+              cy: r(sy.of(t.y)),
+            }),
+          )
+          .join("");
+    }
     let marks = "";
     for (const p of order) {
       const ser = shaped.series[p.si]!;
@@ -364,7 +393,7 @@ export const scatter: Mark = {
         ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.size!) ?? spec.size!)}</b>${ref.map(key3).join("")}</div>`
         : null;
     return {
-      marks: under + marks,
+      marks: under + trails + marks,
       hits: "",
       cross: pts.length ? cross(ctx) : "",
       ...(legend && { legend }),

@@ -111,6 +111,8 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
 
   let areas = "";
   let lines = "";
+  let ghosts = "";
+  const wasOf = spec.was === null ? null : colorVals(spec, spec.was);
   let dots = "";
   const tx = ctx.ends;
   const ep: [number, number, number, [string, string]][] = [];
@@ -209,6 +211,26 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
           d: sh,
         });
     }
+    // spec.was: the old values as a dashed ghost line (gaps break it), under the line.
+    const wd = wasOf
+      ? cells
+          .map((c) => [c, wasOf(shaped.categories[c.ci]!, ser)] as const)
+          .reduce(
+            (a, [c, v], i, all) =>
+              v === null
+                ? a
+                : a + (all[i - 1]?.[1] == null ? "M" : "L") + `${px(c.ci)} ${r(val.of(v))}`,
+            "",
+          )
+      : "";
+    if (wd)
+      ghosts += el("path", {
+        "data-key": key("\u0000was", ser),
+        "data-past": true,
+        "data-s": si % 8,
+        fill: "none", // until the theme's [data-past] rule paints it
+        d: wd,
+      });
     lines += el("path", {
       "data-maya": "line",
       "data-key": key("l", ser),
@@ -265,7 +287,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   }
 
   return {
-    marks: areas + lines + dots,
+    marks: areas + ghosts + lines + dots,
     labels: end,
     hits: plotHit(plot),
     cross: el("line", { x1: 0, x2: 0, y1: r(plot.y), y2: r(plot.y + plot.h) }),

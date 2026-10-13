@@ -147,6 +147,14 @@ export const bar: Mark = {
       lo = hi = 0;
       for (const i of rows) ((lo = Math.min(lo, i.y0, i.y1)), (hi = Math.max(hi, i.y0, i.y1)));
     }
+    // A waterfall whose running totals all sit high (an opening total with small steps) would draw its
+    // steps as slivers: the axis starts below the lowest running total and the total bars break at the
+    // axis (the clipped-bar marks below). ponytail: positive running totals only, a fixed 2:1 trigger.
+    if (spec.type === "waterfall" && lo === 0 && rows.length) {
+      const run = rows.flatMap((i) => (shaped.totals[i.ci] ? [i.y1] : [i.y0, i.y1]));
+      const [a, z] = [Math.min(...run), Math.max(...run)];
+      if (a > 0 && z - a < z / 2) lo = Math.max(0, a - (z - a));
+    }
     // A ghost is part of the data: the previous values widen the domain so none is clipped.
     if (spec.was !== null) {
       const w = colorVals(spec, spec.was);

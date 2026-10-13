@@ -63,3 +63,17 @@ describe("band labels that a cut would make identical", () => {
     expect(texts.length).toBeLessThan(8);
   });
 });
+
+describe("documented theme example", () => {
+  it("theme: [name, overrides] with a registered name renders", async () => {
+    await import("../src/themes.ts");
+    const svg = render({
+      type: "bar",
+      x: "c",
+      y: "v",
+      theme: ["ocean", { accent: "#6A7891" }],
+      data: [{ c: "a", v: 1 }],
+    } as ChartSpec);
+    expect(svg).toContain("<svg");
+  });
+});

@@ -14,7 +14,8 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Intro, idle, patch, type PatchOptions, turn, ZOOM } from "./animate.ts";
+import { type Intro, idle, mend, patch, sync, type PatchOptions, turn, ZOOM } from "./animate.ts";
+import * as ctl from "./ctl.ts";
 import * as flip from "./flip.ts";
 import * as drill from "./drill.ts";
 import * as expand from "./expand.ts";
@@ -40,7 +41,7 @@ export class MayaChart extends HTMLElement {
   #seen: ChartSpec | undefined;
   #ix:
     | (Record<
-        "measure" | "drill" | "expand" | "select" | "brush" | "sort" | "play" | "flip",
+        "measure" | "drill" | "expand" | "select" | "brush" | "sort" | "play" | "flip" | "ctl",
         Handlers
       > & {
         zoom: ReturnType<typeof zoom.mount>;
@@ -211,6 +212,7 @@ export class MayaChart extends HTMLElement {
       sort: sort.mount(host),
       play: play.mount(host),
       flip: flip.mount(host),
+      ctl: ctl.mount(host),
     };
     const box = root.querySelector(".maya-box")!;
     this.#tip = tooltip(
@@ -425,7 +427,10 @@ export class MayaChart extends HTMLElement {
             sort.reduce(
               play.reduce(
                 drill.reduce(
-                  expand.reduce(flip.reduce(measure.reduce(this.#state, ev), ev), ev),
+                  expand.reduce(
+                    flip.reduce(measure.reduce(ctl.reduce(this.#state, ev), ev), ev),
+                    ev,
+                  ),
                   ev,
                 ),
                 ev,
@@ -581,12 +586,34 @@ export class MayaChart extends HTMLElement {
       if (this.#last[k] === parts[k]) return;
       changed = true;
       this.#last[k] = parts[k] as string;
+      if (k === "controls" && this.#mend(root, sel, parts[k])) return;
       root.querySelectorAll(sel).forEach((e) => e.remove());
       const next = SLOTS.slice(i + 1).map(([, s]) => root.querySelector(s));
       (next.find(Boolean) ?? box).insertAdjacentHTML("beforebegin", html(parts[k] as string));
       if (!i) this.#clamp(root);
     });
     return changed;
+  }
+
+  /** Same controls, new values: patch them in place, so a slider mid-drag keeps its focus and an open popover stays open. False: the shape changed, replace. */
+  #mend(root: ShadowRoot, sel: string, markup: string): boolean {
+    const old = [...root.querySelectorAll(sel)].filter((e) => !e.parentElement?.matches(sel));
+    const t = document.createElement("template");
+    t.innerHTML = html(markup);
+    const wp = [...t.content.children];
+    const shape = (e: Element): string => e.localName + "(" + [...e.children].map(shape) + ")";
+    if (old.length !== wp.length || old.some((e, i) => shape(e) !== shape(wp[i]!))) return false;
+    old.forEach((e, i) => (sync(e, wp[i]!), mend(e, wp[i]!)));
+    // Attributes do not move a dirty control's value; a focused one is the user's.
+    const on = root.activeElement;
+    for (const e of old)
+      for (const c of e.matches("input,select") ? [e] : e.querySelectorAll("input,select"))
+        if (c !== on && !(c as HTMLInputElement).matches("[type=search]"))
+          (c as HTMLInputElement).value =
+            c.getAttribute("value") ??
+            c.querySelector("option[selected]")?.getAttribute("value") ??
+            "";
+    return true;
   }
 
   /** Stable id of the focused control: svg, legend:i, measure:i, crumb:i or reset. */
@@ -621,7 +648,10 @@ const legend = (e: Event) => {
 
 const SLOTS: [keyof Parts, string][] = [
   ["title", ".maya-title,.maya-sub"],
-  ["controls", ".maya-ctls,.maya-ctl,.maya-play,.maya-flip,.maya-filter"],
+  [
+    "controls",
+    ".maya-ctls,.maya-ctl,.maya-play,.maya-flip,.maya-filter,.maya-frame,.maya-params,.maya-params-btn",
+  ],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],
 ];
@@ -647,5 +677,6 @@ const FOCUS: [string, string][] = [
   ["crumb", ".maya-crumbs :is(button,a)"],
   ["filter", ".maya-filter"],
   ["reset", ".maya-reset"],
+  ["param", "[data-maya=param],[data-maya=params-reset],[data-maya=frame]"],
   ["play", ".maya-play"],
 ];

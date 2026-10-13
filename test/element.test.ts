@@ -1074,3 +1074,147 @@ describe("maya-register (#88)", () => {
     expect(a.shadowRoot!.querySelector(".maya")!.getAttribute("class")).toBeTruthy();
   });
 });
+
+describe("M5 controls (#78 #80 #85)", () => {
+  const qs = (el: Element, s: string) => el.shadowRoot!.querySelector<HTMLInputElement>(s)!;
+  const fire = (e: Element, type: string) =>
+    e.dispatchEvent(new Event(type, { bubbles: true, composed: true }));
+  const prm = {
+    type: "bar",
+    x: "q",
+    y: "v",
+    colorBy: { target: { param: "t" }, better: "higher" },
+    params: [{ id: "t", label: "Target", min: 0, max: 10, step: 1, value: 4 }],
+    data: [
+      { q: "A", v: 3 },
+      { q: "B", v: 6 },
+    ],
+  } as unknown as ChartSpec;
+
+  it("a param slider commits view.params once per frame and keeps its node; Reset clears it", async () => {
+    const el = await mount((e) => (e.spec = prm));
+    const ev: any[] = [];
+    el.addEventListener("maya-view", (e) => ev.push((e as CustomEvent).detail));
+    const input = qs(el, "[data-maya=param]");
+    input.focus();
+    for (const v of ["5", "7"]) {
+      input.value = v;
+      fire(input, "input");
+    }
+    await frame();
+    expect(el.view.params).toEqual({ t: 7 });
+    expect(ev).toHaveLength(1);
+    expect(qs(el, "[data-maya=param]")).toBe(input); // patched in place, not replaced
+    expect(qs(el, "output").textContent).toBe("7");
+    expect(input.value).toBe("7");
+    input.blur();
+    qs(el, "[data-maya=params-reset]").click();
+    await frame();
+    expect(el.view.params).toBeUndefined();
+    expect(qs(el, "[data-maya=param]").value).toBe("4");
+  });
+
+  const fr = (extra: object) =>
+    ({
+      type: "bar",
+      x: "k",
+      y: "v",
+      frame: "yr",
+      data: ["2021", "2022", "2023"].flatMap((yr, i) => [
+        { yr, k: "A", v: i + 1 },
+        { yr, k: "B", v: 2 },
+      ]),
+      ...extra,
+    }) as ChartSpec;
+
+  it("frame slider, select and tabs set view.frame; Play steps at frameSpeed and stops when a control moves it", async () => {
+    const el = await mount((e) => (e.spec = fr({ frameControl: "both", frameSpeed: 100 })));
+    const sl = qs(el, "input[data-maya=frame]");
+    sl.value = "0";
+    fire(sl, "input");
+    await frame();
+    expect(el.view.frame).toBe(0);
+    expect(qs(el, "input[data-maya=frame]").getAttribute("aria-valuetext")).toBe("2021");
+    qs(el, ".maya-play").click();
+    await new Promise((r) => setTimeout(r, 330));
+    expect(el.view.frame).toBe(2);
+    el.spec = fr({ frameControl: "select" });
+    await frame();
+    const sel = qs(el, "select[data-maya=frame]") as unknown as HTMLSelectElement;
+    sel.value = "1";
+    fire(sel, "change");
+    await frame();
+    expect(el.view.frame).toBe(1);
+    el.spec = fr({ frameControl: "tabs" });
+    await frame();
+    el.shadowRoot!.querySelectorAll<HTMLElement>("[data-maya=frame] [role=radio]")[2]!.click();
+    await frame();
+    expect(el.view.frame).toBe(2);
+    expect(
+      el.shadowRoot!.querySelectorAll("[data-maya=frame] [aria-checked=true]")[0]!.textContent,
+    ).toBe("2023");
+  });
+
+  const fc = (extra: object = {}) =>
+    ({
+      type: "bar",
+      x: "q",
+      y: "v",
+      facet: "s",
+      drill: true,
+      data: ["N", "S"].flatMap((s) =>
+        ["Q1", "Q2"].map((q, i) => ({ s, q, v: (s === "N" ? 1 : 5) + i })),
+      ),
+      ...extra,
+    }) as ChartSpec;
+
+  it("facetScale radios write view.facetScale", async () => {
+    const el = await mount((e) => (e.spec = fc({ facetScale: ["shared", "own"] })));
+    const r = el.shadowRoot!.querySelectorAll<HTMLElement>("[data-maya=facetScale] [role=radio]");
+    expect(r).toHaveLength(2);
+    r[1]!.click();
+    await frame();
+    expect(el.view.facetScale).toBe("own");
+    expect(
+      el.shadowRoot!.querySelector("[data-maya=facetScale] [aria-checked=true]")!.textContent,
+    ).toBe(TEXT.own);
+  });
+
+  it("facet panels: keyed per panel, a panel click drills, Escape and the crumb return", async () => {
+    const el = await mount((e) => (e.spec = fc()));
+    const root = el.shadowRoot!;
+    const ps = [...root.querySelectorAll("svg[data-maya=panel]")];
+    expect(ps.map((p) => p.getAttribute("data-facet"))).toEqual(["N", "S"]);
+    expect(ps[0]!.querySelector("[data-maya=mark]")!.getAttribute("data-key")).toMatch(/^N~/);
+    const keep = ps[1]!.querySelector("[data-maya=mark]");
+    el.data = fc().data.map((r) => ({ ...r, v: r.v + 1 }));
+    await frame();
+    expect(root.querySelector("svg[data-maya=panel][data-facet=S] [data-maya=mark]")).toBe(keep);
+    ps[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 }));
+    await frame();
+    expect(el.view.drill).toEqual(["S"]);
+    expect(root.querySelector("svg[data-maya=panel]")).toBeNull();
+    root
+      .querySelector(".maya")!
+      .dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+      );
+    await frame();
+    expect(el.view.drill ?? []).toEqual([]);
+    expect(root.querySelectorAll("svg[data-maya=panel]")).toHaveLength(2);
+  });
+
+  it("Enter on a focused panel drills it; arrows stay inside the panel", async () => {
+    const el = await mount((e) => (e.spec = fc()));
+    const root = el.shadowRoot!;
+    const p = root.querySelector("svg[data-maya=panel][data-facet=S]")!;
+    const key = (k: string) =>
+      p.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, composed: true }));
+    key("ArrowRight");
+    const on = root.querySelector("[data-active]")!;
+    expect(p.contains(on)).toBe(true);
+    key("Enter");
+    await frame();
+    expect(el.view.drill).toEqual(["S"]);
+  });
+});
