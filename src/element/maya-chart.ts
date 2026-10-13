@@ -521,7 +521,7 @@ export class MayaChart extends HTMLElement {
     const intro: Intro | undefined =
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
     // A drill zoom moves marks under the pointer: no hover mark (its stroke would scale with the zoom) until it lands.
-    if (this.#zoom) this.#tip?.hide(still ? 0 : 640);
+    if (this.#zoom) this.#tip?.hide();
     const face = this.#state.view.face ?? "front";
     const flipped = this.#drawn && face !== this.#face && spec.animate !== false;
     // Turned back before the swap: the card reverses out instead of snapping flat.
@@ -543,6 +543,8 @@ export class MayaChart extends HTMLElement {
       this.#face = face;
       go((this.#drawn || !!intro) && !still);
     }
+    // The hold starts once the zoom does: a slow patch must not eat into it.
+    if (this.#zoom && !still) this.#tip?.hide(Number(ZOOM.duration));
     this.#zoom = undefined;
     const dy = top0 - box.getBoundingClientRect().top; // NaN: not measured
     if (dy && !still) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
