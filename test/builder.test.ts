@@ -128,11 +128,17 @@ describe("snippets", () => {
         let got: unknown;
         let onLoad: (() => void) | undefined;
         const maya = { host: { thoughtspot: (_: unknown, s: unknown) => (got = s) } };
-        const window = {
-          maya: loaded ? maya : undefined,
-          addEventListener: (_: string, f: () => void) => (onLoad = f),
+        const script = { addEventListener: (_: string, f: () => void) => (onLoad = f) };
+        const document = {
+          querySelector: (s: string) => (s.includes("mayacharts") ? script : null),
         };
-        new Function("window", "viz", "maya", js!.code).call(null, window, {}, maya);
+        new Function("window", "document", "viz", "maya", js!.code).call(
+          null,
+          { maya: loaded ? maya : undefined },
+          document,
+          {},
+          maya,
+        );
         if (!loaded) {
           expect(got).toBeUndefined();
           onLoad!();
