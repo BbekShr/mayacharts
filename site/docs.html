@@ -569,14 +569,18 @@ host.renderComplete();</code></pre>
         <p>
           Host adapters do the rest of the plumbing a BI tile repeats. They turn a columnar result
           into rows, unwrap cells given as <code>{ value() }</code> or <code>{ value }</code>, match
-          each field written as a RegExp or a case-insensitive name against the returned columns (an
+          each field written as the exact column name or a RegExp against the returned columns (an
           unmatched field fails with unknown-field listing the columns), find or create the
           <code>#chart</code> element, set its spec and return it. They are in
           <code>mayacharts/host</code>, and in the global builds as <code>maya.host</code>.
         </p>
-        <pre><code>// ThoughtSpot custom chart: reads viz.getDataFromSearchQuery().getData() and calls
-// viz.events.emitRenderCompletedEvent() once the chart settles, errors included.
-maya.host.thoughtspot(viz, { type: "bar", x: /item/i, y: /sales/i });
+        <pre><code>// ThoughtSpot custom chart (three files):
+// chart.html: &lt;script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"&gt;&lt;/script&gt;
+//             &lt;maya-chart id="chart"&gt;&lt;/maya-chart&gt;
+// chart.css:  #chart { --maya-accent: ...; --maya-series-2: ...; }
+// chart.js:   const draw = () =&gt; maya.host.thoughtspot(viz, spec);
+//             window.maya ? draw() : document.querySelector("script[src*=mayacharts]")
+//               .addEventListener("load", draw);
 
 // Any host that returns { schema, data: [[...]] }
 maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },

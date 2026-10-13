@@ -1004,11 +1004,16 @@ res.send(html);
 
 A host that snapshots charts (PDF export, scheduled screenshots, a render-complete hook) should wait for `maya-settled` or `await el.settled`, not `maya-render`, or set `animate: false`.
 
-Host adapters turn a columnar result into rows, unwrap `{ value() }` cells, match fields written as a RegExp or a case-insensitive name against the columns, find or create `#chart`, set the spec and return the element. They live in `mayacharts/host` and in the global builds as `maya.host`.
+Host adapters turn a columnar result into rows, unwrap `{ value() }` cells, match fields written as the exact column name or a RegExp (case-insensitive) against the columns, find or create `#chart`, set the spec and return the element. They live in `mayacharts/host` and in the global builds as `maya.host`.
 
 ```js
-// ThoughtSpot custom chart: also emits render-complete once the chart settles, errors included.
-maya.host.thoughtspot(viz, { type: "bar", x: /item/i, y: /sales/i });
+// ThoughtSpot custom chart (three-file pattern):
+// chart.html: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script>
+//             <maya-chart id="chart"></maya-chart>
+// chart.css:  #chart { --maya-accent: ...; --maya-series-2: ...; }
+// chart.js:   const draw = () => maya.host.thoughtspot(viz, { type: "bar", x: "item", y: "sales" });
+//             window.maya ? draw() : document.querySelector("script[src*=mayacharts]")
+//               .addEventListener("load", draw);
 
 // Any host that returns { schema, data: [[...]] }
 maya.host.columns(
@@ -1252,15 +1257,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 19,500 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 19,923 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,844,154,989 total, 3,424,898 output
-- claude-sonnet-5-5: 903,533,591 total, 119,768 output
+- claude-opus-5-5: 1,913,723,865 total, 3,478,834 output
+- claude-sonnet-5-5: 915,708,012 total, 121,349 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
-- claude-haiku-4-5-20251001: 30,518,833 total, 1,456 output
+- claude-haiku-4-5-20251001: 31,495,338 total, 4,233 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,975,100,656 total, 3,981,350 output
+- all: 3,057,820,458 total, 4,039,644 output
 
 <!-- tokens:end -->
 
