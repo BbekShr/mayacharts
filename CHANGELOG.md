@@ -6,9 +6,18 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
-Fixes #76, #86, #87, #88, #89, #90, #91, #92, #93.
+Fixes #76, #82, #83, #86, #87, #88, #89, #90, #91, #92, #93.
 
 ### Added
+
+- `toggle: true` on kpi and gauge with a `y` array shows one measure at a time behind the measure control (`view.measure`); a gauge takes a `y` array only with it. `yDomain` and `colorBy` can be keyed by y field on kpi and gauge (`yDomain: { Sales: [0, 26e6] }`), and a toggled kpi takes `aggregate` keyed by y field, so a Price ratio sits beside Sales and Units. Fixes #82.
+- `was` keyed by y field (`was: { Sales: "SalesLY", Units: "UnitsLY" }`) with a `y` array: the ghosts and comparisons follow the measure toggle, and a kpi with one tile per field compares each with its own. Fixes #82.
+- `stack` takes an array of modes, such as `[true, "percent"]`: a Layout control switches between them and `view.stack` holds the choice. Text keys `stacks`, `unstacked`, `stacked`, `percent` and `stream`. Fixes #82.
+- kpi: `compare` picks which change lines print (`["was"]` drops the one against the previous period), `frame` shows one scope at a time (YTD or All), and `select` works on the sparkline points. Fixes #82, #83.
+- kpi `numberMotion: "roll"` rolls the headline digit by digit like an odometer (element). Fixes #83.
+- kpi `back`: a second chart spec over the same rows. A Details button (text key `flip`) turns the card over; `view.face` is `"front"` or `"back"`, so `renderShell` can render either face. Fixes #83.
+- gauge `arc: 180 | 270 | 360` (360 is a closed ring) and `tooltip.fields` on gauge. Fixes #83.
+- `view.stack` and `view.face` in `el.view` and the `maya-view` detail.
 
 - `theme` takes a registered name or `[name, overrides]`. `registerTheme(name, tokens)` (`maya.registerTheme` in the global builds) defines a house theme once for every chart; importing `mayacharts/themes` registers its 18 names, and `maya.global.js` ships them as `maya.themes`. An unknown name throws `invalid-theme` listing the registered names. Fixes #88.
 - Theme tokens `rampLow`, `rampHigh`, `rampMid` and `rampMidValue` (a value ramp independent of `accent`; `rampMid` makes it diverging), `up`, `down` and `total` (direction colours, separate from the series slots), `neutral` (Other, unmapped names, folded slices), `subtitleSize`, `labelSize`, `legendSize`, `heroSize`, `heroWeight`, `emptySize`, `numeric` ("tabular" or "proportional"), `cellGap`, `cellRadius`, `labelInk`, `labelInkOnFill`, `lineEmphasis` and `ghost`. Fixes #88.
@@ -35,6 +44,8 @@ Fixes #76, #86, #87, #88, #89, #90, #91, #92, #93.
 - Each `text` key now says which string it controls: on hover in TypeScript, under TEXT KEYS in llms.txt and in the Text keys table of the docs. Fixes #93.
 
 ### Fixed
+
+- `was` with `series` on bar draws one ghost per grouped bar; the docs no longer say it is refused (#82).
 
 - Sankey under drill with a `colors` map keeps the map colours, and an unmapped root stays neutral, at every level (regression from 0.15.0) (#76).
 - With no rows, a title or subtitle holding a data token is dropped instead of printing the raw token; the empty state is unchanged (#76).

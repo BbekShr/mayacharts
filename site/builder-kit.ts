@@ -350,6 +350,9 @@ export const SKIP = new Set([
   "annotate", // arrays, set in the copied code
   "dash",
   "emphasis", // series values, like dash
+  "compare", // kpi: an array of change lines, set in the copied code
+  "back", // kpi: a whole second spec
+  "arc", // gauge: a number, set in the copied code
   ...ROLES,
 ]);
 

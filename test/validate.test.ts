@@ -154,7 +154,7 @@ describe("one snapshot per error code", () => {
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.stacked is not a known option.
         Did you mean "stack"?
-        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, was, tooltip, xScale, yScale, annotate, dash, depth, minAngle, legend, form, emphasis, colorScale, colors, colorBy, theme, $schema, x, y2, series, size, name, title, subtitle, description, locale, currency, frame, horizontal, labels, endLabels, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate, tint, brush, zero.
+        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, was, tooltip, xScale, yScale, annotate, dash, depth, minAngle, legend, form, emphasis, colorScale, colors, colorBy, theme, compare, numberMotion, back, arc, $schema, x, y2, series, size, name, title, subtitle, description, locale, currency, frame, horizontal, labels, endLabels, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate, tint, brush, zero, toggle.
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-option"
     `);
   });

@@ -189,9 +189,12 @@ export interface ChartSpec<R extends object = Row> {
   /** How x is spaced. "auto": a time axis when every x is an ISO 8601 date ("2024-03" or longer) on line, area or vertical bar without sort or limit; else categories. "time" also accepts epoch ms numbers. Default "auto".
    * @example xType: "category" */
   xType?: "auto" | "category" | "time";
-  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`; kpi: one tile each; gauge: one field only).
+  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`; kpi: one tile each, or one at a time with `toggle`; gauge: only with `toggle`).
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
+  /** With a `y` array: one measure at a time behind the measure control (view.measure) instead of one tile each (kpi); a gauge takes a `y` array only with it. kpi gauge.
+   * @example toggle: true */
+  toggle?: boolean;
   /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required; constellation: colours the stars by group). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation.
    * @example series: "region" */
   series?: Field<R>;
@@ -214,26 +217,40 @@ export interface ChartSpec<R extends object = Row> {
    * @example totals: ["Q1", "FY"] */
   totals?: readonly string[];
   /** Stack series instead of grouping them; "percent" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0); "stream" (area only) centres the stack on a wiggle baseline (a streamgraph: values 0 or more, value axis and grid off by default, the tooltip shows each value). bar and area only.
-   * @example stack: "percent" or stack: "stream" */
-  stack?: boolean | "percent" | "stream";
+   * An array of 2 or more distinct modes (false: grouped bars or overlaid areas) adds a control that switches between them, first one shown (view.stack indexes it).
+   * @example stack: "percent" or stack: "stream" or stack: [true, "percent"] */
+  stack?: boolean | "percent" | "stream" | readonly (boolean | "percent" | "stream")[];
   /** Categories on the left axis. bar and dumbbell.
    * @example horizontal: true */
   horizontal?: boolean;
-  /** Playback: one frame per distinct value (data order); the chart shows one frame at a time, the last by default, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and "1" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell; not with `drill` or `zoom`.
+  /** Playback: one frame per distinct value (data order); the chart shows one frame at a time, the last by default, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and "1" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell kpi (a scope such as YTD or All); not with `drill` or `zoom`.
    * @example frame: "year" */
   frame?: Field<R>;
   /** Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction.
    * @example y2: "units" */
   y2?: Field<R>;
-  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a "was" tooltip row and table column). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). bar kpi gauge heatmap; not with `stack` or a `y` array.
-   * @example was: "lastYear" or was: { by: "year" } */
+  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a "was" tooltip row and table column). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). With a `y` array, key it by y field (`{ sales: "salesLY" }`): the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have none; an object with a string `by` is the long form. With `series` (bar): one ghost per grouped bar. bar kpi gauge heatmap; not with `stack`.
+   * @example was: "lastYear" or was: { by: "year" } or was: { sales: "salesLY", units: "unitsLY" } */
   was?:
     | Field<R>
     | {
         readonly by: Field<R>;
         readonly current?: string | number;
         readonly previous?: string | number;
-      };
+      }
+    | Readonly<Partial<Record<Field<R>, Field<R>>>>;
+  /** Which change lines a kpi prints under the headline, in this order: "previous" (the previous category), "was" (spec.was), "target" (colorBy target; the bullet and status stay). `[]` prints none. Default all three. kpi only.
+   * @example compare: ["was"] */
+  compare?: readonly ("previous" | "was" | "target")[];
+  /** How a kpi headline moves to a new number (element only; off under reduced motion): "count" counts up, "roll" rolls each digit like an odometer. Default "count". kpi only.
+   * @example numberMotion: "roll" */
+  numberMotion?: "count" | "roll";
+  /** A second face: a chart spec over the kpi's rows (no `data` of its own, any type but kpi). A Details button turns the card over (view.face); Escape returns. kpi only.
+   * @example back: { type: "bar", x: "month", y: "sales", horizontal: true, sort: "desc", limit: 3 } */
+  back?: Omit<ChartSpec<R>, "data" | "back">;
+  /** Sweep of the gauge dial in degrees: 180 (a half dial), 270 or 360 (a closed ring). Default 180. gauge only.
+   * @example arc: 360 */
+  arc?: 180 | 270 | 360;
   /** Radial form: "bars" (stacked radial bars) or "line" (radar: one closed line per series, angle = x, radius = y from zero; `dash` draws series dashed). Default "bars". radial only.
    * @example form: "line" */
   form?: "bars" | "line";
@@ -271,9 +288,10 @@ export interface ChartSpec<R extends object = Row> {
   /** Value axis includes zero. false fits the axis to the values (recomputed at each drill level), for small changes between large values. Default true. dumbbell only.
    * @example zero: false */
   zero?: boolean;
-  /** Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). kpi: the bullet scale; gauge: the dial range. Not allowed with a `y` array.
-   * @example yDomain: [0, 100] */
-  yDomain?: readonly [number, number];
+  /** Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). kpi: the bullet scale; gauge: the dial range. Not with a `y` array, except keyed by y field on kpi and gauge (unlisted measures take the default).
+   * @example yDomain: [0, 100] or yDomain: { sales: [0, 26e6] } */
+  yDomain?:
+    readonly [number, number] | Readonly<Partial<Record<Field<R>, readonly [number, number]>>>;
   /** Fixed x domain. scatter only.
    * @example xDomain: [0, 1] */
   xDomain?: readonly [number, number];
@@ -305,7 +323,7 @@ export interface ChartSpec<R extends object = Row> {
    * @example brush: true */
   brush?: boolean;
 
-  /** Hover/keyboard tooltip. Default true. `{ fields }` adds those fields as rows (also data table columns), formatted by `format`; where rows combine (bar, line, area, heatmap, dumbbell) numeric fields combine by `aggregate`, and `{ field, ratio: [num, den] }` shows sum(num) / sum(den) under the name `field` (titles and format key it; it need not be in the rows). fields: bar line area scatter heatmap dumbbell beeswarm.
+  /** Hover/keyboard tooltip. Default true. `{ fields }` adds those fields as rows (also data table columns), formatted by `format`; where rows combine (bar, line, area, heatmap, dumbbell) numeric fields combine by `aggregate`, and `{ field, ratio: [num, den] }` shows sum(num) / sum(den) under the name `field` (titles and format key it; it need not be in the rows). fields: bar line area scatter heatmap dumbbell beeswarm gauge (combined over every row).
    * @example tooltip: false or tooltip: { fields: ["units", { field: "price", ratio: ["sales", "units"] }] } */
   tooltip?: boolean | { readonly fields: readonly TipField<Field<R>>[] };
   /** Legend; clicking toggles series. "top", "bottom" or "right" places it (true is "top"). Default: true when `series` is set, and for waffle, hexmap (colour ramp) and units (toggles groups).
@@ -320,7 +338,7 @@ export interface ChartSpec<R extends object = Row> {
   /** With `drill`: a click on empty chart space goes back up one level. Default true.
    * @example drillOut: false */
   drillOut?: boolean;
-  /** Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. `{ peers: field }` (beeswarm) selects one mark and also lights every mark sharing its value of that field, with their average (view.peers). bar line area waterfall scatter heatmap dumbbell ridgeline beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
+  /** Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. `{ peers: field }` (beeswarm) selects one mark and also lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
    * @example select: "multi" or select: { peers: "itemType" } */
   select?: true | "multi" | { readonly peers: Field<R> };
   /** Drag to zoom. line, area, scatter. Reset chip, double-click and Escape restore.
@@ -380,6 +398,10 @@ export interface View {
   brush?: readonly (readonly [field: string, lo: number, hi: number])[];
   /** `select: { peers }`: the selected mark's value of the peers field (as a string); its peers light up with their average. */
   peers?: string;
+  /** Index into a `stack` array of modes. Default 0; larger is clamped. */
+  stack?: number;
+  /** kpi with `back`: which face shows. Default "front". */
+  face?: "front" | "back";
 }
 
 export interface RenderOptions {
@@ -453,6 +475,12 @@ export interface ResolvedSpec {
   y: string;
   /** Every measure (`[y]` when `spec.y` is a string). */
   measures: string[];
+  /** spec.toggle (kpi, gauge): a kpi draws the active measure only. */
+  toggle: boolean;
+  /** kpi change lines to print, in order (default all three). */
+  compare: readonly ("previous" | "was" | "target")[];
+  /** Gauge sweep in degrees (default 180). */
+  arc: 180 | 270 | 360;
   /** Index of `y` in `measures`. */
   measure: number;
   series: string | null;
@@ -461,6 +489,8 @@ export interface ResolvedSpec {
   /** The field marks read the previous value from (bar, kpi, gauge): spec.was, or with the long form
    * `wasBy.by`, which the pivot fills with the previous period's value; null when unset. */
   was: string | null;
+  /** The previous-value field per measure: a string or long-form was applies to every measure, a keyed was to its keys (empty when unset). `was` is the active measure's entry. */
+  wasOf: ReadonlyMap<string, string>;
   /** spec.was long form: period field and the explicit periods as strings (null = latest, one before).
    * `data` is already pivoted (shape.ts pivotWas); titles default `by` to the previous period, formatted. */
   wasBy: { by: string; current: string | null; previous: string | null } | null;
@@ -518,7 +548,10 @@ export interface ResolvedSpec {
   size: string | null;
   name: string | null;
   totals: string[];
+  /** The stack mode shown: spec.stack, or the view.stack entry of a stack array. */
   stack: boolean | "percent" | "stream";
+  /** spec.stack as an array of modes ([] when it is not one): the control lists them, `stack` is the active one. */
+  stacks: readonly (boolean | "percent" | "stream")[];
   /** spec.frame: [field, distinct values in data order, index shown]; `data` holds that frame's rows. */
   frame: readonly [field: string, values: readonly string[], i: number] | null;
   horizontal: boolean;
@@ -552,7 +585,10 @@ export interface ResolvedSpec {
   yAxis: boolean;
   locale: string;
   currency: string;
+  /** The active measure's domain (keyed yDomain: its entry or null). */
   yDomain: readonly [number, number] | null;
+  /** Domains per measure: the array form applies to every measure, the keyed form (kpi, gauge) to its keys. */
+  domains: ReadonlyMap<string, readonly [number, number]>;
   xDomain: readonly [number, number] | null;
   /** spec.rules across the value axis, in object form ([] when unset). */
   rules: readonly { y: number | "mean"; label: string | null }[];

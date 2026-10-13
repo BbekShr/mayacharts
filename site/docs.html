@@ -722,7 +722,18 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>
                 Value; array adds measure toggle, first active (parallel and table: all shown;
                 funnel without <code>x</code>: one stage per field; kpi: one tile per field, shown
-                together; gauge: one field only, no x and no series)
+                together, or one at a time with toggle; gauge: one field, or an array with toggle;
+                no x and no series)
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="toggle"></a><code>toggle</code></td>
+              <td>boolean</td>
+              <td>kpi gauge</td>
+              <td>
+                With a y array, one measure at a time behind the measure control (view.measure): a
+                kpi draws one tile instead of one per field; a gauge takes a y array only with it.
+                aggregate, was, yDomain and colorBy may then be keyed by y field
               </td>
             </tr>
             <tr>
@@ -736,7 +747,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><a class="spec-anchor" id="was"></a><code>was</code></td>
-              <td>field / {by, current?, previous?}</td>
+              <td>field / {by, current?, previous?} / {[y field]: field}</td>
               <td>bar kpi gauge heatmap</td>
               <td>
                 Previous value field, or <code>{ by, current?, previous? }</code> for long data (one
@@ -751,8 +762,48 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 (the value axis spans the ghosts), keyed in the legend by the field's title, the
                 tooltip says "was" and the value, the data table gains a column, and the description
                 names the 2 largest relative moves (text.since, "Since Last week: North +12%, West
-                -10%."). Not with stack or a y array
+                -10%."). With a y array, key it by y field (<code>{ "sales": "salesLY" }</code>):
+                the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have
+                none; an object with a string <code>by</code> is the long form. With series (bar):
+                one ghost per grouped bar. Not with stack
               </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="compare"></a><code>compare</code></td>
+              <td>("previous" / "was" / "target")[]</td>
+              <td>kpi</td>
+              <td>
+                Which change lines print under the headline, in this order: previous (the previous
+                category), was (spec.was), target (colorBy target; the bullet and status stay). []
+                prints none. Default all three
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="numberMotion"></a><code>numberMotion</code></td>
+              <td>"count" / "roll"</td>
+              <td>kpi</td>
+              <td>
+                How the headline moves to a new number on first draw and on every change (element
+                only; off under reduced motion): "count" counts up, "roll" rolls each digit column
+                like an odometer. Default "count"
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="back"></a><code>back</code></td>
+              <td>spec without data</td>
+              <td>kpi</td>
+              <td>
+                A second face: a chart spec of any type but kpi over the kpi's rows (frame applied).
+                A Details button (text.flip, aria-pressed) turns the card over; view.face is "front"
+                or "back", so renderShell renders either; Escape returns. Its errors name
+                spec.back.&lt;path&gt;
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="arc"></a><code>arc</code></td>
+              <td>180 / 270 / 360</td>
+              <td>gauge</td>
+              <td>Sweep of the dial in degrees; 360 is a closed ring. Default 180</td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="forms"></a><code>forms</code></td>
@@ -786,14 +837,14 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             <tr>
               <td><a class="spec-anchor" id="frame"></a><code>frame</code></td>
               <td>field</td>
-              <td>bar line area scatter dumbbell</td>
+              <td>bar line area scatter dumbbell kpi</td>
               <td>
                 Playback: one frame per distinct value of the field, in data order (values match as
                 strings, null rows belong to no frame, at most 200 frames). The chart shows one
                 frame, the last by default (view.frame picks another), and its title becomes the
                 title plus the frame value (text.frameOf, formatted by the field's format). Value
                 axes span every frame, so they hold still while it plays. The element adds a Play
-                button
+                button. kpi: a scope such as YTD or All, one at a time
               </td>
             </tr>
             <tr>
@@ -866,7 +917,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><a class="spec-anchor" id="stack"></a><code>stack</code></td>
-              <td>boolean | "percent" | "stream"</td>
+              <td>boolean | "percent" | "stream" | modes[]</td>
               <td>bar area</td>
               <td>
                 Stack series instead of grouping. "percent" shows each category's visible values as
@@ -876,7 +927,11 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 stack below 0. "stream" (area only) centres the stack on a wiggle baseline, a
                 streamgraph: values must be 0 or more, the value axis and grid are off by default,
                 and the tooltip shows each value. A radial always stacks, so
-                <code>stack: false</code> on it is option-unsupported
+                <code>stack: false</code> on it is option-unsupported. An array of 2 or more
+                distinct modes (<code>[true, "percent"]</code>; false: grouped bars or overlaid
+                areas) adds a Layout control (text.stacks, text.unstacked, text.stacked,
+                text.percent, text.stream) that switches between them, first one shown; view.stack
+                indexes it
               </td>
             </tr>
             <tr>
@@ -941,7 +996,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 points point range density perCell mean perX rule log play pause frameOf frame was
                 since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
                 median q1 min rows ofPrevious ofFirst first last labelled peerMean brushed
-                brushCleared
+                brushCleared flip stacks unstacked stacked percent stream
               </td>
             </tr>
             <tr>
@@ -989,12 +1044,14 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><a class="spec-anchor" id="yDomain"></a><code>yDomain</code></td>
-              <td>[min, max]</td>
+              <td>[min, max] / {[y field]: [min, max]}</td>
               <td>-</td>
               <td>
                 Fixed value-axis domain. Pass [hi, lo] to reverse it (ranks with 1 on top). kpi: the
                 bullet scale. gauge: the dial range. An end that is off the tick step gets its own
-                tick unless that label would touch its neighbour. Not allowed with y array
+                tick unless that label would touch its neighbour. Not with a y array, except keyed
+                by y field on kpi and gauge (<code>{ "sales": [0, 26e6] }</code>; unlisted measures
+                take the default)
               </td>
             </tr>
             <tr>
@@ -1507,6 +1564,39 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>"Filter cleared"</td>
               <td>Live region after the parallel brush is cleared.</td>
             </tr>
+            <tr>
+              <td><code>flip</code></td>
+              <td>"Details"</td>
+              <td>
+                kpi with spec.back: the button that turns the card over (aria-pressed says which
+                face shows).
+              </td>
+            </tr>
+            <tr>
+              <td><code>stacks</code></td>
+              <td>"Layout"</td>
+              <td>aria-label of the stack mode radiogroup (spec.stack as an array).</td>
+            </tr>
+            <tr>
+              <td><code>unstacked</code></td>
+              <td>"Separate"</td>
+              <td>Stack mode option for false: grouped bars, overlaid areas.</td>
+            </tr>
+            <tr>
+              <td><code>stacked</code></td>
+              <td>"Stacked"</td>
+              <td>Stack mode option for true.</td>
+            </tr>
+            <tr>
+              <td><code>percent</code></td>
+              <td>"Percent"</td>
+              <td>Stack mode option for "percent".</td>
+            </tr>
+            <tr>
+              <td><code>stream</code></td>
+              <td>"Stream"</td>
+              <td>Stack mode option for "stream".</td>
+            </tr>
           </tbody>
         </table>
       </section>
@@ -1533,6 +1623,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 <code>{ "field": "price", "ratio": ["sales", "units"] }</code> shows sum(sales) /
                 sum(units) under the name price wherever rows combine (titles and format key it; it
                 need not be in the rows). fields: bar line area scatter heatmap dumbbell beeswarm
+                gauge (combined over every row)
               </td>
             </tr>
             <tr>
@@ -1582,9 +1673,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 Click/Enter/legend selects marks; Escape clears. With drill, double-click or
                 Shift+Enter drills. <code>{ "peers": "itemType" }</code> (beeswarm) also lights the
                 marks sharing the selected one's value of that field, with their average
-                (text.peerMean); view.peers holds the value. bar line area waterfall scatter heatmap
-                dumbbell ridgeline beeswarm parallel table marimekko waffle radial treemap sunburst
-                hexmap boxplot funnel weave units orbit constellation
+                (text.peerMean); view.peers holds the value. kpi: the sparkline points. bar line
+                area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table
+                marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit
+                constellation
               </td>
             </tr>
             <tr>
@@ -2002,8 +2094,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><code>view</code></td>
               <td>property</td>
               <td>
-                <code>{ measure, drill, window, hidden, form, sortBy, frame, brush, peers }</code>;
-                <code>{}</code> resets; no events on set
+                <code
+                  >{ measure, drill, window, hidden, form, stack, face, sortBy, frame, brush, peers
+                  }</code
+                >; <code>{}</code> resets; no events on set
               </td>
             </tr>
             <tr>
@@ -2051,11 +2145,15 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><code>maya-view</code></td>
-              <td><code>{ measure, drill, window, hidden, form, sortBy, brush, peers }</code></td>
               <td>
-                Measure toggled, drilled, zoomed, a legend series hidden, a units form picked, a
-                table sorted, a parallel axis brushed (brush: [field, lo, hi] per axis) or beeswarm
-                peers selected (user actions only)
+                <code
+                  >{ measure, drill, window, hidden, form, stack, face, sortBy, brush, peers }</code
+                >
+              </td>
+              <td>
+                Measure toggled, drilled, zoomed, a legend series hidden, a units form or stack mode
+                picked, a kpi card turned over, a table sorted, a parallel axis brushed (brush:
+                [field, lo, hi] per axis) or beeswarm peers selected (user actions only)
               </td>
             </tr>
             <tr>
@@ -2175,9 +2273,10 @@ await chart.settled; // drawn and still</code></pre>
           these classes are stable for tests and hosts: <code>.maya-title</code>,
           <code>.maya-sub</code>, <code>.maya-legend</code>, <code>.maya-crumbs</code>,
           <code>.maya-ctl</code>, <code>.maya-reset</code>, <code>.maya-box</code>,
-          <code>.maya-svg</code>, <code>.maya-tip</code>, <code>.maya-err</code> and
-          <code>.maya-play</code>. Marks carry <code>data-maya="mark"</code>, <code>data-key</code>,
-          <code>data-c</code>, <code>data-s</code> and <code>data-tone</code>.
+          <code>.maya-svg</code>, <code>.maya-tip</code>, <code>.maya-err</code>,
+          <code>.maya-play</code> and <code>.maya-flip</code>. Marks carry
+          <code>data-maya="mark"</code>, <code>data-key</code>, <code>data-c</code>,
+          <code>data-s</code> and <code>data-tone</code>.
         </p>
       </section>
       <section id="theme-tokens">

@@ -12,7 +12,7 @@
  *           touches window/document (a test deletes globalThis.window and imports it).
  *
  * State: interaction state is not in the spec. RenderOptions.view = { measure, drill, window,
- *   hidden, sortBy, frame, form } and RenderOptions.selected = Sel[] (raw values). view.form
+ *   hidden, sortBy, frame, form, stack, face, brush, peers } and RenderOptions.selected = Sel[] (raw values). view.form
  *   indexes the units spec.forms (ResolvedSpec.forms/form, clamped); for units without colorBy
  *   resolve() also makes x the series, so the legend and view.hidden toggle groups. It applies
  *   measure (active y, measures[] kept for the control), frame (keep the rows of one distinct
@@ -119,14 +119,15 @@
  *   kpi and gauge status words: text.onTrack (good), atRisk (warn), offTrack (bad); the kpi
  *   tooltip uses them too.
  *
- * kpi with a `y` array (ALL_Y, never a measure toggle): one tile per measure. shape() makes each
+ * kpi with a `y` array (ALL_Y; with spec.toggle a measure toggle instead, see the M3 paragraph): one tile per measure. shape() makes each
  *   measure a series (Shaped.series = measures, cell.si = measure index) and thins them together
  *   (the last two categories kept). Tile parts carry data-s = measure index % 8 and keys with the
  *   measure field as the series part: headline `v~FIELD`, bullet `b~FIELD`, dots `FIELD~C`, line
  *   `l~FIELD`, area `a~FIELD`. A single y keeps `v`, `b`, `~C`, `l~`, `a~`. The data table has
  *   one column per measure, each toned by its own goal.
  *
- * gauge (radial module): one value, rows combined by spec.aggregate; one y, no x, no series.
+ * gauge (radial module): one value, rows combined by spec.aggregate; one y (a y array only with
+ *   spec.toggle: the measure control picks it), no x, no series.
  *   Dial range yDomain, else 0 to a nice max over the value, target, warn and was. Its tone is
  *   ctx.tone(value); the full mark contract is the header of radial.ts.
  *
@@ -216,6 +217,36 @@
  *   ResolvedSpec.brush when spec.brush) and peers (select { peers }: the selected mark's peers
  *   value, ResolvedSpec.peers); the element owns both gestures and reports them in maya-view.
  *
+ * Contract #82-#83 (M3; where it differs, this paragraph wins over the older text):
+ *   Toggle: spec.toggle (kpi, gauge, needs a y array) gives ResolvedSpec.toggle; the measure
+ *   radiogroup shows and view.measure picks the active y as on bar. A toggled kpi is not "wide"
+ *   (shape.ts wide(): one series, keys `v`, `b`, `~C`, `l~`, `a~` as a single y; the description
+ *   and data table name the active measure only); kpi.ts draws only spec.y when spec.toggle.
+ *   Options keyed by y field resolve to the active measure like aggregate: yDomain
+ *   ({ field: [lo, hi] }, kpi and gauge; ResolvedSpec.domains per measure, yDomain the active
+ *   entry or null), colorBy (kpi and gauge; goals as before), was ({ field: wasField } with a y
+ *   array, bar kpi gauge heatmap; ResolvedSpec.wasOf per measure, was the active entry or null,
+ *   so a measure without one draws no ghosts). An object was with a string `by` is the long
+ *   form. A wide kpi (no toggle) reads wasOf.get(field) and domains.get(field) per tile; its
+ *   data table has a was column after each measure that has one. was with series (bar): one
+ *   ghost per grouped bar (it always was; nothing refuses it).
+ *   kpi: compare (ResolvedSpec.compare, default ["previous", "was", "target"], [] = none) picks
+ *   the change lines in that order; frame works as on other types (resolve keeps one frame's
+ *   rows, the title names it, the Play button shows); select and numberMotion are accepted
+ *   (numberMotion is element-only, read from the spec: "roll" rolls digit columns instead of
+ *   counting; core writes nothing for it). back: a spec without data, any type but kpi,
+ *   validated as a spec over the kpi's rows (errors name back.<path>). With view.face "back",
+ *   build() renders { ...back, data: the front's resolved rows (frame applied) } with the same
+ *   view minus face, and appends the flip button (pressed) to its controls: the shell holds one
+ *   face at a time, so SSR renders either and the element turns the card by re-rendering with
+ *   view.face. renderShell's JSON child keeps the fields back references.
+ *   gauge: arc (180 | 270 | 360, ResolvedSpec.arc, default 180) is the dial sweep;
+ *   tooltip.fields are combined over every row by aggregate (ratio items too).
+ *   Stack modes: spec.stack may be an array of 2+ distinct modes (false, true, "percent",
+ *   "stream"); ResolvedSpec.stacks lists them and stack is view.stack's entry (clamped, default
+ *   0), so everything downstream sees one mode. It counts as stacked for the was and ratio
+ *   refusals; "stream" anywhere in it needs area. The svg's data-stack reflects the active mode.
+ *
  * Outputs
  *   render(spec, opts)      standalone `<svg class="maya-root">` with an embedded <style>.
  *                           Works as a file, in <img>, or rasterized by the hosted API.
@@ -237,11 +268,15 @@
  *   <style>CSS</style>
  *   <div class="maya">
  *     TITLE  CONTROLS  LEGEND  CRUMBS
- *     CONTROLS = the measure radiogroup (.maya-ctl), then for units with 2+ forms the form
+ *     CONTROLS = the measure radiogroup (.maya-ctl; not on ALL_Y types unless spec.toggle), then for units with 2+ forms the form
  *       radiogroup (.maya-ctl data-maya="form", aria-label text.forms, options text.waffle /
- *       bars / swarm, data-i = view.form; measure handlers must skip it), then with spec.frame and 2+ frames
+ *       bars / swarm, data-i = view.form; measure handlers must skip it), then with a spec.stack
+ *       array the stack radiogroup (.maya-ctl data-maya="stack", aria-label text.stacks, options
+ *       text.unstacked / stacked / percent / stream, data-i = view.stack), then with spec.frame and 2+ frames
  *       <button type="button" class="maya-play" data-maya="play">text.play</button>
- *       (the same for every frame, so the element can relabel it text.pause while playing).
+ *       (the same for every frame, so the element can relabel it text.pause while playing),
+ *       then with kpi spec.back <button type="button" class="maya-flip" data-maya="flip"
+ *       aria-pressed="false|true">text.flip</button> (pressed: the back face shows).
  *       Parts.frame = [index shown, frame count] with spec.frame, absent otherwise.
  *     <div class="maya-box">SVG</div>
  *     TABLE
@@ -596,6 +631,10 @@ const radios = (tag: string, label: string, names: string[], i: number) =>
 
 const kebab = (s: string) => s.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase());
 
+/** The kpi `back` toggle (aria-pressed: the back face shows). */
+const flip = (s: ResolvedSpec, on: boolean) =>
+  `<button type="button" class="maya-flip" data-maya="flip" aria-pressed="${on}">${esc(t(s, "flip"))}</button>`;
+
 function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string | null): Parts {
   spec = unset(spec);
   validateSpec(spec);
@@ -603,6 +642,13 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   // validateSpec guarantees the type is core or registered.
   const mark = (Object.hasOwn(CORE, spec.type) ? CORE[spec.type] : MODULES.get(spec.type))!;
   const s0 = resolve(spec, opts?.view);
+  // kpi back face: the back spec over the front's rows (frame applied) is the whole chart; only
+  // the flip button is the front's.
+  if (spec.back && opts?.view?.face === "back") {
+    const { face: _, ...view } = opts.view;
+    const p = build({ ...spec.back, data: s0.data } as ChartSpec, { ...opts, view }, sheet);
+    return { ...p, controls: p.controls + flip(s0, true) };
+  }
   const W = opts?.width ?? 640;
   const H = opts?.height ?? 320;
   // ponytail: plot width is only known after shape (tick labels set the margins); W - 56 is the
@@ -1188,7 +1234,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     // Nothing to draw: the empty state stands alone (#64).
     legend: empty ? "" : legend,
     controls:
-      (s.measures.length > 1 && !ALL_Y.includes(s.type)
+      (s.measures.length > 1 && (!ALL_Y.includes(s.type) || s.toggle)
         ? radios(
             "",
             t(s, "measures"),
@@ -1204,9 +1250,19 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
             s.form,
           )
         : "") +
+      (s.stacks.length > 1
+        ? radios(
+            ' data-maya="stack"',
+            t(s, "stacks"),
+            // "percent" and "stream" are their own text keys.
+            s.stacks.map((m) => t(s, m === true ? "stacked" : m === false ? "unstacked" : m)),
+            s.stacks.indexOf(s.stack),
+          )
+        : "") +
       (fr && fr[1].length > 1
         ? `<button type="button" class="maya-play" data-maya="play">${esc(t(s, "play"))}</button>`
-        : ""),
+        : "") +
+      (spec.back ? flip(s, false) : ""),
     crumbs:
       s.drilled.length > 0
         ? `<nav class="maya-crumbs" aria-label="${esc(t(s, "crumbs"))}"><button type="button" data-depth="0">${esc(t(s, "back"))}</button>` +
@@ -1273,14 +1329,32 @@ export function shellInner(parts: Parts, css: string, nonce?: string): string {
 
 /** Rows cut to the fields the spec references (no data leakage into SSR HTML). */
 function project(spec: ChartSpec): ChartSpec {
+  const fields = used(spec);
+  return {
+    ...spec,
+    // A theme name is resolved here: the page that hydrates may not have registered it.
+    ...(spec.theme === undefined || spec.theme === null ? {} : { theme: themeOf(spec.theme) }),
+    data: spec.data.map((row) =>
+      Object.fromEntries(Object.entries(row).filter(([k]) => fields.has(k))),
+    ),
+  };
+}
+
+/** Every field a spec references (a kpi's back face too). */
+function used(spec: Omit<ChartSpec, "data">): Set<unknown> {
   const keep = (o: object | string | undefined) => (typeof o === "object" ? Object.keys(o) : []);
-  const fields = new Set<unknown>([
+  const was = spec.was;
+  return new Set<unknown>([
     spec.x,
     ...(typeof spec.y === "string" ? [spec.y] : spec.y),
     spec.series,
     spec.y2,
     ...ratios(spec.aggregate).flatMap(([, r]) => r),
-    typeof spec.was === "object" ? spec.was.by : spec.was,
+    ...(typeof was === "object"
+      ? typeof was.by === "string"
+        ? [was.by]
+        : Object.values(was)
+      : [was]),
     ...(typeof spec.tooltip === "object"
       ? spec.tooltip.fields.flatMap((f) => (typeof f === "string" ? [f] : f.ratio))
       : []),
@@ -1292,15 +1366,8 @@ function project(spec: ChartSpec): ChartSpec {
     typeof spec.colorBy === "string" ? spec.colorBy : undefined,
     ...keep(spec.format),
     ...keep(spec.titles),
+    ...(spec.back ? used(spec.back) : []),
   ]);
-  return {
-    ...spec,
-    // A theme name is resolved here: the page that hydrates may not have registered it.
-    ...(spec.theme === undefined || spec.theme === null ? {} : { theme: themeOf(spec.theme) }),
-    data: spec.data.map((row) =>
-      Object.fromEntries(Object.entries(row).filter(([k]) => fields.has(k))),
-    ),
-  };
 }
 
 /** `<maya-chart>` with Declarative Shadow DOM. JSON child escapes `<` as <. */

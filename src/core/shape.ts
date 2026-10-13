@@ -344,8 +344,9 @@ function other(s: ResolvedSpec, series: string[], rest: Cat[]): Cat {
   };
 }
 
-/** A kpi with a y array: each measure is a series (cell.si = measure index), thinned together. */
-const wide = (s: ResolvedSpec) => s.type === "kpi" && s.measures.length > 1;
+/** A kpi with a y array (not toggle): each measure is a series (cell.si = measure index), thinned together. */
+export const wide = (s: ResolvedSpec): boolean =>
+  s.type === "kpi" && s.measures.length > 1 && !s.toggle;
 
 /**
  * The row pass: one reducer per (category, series) and one for y2 per category; pairs with no row
