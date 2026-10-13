@@ -165,6 +165,9 @@ describe("snippets", () => {
     expect(js!.code).not.toContain("#0b6");
     expect(splitTheme(spec).spec.theme).toEqual({ axisSize: "14px" });
     expect(splitTheme({ ...spec, theme: { accent: "#0b6" } }).spec).not.toHaveProperty("theme");
+    expect(() => splitTheme({ ...spec, theme: { accent: "red;}body{x:y" } })).toThrow(
+      /unsafe-css-value|allowlist/,
+    );
     expect(splitTheme({ ...spec, theme: "ocean" })).toMatchObject({
       vars: "",
       spec: { theme: "ocean" },

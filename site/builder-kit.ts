@@ -897,6 +897,7 @@ export function splitTheme(spec: ChartSpec): { vars: string; spec: ChartSpec } {
   const { data: _, theme, ...rest } = spec;
   if (!theme || typeof theme !== "object" || Array.isArray(theme))
     return { vars: "", spec: { ...rest, ...(theme && { theme }) } as ChartSpec };
+  validateSpec(spec); // the CSS allowlist: a value can never close the declaration it lands in
   const keep = Object.fromEntries(Object.entries(theme).filter(([k]) => LAYOUT.has(k)));
   const vars = Object.entries(theme)
     .filter(([k]) => !LAYOUT.has(k))
