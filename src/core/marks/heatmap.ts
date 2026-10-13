@@ -1,4 +1,4 @@
-import { el, esc, hit, key, r, tw } from "../svg.ts";
+import { el, esc, hit, key, r, TOTAL, tw } from "../svg.ts";
 import { colorVals } from "../shape.ts";
 import { ramp } from "../scale.ts";
 import { inkOf, inText, more } from "./bar.ts";
@@ -7,16 +7,23 @@ import type { BandScale, Mark } from "../types.ts";
 /** x = column category, series = row category; ramp legend; labels default on at >= 24 px. */
 export const heatmap: Mark = {
   noun: "Heatmap",
-  axes: (spec, shaped) => [
-    { kind: "band", field: spec.x, domain: shaped.categories },
-    { kind: "band", field: spec.series ?? "", domain: shaped.series },
-  ],
+  axes: (spec, shaped) => {
+    const m = spec.margins ? [TOTAL] : [];
+    return [
+      { kind: "band", field: spec.x, domain: [...shaped.categories, ...m] },
+      { kind: "band", field: spec.series ?? "", domain: [...shaped.series, ...m] },
+    ];
+  },
   draw(ctx) {
     const { spec, shaped } = ctx;
     const cx = ctx.x as BandScale;
     const cy = ctx.y as BandScale;
     const cells = shaped.cells.filter((c) => c.value !== null);
-    const { q, breaks } = ramp(
+    const {
+      q,
+      labels: legendLabels,
+      steps,
+    } = ramp(
       cells.map((c) => c.value!),
       spec.colorScale,
       spec.rampMid,
@@ -72,15 +79,58 @@ export const heatmap: Mark = {
           "data-key": d["data-key"],
         });
     }
+    // totals: true: the Total column, row and corner sit in the extra band, outside the ramp (neutral fill, bold value).
+    const m = shaped.margins;
+    if (m) {
+      const tot = ctx.t("total");
+      const sum = (k: string, x: number, y: number, v: number | null, cat: string, ser: string) => {
+        if (v === null) return;
+        const d = {
+          "data-key": k,
+          "data-x": cat,
+          "data-series": ser,
+          "data-y": v,
+          "data-f": ctx.fmt(spec.y, v),
+        };
+        const o = { "data-hm": true, "data-sum": true };
+        // data-other: a total is not a branch, so it never drills.
+        marks += el("rect", {
+          "data-maya": "mark",
+          "data-other": true,
+          ...o,
+          ...d,
+          x: r(x),
+          y: r(y),
+          width: r(w),
+          height: r(h),
+          "stroke-width": sw,
+        });
+        hits += hit(d, x, y, w, h);
+        const text = ctx.fmt(spec.y, v);
+        if (spec.labels !== false && w >= 24 && h >= 24 && tw(text) <= w)
+          labels += inText(x + w / 2, y + h / 2, text, { "data-ink": "a", ...o, "data-key": k });
+      };
+      const at = (b: BandScale, i: number, size: number) => b.at(i) + (b.bandwidth - size) / 2;
+      const [tx, ty] = [at(cx, shaped.categories.length, w), at(cy, shaped.series.length, h)];
+      shaped.categories.forEach((c, i) =>
+        sum(key(c, TOTAL), at(cx, i, w), ty, m.x[i]!, ctx.fmt(spec.x, c), tot),
+      );
+      shaped.visible.forEach((j, n) => {
+        const ser = shaped.series[j]!;
+        sum(key(TOTAL, ser), tx, at(cy, n, h), m.series[j]!, tot, ser);
+      });
+      sum(key(TOTAL, TOTAL), tx, ty, m.all, tot, tot);
+    }
+    // Swatches: a quantile's class steps; rank (lowest, median, highest) two halves; else one gradient.
+    const swatch = steps ?? (legendLabels.length > 2 ? [2, 7] : null);
     const legend =
       cells.length > 0
-        ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b>${breaks
+        ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b>${legendLabels
             .map(
               (b, k) =>
                 `<span>${esc(ctx.fmt(spec.y, b))}</span>` +
-                // Quantile: one swatch per class (steps 0 2 5 7 9), the breaks between them.
-                (k < breaks.length - 1
-                  ? `<i${breaks.length > 2 ? ` data-q="${[0, 2, 5, 7, 9][k]}"` : ""}></i>`
+                (k < legendLabels.length - 1
+                  ? `<i${swatch ? ` data-q="${swatch[k]}"` : ""}></i>`
                   : ""),
             )
             .join("")}</div>`

@@ -528,6 +528,14 @@ export const waffle: Mark = {
     const step = Math.min(plot.w, plot.h) / 10;
     const [ox, oy] = [plot.x + (plot.w - step * 10) / 2, plot.y + (plot.h - step * 10) / 2];
     const g = Math.min(3, step * 0.12);
+    // A drilled waffle (spec.hue): the children are tints of the parent's hue, by position, like the treemap.
+    const hue = (ci: number) => ({
+      "data-s": (spec.hue ?? ci) % 8,
+      "data-lt":
+        spec.hue === null
+          ? null
+          : 1 + Math.round((6 * ci) / Math.max(1, shaped.categories.length - 1)),
+    });
     let marks = "";
     let hits = "";
     let i = 0;
@@ -540,7 +548,7 @@ export const waffle: Mark = {
           "data-maya": "mark",
           "data-key": key("w", cat, k),
           "data-c": i,
-          "data-s": ci % 8,
+          ...hue(ci),
           // Hovering a cell lights its whole category, the way flows light a path (tooltip.ts).
           "data-n": "w" + ci,
           "data-a": "w" + ci,
@@ -573,7 +581,7 @@ export const waffle: Mark = {
       shaped.categories
         .map(
           (cat, ci) =>
-            `<span data-s="${ci % 8}"><i></i>${esc(ctx.fmt(spec.x, cat))} ${pct((vals[ci] ?? 0) / sum)}</span>`,
+            `<span data-s="${hue(ci)["data-s"]}"${spec.hue === null ? "" : ` data-lt="${hue(ci)["data-lt"]}"`}><i></i>${esc(ctx.fmt(spec.x, cat))} ${pct((vals[ci] ?? 0) / sum)}</span>`,
         )
         .join("") +
       `</div>`;

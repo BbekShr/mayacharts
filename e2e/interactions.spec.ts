@@ -1090,3 +1090,109 @@ test.describe("stack toggle, card flip, kpi toggle and select", () => {
     await expect.poll(async () => (await view(page, "fl")).face).toBe("back");
   });
 });
+
+test.describe("M4 drills, table paging and expand", () => {
+  const fam = ["Outerwear", "Bottoms"];
+  const items: Record<string, string[]> = {
+    Outerwear: ["Jackets", "Vests"],
+    Bottoms: ["Jeans", "Chino"],
+  };
+  const rows = fam.flatMap((f, i) =>
+    items[f]!.map((item, j) => ({ f, item, q: "2025", sales: 10 + 7 * i + 3 * j })),
+  );
+  const drilled = (page: Page, id: string, n: number) =>
+    expect.poll(async () => ((await view(page, id)).drill ?? []).length).toBe(n);
+
+  for (const type of ["radial", "waffle"] as const)
+    test(`${type}: click a mark drills, Back pops`, async ({ page }) => {
+      await mount(page, "d", { type, path: ["f", "item"], y: "sales", drill: true, data: rows });
+      await clickMark(page, page.locator("#d [data-maya=mark]").first());
+      await drilled(page, "d", 1);
+      await settle(page);
+      await page.locator("#d .maya-crumbs [data-depth='0']").click();
+      await drilled(page, "d", 0);
+    });
+
+  test("heatmap: a column header drills on its own axis, Escape pops columns first", async ({
+    page,
+  }) => {
+    const data = fam.flatMap((f) =>
+      items[f]!.flatMap((item) => ["W", "E"].map((r) => ({ f, item, r, sales: 5 }))),
+    );
+    await mount(page, "h", {
+      type: "heatmap",
+      x: "f",
+      y: "sales",
+      xPath: ["f", "item"],
+      path: ["r"],
+      drill: true,
+      data,
+    });
+    await clickMark(page, page.locator("#h [data-maya=axis-x] text[data-key]").first());
+    await expect.poll(async () => (await view(page, "h")).xDrill).toEqual(["Outerwear"]);
+    await expect(page.locator("#h .maya-crumbs[data-axis=x]")).toBeVisible();
+    await settle(page);
+    await page.locator("#h svg").focus();
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "h")).xDrill ?? []).toEqual([]);
+  });
+
+  test("area: a band's point drills the series", async ({ page }) => {
+    const data = ["1", "2", "3"].flatMap((q) =>
+      rows.map((r) => ({ ...r, q, sales: r.sales + +q })),
+    );
+    await mount(page, "a", {
+      type: "area",
+      x: "q",
+      y: "sales",
+      seriesPath: ["f", "item"],
+      drill: true,
+      data,
+    });
+    await clickMark(page, page.locator("#a [data-maya=mark]").first());
+    await drilled(page, "a", 1);
+  });
+
+  const stores = Array.from({ length: 12 }, (_, i) => ({
+    s: "Store " + i,
+    ytd: 100 - i,
+    m: "Jan",
+    v: i + 1,
+  }));
+  const table = { type: "table", x: "s", y: "ytd", page: 4, filter: true, data: stores };
+
+  test("table: Show more pages, the filter keeps focus and caret", async ({ page }) => {
+    await mount(page, "t", table);
+    await page.locator("#t [data-maya=more]").click();
+    await expect.poll(async () => (await view(page, "t")).page).toBe(1);
+    const input = page.locator("#t .maya-filter");
+    await input.click();
+    await page.keyboard.type("Store 1");
+    await expect.poll(async () => (await view(page, "t")).filter).toBe("Store 1");
+    await expect(input).toBeFocused();
+    await page.keyboard.type("1");
+    await expect.poll(async () => (await view(page, "t")).filter).toBe("Store 11");
+  });
+
+  test("table: a row opens its sub-chart, another row closes it", async ({ page }) => {
+    await mount(page, "t", { ...table, expand: { type: "bar", x: "m", y: "v" } });
+    const hit = (i: number) => page.locator("#t [data-maya=hit][aria-expanded]").nth(i);
+    await clickMark(page, hit(0));
+    await expect.poll(async () => (await view(page, "t")).expanded).toBe("Store 0");
+    await expect(page.locator("#t svg[data-maya=expand]")).toHaveCount(1);
+    await clickMark(page, hit(0));
+    await expect.poll(async () => (await view(page, "t")).expanded).toBe("");
+  });
+
+  test("list: the first move starts open and a click moves the opening", async ({ page }) => {
+    const data = ["A", "B", "C"].flatMap((m, i) => [
+      { m, v: i + 1 },
+      { m, e: "x", v: 1 },
+      { m, e: "y", v: 2 },
+    ]);
+    await mount(page, "l", { type: "list", x: "m", y: "v", path: ["m", "e"], data });
+    await expect(page.locator("#l svg[data-maya=expand]")).toHaveCount(1);
+    await clickMark(page, page.locator("#l [data-key='m~B']"));
+    await expect.poll(async () => (await view(page, "l")).expanded).toBe("B");
+  });
+});

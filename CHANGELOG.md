@@ -54,6 +54,12 @@ Fixes #76, #79, #81, #82, #83, #84, #86, #87, #88, #89, #90, #91, #92, #93.
 
 ### Fixed
 
+- heatmap `was: { by }` where `by` is the series (a calendar of years) compares each cell with the same x under the previous series value instead of drawing a row named "undefined".
+- `colorScale: "quantile"` collapses tied breaks: the legend shows one label per distinct break and the colour steps spread over the real class count, so the lowest value no longer paints at a high step. `colorScale: "rank"` exposes lowest, median and highest values for its legend.
+- A rule whose label already holds its value ("80%") prints it once instead of "80% 80%".
+- A log axis over less than two decades takes 1-2-5 ticks and a domain nice to them ($5 to $300 data spans 5 to 500, not 1 to 1,000).
+- Band labels that a cut would make identical ("20…" eight times) are thinned and kept longer.
+- The docs example for `theme: [name, overrides]` names a registered theme.
 - `was` with `series` on bar draws one ghost per grouped bar; the docs no longer say it is refused (#82).
 
 - Sankey under drill with a `colors` map keeps the map colours, and an unmapped root stays neutral, at every level (regression from 0.15.0) (#76).

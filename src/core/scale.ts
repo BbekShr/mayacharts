@@ -87,31 +87,45 @@ export function timeScale(
 }
 
 /**
- * spec.colorScale for a value ramp (heatmap, hexmap): q(v) is the data-q step 0..9 and `breaks` what
- * the legend shows ([lo, hi]; quantile: [lo, four class breaks, hi]). linear: by value (with `mid`,
- * diverging: mid at the centre, the farther end at its end, so equal distances get equal steps);
- * log: by log10 (values above 0); rank: by position among the distinct values; quantile: five
- * equal-count classes at steps 0, 2, 5, 7, 9. One distinct value: step 9.
+ * spec.colorScale for a value ramp (heatmap, hexmap): q(v) is the data-q step 0..9, `breaks` the
+ * legend's values ([lo, hi]; quantile with distinct class breaks: [lo, ...breaks, hi]), `labels` the
+ * values to print along a gradient legend (rank: lowest, median, highest distinct value; else the
+ * breaks) and `steps` the data-q of each quantile class swatch (null when the legend is a gradient).
+ * linear: by value (with `mid`, diverging: mid at the centre, the farther end at its end, so equal
+ * distances get equal steps); log: by log10 (values above 0); rank: by position among the distinct
+ * values; quantile: up to up to five equal-count classes (ties merge), ties collapsed (so fewer classes when values
+ * repeat), steps spread over the real class count. One distinct value: step 9.
  */
 export function ramp(
   values: readonly number[],
   kind: "linear" | "rank" | "quantile" | "log" = "linear",
   mid: number | null = null,
-): { q(v: number): number; breaks: number[] } {
+): { q(v: number): number; breaks: number[]; labels: number[]; steps: number[] | null } {
   const all = [...values].sort((a, b) => a - b);
   const [lo, hi] = [all[0] ?? 0, all.at(-1) ?? 0];
   const step = (p: number) => (hi > lo ? Math.min(9, Math.max(0, Math.floor(p * 10))) : 9);
   if (kind === "rank") {
     const u = [...new Set(all)];
     const at = new Map(u.map((v, i) => [v, i / Math.max(1, u.length - 1)]));
-    return { q: (v) => step(at.get(v) ?? 0), breaks: [lo, hi] };
+    return {
+      q: (v) => step(at.get(v) ?? 0),
+      breaks: [lo, hi],
+      labels: u.length > 2 ? [lo, u[Math.round((u.length - 1) / 2)]!, hi] : [lo, hi],
+      steps: null,
+    };
   }
   if (kind === "quantile") {
-    // ponytail: fixed five classes; more need a class count option.
-    const b = [1, 2, 3, 4].map((k) => all[Math.floor((k * all.length) / 5)]!);
+    // ponytail: at most five classes; more need a class count option.
+    const d = [...new Set([1, 2, 3, 4].map((k) => all[Math.floor((k * all.length) / 5)]!))].filter(
+      (x) => x > lo && x < hi,
+    );
+    const cut = d.length ? d : [hi];
+    const breaks = d.length ? [lo, ...d, hi] : [lo, hi];
     return {
-      q: (v) => (hi > lo ? Math.round((b.filter((x) => v >= x).length * 9) / 4) : 9),
-      breaks: [lo, ...b, hi],
+      q: (v) => (hi > lo ? Math.round((cut.filter((x) => v >= x).length * 9) / cut.length) : 9),
+      breaks,
+      labels: breaks,
+      steps: d.length ? cut.concat(0).map((_, k) => Math.round((k * 9) / cut.length)) : null,
     };
   }
   const f = kind === "log" ? Math.log10 : (v: number) => v;
@@ -119,5 +133,7 @@ export function ramp(
   return {
     q: (v) => step(m === null ? (f(v) - f(lo)) / (f(hi) - f(lo)) : 0.5 + (v - mid!) / (2 * m)),
     breaks: [lo, hi],
+    labels: [lo, hi],
+    steps: null,
   };
 }

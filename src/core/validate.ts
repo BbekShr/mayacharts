@@ -32,7 +32,7 @@
 import { addThemes, CORE_TYPES, MODULE_OF, MODULES, THEMES, types } from "./registry.ts";
 import { t as txt, TEXT } from "./strings.ts";
 import { formatter } from "./format.ts";
-import { pivotWas } from "./shape.ts";
+import { pivotPrevSeries, pivotWas } from "./shape.ts";
 import { memo } from "./svg.ts";
 import { toTime } from "./ticks.ts";
 import type {
@@ -1511,10 +1511,14 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const wb = isLong(W)
     ? { by: W.by as string, current: str(W.current), previous: str(W.previous) }
     : null;
-  const pv = wb ? pivotWas(rows, x, series, ym, wb, (ag as Aggregate | undefined) ?? "sum") : null;
-  const wasOf = byY<string>(wb ? wb.by : W, (o) => typeof o === "string");
+  // Heatmap calendar form: was.by is the series, so the previous value is the same x one series value back.
+  const cal = wb !== null && series !== null && wb.by === series;
+  const pf = `${series} previous`;
+  const agg0 = (ag as Aggregate | undefined) ?? "sum";
+  const pv = wb && !cal ? pivotWas(rows, x, series, ym, wb, agg0) : null;
+  const wasOf = byY<string>(cal ? pf : wb ? wb.by : W, (o) => typeof o === "string");
   const domains = byY<readonly [number, number]>(spec.yDomain, Array.isArray);
-  const data = pv ? pv.rows : rows;
+  const data = pv ? pv.rows : cal ? pivotPrevSeries(rows, x, series, ym, pf, agg0) : rows;
   const forms = spec.forms ?? (spec.type === "units" ? (FORMS as ResolvedSpec["forms"]) : []);
   const entries = <T>(o: Readonly<Partial<Record<string, T>>> | undefined) =>
     Object.entries(o ?? {}).filter((e): e is [string, T] => e[1] !== undefined);
@@ -1669,6 +1673,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     forms,
     form: Math.max(0, Math.min(view.form ?? 0, forms.length - 1)),
     path,
+    levels: full.length,
     drilled,
     drillOn: spec.drillTo ? "series" : drilled.length < depth ? (sp ? "series" : "x") : null,
     xPath: xp.slice(xDrilled.length),
@@ -1676,6 +1681,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     start,
     margins: spec.type === "heatmap" && spec.totals === true,
     // ponytail: a scrolling or paged table draws at most 1000 rows (one svg, no virtualisation); NON-FEATURES.
+    page: table ? (spec.page ?? null) : null,
     shown: table
       ? spec.page
         ? Math.min(MAX_POINTS, spec.page * ((view.page ?? 0) + 1))

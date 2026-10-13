@@ -107,9 +107,9 @@ describe("hexmap", () => {
   });
   it("snapshot", () =>
     expect(marks(render(base)).join("\n")).toMatchInlineSnapshot(`
-      "<path data-maya="mark" data-key="g~CA" data-c="0" data-s="0" data-x="California" data-series="" data-f="10" data-y="10" data-q="0" d="M129.87 149.77L129.87 170.23L112.15 180.46L94.44 170.23L94.44 149.77L112.15 139.54Z"/>
-      <path data-maya="mark" data-key="g~TX" data-c="1" data-s="0" data-x="Texas" data-series="" data-f="50" data-y="50" data-q="9" d="M268.43 252.63L268.43 273.09L250.72 283.31L233 273.09L233 252.63L250.72 242.4Z"/>
-      <path data-maya="mark" data-key="g~NY" data-c="2" data-s="0" data-x="New York" data-series="" data-f="30" data-y="30" data-q="5" d="M446.59 81.2L446.59 101.66L428.87 111.89L411.16 101.66L411.16 81.2L428.87 70.97Z"/>"
+      "<path data-maya="mark" data-key="g~CA" data-raw="CA" data-c="0" data-s="0" data-x="California" data-series="" data-f="10" data-y="10" data-q="0" d="M129.87 149.77L129.87 170.23L112.15 180.46L94.44 170.23L94.44 149.77L112.15 139.54Z"/>
+      <path data-maya="mark" data-key="g~TX" data-raw="Texas" data-c="1" data-s="0" data-x="Texas" data-series="" data-f="50" data-y="50" data-q="9" d="M268.43 252.63L268.43 273.09L250.72 283.31L233 273.09L233 252.63L250.72 242.4Z"/>
+      <path data-maya="mark" data-key="g~NY" data-raw=" ny " data-c="2" data-s="0" data-x="New York" data-series="" data-f="30" data-y="30" data-q="5" d="M446.59 81.2L446.59 101.66L428.87 111.89L411.16 101.66L411.16 81.2L428.87 70.97Z"/>"
     `));
   it("state labels carry their hex's ramp step and the auto ink, no halo class", () => {
     const t = (render(base).match(/<text [^>]*data-in[^>]*>[A-Z]{2}</g) ?? []).filter(

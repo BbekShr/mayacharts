@@ -145,6 +145,8 @@
  *   two periods and writes the previous period's value under the key `by`, so ResolvedSpec.was =
  *   by and marks read the wide form unchanged; titles default `by` to the previous period
  *   formatted by format[by] (ResolvedSpec.wasBy keeps the field and the explicit periods).
+ *   Calendar form (heatmap, by = series): shape.ts pivotPrevSeries instead; each cell reads the same
+ *   x under the previous series value (time order for dates, else data order) as ResolvedSpec.was.
  *
  * Contract #69-#72 (where it differs, this paragraph wins over the older text below):
  *   Ratio: ResolvedSpec.ratio = [num, den] with aggregate "sum": wherever rows of y combine
@@ -205,12 +207,14 @@
  *   theme.ts can let the key beat a tone, and data-sign under colorBy "sign" (also on the tone
  *   legend) so tones read as directions (theme up, down; total for waterfall totals). Waterfall
  *   bars carry data-way="up|down|total" (theme-only hook) for the same tokens.
- *   Ramps: scale.ts ramp(values, spec.colorScale, spec.rampMid) gives data-q 0..9 and the legend
- *   breaks (quantile: five classes). stack "stream" (area): shape.ts wiggle baseline (cells keep
+ *   Ramps: scale.ts ramp(values, spec.colorScale, spec.rampMid) gives data-q 0..9, the legend
+ *   `breaks`, `labels` (rank: lowest, median, highest) and `steps` (quantile: the data-q of each
+ *   class swatch, ties collapsed so there may be fewer than five; null for a gradient legend). stack "stream" (area): shape.ts wiggle baseline (cells keep
  *   value, y0/y1 are offset); resolve() defaults yAxis and grid off. sort "change" (dumbbell):
  *   to minus from, descending, in shape. Tooltip ratio fields: ResolvedSpec.tipRatio, combined by
  *   shape.ts colorVals as sum(num) / sum(den); tipFields keeps their names. { y2 } rules: a
- *   <line data-y2> across the right axis, labelled by format[y2], in the rules group; they widen
+ *   <line data-y2> across the right axis, labelled by format[y2], in the rules group (a rule label
+ *   that already contains the formatted value is printed alone, for every rule kind); they widen
  *   the right axis. Beeswarm "mean" rules average the visible rows. Legend buttons of a spec.emphasis
  *   series carry data-em. slots: also tint with path (path values) and a weave's group colorBy
  *   (groups), so a colors map keys those. View: brush ([field, lo, hi] per parallel axis, kept in
@@ -258,6 +262,10 @@
  *   so the element reads the gesture from the svg, never from the spec. New x-from-path types:
  *   radial, waffle, hexmap, waterfall (PATHX). A drilled hexmap resolves to type "bar",
  *   horizontal, sort "desc" (build() picks the mark after resolve), so its children draw as bars.
+ *   ResolvedSpec.levels is the full path length: only a 3-level chord re-keys its targets to level 2
+ *   when drilled and marks (data-dr, branchOf) its targets, not its sources, as the drillable nodes.
+ *   The heatmap Total band is the sentinel TOTAL (svg.ts), labelled text.total like OTHER; it never drills.
+ *   An open table row draws a rule (line[data-rule] in the grid group) above its expand box.
  *   Chord with 3 levels: view.drill = [target]; rows keep path[1] = target; ResolvedSpec.path is
  *   [path[0], path[1]] at the root and [path[0], path[2]] drilled, so the chord mark always sees
  *   two levels. Marimekko without series: x = path[d], series = path[d + 1]. seriesPath: series =
@@ -483,6 +491,14 @@
  *   pop. While view.face is "back", the element's host.spec() is { ...spec.back, data }, so select,
  *   tooltip, drill and play read the back's options; a face change skips the key diff and turns the
  *   card (old svg rotateY 0 to 90deg 160 ms, swap, new -90 to 0 280 ms; reduced motion crossfades).
+ *   Heatmap column headers ([data-maya=axis-x] text[data-key], tabindex 0, role button, set after
+ *   paint when spec.drill and spec.xPath) push view.xDrill on click, Enter or Space. A row, tick or
+ *   series push is gated on drillDepth and reads the svg's data-drill; marks with data-way="total"
+ *   or data-other never drill. Escape pops xDrill first, then drill. Table and list rows expand on
+ *   click or Enter (with select: double click or Shift+Enter) through view.expanded;
+ *   [data-maya=more] increments view.page; input[data-maya=filter] sets view.filter (debounced
+ *   150 ms) and resets the page. Under svg[data-scroll] the element holds [data-maya=thead] with a
+ *   translateY(scrollTop) CSSOM transform; svg[data-maya=expand] crossfades whole.
  *   Parallel axis strips ([data-maya=axis]) are focusable sliders the element sets after paint:
  *   Up/Down move the brush range a tenth of the axis (the first press starts a 20% range at that
  *   end), Shift+Up/Down grow or shrink it, Delete or Backspace clear that axis. A plain click on
@@ -586,7 +602,7 @@ import { MODULES } from "./registry.ts";
 import { agg, colorVals, feed, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
-import { el, esc, OTHER, r, tw } from "./svg.ts";
+import { el, esc, OTHER, r, TOTAL, tw } from "./svg.ts";
 import { toTime } from "./ticks.ts";
 import {
   ALL_Y,
@@ -808,6 +824,7 @@ function build(
   const ms = new Map(shaped.time?.map((v, i) => [shaped.categories[i]!, v]));
   const fmt = (field: string, v: unknown, step?: number) => {
     if (v === OTHER) return t(s, "other");
+    if (v === TOTAL) return t(s, "total");
     if (field === s.x && typeof v === "string") v = ms.get(v) ?? v;
     const k = field + "\0" + step;
     let f = fmts.get(k);
@@ -1070,6 +1087,14 @@ function build(
       onX
         ? { x1: r(p), x2: r(p), y1: y0, y2: r(plot.y + plot.h) }
         : { x1: r(plot.x), x2: x0, y1: r(p), y2: r(p) };
+    // "Target 80%" unless the label already carries the value ("80%": shown once; a word like a
+    // category "c" must be the whole label, a number may sit inside it).
+    const lab = (name: string | null | undefined, val: string) =>
+      name
+        ? name === val || (/\d/.test(val) && name.includes(val))
+          ? name
+          : `${name} ${val}`
+        : val;
     const say = (name: string | null, val: string) => (said += ` ${name ?? t(s, "rule")}: ${val}.`);
     if (v && !("bandwidth" in v)) {
       s.bands.forEach((u) => {
@@ -1096,7 +1121,7 @@ function build(
         rules += el("line", seg(p, hz));
         // Above the line at its end, else at its start, else below; a vertical line: beside it at
         // the top (either side), stepping down along it.
-        const text = name ? `${name} ${val}` : val;
+        const text = lab(name, val);
         spots(
           hz
             ? [0, 1, 2, 3].flatMap((k): Spot[] => [
@@ -1121,7 +1146,7 @@ function build(
         const val = fmt(s.y2!, u.y);
         say(u.label, val);
         rules += el("line", { "data-y2": true, ...seg(p, false) });
-        const text = u.label ? `${u.label} ${val}` : val;
+        const text = lab(u.label, val);
         spots([
           [text, x0, p - 14, true],
           [text, plot.x, p - 14, false],
@@ -1147,7 +1172,7 @@ function build(
         if (!(p >= lo && p <= hi)) return;
         const at = r(p);
         const val = fmt(s.x, u.x);
-        const text = u.label ? `${u.label} ${val}` : val;
+        const text = lab(u.label, val);
         say(u.label, val);
         rules += el("line", { "data-xrule": true, ...seg(at, !hz) });
         // Beside the line at the top, right then left, stepping down; then the label alone, then

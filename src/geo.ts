@@ -45,13 +45,14 @@ const ROWS = Math.max(...STATES.map((s) => s.r)) + 1;
 export const hexmap: Mark = {
   noun: "Hex map",
   check(spec, fail) {
+    const x = spec.x ?? spec.path?.[0];
     spec.data.forEach((row, i) => {
-      const v = (row as Record<string, unknown>)[spec.x as string];
+      const v = (row as Record<string, unknown>)[x as string];
       if (v == null || find(v)) return;
       const d = near(String(v));
       fail(
         "unknown-state",
-        `data[${i}].${spec.x}`,
+        `data[${i}].${x}`,
         `"${v}" is not a US state`,
         d && `Did you mean "${d}"?`,
         "Use a two-letter code or full name (50 states, DC, PR).",
@@ -84,11 +85,20 @@ export const hexmap: Mark = {
     };
 
     const sum = new Map<(typeof STATES)[number], number>();
+    // The raw x value of each state: a drill pushes the data's own spelling ("Nevada"), not the key's code.
+    const raw = new Map<(typeof STATES)[number], string>();
     shaped.cells.forEach((c) => {
       const st = find(shaped.categories[c.ci]);
-      if (st && c.value !== null) sum.set(st, (sum.get(st) ?? 0) + c.value);
+      if (st && c.value !== null) {
+        sum.set(st, (sum.get(st) ?? 0) + c.value);
+        if (!raw.has(st)) raw.set(st, shaped.categories[c.ci]!);
+      }
     });
-    const { q: qOf, breaks } = ramp([...sum.values()], spec.colorScale, spec.rampMid);
+    const {
+      q: qOf,
+      labels: legendLabels,
+      steps,
+    } = ramp([...sum.values()], spec.colorScale, spec.rampMid);
 
     // Missing states stay on the map as dashed empty hexes with a faint code.
     let grid = "";
@@ -132,6 +142,7 @@ export const hexmap: Mark = {
       marks += el("path", {
         "data-maya": "mark",
         "data-key": key("g", st.code),
+        "data-raw": raw.get(st),
         "data-c": n++,
         "data-s": 0,
         "data-x": st.name,
@@ -149,14 +160,16 @@ export const hexmap: Mark = {
         labels += text(cx, cy - dy, st.code, { ...o, "font-size": r(fc), "font-weight": 600 });
       if (showV) labels += text(cx, cy + fc * 0.62, f.get(st)!, { ...o, "font-size": r(fv) });
     }
+    // Swatches: a quantile's class steps; rank (lowest, median, highest) two halves; else one gradient.
+    const swatch = steps ?? (legendLabels.length > 2 ? [2, 7] : null);
     const legend =
-      breaks[0]! < breaks.at(-1)!
-        ? `<div class="maya-legend" data-maya="ramp" data-hex><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b>${breaks
+      legendLabels[0]! < legendLabels.at(-1)!
+        ? `<div class="maya-legend" data-maya="ramp" data-hex><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b>${legendLabels
             .map(
               (b, k) =>
                 `<span>${esc(ctx.fmt(spec.y, b))}</span>` +
-                (k < breaks.length - 1
-                  ? `<i${breaks.length > 2 ? ` data-q="${[0, 2, 5, 7, 9][k]}"` : ""}></i>`
+                (k < legendLabels.length - 1
+                  ? `<i${swatch ? ` data-q="${swatch[k]}"` : ""}></i>`
                   : ""),
             )
             .join("")}</div>`

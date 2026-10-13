@@ -250,7 +250,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction.
    * @example y2: "units" */
   y2?: Field<R>;
-  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a "was" tooltip row and table column). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). With a `y` array, key it by y field (`{ sales: "salesLY" }`): the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have none; an object with a string `by` is the long form. With `series` (bar): one ghost per grouped bar. bar kpi gauge heatmap; not with `stack`.
+  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a "was" tooltip row and table column). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). With a `y` array, key it by y field (`{ sales: "salesLY" }`): the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have none; an object with a string `by` is the long form. With `series` (bar): one ghost per grouped bar. Heatmap calendar form: `{ by }` equal to `series` compares each cell with the same x under the previous series value (the year before), and the first series value has none. bar kpi gauge heatmap; not with `stack`.
    * @example was: "lastYear" or was: { by: "year" } or was: { sales: "salesLY", units: "unitsLY" } */
   was?:
     | Field<R>
@@ -364,7 +364,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Series values drawn with a heavier stroke (theme `lineEmphasis`), e.g. this year against earlier years. line only; needs `series`; `[]` is unset.
    * @example emphasis: ["2026"] */
   emphasis?: readonly string[];
-  /** How values map to the colour ramp: "linear" (default), "rank" (even steps by order, for skewed totals), "quantile" (five equal-count classes; the legend shows the breaks) or "log" (values above 0). heatmap hexmap.
+  /** How values map to the colour ramp: "linear" (default), "rank" (even steps by order, for skewed totals), "quantile" (up to five equal-count classes (ties merge); the legend shows the breaks) or "log" (values above 0). heatmap hexmap.
    * @example colorScale: "rank" */
   colorScale?: "linear" | "rank" | "quantile" | "log";
   /** Children take evenly spaced tints of their parent's colour instead of their own palette slots: drilled levels of a `path` (the parent is the drilled value, coloured by `colors` or its slot), and weave threads under a group `colorBy` (the parent is the group). A `colors` map then names path values or groups. treemap sunburst sankey chord waffle weave.
@@ -406,7 +406,7 @@ export interface ChartSpec<R extends object = Row> {
    * @example colorBy: { target: 100, warn: 80 } or colorBy: { revenue: { target: 1.8e6 }, churn: { better: "lower" } } or colorBy: "family" */
   colorBy?: "sign" | Goal | Readonly<Partial<Record<Field<R>, Goal>>> | Field<R>;
   /** Theme tokens (CSS values, allowlisted), a registered theme's name, or `[name, overrides]`. Names come from `mayacharts/themes` (`maya.themes` in maya.global.js) or `registerTheme(name, tokens)`. `line` is the line width, `gridDash` a grid dash array; `series1..8` palette slots; `rampLow`, `rampHigh` and `rampMid` the value ramp (rampMid makes it diverging, centred on `rampMidValue`, default 0); `up`, `down`, `total` direction colours (waterfall, colorBy "sign", dumbbell connectors); `neutral` uncoloured marks (Other, unmapped names); `labelInk` / `labelInkOnFill` label colours on light and dark fills; `numeric` "tabular" or "proportional" figures. Precedence: `colors` map > colorBy > `series1..8` > `accent`.
-   * @example theme: { accent: "#0b6", font: "'Inter', sans-serif", gridDash: "3 3" } or theme: ["slate", { accent: "#6A7891" }] */
+   * @example theme: { accent: "#0b6", font: "'Inter', sans-serif", gridDash: "3 3" } or theme: ["ocean", { accent: "#6A7891" }] */
   theme?: ThemeSpec;
   /** Grid lines perpendicular to the value axis. Default true.
    * @example grid: false */
@@ -587,6 +587,8 @@ export interface ResolvedSpec {
   forms: readonly ("waffle" | "bars" | "swarm")[];
   /** Index into `forms` from view.form, clamped. */
   form: number;
+  /** The full `path` length (a chord with 3 levels shows two of them at a time). */
+  levels: number;
   /** Remaining path levels below the drilled branch ([] when no path). */
   path: string[];
   /** Applied drill values, outer first ([] at the root). seriesPath: series values; a chord with 3 levels: the target only. */
@@ -603,6 +605,8 @@ export interface ResolvedSpec {
   margins: boolean;
   /** table: most rows drawn (page * (view.page + 1); 1000 with scroll); null = the rows that fit. */
   shown: number | null;
+  /** spec.page on a table (rows a "Show n more" row adds), else null. */
+  page: number | null;
   /** table page or scroll: the svg is as tall as its rows (MarkOut.height) and scrolls in the tile. */
   scroll: boolean;
   /** table: view.filter when spec.filter (data is already filtered); null otherwise. */

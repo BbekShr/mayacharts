@@ -765,7 +765,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 -10%."). With a y array, key it by y field (<code>{ "sales": "salesLY" }</code>):
                 the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have
                 none; an object with a string <code>by</code> is the long form. With series (bar):
-                one ghost per grouped bar. Not with stack
+                one ghost per grouped bar. Heatmap calendar form:
+                <code>{ "by": "year" }</code> equal to <code>series</code> compares each cell with
+                the same x under the previous series value, and the first series value has none. Not
+                with stack
               </td>
             </tr>
             <tr>
@@ -1902,7 +1905,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>"linear" / "rank" / "quantile" / "log"</td>
               <td>
                 How values map to the colour ramp. rank: even steps by order, for skewed totals;
-                quantile: five equal-count classes, the legend shows the breaks; log: values above
+                quantile: up to five equal-count classes (ties merge), the legend shows the breaks; log: values above
                 0. Default linear. heatmap hexmap
               </td>
             </tr>
@@ -1939,7 +1942,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>
                 Theme tokens (CSS values, allowlisted; see
                 <a href="#theme-tokens">Theme tokens</a>), a registered theme's name, or a name plus
-                overrides such as <code>["slate", { "accent": "#6A7891" }]</code>. Importing
+                overrides such as <code>["ocean", { "accent": "#6A7891" }]</code>. Importing
                 <code>mayacharts/themes</code> (or loading maya.global.js, which has them as
                 <code>maya.themes</code>) registers the 18 ready-made names;
                 <code>registerTheme(name, tokens)</code> (<code>maya.registerTheme</code>) adds a

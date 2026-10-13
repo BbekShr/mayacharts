@@ -2,7 +2,7 @@
  * Table header sort. Same reduce/mount contract as measure.ts.
  * Markup: `[data-maya=sort][data-field]` groups from core/marks/table.ts (tabindex 0, role button).
  * Click, Enter or Space commits view.sortBy: same field toggles, a new field starts desc for a
- * measure and asc for the row label. Persistence: resets when type, x or y change.
+ * measure and asc for the row label and dimension columns (spec.columns). Persistence: resets when type, x or y change.
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
@@ -38,7 +38,11 @@ export const mount = (host: Host): Handlers => {
     const spec = host.spec();
     const field = h.getAttribute("data-field");
     if (!spec || spec.type !== "table" || !field) return;
-    const next = reduce(host.state(), { type: "sort", field, label: field === spec.x });
+    const next = reduce(host.state(), {
+      type: "sort",
+      field,
+      label: field === spec.x || !!spec.columns?.includes(field),
+    });
     const [, dir] = next.view.sortBy!;
     want = field;
     host.commit(next);

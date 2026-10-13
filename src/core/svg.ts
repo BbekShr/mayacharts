@@ -61,6 +61,8 @@ export function nameId(seen: Map<string, number>, name: string | null, i: number
 
 /** Sentinel category for `limit`'s rolled-up rest. Cannot collide with real data text. */
 export const OTHER = "\u0000other";
+/** Sentinel band of the heatmap's Total row and column (`totals: true`). */
+export const TOTAL = "\u0000total";
 
 /**
  * Mark identity: each part `encodeURIComponent`ed (lone surrogates replaced, `~` -> %7E),

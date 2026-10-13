@@ -652,6 +652,44 @@ export function pivotWas(
   });
 }
 
+/**
+ * Calendar form of spec.was (heatmap, `was.by` = spec.series): each cell's previous value is the
+ * same x under the previous series value (by time when all are dates, else data order). Adds the
+ * aggregated previous value as `field` on the first row of each cell, so colorVals reads it as a
+ * per-cell field. ponytail: the first series value has no previous; `count` aggregates one value.
+ */
+export function pivotPrevSeries(
+  rows: readonly Row[],
+  x: string,
+  series: string,
+  y: string,
+  field: string,
+  aggregate: Aggregate,
+): readonly Row[] {
+  return memo(rows, `p${x}\0${series}\0${y}\0${aggregate}`, () => {
+    const ks = new Map<string, Row[string]>();
+    for (const r of rows)
+      if (r[series] != null) ks.has(String(r[series])) || ks.set(String(r[series]), r[series]);
+    const t = (k: string) => toTime(ks.get(k));
+    const ord = [...ks.keys()];
+    if (!ord.some((k) => t(k) === null)) ord.sort((a, b) => t(a)! - t(b)!);
+    const sum = new Map<string, ReturnType<typeof agg>>();
+    for (const r of rows)
+      if (typeof r[y] === "number" && r[series] != null) {
+        const k = `${r[x]}\0${r[series]}`;
+        (sum.get(k) ?? sum.set(k, agg(aggregate)).get(k)!).add(r[y]);
+      }
+    const done = new Set<string>();
+    return rows.map((r) => {
+      const i = ord.indexOf(String(r[series]));
+      const k = `${r[x]}\0${ord[i - 1]}`;
+      if (i < 1 || done.has(`${r[x]}\0${r[series]}`) || !sum.has(k)) return r;
+      done.add(`${r[x]}\0${r[series]}`);
+      return { ...r, [field]: sum.get(k)!.value() };
+    });
+  });
+}
+
 /** A field (default: the colorBy field; also spec.was and tooltip fields) aggregated per (category,
  * series) like the marks; null without one. A tooltip ratio field (spec.tipRatio) is sum(num) / sum(den). */
 export function colorVals(

@@ -38,7 +38,7 @@ export function niceTicks(min: number, max: number, target = 5): Ticks {
 }
 
 /**
- * Ticks of a log axis: powers of 10, plus 2 and 5 of each when the span is under 3 decades. The
+ * Ticks of a log axis: powers of 10, plus 2 and 5 of each when the span is under 3 decades or the data spans under 2. The
  * domain is whole decades around [min, max]; a non-positive min falls back to 3 decades under max.
  * `step` is the lowest tick, which every tick is a whole multiple of (the formatter's decimals).
  */
@@ -47,10 +47,12 @@ export function logTicks(min: number, max: number): Ticks {
   if (!(min > 0)) min = max / 1e3;
   const lo = Math.floor(Math.log10(min) + 1e-9);
   const hi = Math.max(lo + 1, Math.ceil(Math.log10(max) - 1e-9));
-  // 1-2-5 of each decade under 3 decades, else whole decades; the domain snaps to them.
+  // 1-2-5 of each decade under 3 decades or when the data itself spans under 2 (5 to 300 is
+  // 5 to 500, not 1 to 1000), else whole decades; the domain snaps to them.
+  const fine = hi - lo < 3 || Math.log10(max / min) < 2;
   const all: number[] = [];
   for (let e = lo; e <= hi; e++)
-    for (const m of hi - lo < 3 ? [1, 2, 5] : [1]) all.push(clean(m * 10 ** e));
+    for (const m of fine ? [1, 2, 5] : [1]) all.push(clean(m * 10 ** e));
   const d0 = all.filter((v) => v <= min * (1 + 1e-9)).pop() ?? all[0]!;
   const d1 = all.find((v) => v >= max * (1 - 1e-9)) ?? all.at(-1)!;
   return { domain: [d0, d1], values: all.filter((v) => v >= d0 && v <= d1), step: clean(10 ** lo) };

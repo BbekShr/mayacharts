@@ -700,7 +700,10 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   const z = !!(zoom || zm || moved || sun);
   const late = { ...UI, delay: Number((zoom || drill ? ZOOM : DATA).duration) * 0.75 };
   const ghosts: Element[] = [];
-  const fadeable = (c: Element) => c.localName === "g" && !/^(cross|hits)$/.test(id(c));
+  // A table row's sub-chart (svg[data-maya=expand]) sits outside the marks group, so the key diff
+  // never sees it: it crossfades whole, while the rows below slide by their own keys.
+  const fadeable = (c: Element) =>
+    (c.localName === "g" && !/^(cross|hits)$/.test(id(c))) || id(c) === "expand";
   for (const c of [...w.children]) {
     if (c === wm) {
       out.push(om);

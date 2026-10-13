@@ -134,7 +134,10 @@ const nodeAttrs = (ctx: MarkCtx, h: Reach, n: N, c: number, off: number, series 
   "data-depth": n.lv,
   // The next level to drill, short of the last column: the only nodes that take a click (cursor).
   "data-dr":
-    ctx.spec.drill && n.lv + off === ctx.spec.drilled.length && n.lv < ctx.spec.path.length - 1,
+    ctx.spec.drill &&
+    (ctx.spec.type === "chord" && ctx.spec.levels === 3
+      ? n.lv === 1 && !ctx.spec.drilled.length // a 3-level chord drills its targets
+      : n.lv + off === ctx.spec.drilled.length && n.lv < ctx.spec.path.length - 1),
 });
 
 /** Rows to nodes (one per name per level) and links (one per adjacent pair, aggregated). */
@@ -380,6 +383,8 @@ export const chord: Mark = {
     nodes
       .filter((n) => n.lv === 1)
       .forEach((n) => (n.s = spec.tint && spec.hue !== null ? spec.hue % 8 : slotOf(ctx, n)));
+    // Targets of a 3-level chord sit at the full path's level (a drilled one shows path[2] there), so a drill morphs the sources and re-enters the targets; a 2-level chord keeps its keys and morphs.
+    const off = (n: N) => (n.lv && spec.levels === 3 ? spec.drilled.length : 0);
     const hov = reach(ls);
     const total = ls.reduce((a, l) => a + l.v, 0);
     if (!(total > 0)) return { marks: "", hits: "" };
@@ -463,7 +468,7 @@ export const chord: Mark = {
       const [a0, a1, r0, r1] = [n.a + ia, n.a + n.v * k - ia, R + 6, R + RING - 2];
       const d = `M${pt(a0, r1)}${arc(a0, a1, r1, 1)}L${pt(a1, r0)}${arc(a0, a1, r0, 0)}Z`;
       marks += el("path", {
-        ...nodeAttrs(ctx, hov, n, c++, 0, spec.titles.get(n.lv ? P1 : P0) ?? (n.lv ? P1 : P0)),
+        ...nodeAttrs(ctx, hov, n, c++, off(n), spec.titles.get(n.lv ? P1 : P0) ?? (n.lv ? P1 : P0)),
         "data-arc": true,
         "data-lt": lt.get(n),
         d,
@@ -487,7 +492,7 @@ export const chord: Mark = {
         lx,
         cyy,
         anchor,
-        nodeKey(n, 0),
+        nodeKey(n, off(n)),
         n.name,
         val(n),
         maxCh,

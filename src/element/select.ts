@@ -94,8 +94,9 @@ export function mount(host: Host): Handlers {
     const spec = host.spec();
     if (!spec?.select) return;
     const el = e.target as Element;
+    const split = spec.drill || root.querySelector("svg[data-expand]");
     // With drill, the second click of a double click is the drill: the pair leaves the selection as it was.
-    if (spec.drill && (e as MouseEvent).detail === 2 && host.mark(e)) {
+    if (split && (e as MouseEvent).detail === 2 && host.mark(e)) {
       if (later) later = undefined;
       else if (host.state().selected !== before) host.commit({ ...host.state(), selected: before });
       return;
@@ -110,7 +111,7 @@ export function mount(host: Host): Handlers {
     }
     const m = host.mark(e);
     const sel = m && selOf(m, type());
-    if (m && sel && spec.drill && (e as MouseEvent).detail === 1) {
+    if (m && sel && split && (e as MouseEvent).detail === 1) {
       const f: () => unknown = (later = () => later === f && ((later = undefined), pick(sel, m)));
       setTimeout(f, 250);
     } else if (m && sel) pick(sel, m);

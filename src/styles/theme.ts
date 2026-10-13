@@ -292,6 +292,24 @@ export const css =
   // WebKit paints each per-element opacity as its own group: dense dumbbell connectors dim through the stroke.
   "[data-still] [data-hot] line[data-maya=link]{opacity:1;stroke-opacity:.08}" +
   "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}" +
+  // M4: table filter, scrolling table, show-more row, open-row sub-chart, heatmap column drill and Total margins.
+  ".maya-filter{font:inherit;color:var(--maya-fg);background:var(--maya-grid);border:0;border-radius:8px;padding:4px 10px;margin:0 0 8px;min-width:9em;max-width:100%;align-self:flex-start}.maya-filter::placeholder{color:var(--maya-fg-muted)}.maya-filter:focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
+  ".maya-box:has(svg[data-scroll]){overflow:auto;max-height:100%}.maya-box svg[data-scroll]{height:auto}" +
+  "svg[data-maya=expand]{overflow:hidden}" +
+  "svg[data-xdrill] [data-maya=axis-x] text[data-key]{pointer-events:auto;cursor:pointer}svg[data-xdrill] [data-maya=axis-x] text[data-key]:hover{text-decoration:underline}" +
+  ".maya-crumbs[data-axis=x]{margin-top:-4px}" +
+  // A heatmap Total sits outside the ramp: a quiet neutral fill (the label's ink follows it), bold value.
+  "[data-hm][data-sum]{--c:color-mix(in oklab,var(--maya-fg) 12%,var(--maya-bg))}text[data-hm][data-sum]{font-weight:700}" +
+  // Table: the header owns a page-coloured ground and its rule (the element pins it over scrolled rows); the open row's chevron; a diverging column's centre line; strip squares.
+  "[data-maya=thead]>rect[data-bg]{fill:var(--maya-bg);pointer-events:none}[data-maya=thead]>line{stroke:var(--maya-grid);stroke-width:1}" +
+  "[data-maya=marks] text[data-chev]{fill:var(--maya-fg-muted);font-size:10px}[data-maya=grid] line[data-centre]{stroke:var(--maya-fg-muted);stroke-opacity:.5}" +
+  "[data-way=zero]{--c:var(--maya-fg-muted)}rect[data-way][data-maya=mark]:not([data-s]){rx:2px}rect[data-nil]{fill:none;stroke:var(--maya-fg-muted);stroke-opacity:.4;rx:2px}" +
+  // Table: the Show more row.
+  "[data-maya=more]{cursor:pointer}[data-maya=more] text{fill:var(--maya-accent);font-weight:600}[data-maya=more]:is(:hover,:focus-visible) text{text-decoration:underline}[data-maya=more]:focus-visible{outline:2px solid var(--maya-focus)}" +
+  // List: bold headline over muted body, the value in its own weight, evidence names muted.
+  "[data-maya=marks] text tspan[data-num]{fill:var(--maya-fg-muted);font-variant-numeric:var(--maya-numeric,tabular-nums)}[data-maya=marks] text tspan[data-hd]{font-size:14px;font-weight:600}" +
+  "[data-maya=marks] text[data-v]{font-size:14px;font-weight:600;font-variant-numeric:var(--maya-numeric,tabular-nums)}[data-maya=marks] text[data-body],[data-maya=marks] text[data-ev=name]{fill:var(--maya-fg-muted)}" +
+  "[data-maya=marks] text[data-ev=value]{font-variant-numeric:var(--maya-numeric,tabular-nums)}" +
   // Parallel brush and beeswarm peers (M2).
   // Parallel brush: lines outside every range fade; the range is a band on its axis (the cross group is hidden by default).
   "[data-off]{opacity:.12}" +

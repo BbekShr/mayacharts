@@ -17,6 +17,7 @@ import { css } from "../styles/theme.ts";
 import { type Intro, idle, patch, type PatchOptions, turn, ZOOM } from "./animate.ts";
 import * as flip from "./flip.ts";
 import * as drill from "./drill.ts";
+import * as expand from "./expand.ts";
 import { html } from "./html.ts";
 import { listen } from "./listen.ts";
 import * as measure from "./measure.ts";
@@ -38,7 +39,10 @@ export class MayaChart extends HTMLElement {
   #state: State = { view: {}, selected: [] };
   #seen: ChartSpec | undefined;
   #ix:
-    | (Record<"measure" | "drill" | "select" | "brush" | "sort" | "play" | "flip", Handlers> & {
+    | (Record<
+        "measure" | "drill" | "expand" | "select" | "brush" | "sort" | "play" | "flip",
+        Handlers
+      > & {
         zoom: ReturnType<typeof zoom.mount>;
       })
     | undefined;
@@ -193,6 +197,7 @@ export class MayaChart extends HTMLElement {
       measure: measure.mount(host),
       select: select.mount(host), // before drill: a double click restores the selection, then drills
       drill: drill.mount(host),
+      expand: expand.mount(host),
       brush: brush.mount(host),
       zoom: zoom.mount(host),
       sort: sort.mount(host),
@@ -290,7 +295,9 @@ export class MayaChart extends HTMLElement {
     // Drilling zooms into the branch entered, or out of the branch left. Flows keep their
     // nodes in place across a drill (stable keys), so they morph instead.
     const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
-    this.#fl = d1.length !== d0.length;
+    this.#fl =
+      d1.length !== d0.length ||
+      (prev.view.xDrill?.length ?? 0) !== (next.view.xDrill?.length ?? 0);
     // A table row is a thin bar, not a container: its rows swap by key instead of zooming.
     if (/^(sankey|table)$/.test(this.spec?.type ?? "")) this.#fl && this.#tip?.hide();
     else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
@@ -332,8 +339,8 @@ export class MayaChart extends HTMLElement {
         (e.target as Element).closest(".maya-svg") &&
         // Enter selects, else drills; Shift+Enter drills, else selects.
         ((e as KeyboardEvent).shiftKey
-          ? ix.drill.enter?.(m) || ix.select.enter?.(m)
-          : ix.select.enter?.(m) || ix.drill.enter?.(m))
+          ? ix.drill.enter?.(m) || ix.expand.enter?.(m) || ix.select.enter?.(m)
+          : ix.select.enter?.(m) || ix.drill.enter?.(m) || ix.expand.enter?.(m))
       );
     } else if (k === "+" || k === "=" || k === "-") {
       const { ctrlKey, metaKey, altKey } = e as KeyboardEvent;
@@ -408,7 +415,13 @@ export class MayaChart extends HTMLElement {
         brush.reduce(
           zoom.reduce(
             sort.reduce(
-              play.reduce(drill.reduce(flip.reduce(measure.reduce(this.#state, ev), ev), ev), ev),
+              play.reduce(
+                drill.reduce(
+                  expand.reduce(flip.reduce(measure.reduce(this.#state, ev), ev), ev),
+                  ev,
+                ),
+                ev,
+              ),
               ev,
             ),
             ev,
@@ -621,6 +634,7 @@ const FOCUS: [string, string][] = [
   ["measure", ".maya-ctl [role=radio]"],
   ["flip", ".maya-flip"],
   ["crumb", ".maya-crumbs :is(button,a)"],
+  ["filter", ".maya-filter"],
   ["reset", ".maya-reset"],
   ["play", ".maya-play"],
 ];

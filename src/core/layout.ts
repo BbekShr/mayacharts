@@ -362,7 +362,12 @@ export function frame(
       // nothing; thin and keep labels whole).
       const slot = plot.w / bLab.length - 8;
       // 3 characters and the ellipsis need about 27 px.
-      const few = (bLab.length <= 8 || slot >= 60) && (slot >= 27 || maxW(bLab) - 8 <= slot);
+      // Labels a cut would make identical ("20…" x 8) are thinned and kept longer instead.
+      const cut = bLab.map((c) => clip(c, slot)).filter((t, i) => t !== bLab[i]);
+      const few =
+        (bLab.length <= 8 || slot >= 60) &&
+        (slot >= 27 || maxW(bLab) - 8 <= slot) &&
+        new Set(cut).size === cut.length;
       const every = few ? 1 : Math.max(1, Math.ceil(maxW(bLab) / (plot.w / bLab.length)));
       bLab.forEach((c, i) => {
         if (i % every) return;
