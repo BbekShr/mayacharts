@@ -268,8 +268,8 @@ export const scatter: Mark = {
           .slice(0, -1)
           .map((t, i) =>
             el("path", {
-              // Keyed by age (0 = newest), so a roll of the frames morphs each segment (same M L) instead of re-entering.
-              "data-key": key("\u0000trail", n, "s", q.length - 2 - i),
+              // Keyed by its start frame, so past segments stay byte-identical as the frames roll.
+              "data-key": key("\u0000trail", n, "s", t.frame),
               "data-trail": "seg",
               "data-s": sd,
               "stroke-opacity": r(0.15 + (0.45 * (i + 1)) / (q.length - 1)),
