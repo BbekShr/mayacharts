@@ -6,46 +6,71 @@
  * deepest branch that still exists in the data.
  */
 import { t } from "../core/strings.ts";
+import { drillDepth } from "../core/validate.ts";
 import type { ChartSpec, Handlers, Host, SpecEvent, State } from "../core/types.ts";
 import { listen } from "./listen.ts";
 
 /** `spec` is needed to gate a push (the reducer has no other access to it). */
 export type DrillEvent =
-  { type: "drill"; value: string; spec?: ChartSpec } | { type: "pop"; depth: number } | SpecEvent;
+  | { type: "drill" | "xdrill"; value: string; spec?: ChartSpec }
+  | { type: "pop" | "xpop"; depth: number }
+  | SpecEvent;
 
 const same = (a: readonly string[] = [], b: readonly string[] = []) =>
   a.length === b.length && a.every((v, i) => v === b[i]);
 
-const withDrill = (s: State, drill: readonly string[]): State =>
-  same(s.view.drill, drill) ? s : { view: { ...s.view, drill }, selected: [] };
+const put = (s: State, k: "drill" | "xDrill", v: readonly string[]): State =>
+  same(s.view[k], v) ? s : { view: { ...s.view, [k]: v }, selected: [] };
 
 /** Flow keys are `n~level~name` / `k~level~source~target`, level in the whole path. */
 const FLOW = ["sankey", "chord"];
 
 export const reduce = (s: State, e: DrillEvent): State => {
   const cur = s.view.drill ?? [];
-  if (e.type === "pop") return withDrill(s, cur.slice(0, Math.max(0, e.depth)));
-  if (e.type === "drill") {
-    const n = (e.spec?.path?.length ?? 0) - 1;
-    return e.spec?.drill && cur.length < n ? withDrill(s, [...cur, e.value]) : s;
-  }
-  if (e.type !== "spec" || !cur.length) return s;
+  const xc = s.view.xDrill ?? [];
+  if (e.type === "pop") return put(s, "drill", cur.slice(0, Math.max(0, e.depth)));
+  if (e.type === "xpop") return put(s, "xDrill", xc.slice(0, Math.max(0, e.depth)));
+  if (e.type === "drill")
+    return e.spec && cur.length < drillDepth(e.spec) ? put(s, "drill", [...cur, e.value]) : s;
+  if (e.type === "xdrill")
+    return e.spec?.drill && xc.length < (e.spec.xPath?.length ?? 0) - 1
+      ? put(s, "xDrill", [...xc, e.value])
+      : s;
+  if (e.type !== "spec") return s;
   const { prev, next } = e;
   const path = next.path ?? [];
   if (
-    !next.drill ||
-    (prev && (prev.type !== next.type || prev.x !== next.x || !same(prev.path, next.path)))
+    xc.length &&
+    (!next.drill || (prev && (prev.type !== next.type || !same(prev.xPath, next.xPath))))
   )
-    return withDrill(s, []);
-  // Deepest branch that still has rows.
+    s = put(s, "xDrill", []);
+  if (!cur.length) return s;
+  const depth = drillDepth(next);
+  if (
+    !depth ||
+    (prev &&
+      (prev.type !== next.type ||
+        prev.x !== next.x ||
+        !same(prev.path, next.path) ||
+        !same(prev.seriesPath, next.seriesPath)))
+  )
+    return put(s, "drill", []);
+  // Deepest branch that still has rows. Each level filters on its own field.
+  const lv =
+    next.seriesPath ??
+    (next.drillTo
+      ? [next.series ?? ""]
+      : next.type === "chord" && path.length === 3
+        ? [path[1]!]
+        : path);
   let rows = next.data;
   const keep: string[] = [];
-  for (let i = 0; i < cur.length && i < path.length - 1; i++) {
-    rows = rows.filter((r) => String(r[path[i]!]) === cur[i]);
+  for (let i = 0; i < cur.length && i < depth; i++) {
+    rows = rows.filter((r) => String(r[lv[i]!]) === cur[i]);
     if (!rows.length) break;
     keep.push(cur[i]!);
   }
-  return withDrill(s, keep);
+  return put(s, "drill", keep);
 };
 
 export const decode = (raw: string) => {
@@ -61,10 +86,12 @@ export const decode = (raw: string) => {
  * Flow keys are `n~level~name` and `k~level~source~target` (level in the whole path); only
  * the outermost level on screen drills.
  */
-export const branchOf = (key: string, depth: number, type = ""): string | undefined => {
+export const branchOf = (key: string, depth: number, type = "", levels = 0): string | undefined => {
   const p = key.split("~");
+  // A 3-level chord drills its targets (key level 1), not its sources.
+  const lv = type === "chord" && levels === 3 ? 1 : depth;
   const raw = FLOW.includes(type)
-    ? p[1] === String(depth) && (p[0] === "n" || p[0] === "k")
+    ? p[1] === String(lv) && (p[0] === "n" || p[0] === "k")
       ? p[2]
       : undefined
     : p[0] === "h"
@@ -77,6 +104,8 @@ export const branchOf = (key: string, depth: number, type = ""): string | undefi
 export const BUSY =
   "[data-maya=mark],[data-maya=hit],[data-maya=link],[data-maya=legend],button,a,input,select,.maya-ctl,.maya-tip,.maya-table";
 
+const TICK = "[data-maya=axis-x] text[data-key]";
+
 export const mount = (host: Host): Handlers => {
   /** After the next paint: focus the first mark (push) or the parent mark (pop); after a
    * pointer drill only the chart, so Escape works without a focus ring jumping onto a mark. */
@@ -88,29 +117,78 @@ export const mount = (host: Host): Handlers => {
     [...host.root.querySelectorAll<SVGElement>("[data-maya=mark][data-key]")].filter(
       (m) => !m.hasAttribute("data-other"),
     );
-
-  const say = (next: State) => {
+  /** Column headers drill (svg[data-xdrill]) or, at the last level, report the leaf. */
+  const ticks = () => {
     const spec = host.spec();
-    const d = next.view.drill ?? [];
+    return !!(spec?.drill && spec.xPath);
+  };
+  /** What a gesture pushes: the svg says ("" the category, "series"); at the last level it is
+   * absent and the spec still reports the leaf. null: nothing drills. */
+  const mode = () => {
+    const d = host.root.querySelector(".maya-svg")?.getAttribute("data-drill");
+    const spec = host.spec();
+    return d ?? (spec?.drill ? (spec.seriesPath ? "series" : "") : null);
+  };
+  const valOf = (m: Element, depth: number) =>
+    mode() === "series"
+      ? (m.getAttribute("data-series") ?? undefined)
+      : (m.getAttribute("data-raw") ??
+        branchOf(m.getAttribute("data-key")!, depth, host.spec()?.type, host.spec()?.path?.length));
+
+  const say = (next: State, x?: boolean) => {
+    const spec = host.spec();
+    const d = (x ? next.view.xDrill : next.view.drill) ?? [];
     if (spec) host.announce(t(spec, d.length ? "drilledInto" : "back", d.join(" / ")));
   };
 
-  const pop = (depth: number): boolean => {
+  const pop = (depth: number, x?: boolean): boolean => {
     const s = host.state();
-    const cur = s.view.drill ?? [];
+    const cur = (x ? s.view.xDrill : s.view.drill) ?? [];
     if (depth >= cur.length) return false;
-    const next = reduce(s, { type: "pop", depth });
+    const next = reduce(s, { type: x ? "xpop" : "pop", depth });
     if (next === s) return false;
-    want = ptr ? { svg: true } : { value: cur[depth]! };
+    want = ptr || x ? { svg: true } : { value: cur[depth]! };
     host.commit(next);
-    say(next);
+    say(next, x);
+    return true;
+  };
+
+  const leaf = (path: string[], axis?: "x") =>
+    !host.el.dispatchEvent(
+      new CustomEvent("maya-drill-leaf", {
+        detail: axis ? { path, axis } : { path },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+  /** A heatmap column header: push the column branch. */
+  const pushX = (t: Element): boolean => {
+    const spec = host.spec();
+    const key = t.getAttribute("data-key");
+    if (!spec || key === null) return false;
+    const s = host.state();
+    const value = decode(key);
+    if (value.startsWith("\0")) return false; // the Total band never drills
+    const next = reduce(s, { type: "xdrill", value, spec });
+    if (next === s) return leaf([...(s.view.xDrill ?? []), value], "x");
+    want = { svg: true };
+    host.commit(next);
+    say(next, true);
     return true;
   };
 
   const push = (m: Element): boolean => {
     const spec = host.spec();
     const key = m.getAttribute("data-key");
-    if (!spec?.drill || !key || m.hasAttribute("data-other")) return false;
+    if (
+      !spec ||
+      mode() === null ||
+      !key ||
+      m.hasAttribute("data-other") ||
+      m.getAttribute("data-way") === "total"
+    )
+      return false;
     const s = host.state();
     const depth = (s.view.drill ?? []).length;
     // Sunburst centre: the current branch; activating it goes back up.
@@ -119,20 +197,13 @@ export const mount = (host: Host): Handlers => {
     const p = key.split("~");
     // data-to: a nested treemap child drills only its parent (that many values).
     const to = +m.getAttribute("data-to")! || 99;
-    const first = branchOf(key, depth, spec.type);
-    if (first === undefined) return false;
+    const first = valOf(m, depth);
+    if (first === undefined || first.startsWith("\0")) return false; // the Total band never drills
     const values = p[0] === "h" ? p.slice(1 + depth, 1 + depth + to).map(decode) : [first];
     let next = s;
     for (const value of values) next = reduce(next, { type: "drill", value, spec });
-    if (next === s)
-      // Nowhere deeper to go: the drill gesture reports the leaf (root to leaf).
-      return !host.el.dispatchEvent(
-        new CustomEvent("maya-drill-leaf", {
-          detail: { path: [...(s.view.drill ?? []), ...values] },
-          bubbles: true,
-          composed: true,
-        }),
-      );
+    // Nowhere deeper to go: the drill gesture reports the leaf (root to leaf).
+    if (next === s) return leaf([...(s.view.drill ?? []), ...values]);
     want = ptr ? { svg: true } : { first: true };
     host.commit(next);
     say(next);
@@ -149,7 +220,10 @@ export const mount = (host: Host): Handlers => {
     // The tooltip's drill button (select and drill together) names its mark.
     const tk = el?.closest(".maya-tip [data-drill]")?.getAttribute("data-drill");
     const m = tk ? marks().find((x) => x.getAttribute("data-key") === tk) : host.mark(e);
-    if (crumb) pop(Number(crumb.getAttribute("data-depth")));
+    const tick = ticks() && el?.closest(TICK);
+    if (crumb)
+      pop(Number(crumb.getAttribute("data-depth")), crumb.parentElement?.dataset.axis === "x");
+    else if (tick) detail < 2 && pushX(tick);
     // A link never drills (sankey and chord links are not keyboard-reachable).
     else if (m && m.getAttribute("data-maya") !== "link") (tk || !both || detail > 1) && push(m);
     else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false)
@@ -157,25 +231,36 @@ export const mount = (host: Host): Handlers => {
     ptr = false;
   };
 
+  // Column headers are buttons for the keyboard (sort.ts does the same for table headers).
+  const key = (e: Event) => {
+    const k = (e as KeyboardEvent).key;
+    const tick = ticks() && (e.target as Element).closest?.(TICK);
+    if (!tick || (k !== "Enter" && k !== " ")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    pushX(tick);
+  };
+
   return {
-    escape: () => pop((host.state().view.drill ?? []).length - 1),
+    escape: () =>
+      pop((host.state().view.xDrill ?? []).length - 1, true) ||
+      pop((host.state().view.drill ?? []).length - 1),
     enter: (mark) => push(mark),
     painted() {
+      if (ticks())
+        for (const t of host.root.querySelectorAll(TICK)) {
+          t.setAttribute("tabindex", "0");
+          t.setAttribute("role", "button");
+        }
       if (!want) return;
       const all = marks();
+      const depth = host.state().view.drill?.length ?? 0;
       const m =
         "svg" in want
           ? undefined
           : "first" in want
             ? all[0]
-            : all.find(
-                (x) =>
-                  branchOf(
-                    x.getAttribute("data-key")!,
-                    host.state().view.drill?.length ?? 0,
-                    host.spec()?.type,
-                  ) === (want as { value: string }).value,
-              );
+            : all.find((x) => valOf(x, depth) === (want as { value: string }).value);
       want = undefined;
       // The chart takes focus at once so keys keep working; the mark follows the landing, if
       // focus is still on the chart (a mark focused mid-zoom draws its outline scaled over the plot).
@@ -199,6 +284,6 @@ export const mount = (host: Host): Handlers => {
       if (m && zoom.length) Promise.allSettled(zoom.map((a) => a.finished)).then(go);
       else go();
     },
-    off: listen(host.root, ["click", click]),
+    off: listen(host.root, ["click", click], ["keydown", key, true]),
   };
 };

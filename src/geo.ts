@@ -1,6 +1,7 @@
 // US state hex cartogram. Importing this file registers the "hexmap" type.
 import { register } from "./core/registry.ts";
-import { el, key, r, esc } from "./core/svg.ts";
+import { ramp } from "./core/scale.ts";
+import { el, key, px, r, esc } from "./core/svg.ts";
 import type { Mark } from "./core/types.ts";
 
 // "CODE Name col row": odd-r offset grid (odd rows shift right half a hex), pointy-top.
@@ -44,13 +45,14 @@ const ROWS = Math.max(...STATES.map((s) => s.r)) + 1;
 export const hexmap: Mark = {
   noun: "Hex map",
   check(spec, fail) {
+    const x = spec.x ?? spec.path?.[0];
     spec.data.forEach((row, i) => {
-      const v = (row as Record<string, unknown>)[spec.x as string];
+      const v = (row as Record<string, unknown>)[x as string];
       if (v == null || find(v)) return;
       const d = near(String(v));
       fail(
         "unknown-state",
-        `data[${i}].${spec.x}`,
+        `data[${i}].${x}`,
         `"${v}" is not a US state`,
         d && `Did you mean "${d}"?`,
         "Use a two-letter code or full name (50 states, DC, PR).",
@@ -83,13 +85,20 @@ export const hexmap: Mark = {
     };
 
     const sum = new Map<(typeof STATES)[number], number>();
+    // The raw x value of each state: a drill pushes the data's own spelling ("Nevada"), not the key's code.
+    const raw = new Map<(typeof STATES)[number], string>();
     shaped.cells.forEach((c) => {
       const st = find(shaped.categories[c.ci]);
-      if (st && c.value !== null) sum.set(st, (sum.get(st) ?? 0) + c.value);
+      if (st && c.value !== null) {
+        sum.set(st, (sum.get(st) ?? 0) + c.value);
+        if (!raw.has(st)) raw.set(st, shaped.categories[c.ci]!);
+      }
     });
-    const vals = [...sum.values()];
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
+    const {
+      q: qOf,
+      labels: legendLabels,
+      steps,
+    } = ramp([...sum.values()], spec.colorScale, spec.rampMid);
 
     // Missing states stay on the map as dashed empty hexes with a faint code.
     let grid = "";
@@ -97,7 +106,7 @@ export const hexmap: Mark = {
     let labels = "";
     let n = 0;
     const w = R3 * k;
-    const fc = Math.min(13, s * 0.55);
+    const fc = Math.min(13, s * 0.55, px(spec.theme.labelSize)); // labelSize caps the fit
     const fv = fc * 0.8;
     const text = (cx: number, cy: number, str: string, extra: Record<string, unknown>) =>
       el(
@@ -129,10 +138,11 @@ export const hexmap: Mark = {
     }
     for (const [st, v] of sum) {
       const [cx, cy] = at(st) as [number, number];
-      const q = hi > lo ? Math.min(9, Math.floor(((v - lo) / (hi - lo)) * 10)) : 9;
+      const q = qOf(v);
       marks += el("path", {
         "data-maya": "mark",
         "data-key": key("g", st.code),
+        "data-raw": raw.get(st),
         "data-c": n++,
         "data-s": 0,
         "data-x": st.name,
@@ -144,16 +154,25 @@ export const hexmap: Mark = {
         "data-q": q,
         d: hex(st),
       });
-      // Drawn here (not ctx.label) so labels on the dark ramp steps can carry data-dark.
-      // data-q picks the ink per ramp step (wip-flow.ts); data-dark marks the black steps.
-      const o = { "data-in": true, "data-dark": q >= 8, "data-q": q };
+      // Drawn here (not ctx.label): no halo; data-hx + data-q give the label its hex's fill, data-ink="a" picks the ink from it (theme.ts).
+      const o = { "data-in": true, "data-ink": "a", "data-hx": true, "data-q": q };
       if (showC)
         labels += text(cx, cy - dy, st.code, { ...o, "font-size": r(fc), "font-weight": 600 });
       if (showV) labels += text(cx, cy + fc * 0.62, f.get(st)!, { ...o, "font-size": r(fv) });
     }
+    // Swatches: a quantile's class steps; rank (lowest, median, highest) two halves; else one gradient.
+    const swatch = steps ?? (legendLabels.length > 2 ? [2, 7] : null);
     const legend =
-      hi > lo
-        ? `<div class="maya-legend" data-maya="ramp" data-hex><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
+      legendLabels[0]! < legendLabels.at(-1)!
+        ? `<div class="maya-legend" data-maya="ramp" data-hex><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b>${legendLabels
+            .map(
+              (b, k) =>
+                `<span>${esc(ctx.fmt(spec.y, b))}</span>` +
+                (k < legendLabels.length - 1
+                  ? `<i${swatch ? ` data-q="${swatch[k]}"` : ""}></i>`
+                  : ""),
+            )
+            .join("")}</div>`
         : "";
     return { marks, hits: "", labels, grid, legend };
   },

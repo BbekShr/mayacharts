@@ -10,19 +10,23 @@
  * lightness band or below 3:1 on the background, as in the default; the legend, direct
  * labels and the data table carry identity there.
  * Spread one to change a token: `theme: { ...themes.pop, radius: "0px" }`.
+ * Importing this file also registers every theme by name (registry.ts), so `theme: "ocean"` and
+ * `theme: ["ocean", { radius: "0px" }]` work; a name the host registered first is kept.
  */
-import type { ThemeToken } from "./core/types.ts";
+import { addThemes } from "./core/registry.ts";
+import type { ThemeToken, ThemeTokens } from "./core/types.ts";
 
-export type Theme = Readonly<Partial<Record<ThemeToken, string>>>;
+export type Theme = ThemeTokens;
 
+type Css = Partial<Record<Exclude<ThemeToken, "rampMidValue">, string>>;
 /** Eight light and eight dark colours to accent and series2..8 as light-dark pairs. */
-const series = (light: string, dark: string): Theme => {
+const series = (light: string, dark: string): Css => {
   const d = dark.split(" ");
-  const out: Partial<Record<ThemeToken, string>> = {};
+  const out: Css = {};
   light
     .split(" ")
     .forEach(
-      (c, i) => (out[i ? (`series${i + 1}` as ThemeToken) : "accent"] = `light-dark(${c},${d[i]})`),
+      (c, i) => (out[i ? (`series${i + 1}` as "series2") : "accent"] = `light-dark(${c},${d[i]})`),
     );
   return out;
 };
@@ -204,3 +208,5 @@ export const themes = {
 } satisfies Record<string, Theme>;
 
 export type ThemeName = keyof typeof themes;
+
+addThemes(themes, true);

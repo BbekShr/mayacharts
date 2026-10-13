@@ -55,9 +55,9 @@ describe("chord", () => {
   it("is deterministic", () => {
     expect(svg(spec)).toBe(svg(spec));
   });
-  it("rejects a path that is not two levels", () => {
+  it("rejects a path that is not two or three levels", () => {
     expect(() => svg({ ...spec, path: ["region"] })).toThrow();
-    expect(() => svg({ ...spec, path: ["region", "fam", "v"] })).toThrow();
+    expect(() => svg({ ...spec, path: ["region", "fam", "v", "w"] })).toThrow();
   });
   it("zero values are rejected", () => {
     expect(() => svg({ ...spec, data: [{ region: "A", fam: "B", v: 0 }] })).toThrow();
@@ -106,5 +106,30 @@ describe("chord", () => {
     const d = /data-maya="link"[^>]* d="([^"]+)"/.exec(s)![1]!;
     expect(d.match(/C/g)).toHaveLength(2);
     expect(d).not.toContain("Q");
+  });
+
+  it("at 280x300 no two labels overprint (poles share a slot set, colliding labels drop)", () => {
+    const from = ["North", "South", "Swim and basics", "West", "East"];
+    const to = ["Bags", "Shoes", "Jackets", "Hats", "Pants"];
+    const rows = from.flatMap((a, i) =>
+      to.map((b, j) => ({ a, b, v: 5 + ((i * 7 + j * 3) % 11) * (i === 2 || j === 4 ? 0.3 : 4) })),
+    );
+    const out = renderParts(
+      { type: "chord", path: ["a", "b"], y: "v", data: rows },
+      { width: 280, height: 300 },
+    ).svg;
+    const t = [
+      ...out.matchAll(
+        /<text x="([\d.]+)" text-anchor="(\w+)"[^>]*y="([\d.-]+)"[^>]*data-nm=""[^>]*>([^<]*)</g,
+      ),
+    ].map((m) => {
+      const w = m[4]!.length * 6.6;
+      const x = +m[1]!;
+      return { y: +m[3]!, a: m[2] === "middle" ? x - w / 2 : m[2] === "end" ? x - w : x, w };
+    });
+    expect(t.length).toBeGreaterThan(2);
+    for (const [i, p] of t.entries())
+      for (const q of t.slice(i + 1))
+        expect(Math.abs(p.y - q.y) < 12 && p.a < q.a + q.w && q.a < p.a + p.w).toBe(false);
   });
 });

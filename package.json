@@ -102,6 +102,7 @@
     "./dist/units.js",
     "./dist/orbit.js",
     "./dist/constellation.js",
+    "./dist/themes.js",
     "./dist/maya.global.js",
     "./dist/maya.*.global.js",
     "./src/element.ts",
@@ -114,6 +115,7 @@
     "./src/constellation.ts",
     "./src/geo.ts",
     "./src/stats.ts",
+    "./src/themes.ts",
     "./src/global.ts",
     "./src/global-*.ts"
   ],

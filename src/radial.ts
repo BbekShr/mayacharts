@@ -6,21 +6,179 @@
 // ctx.tone(v) gives "good" | "warn" | "bad" | null for data-tone. spec.was is the previous value.
 import { register } from "./core/registry.ts";
 import { TAU } from "./core/scale.ts";
-import { clip, el, esc, key, OTHER, r } from "./core/svg.ts";
+import { clip, el, esc, key, OTHER, px, r } from "./core/svg.ts";
 import { niceTicks } from "./core/ticks.ts";
-import type { Mark } from "./core/types.ts";
+import type { Mark, MarkCtx, MarkOut } from "./core/types.ts";
 
 const W = 7.2; // estimated glyph width at 12px, the same estimate core layout uses
+
+/** The disc and its rings (the outermost always, then every other one, at most 3) with their values; `put` places a label at ring radius rr. */
+const rings = (
+  ctx: MarkCtx,
+  [cx, cy, R]: number[],
+  vals: number[],
+  rad: (v: number) => number,
+  put: (rr: number) => Parameters<typeof el>[1],
+) => {
+  let grid = el("circle", { cx: r(cx!), cy: r(cy!), r: r(R!), "data-disc": true });
+  let labels = "";
+  vals.forEach((v, i) => {
+    if (vals.length > 3 && (vals.length - 1 - i) % 2) return;
+    grid += el("circle", { cx: r(cx!), cy: r(cy!), r: r(rad(v)), fill: "none" });
+    const t = el(
+      "text",
+      { ...put(rad(v)), "dominant-baseline": "middle", "data-ring": "" },
+      esc(ctx.fmt(ctx.spec.y, v)),
+    );
+    labels += t;
+  });
+  return { grid, labels };
+};
+
+/**
+ * spec.form "line" (a radar): angle = x from 12 o'clock, radius = y from the centre, one line per
+ * series (key `l~SERIES`, the line mark's attributes: dash, emphasis, legend isolate), closed when the
+ * series has a value in every category and open where one is missing. A dot per value holds the
+ * tooltip; a wedge hit per category (keyed to its first dot) lists every series of that category.
+ * ponytail: no area fill (overlapping series would hide each other); categories are thinned by label collision.
+ */
+const radar = (ctx: MarkCtx): MarkOut => {
+  const { spec, shaped: sh, plot } = ctx;
+  const n = sh.categories.length;
+  if (!n || !sh.cells.length) return { marks: "", hits: "" };
+  const max = Math.max(0, ...sh.cells.map((c) => c.value ?? 0));
+  const ticks = niceTicks(0, max, 5);
+  const top = ticks.domain[1] || 1;
+  const names = sh.categories.map((c) =>
+    clip(ctx.fmt(spec.x, c), Math.max(4, Math.floor((plot.w * 0.2) / W))),
+  );
+  const lw = Math.max(...names.map((s) => s.length)) * W + 8;
+  const [cx, cy] = [plot.x + plot.w / 2, plot.y + plot.h / 2];
+  const R = Math.max(10, Math.min(plot.w / 2 - lw, plot.h / 2 - 18));
+  const ang = (k: number) => (k / n) * TAU;
+  const at = (rr: number, a: number): [number, number] => [
+    cx + rr * Math.sin(a),
+    cy - rr * Math.cos(a),
+  ];
+  let marks = "";
+  let dots = "";
+  let hits = "";
+  let grid = "";
+  const first = new Map<number, string>();
+  for (const si of sh.visible) {
+    const ser = sh.series[si]!;
+    const row = sh.categories.map(() => null as number | null);
+    for (const c of sh.cells) if (c.si === si && c.value !== null) row[c.ci] = Math.max(0, c.value);
+    const closed = n > 2 && row.every((v) => v !== null);
+    let d = "";
+    let len = 0;
+    let prev: [number, number] | null = null;
+    row.forEach((v, k) => {
+      if (v === null) return void (prev = null);
+      const p = at((v / top) * R, ang(k));
+      d += `${prev ? "L" : "M"}${r(p[0])} ${r(p[1])}`;
+      if (prev) len += Math.hypot(p[0] - prev[0], p[1] - prev[1]);
+      prev = p;
+      const cname = sh.categories[k]!;
+      const key_ = key(ser, cname);
+      first.has(k) || first.set(k, key_);
+      dots += el("circle", {
+        "data-maya": "mark",
+        "data-key": key_,
+        "data-c": k,
+        "data-s": si % 8,
+        "data-x": ctx.fmt(spec.x, cname),
+        "data-series": ser,
+        "data-y": sh.cells.find((c) => c.si === si && c.ci === k)!.value,
+        "data-f": ctx.fmt(spec.y, sh.cells.find((c) => c.si === si && c.ci === k)!.value),
+        "data-tone": ctx.tone(v),
+        "data-dash": spec.dash.has(ser),
+        "data-em": spec.emphasis.has(ser),
+        "data-last": n === 1,
+        r: 3,
+        cx: r(p[0]),
+        cy: r(p[1]),
+      });
+    });
+    if (closed) {
+      const f = at((row[0]! / top) * R, 0);
+      len += Math.hypot(f[0] - prev![0], f[1] - prev![1]);
+      d += "Z";
+    }
+    const dash = spec.dash.has(ser);
+    marks += el("path", {
+      "data-maya": "line",
+      "data-key": key("l", ser),
+      "data-s": si % 8,
+      "data-radar": true, // the legend key is a line, as for a line chart (theme.ts)
+      "data-dash": dash,
+      "data-em": spec.emphasis.has(ser),
+      pathLength: 1,
+      "stroke-dasharray":
+        dash && len ? `${+(6 / len).toPrecision(3)} ${+(4 / len).toPrecision(3)}` : null,
+      d: d || null,
+    });
+  }
+  // Spokes and the wedge a category answers for.
+  const h = Math.min(Math.PI / n, 3);
+  for (let k = 0; k < n; k++) {
+    const [x, y] = at(R, ang(k));
+    grid += el("line", { x1: r(cx), y1: r(cy), x2: r(x), y2: r(y) });
+    const [a, b] = [at(R, ang(k) - h), at(R, ang(k) + h)];
+    if (first.has(k))
+      hits += el("path", {
+        "data-maya": "hit",
+        "data-key": first.get(k),
+        "data-c": k,
+        d: `M${r(cx)} ${r(cy)}L${r(a[0])} ${r(a[1])}A${r(R)} ${r(R)} 0 ${h * 2 > Math.PI ? 1 : 0} 1 ${r(b[0])} ${r(b[1])}Z`,
+        fill: "transparent",
+      });
+  }
+  const ring = rings(
+    ctx,
+    [cx, cy, R],
+    ticks.values.filter((v) => v > 0),
+    (v) => R * (v / top),
+    // Between the first two spokes, so neither a spoke's line nor a category name sits under a value.
+    (rr) => ({
+      x: r(at(rr, ang(0.5))[0]),
+      y: r(at(rr, ang(0.5))[1]),
+      "text-anchor": "middle",
+    }),
+  );
+  grid = ring.grid + grid;
+  let labels = ring.labels;
+  const boxes: number[][] = [];
+  names.forEach((name, k) => {
+    const a = ang(k);
+    const [x, y] = at(R + 8 + 4 * Math.abs(Math.cos(a)), a);
+    const s = Math.sin(a);
+    const anchor = Math.abs(s) < 0.2 ? "middle" : s > 0 ? "start" : "end";
+    const w = name.length * W;
+    const l = anchor === "middle" ? x - w / 2 : anchor === "start" ? x : x - w;
+    if (boxes.some((b) => l < b[2]! && l + w > b[0]! && y - 7 < b[3]! && y + 7 > b[1]!)) return;
+    boxes.push([l, y - 7, l + w, y + 7]);
+    labels += el(
+      "text",
+      { x: r(x), y: r(y), "text-anchor": anchor, "dominant-baseline": "middle", "data-cat": "" },
+      esc(name),
+    );
+  });
+  return { marks: marks + dots, hits, labels, grid };
+};
 
 export const radial: Mark = {
   noun: "Radial bar",
   draw(ctx) {
+    if (ctx.spec.radar) return radar(ctx);
     const { spec, shaped, plot } = ctx;
     const n = shaped.categories.length;
     if (!n || !shaped.cells.length) return { marks: "", hits: "" };
 
-    // Stack outward per category; negatives and nulls draw nothing.
-    const segs = shaped.cells.map((c) => ({ c, v: Math.max(0, c.value ?? 0), y0: 0, y1: 0 }));
+    // Stack outward per category; a null value has no segment (so no zero-width mark, no tooltip row), a negative draws nothing.
+    const segs = shaped.cells
+      .filter((c) => c.value !== null)
+      .map((c) => ({ c, v: Math.max(0, c.value!), y0: 0, y1: 0 }));
     const totals = new Array<number>(n).fill(0);
     const last = new Array<number>(n).fill(-1);
     const topV = new Array<number>(n).fill(0);
@@ -155,6 +313,7 @@ export const radial: Mark = {
 
     // Stack total at each tip, beyond it when there is room, else inside it (names as above).
     const named = new Set<number>();
+    const outs: [string, number, number, boolean][] = [];
     totals.forEach((t, ci) => {
       const a = G / 2 + (ci + 0.5) * step;
       const [rt, f] = [rad(t), fv(t)];
@@ -168,37 +327,26 @@ export const radial: Mark = {
         named.add(ci);
         tipText += spoke(nm, R0 + 7, a, { "data-in": true, "data-dark": true, "data-name": "" });
       }
-      if (out) tipText += spoke(f, rt + 6, a, { "data-tip": "" });
-      else if (len >= w + (both ? nm.length * 6.6 + 8 : 0))
-        tipText += spoke(
-          f,
-          rt - 6,
-          a,
-          { "data-in": true, "data-dark": true, "data-name": "" },
-          true,
-        );
+      const inside = () =>
+        spoke(f, rt - 6, a, { "data-in": true, "data-dark": true, "data-name": "" }, true);
+      if (out) outs.push([f, rt + 6, a, len >= w]);
+      else if (len >= w + (both ? nm.length * 6.6 + 8 : 0)) tipText += inside();
     });
 
     // Disc and rings; the outermost ring always shows, every other one below it (at most 3).
-    let grid = el("circle", { cx: r(cx), cy: r(cy), r: r(R), "data-disc": true });
-    let labels = "";
-    const vals = ticks.values.filter((v) => v > 0);
-    const k = vals.length;
-    const rings = vals.filter((_, i) => (k > 3 ? (k - 1 - i) % 2 === 0 : true));
-    for (const v of rings) {
-      grid += el("circle", { cx: r(cx), cy: r(cy), r: r(rad(v)), fill: "none" });
-      labels += el(
-        "text",
-        {
-          x: r(cx),
-          y: r(cy - rad(v)),
-          "text-anchor": "middle",
-          "dominant-baseline": "middle",
-          "data-ring": "",
-        },
-        esc(fv(v)),
-      );
-    }
+    const ring = rings(
+      ctx,
+      [cx, cy, R],
+      ticks.values.filter((v) => v > 0),
+      rad,
+      (rr) => ({
+        x: r(cx),
+        y: r(cy - rr),
+        "text-anchor": "middle",
+      }),
+    );
+    const grid = ring.grid;
+    let labels = ring.labels;
 
     // Centre: the grand total under the measure's name.
     const tt = spec.titles.get(spec.y) ?? spec.y;
@@ -272,13 +420,37 @@ export const radial: Mark = {
         esc(name),
       );
     });
+    // A value beyond its bar tip yields to a category label it would overprint (the spoke's box, 6 px each side).
+    // Place outside, else relocate inside the top segment when it has room, else drop.
+    for (const [f, rr, a, room] of outs) {
+      const [x0, y0] = [cx + rr * Math.sin(a), cy - rr * Math.cos(a)];
+      const [x1, y1] = [x0 + f.length * 6.2 * Math.sin(a), y0 - f.length * 6.2 * Math.cos(a)];
+      if (
+        !boxes.some(
+          (b) =>
+            Math.min(x0, x1) - 6 < b[2]! &&
+            Math.max(x0, x1) + 6 > b[0]! &&
+            Math.min(y0, y1) - 6 < b[3]! &&
+            Math.max(y0, y1) + 6 > b[1]!,
+        )
+      )
+        labels += spoke(f, rr, a, { "data-tip": "" });
+      else if (room)
+        labels += spoke(
+          f,
+          rr - 12,
+          a,
+          { "data-in": true, "data-dark": true, "data-name": "" },
+          true,
+        );
+    }
     return { marks, hits, labels, grid };
   },
 };
 
 register("radial", radial);
 
-// Gauge: a 180 degree dial. The track is a rounded sector, the value a stroked circle (see below);
+// Gauge: a 180, 270 or 360 degree dial (spec.arc). The track is a rounded sector, the value a stroked circle (see below);
 // bands, target tick and was marker are unkeyed (outside marks).
 const num = (v: unknown) => (typeof v === "number" ? v : null);
 const PI = Math.PI;
@@ -326,30 +498,48 @@ export const gauge: Mark = {
       tone && target !== null
         ? ctx.t(tone === "good" ? "onTrack" : tone === "warn" ? "atRisk" : "offTrack")
         : "";
-    const below = 18 + (wasV !== null || status ? 16 : 0); // the row under the dial: change, and the status when it cannot sit above the value
+    // Sweep in degrees from its start (12 o'clock clockwise): 180 from 9 o'clock, 270 from 225 degrees, 360 closed from 12.
+    const SW = spec.arc;
+    const A0 = SW === 180 ? -90 : SW === 270 ? -135 : 0;
+    const open = SW < 360;
+    const wide = SW > 180; // the number and rows sit inside the ring, not under the dial
+    // The row under a half dial: change, and the status when it cannot sit above the value (a ring holds them inside).
+    const below = wide ? (open ? 16 : 0) : 18 + (wasV !== null || status ? 16 : 0);
+    const dn = SW === 180 ? 0 : SW === 270 ? Math.SQRT1_2 : 1; // how far the dial hangs below its centre, in radii
     const top = target === null ? 6 : 18;
     const side = 6 + ex + (target === null ? 0 : Math.min(plot.w * 0.2, tl.length * 6.2));
-    const R = Math.max(14, Math.min(plot.w / 2 - side, plot.h - below - top - ex));
+    const R = Math.max(14, Math.min(plot.w / 2 - side, (plot.h - below - top - ex) / (1 + dn)));
     const t = Math.min(26, Math.max(6, R * 0.2));
     const [cx, cy] = [
       plot.x + plot.w / 2,
-      plot.y + Math.max(0, (plot.h - R - ex - top - below) / 2) + top + ex + R,
+      plot.y + Math.max(0, (plot.h - R * (1 + dn) - ex - top - below) / 2) + top + ex + R,
     ];
     const ri = R - t;
     const pt = (rr: number, a: number) => `${r(cx + rr * Math.sin(a))} ${r(cy - rr * Math.cos(a))}`;
-    const at = (f: number) => (f - 0.5) * PI;
+    const at = (f: number) => ((A0 + f * SW) * PI) / 180;
     // Annular sector over fractions f0..f1 of the dial; h > 0 rounds both ends (they stay inside f0..f1).
     const ring = (r0: number, r1: number, f0: number, f1: number, h: number) => {
       const d = h / ((r0 + r1) / 2);
       const a0 = at(f0) + d;
-      const a1 = Math.max(at(f1) - d, a0);
+      const a1 = Math.min(Math.max(at(f1) - d, a0), a0 + TAU - 0.001);
+      const lg = a1 - a0 > PI ? 1 : 0;
       return (
-        `M${pt(r1, a0)}A${r(r1)} ${r(r1)} 0 0 1 ${pt(r1, a1)}A${r(h)} ${r(h)} 0 0 1 ${pt(r0, a1)}` +
-        `A${r(r0)} ${r(r0)} 0 0 0 ${pt(r0, a0)}A${r(h)} ${r(h)} 0 0 1 ${pt(r1, a0)}Z`
+        `M${pt(r1, a0)}A${r(r1)} ${r(r1)} 0 ${lg} 1 ${pt(r1, a1)}A${r(h)} ${r(h)} 0 0 1 ${pt(r0, a1)}` +
+        `A${r(r0)} ${r(r0)} 0 ${lg} 0 ${pt(r0, a0)}A${r(h)} ${r(h)} 0 0 1 ${pt(r1, a0)}Z`
       );
     };
+    // The whole dial: a rounded sector, or for a ring two circles (the inner one reversed leaves the hole).
+    const full = () =>
+      open
+        ? ring(ri, R, 0, 1, t / 2)
+        : [R, ri]
+            .map(
+              (q, i) =>
+                `M${r(cx - q)} ${r(cy)}a${r(q)} ${r(q)} 0 1 ${1 - i} ${r(2 * q)} 0a${r(q)} ${r(q)} 0 1 ${1 - i} ${r(-2 * q)} 0Z`,
+            )
+            .join("");
 
-    let grid = el("path", { "data-kpi": "track", d: ring(ri, R, 0, 1, t / 2) });
+    let grid = el("path", { "data-kpi": "track", d: full() });
     if (bands) {
       const [a, b] = [Math.min(lo, hi), Math.max(lo, hi)];
       const lower = g!.better === "lower";
@@ -372,13 +562,24 @@ export const gauge: Mark = {
       "data-y": value,
       "data-f": f,
       "data-tone": tone,
+      "data-more":
+        spec.tipFields
+          .flatMap((k) => {
+            const rt = spec.tipRatio.get(k);
+            const sum = (q: string) => ctx.agg("sum")(spec.data.map((row) => num(row[q])));
+            const v = rt ? (sum(rt[1]) ? sum(rt[0])! / sum(rt[1])! : null) : col(k);
+            // Tabs and newlines are the grammar: a cell holding them must not add rows.
+            const cl = (x: string) => x.replace(/[\t\n]/g, " ");
+            return v == null ? [] : [`${cl(spec.titles.get(k) ?? k)}\t${cl(ctx.fmt(k, v))}`];
+          })
+          .join("\n") || null,
     };
     // The value is a stroked circle like a sunburst slice (pathLength 360, dash = angle) so a change
     // sweeps along the track; the round caps sit inside the same inset as the track's rounded ends.
     const cap = (t / (ri + R)) * (180 / PI);
     // The fill grows from zero (the dial minimum when zero is off the dial), either way round.
-    const z = fr(0) * 180;
-    const d0 = fr(value) * 180 - z;
+    const z = fr(0) * SW;
+    const d0 = fr(value) * SW - z;
     const sweep = Math.max(0, Math.abs(d0) - 2 * cap);
     const marks = el("circle", {
       "data-maya": "mark",
@@ -392,17 +593,29 @@ export const gauge: Mark = {
       "stroke-linecap": d0 ? "round" : "butt", // a zero value draws nothing, not a dot
       pathLength: 360,
       "stroke-dasharray": `${r(sweep)} ${r(360 - sweep)}`,
-      "stroke-dashoffset": r(180 - z - Math.min(d0, 0) - cap),
+      // The dash starts at 3 o'clock; the offset turns it back to the dial's start (12 o'clock is 270).
+      "stroke-dashoffset": r(((-(A0 + 270 + z + Math.min(d0, 0) + cap) % 360) + 360) % 360),
     });
     const hits = el("path", {
       "data-maya": "hit",
       "data-key": "v",
       ...d,
       fill: "transparent",
-      d: ring(ri, R, 0, 1, t / 2),
+      d: full(),
     });
     // Value centred in the dial; it counts up as a keyed text mark.
-    const fs = Math.max(12, Math.min(ri * 0.55, 44, (ri * 1.5) / (f.length * 0.62)));
+    const fs = Math.max(
+      12,
+      Math.min(
+        ri * 0.55,
+        44,
+        (ri * 1.5) / (f.length * 0.62),
+        px(spec.theme.heroSize), // heroSize caps the fit
+      ),
+    );
+    // On a ring the number sits on the centre (or just above it when a row of text follows).
+    const row = wasV !== null || (status && !(ri * ri - (fs + 22) ** 2 >= 1300));
+    const vy = wide ? (row ? cy - 2 : cy + fs * 0.35) : cy - 4;
     const out = el(
       "text",
       {
@@ -411,8 +624,9 @@ export const gauge: Mark = {
         ...d,
         "data-tone": null,
         "data-total": "",
+        "data-hero": true,
         x: r(cx),
-        y: r(cy - 4),
+        y: r(vy),
         "text-anchor": "middle",
         "font-size": r(fs),
         "font-weight": 650,
@@ -428,7 +642,7 @@ export const gauge: Mark = {
         {
           "data-tone": tone,
           x: r(cx),
-          y: r(cy - 4 - fs - 6),
+          y: r(vy - fs - 6),
           "text-anchor": "middle",
           "font-size": 12,
           "font-weight": 600,
@@ -441,7 +655,18 @@ export const gauge: Mark = {
         { "data-kpi": "of", x: r(x), y: r(cy + 14), "text-anchor": a, "font-size": 11 },
         esc(s),
       );
-    labels += end(cx - R, "start", fv(lo)) + end(cx + R, "end", fv(hi));
+    // A half dial prints its ends under the track's ends; a 270 one under its ends, further in; a ring has no ends.
+    if (SW === 180) labels += end(cx - R, "start", fv(lo)) + end(cx + R, "end", fv(hi));
+    else if (open) {
+      const [ex2, ey] = [((ri + R) / 2) * Math.SQRT1_2, cy + R * Math.SQRT1_2 + 14];
+      const e2 = (x: number, s: string) =>
+        el(
+          "text",
+          { "data-kpi": "of", x: r(x), y: r(ey), "text-anchor": "middle", "font-size": 11 },
+          esc(s),
+        );
+      labels += e2(cx - ex2, fv(lo)) + e2(cx + ex2, fv(hi));
+    }
     const tick = (v: number, r0: number, r1: number, a: Parameters<typeof el>[1]) => {
       const an = at(fr(v));
       return el("line", {
@@ -516,10 +741,13 @@ export const gauge: Mark = {
           );
     if ((status && !above) || chg) {
       const lead = status && !above ? status + (chg ? ", " : "") : "";
-      const part = (t: string, tn: string | null) => el("tspan", { "data-tone": tn }, esc(t));
+      // ponytail: inside a ring the row is cut to the chord at its height (5.8 px a character), not measured.
+      const fit = wide ? Math.floor((2 * Math.sqrt(Math.max(0, ri * ri - 400))) / 5.8) : 99;
+      const part = (t: string, tn: string | null) =>
+        el("tspan", { "data-tone": tn }, esc(clip(t, fit)));
       labels += el(
         "text",
-        { x: r(cx), y: r(cy + 32), "text-anchor": "middle", "font-size": 11 },
+        { x: r(cx), y: r(wide ? vy + 20 : cy + 32), "text-anchor": "middle", "font-size": 11 },
         (lead ? part(lead, tone) : "") +
           (chg ? part(chg, dv ? (dv > 0 === (g?.better !== "lower") ? "good" : "bad") : null) : ""),
       );

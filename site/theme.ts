@@ -45,7 +45,7 @@ try {
 
 /** The spec with the picked theme under any theme it sets itself. */
 export const themed = (spec: ChartSpec): ChartSpec =>
-  chartTheme ? { ...spec, theme: { ...themes[chartTheme], ...spec.theme } } : spec;
+  chartTheme ? { ...spec, theme: [chartTheme, (spec.theme ?? {}) as Theme] } : spec;
 
 // The library's own first four series colours, for the Default swatch.
 const own = ["oklch(.6 .17 255)", "oklch(.66 .16 50)", "oklch(.62 .15 160)", "oklch(.66 .17 330)"];

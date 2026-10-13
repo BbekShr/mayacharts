@@ -10,21 +10,30 @@ import { BUSY, decode as dec } from "./drill.ts";
 import { listen } from "./listen.ts";
 
 export type SelectEvent =
-  { type: "toggle"; sel: Sel; multi: boolean } | { type: "clear" } | SpecEvent;
+  | { type: "toggle"; sel: Sel; multi: boolean; peer?: string | null | undefined }
+  | { type: "clear" }
+  | SpecEvent;
 
 const FIELDS = ["x", "series", "name"] as const;
 // String compare: a numeric selection (x: 2024) matches the attribute-derived "2024".
 const same = (a: Sel, b: Sel) => FIELDS.every((f) => String(a[f]) === String(b[f]));
 
+// select { peers } keeps view.peers beside the selection; both go together.
+const bare = (s: State, selected: State["selected"]): State => {
+  if (!("peers" in s.view)) return { ...s, selected };
+  const { peers: _, ...view } = s.view;
+  return { ...s, selected, view };
+};
+
 export function reduce(s: State, e: SelectEvent): State {
-  if (e.type === "clear") return s.selected.length ? { ...s, selected: [] } : s;
+  if (e.type === "clear") return s.selected.length || "peers" in s.view ? bare(s, []) : s;
   if (e.type === "spec") {
     const p = e.prev;
     if (!p || !s.selected.length) return s;
     const n = e.next;
     const moved =
       p.type !== n.type || p.x !== n.x || JSON.stringify(p.path) !== JSON.stringify(n.path);
-    return moved ? { ...s, selected: [] } : s;
+    return moved ? bare(s, []) : s;
   }
   if (e.type !== "toggle") return s;
   const had = s.selected.some((q) => same(q, e.sel));
@@ -35,7 +44,8 @@ export function reduce(s: State, e: SelectEvent): State {
     : had && s.selected.length === 1
       ? []
       : [e.sel];
-  return { ...s, selected };
+  const n = bare(s, selected);
+  return selected.length && e.peer != null ? { ...n, view: { ...n.view, peers: e.peer } } : n;
 }
 
 /** Raw-value Sel of a mark, decoded from its data-key (`S~C`, scatter `S~name`, `h~…`). */
@@ -65,7 +75,12 @@ export function mount(host: Host): Handlers {
   const pick = (sel: Sel, target: Element | null) => {
     const spec = host.spec();
     if (!spec?.select) return;
-    const next = reduce(host.state(), { type: "toggle", sel, multi: spec.select === "multi" });
+    const next = reduce(host.state(), {
+      type: "toggle",
+      sel,
+      multi: spec.select === "multi",
+      peer: typeof spec.select === "object" ? target?.getAttribute("data-peer") : null,
+    });
     const y = target?.getAttribute("data-y") ?? "";
     host.commit(next, target ? { ...sel, value: y !== "" && !isNaN(+y) ? +y : y } : null);
     const n = next.selected.length;
@@ -79,8 +94,9 @@ export function mount(host: Host): Handlers {
     const spec = host.spec();
     if (!spec?.select) return;
     const el = e.target as Element;
+    const split = spec.drill || root.querySelector("svg[data-expand]");
     // With drill, the second click of a double click is the drill: the pair leaves the selection as it was.
-    if (spec.drill && (e as MouseEvent).detail === 2 && host.mark(e)) {
+    if (split && (e as MouseEvent).detail === 2 && host.mark(e)) {
       if (later) later = undefined;
       else if (host.state().selected !== before) host.commit({ ...host.state(), selected: before });
       return;
@@ -95,7 +111,7 @@ export function mount(host: Host): Handlers {
     }
     const m = host.mark(e);
     const sel = m && selOf(m, type());
-    if (m && sel && spec.drill && (e as MouseEvent).detail === 1) {
+    if (m && sel && split && (e as MouseEvent).detail === 1) {
       const f: () => unknown = (later = () => later === f && ((later = undefined), pick(sel, m)));
       setTimeout(f, 250);
     } else if (m && sel) pick(sel, m);
@@ -108,6 +124,7 @@ export function mount(host: Host): Handlers {
     host.announce(t(host.spec() ?? {}, "selectionCleared"));
     return true;
   };
+  let dimmed = false;
   return {
     escape: clear,
     enter(mark) {
@@ -119,11 +136,24 @@ export function mount(host: Host): Handlers {
     painted() {
       const sel = host.state().selected;
       // No selection: only marks still flagged need a visit (not every mark on every paint).
+      const live = new Set<string | null>();
       for (const m of root.querySelectorAll(
         sel.length ? "[data-maya=mark][data-key]" : "[data-selected]",
       ))
-        if (sel.some((q) => matches(q, m, type()))) m.setAttribute("data-selected", "");
-        else m.removeAttribute("data-selected");
+        if (sel.some((q) => matches(q, m, type()))) {
+          m.setAttribute("data-selected", "");
+          live.add(m.getAttribute("data-s"));
+        } else m.removeAttribute("data-selected");
+      // Lines and areas are not marks (ridges, series paths): the other series step back with --d.
+      if (sel.length || dimmed)
+        for (const l of root.querySelectorAll("[data-maya=line],[data-maya=area]"))
+          (l as SVGElement).style.setProperty(
+            "--d",
+            sel.length && l.hasAttribute("data-s") && !live.has(l.getAttribute("data-s"))
+              ? ".3"
+              : "",
+          );
+      dimmed = !!sel.length;
     },
     off: (() => {
       const a = listen(root, ["click", onClick]);

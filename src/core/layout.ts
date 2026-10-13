@@ -183,9 +183,11 @@ export function frame(
     edge ? (tw(edge.labels[0] ?? "") * k) / 2 + 2 : 0,
   );
   const bottom = (spec.xAxis && bx ? 24 : 8) + (xTitle ? 18 : 0);
+  // An annotation above a point at the plot top needs a label row of headroom (#91.8).
+  const top = 10 + ((spec.annotate.length || spec.notes.length) && !spec.horizontal ? 14 : 0);
   const plot = {
     x: left,
-    y: 10,
+    y: top,
     // Room for half of the last bottom tick label, which is centred on the plot's right edge.
     w: Math.max(
       1,
@@ -195,18 +197,20 @@ export function frame(
           ? (spec.yAxis ? maxW(rt.labels) + 4 : 8) + (rTitle ? 18 : 0)
           : Math.max(12, size.gutter ?? 0, edge ? (tw(edge.labels.at(-1) ?? "") * k) / 2 + 2 : 0)),
     ),
-    h: Math.max(1, H - 10 - bottom),
+    h: Math.max(1, H - top - bottom),
   };
+  // Heatmap bands touch: the mark leaves its own 1 to 2 px gap between cells (M4), not 20% padding.
+  const pad = spec.type === "heatmap" ? ([0, 0] as const) : ([0.2, 0.1] as const);
   const x: Scale | null = bx
     ? bx.kind === "band"
-      ? bandScale(bx.domain, [plot.x, plot.x + plot.w])
+      ? bandScale(bx.domain, [plot.x, plot.x + plot.w], ...pad)
       : bx.kind === "time"
         ? timeScale(bx.domain, bx.t, [plot.x, plot.x + plot.w])
         : linearScale(bt!.domain, [plot.x, plot.x + plot.w], bt!.log)
     : null;
   const y: Scale | null = ly
     ? ly.kind === "band"
-      ? bandScale(ly.domain, [plot.y, plot.y + plot.h])
+      ? bandScale(ly.domain, [plot.y, plot.y + plot.h], ...pad)
       : linearScale(lt!.domain, [plot.y + plot.h, plot.y], lt!.log)
     : null;
 
@@ -230,20 +234,24 @@ export function frame(
 
   let ay = "";
   if (spec.yAxis && ly) {
-    if (lt)
+    if (lt) {
+      let last = Infinity; // the same for an off-step yDomain end within a label's height
       lt.values.forEach((v, i) => {
+        const py = (y as { of(v: number): number }).of(v);
+        if (Math.abs(last - py) < 12) return;
+        last = py;
         ay += el(
           "text",
           {
             x: r(plot.x - 6),
-            y: r((y as { of(v: number): number }).of(v)),
+            y: r(py),
             "text-anchor": "end",
             "dominant-baseline": "middle",
           },
           esc(lt.labels[i]!),
         );
       });
-    else {
+    } else {
       const b = y as { at(i: number): number; bandwidth: number };
       const every = Math.max(1, Math.ceil(14 / (plot.h / Math.max(1, ly.domain.length))));
       lFull.forEach((c, i) => {
@@ -337,21 +345,29 @@ export function frame(
         1,
         Math.ceil(maxW(bt.labels) / (plot.w / Math.max(1, bt.values.length - 1))),
       );
+      // An off-step domain end (xDomain, or yDomain when horizontal) closer than a label to the
+      // tick before it is not labelled (#92.2).
+      let right = -Infinity;
       bt.values.forEach((v, i) => {
-        if (i % every) return;
-        ax += el(
-          "text",
-          { x: r((x as { of(v: number): number }).of(v)), y: ty, "text-anchor": "middle" },
-          esc(bt.labels[i]!),
-        );
+        const px = (x as { of(v: number): number }).of(v);
+        const half = w(bt.labels[i]!) / 2 - 4;
+        if (i % every || px - half < right) return;
+        right = px + half;
+        ax += el("text", { x: r(px), y: ty, "text-anchor": "middle" }, esc(bt.labels[i]!));
       });
     } else {
       const b = x as { at(i: number): number; bandwidth: number };
-      // Up to 8 categories are cut to their slot instead of thinned, unless a cut would keep fewer than
-      // 3 characters (a stub like "Al…" names nothing; thin and keep labels whole).
+      // Up to 8 categories, or any number with slots of 60 px or more (#92.3), are cut to their slot
+      // instead of thinned, unless a cut would keep fewer than 3 characters (a stub like "Al…" names
+      // nothing; thin and keep labels whole).
       const slot = plot.w / bLab.length - 8;
       // 3 characters and the ellipsis need about 27 px.
-      const few = bLab.length <= 8 && (slot >= 27 || maxW(bLab) - 8 <= slot);
+      // Labels a cut would make identical ("20…" x 8) are thinned and kept longer instead.
+      const cut = bLab.map((c) => clip(c, slot)).filter((t, i) => t !== bLab[i]);
+      const few =
+        (bLab.length <= 8 || slot >= 60) &&
+        (slot >= 27 || maxW(bLab) - 8 <= slot) &&
+        new Set(cut).size === cut.length;
       const every = few ? 1 : Math.max(1, Math.ceil(maxW(bLab) / (plot.w / bLab.length)));
       bLab.forEach((c, i) => {
         if (i % every) return;

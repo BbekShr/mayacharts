@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agg, shape, thin } from "../src/core/shape.ts";
+import { agg, colorVals, shape, thin } from "../src/core/shape.ts";
 import { render } from "../src/core/render.ts";
 import { OTHER } from "../src/core/svg.ts";
 import { resolve } from "../src/core/validate.ts";
@@ -348,5 +348,50 @@ describe("kpi with a y array", () => {
     expect(s.reduced![1]).toBe(5000);
     expect(s.categories.slice(-2)).toEqual(["c4998", "c4999"]);
     expect(s.cells.filter((c) => c.si === 1).length).toBe(s.categories.length);
+  });
+});
+
+describe("M2 shape contracts (#86, #87)", () => {
+  it('stack "stream": layers stay contiguous on a wiggle baseline centred at the first category', () => {
+    const data = ["a", "b", "c"].flatMap((m, i) =>
+      ["A", "B"].map((s, j) => ({ m, s, v: (i + 1) * (j + 1) })),
+    );
+    const sh = shape(sp(data, { type: "area", stack: "stream" }));
+    const at = (ci: number) => sh.cells.filter((c) => c.ci === ci);
+    // First category: total 3, centred on 0.
+    expect(at(0)[0]!.y0).toBeCloseTo(-1.5);
+    for (const ci of [0, 1, 2]) {
+      const [p, q] = at(ci);
+      expect(q!.y0).toBeCloseTo(p!.y1);
+      expect(q!.y1 - p!.y0).toBeCloseTo((ci + 1) * 3);
+    }
+    expect(at(1)[0]!.value).toBe(2);
+  });
+
+  it('sort "change": to minus from, largest gain first', () => {
+    const data = [
+      { m: "a", s: "from", v: 10 },
+      { m: "a", s: "to", v: 11 },
+      { m: "b", s: "from", v: 1 },
+      { m: "b", s: "to", v: 9 },
+      { m: "c", s: "from", v: 50 },
+      { m: "c", s: "to", v: 40 },
+    ];
+    expect(shape(sp(data, { type: "dumbbell", sort: "change" })).categories).toEqual([
+      "b",
+      "a",
+      "c",
+    ]);
+  });
+
+  it("tooltip ratio fields combine as sum(num) / sum(den)", () => {
+    const s = sp(
+      [
+        { m: "a", s: "x", v: 1, sales: 10, units: 2 },
+        { m: "a", s: "x", v: 1, sales: 30, units: 2 },
+      ],
+      { tooltip: { fields: [{ field: "price", ratio: ["sales", "units"] }] } },
+    );
+    expect(colorVals(s, "price")("a", "x")).toBe(10);
   });
 });

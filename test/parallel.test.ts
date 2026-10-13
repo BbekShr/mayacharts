@@ -112,3 +112,49 @@ describe("parallel axes follow the data extent", () => {
     expect(ticks).toContain("94");
   });
 });
+
+describe("parallel brush", () => {
+  const b: ChartSpec = { ...spec, brush: true };
+  const lineTags = (s: string) => tags(s, 'path data-maya="line"');
+  it("lines outside every range get data-off, on the path and its dots", () => {
+    // Sales are summed per region: 30, 31, 32, 33.
+    const s = renderParts(b, { view: { brush: [["sales", 0, 100]] } }).svg;
+    expect(s).not.toContain("data-off");
+    const tight = renderParts(b, { view: { brush: [["sales", 30.5, 31.5]] } }).svg;
+    expect(lineTags(tight).filter((t) => t.includes("data-off"))).toHaveLength(3);
+    expect(
+      tags(tight, 'circle data-maya="mark"').filter((t) => t.includes("data-off")).length,
+    ).toBe(9);
+  });
+  it("ranges combine with AND and draw as data-range rects in the cross group", () => {
+    const s = renderParts(b, {
+      view: {
+        brush: [
+          ["sales", 29.5, 31.5],
+          ["units", 0, 200],
+        ],
+      },
+    });
+    expect(lineTags(s.svg).filter((t) => t.includes("data-off"))).toHaveLength(3);
+    const cross = s.svg.match(/<g data-maya="cross">(.*?)<\/g>/s)![1]!;
+    expect(cross.match(/<rect data-range/g)).toHaveLength(2);
+    expect(cross).toContain('data-field="sales"');
+  });
+  it("nothing is faded or drawn without a range, or without spec.brush", () => {
+    expect(lineTags(render(b)).some((t) => t.includes("data-off"))).toBe(false);
+    expect(render(spec, { view: { brush: [["sales", 1, 2]] } })).not.toContain("<rect data-range");
+  });
+  it("an axis strip per measure with spec.brush, none without", () => {
+    expect(tags(render(b), 'rect data-maya="axis"')).toHaveLength(3);
+    expect(render(spec)).not.toContain('data-maya="axis"');
+  });
+});
+
+describe("brushed-out end labels (M2 M13)", () => {
+  it("fade with their line", () => {
+    const s = render({ ...spec, brush: true }, { view: { brush: [["sales", 15, 30]] } });
+    const off = tags(s, 'text[^>]*data-key="l~[^>]*').filter((t) => t.includes("data-off"));
+    expect(off.length).toBeGreaterThan(0);
+    expect(tags(render(spec), "text[^>]*data-off")).toHaveLength(0);
+  });
+});

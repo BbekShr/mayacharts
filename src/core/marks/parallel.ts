@@ -42,6 +42,9 @@ export const parallel: Mark = {
     const at = (i: number) => r(ms.length < 2 ? x0 : x0 + ((x1 - x0) * i) / (ms.length - 1));
     let grid = "";
     let labels = "";
+    // Brush: a strip per axis (the element drags a range on it) and the active ranges.
+    let strips = "";
+    let ranges = "";
     const scales = ms.map((m, i) => {
       const all = lines.map((l) => l.vals[i]).filter((v): v is number => v !== null);
       // ponytail: each axis runs over its own data extent (not anchored at zero); no per-axis domain option.
@@ -67,6 +70,32 @@ export const parallel: Mark = {
           esc(ctx.fmt(m, v, t.step)),
         );
       }
+      if (spec.brush)
+        strips += el("rect", {
+          "data-maya": "axis",
+          "data-field": m,
+          "data-yd": `${lo} ${hi}`,
+          x: r(x - 8),
+          y: r(y0),
+          width: 16,
+          height: r(y1 - y0),
+          fill: "transparent",
+        });
+      const rg = spec.brush?.find((b) => b[0] === m);
+      if (rg) {
+        const [a, b] = [
+          of(Math.min(hi, Math.max(lo, rg[2]))),
+          of(Math.min(hi, Math.max(lo, rg[1]))),
+        ];
+        ranges += el("rect", {
+          "data-range": true,
+          "data-field": m,
+          x: r(x - 5),
+          y: a,
+          width: 10,
+          height: r(b - a),
+        });
+      }
       labels += el(
         "text",
         {
@@ -84,12 +113,20 @@ export const parallel: Mark = {
     let dots = "";
     let paths = "";
     let hits = "";
-    const ends: { y: number; ey: number; x: string; si: number; k: string }[] = [];
+    const ends: { y: number; ey: number; x: string; si: number; k: string; off: true | null }[] =
+      [];
     for (const { cat, ci, vals, si } of lines) {
       const x = ctx.fmt(spec.x, cat);
       let d = "";
       let gap = true;
       let end = [0, 0];
+      // Outside any brushed range (a gap on a brushed axis is outside too): faded by the theme.
+      const off = !!spec.brush?.some(([f, lo, hi]) => {
+        const v = vals[ms.indexOf(f)];
+        return v === undefined || v === null || v < lo || v > hi;
+      })
+        ? true
+        : null;
       vals.forEach((v, i) => {
         if (v === null) {
           gap = true;
@@ -109,6 +146,7 @@ export const parallel: Mark = {
           "data-y": v,
           "data-f": ctx.fmt(ms[i]!, v),
           "data-neg": v < 0,
+          "data-off": off,
           r: 3.5,
           cx,
           cy,
@@ -116,13 +154,15 @@ export const parallel: Mark = {
       });
       if (!d) continue;
       // End labels are repelled below, never dropped; a line that stops early has none.
-      if (vals.at(-1) !== null) ends.push({ y: end[1]!, ey: end[1]!, x, si, k: key("l", cat) });
+      if (vals.at(-1) !== null)
+        ends.push({ y: end[1]!, ey: end[1]!, x, si, k: key("l", cat), off });
       paths += el("path", {
         "data-maya": "line",
         "data-key": key("l", cat),
         "data-c": ci,
         "data-s": si % 8,
         pathLength: 1,
+        "data-off": off,
         d,
       });
       hits += el("path", {
@@ -155,6 +195,7 @@ export const parallel: Mark = {
             "text-anchor": "start",
             "dominant-baseline": "middle",
             "data-key": e.k,
+            "data-off": e.off, // fades with its line
           },
           esc(e.x),
         );
@@ -163,7 +204,8 @@ export const parallel: Mark = {
     // The hit paths share their stroke: set once on a group instead of on every row.
     return {
       marks: dots + paths,
-      hits: `<g fill="none" stroke="transparent" stroke-width="16" stroke-linejoin="round">${hits}</g>`,
+      hits: `<g fill="none" stroke="transparent" stroke-width="16" stroke-linejoin="round">${hits}</g>${strips}`,
+      cross: ranges,
       grid,
       labels,
     };

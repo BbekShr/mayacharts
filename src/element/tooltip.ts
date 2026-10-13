@@ -279,6 +279,9 @@ export function tooltip(
       s = spec();
     if (!v || v == "zero") return "";
     if (typeof s?.colorBy !== "object") return str(s ?? {}, v === "good" ? "positive" : "negative");
+    // The kpi and gauge status words (text.onTrack, atRisk, offTrack), so renaming them renames both.
+    if (s.type == "kpi" || s.type == "gauge")
+      return str(s, ({ good: "onTrack", warn: "atRisk" } as const)[v as "good"] ?? "offTrack");
     // Same words as core's toneWord: warn is "near", lower-is-better swaps above/below. A multi-measure kpi row names its measure in data-series.
     const g = resolve(s, (host as { view?: View }).view).goals,
       lower = (g.get(a(k, "data-series")) ?? [...g.values()][0])?.better === "lower";
@@ -321,7 +324,10 @@ export function tooltip(
             : y
           : "";
     // Stacked: rows top-down like the stack, then the total.
-    const stk = sp?.stack && /^(bar|area)$/.test(sp.type) && g.length > 1;
+    const stk =
+      m.closest("svg")?.hasAttribute("data-stack") &&
+      /^(bar|area)$/.test(sp?.type ?? "") &&
+      g.length > 1; // data-stack is the active mode; spec.stack may be a modes array
     const all = stk ? [...g].reverse() : g;
     // ponytail: 12 rows at most (a tooltip must fit the viewport), from 6 before the hovered row; "+N" counts the rest.
     const rows = all.slice(Math.max(0, all.indexOf(m) - 6)).slice(0, 12);
@@ -334,13 +340,26 @@ export function tooltip(
         const f = a(k, "data-f");
         const tab = f.includes("\t");
         if (s) {
-          if (k.hasAttribute("data-s")) row.append(h("i", "", { "data-s": a(k, "data-s") }));
+          if (k.hasAttribute("data-s"))
+            row.append(
+              h("i", "", {
+                "data-s": a(k, "data-s"),
+                ...(k.hasAttribute("data-lt") && { "data-lt": a(k, "data-lt") }),
+              }),
+            );
           row.append(h("span", s));
         } else if (label && !tab) row.append(h("span", label));
         if (!tab) row.append(h("span", f, { "data-v": "" }));
         const tn = tone(k);
         if (tn) row.append(h("span", tn));
-        const more = [tab ? f : "", a(k, "data-more")].filter(Boolean).flatMap((t) =>
+        // A field already shown (the y title, a scatter's own lines) is not listed again; was is a note line.
+        const own = new Set(tab ? f.split("\n").map((p) => p.split("\t")[0]) : [label]);
+        const extra = a(k, "data-more")
+          .split("\n")
+          .filter((p) => !own.has(p.split("\t")[0]) || p[0] === "\t")
+          .join("\n");
+        const was = a(k, "data-was");
+        const more = [tab ? f : "", extra, was && "\t" + was].filter(Boolean).flatMap((t) =>
           t.split("\n").map((p) => {
             // "label\tvalue[\tz]": z draws a bar either side of the average (constellation);
             // an empty label is a note line under the rows.

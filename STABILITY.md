@@ -12,12 +12,13 @@ The following are covered by semantic versioning:
 - CSS custom properties `--maya-*`
 - Data attributes: `data-maya` group names (grid, axis-y, axis-x, marks, labels, cross, hits, and `sort` on a table header with its `data-field`), `data-key`, `data-c` (category), `data-x` (x value), `data-f` (formatted value), `data-series`, `data-plot` (plot box "x y w h"), `data-t` (present on a time axis), `data-tone`, `data-q`, `data-y`, `data-other` (the limit roll-up), `data-depth` (breadcrumb button), `data-selected`
 - Signature chart attributes: `data-past` (the ghost bar over a bar with `was`), `data-was` (the bar's previous value, as tooltip text), `data-neg` (a negative value; on orbit, a reversed orbit), `data-v` on the orbit group that rotates (speed bucket 1 to 5), `data-trail` (orbit's static growth arc), `data-w` (a weave thread; `data-w="h"` is its halo)
-- `view.form` and the `forms` spec field (units)
-- Spec: chart types `boxplot`, `funnel`, `weave`, `units`, `orbit`, `constellation` and `gauge`, `stack: "percent"`, and `colorBy` thresholds `{ target, warn, better }`
+- `view.form` and the `forms` spec field (units); `view.xDrill`, `view.expanded`, `view.page` and `view.filter`
+- Interaction hooks on the svg: `data-drill` (empty, or `"series"` when the drill gesture splits a series), `data-xdrill`, `data-scroll`, `data-expand`; `.maya-filter` (the table search box) and `.maya-crumbs[data-axis="x"]` (the heatmap column breadcrumb)
+- Spec: chart types `boxplot`, `funnel`, `weave`, `units`, `orbit`, `constellation` and `gauge` and `list`, `stack: "percent"`, and `colorBy` thresholds `{ target, warn, better }`
 - `mayacharts/host` (`maya.host` in the global builds): the adapter function names and the spec they return
 - Class names: `.maya-*` available for host styling
-- Exported functions: `render`, `renderShell`, `renderParts`, `validateSpec`
-- `mayacharts/themes`: the `themes` object and its theme names (token values may be retuned in any minor version)
+- Exported functions: `render`, `renderShell`, `renderParts`, `validateSpec`, `registerTheme`
+- `mayacharts/themes`: the `themes` object and its theme names, registered on import and as `maya.themes` in `maya.global.js` (token values may be retuned in any minor version)
 - Data identity: the row pass is cached per `spec.data` array, so a host that edits a middle row in place must pass a new array to see the change; a different length, first row or last row is noticed. `Parts.warnings` lists what the chart did on its own (the bar roll-up into Other)
 
 ## Not public

@@ -4,7 +4,8 @@
  *                                     { type: "spec", prev, next } (persistence rules)
  *   mount(host) => Handlers           DOM wiring on host.root; calls host.commit(next)
  * Markup: Parts.controls, a `.maya-ctl` radiogroup of [role=radio][aria-checked] buttons.
- * Persistence: measure resets when spec.y changes.
+ * Persistence: measure resets when spec.y changes, stack when spec.stack does. The form and stack
+ * groups (data-maya) are the same radiogroup writing view.form / view.stack.
  */
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
 import { listen } from "./listen.ts";
@@ -12,24 +13,26 @@ import { t } from "../core/strings.ts";
 
 /** `count` (number of measures) bounds the index; without it only the lower bound applies. */
 export type MeasureEvent =
-  { type: "measure" | "pick" | "form"; index: number; count?: number | undefined } | SpecEvent;
+  | { type: "measure" | "pick" | "form" | "stack"; index: number; count?: number | undefined }
+  | SpecEvent;
 
 const RADIO = ".maya-ctl [role=radio]";
-const FORM = "[data-maya=form]"; // units' form control: the same radiogroup, writes view.form
+type Kind = "form" | "stack" | "measure";
 
 export const reduce = (s: State, e: MeasureEvent): State => {
   if (e.type === "spec") {
     if (!e.prev) return s;
     const y = e.next.y;
-    const same = JSON.stringify(y) === JSON.stringify(e.prev.y);
-    if (Array.isArray(y) && same) return s;
-    if (s.view.measure === undefined) return s;
-    const { measure: _drop, ...view } = s.view;
-    return { ...s, view };
+    const { measure, stack, ...view } = s.view;
+    const keep = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+    const v: typeof s.view = { ...view };
+    if (measure !== undefined && Array.isArray(y) && keep(y, e.prev.y)) v.measure = measure;
+    if (stack !== undefined && keep(e.next.stack, e.prev.stack)) v.stack = stack;
+    return Object.keys(v).length === Object.keys(s.view).length ? s : { ...s, view: v };
   }
   const max = e.count === undefined ? Infinity : e.count - 1;
   const index = Math.min(Math.max(0, Math.trunc(e.index) || 0), Math.max(0, max));
-  const k = e.type === "form" ? "form" : "measure";
+  const k = e.type === "form" || e.type === "stack" ? e.type : "measure";
   return s.view[k] === index ? s : { ...s, view: { ...s.view, [k]: index } };
 };
 
@@ -38,23 +41,26 @@ export const mount = (host: Host): Handlers => {
   const radios = (g: Element | null | undefined) => [
     ...(g?.querySelectorAll<HTMLElement>("[role=radio]") ?? []),
   ];
-  const kind = (g: Element) => (g.matches(FORM) ? "form" : "measure");
-  let kbd: "form" | "measure" | undefined; // the last change came from the keyboard: keep focus on that group's active radio
+  const kind = (g: Element): Kind => {
+    const d = g.getAttribute("data-maya");
+    return d === "form" || d === "stack" ? d : "measure";
+  };
+  let kbd: Kind | undefined; // the last change came from the keyboard: keep focus on that group's active radio
 
   const pick = (g: HTMLElement, index: number): void => {
-    const form = kind(g) === "form";
+    const k = kind(g);
     const spec = host.spec();
     const ys = spec && Array.isArray(spec.y) ? (spec.y as string[]) : [];
     const s = host.state();
     const next = reduce(s, {
-      type: kind(g),
+      type: k,
       index,
-      count: form ? radios(g).length : ys.length || undefined,
+      count: k === "measure" ? ys.length || undefined : radios(g).length,
     });
     if (next === s) return;
     host.commit(next);
     const m = next.view.measure ?? 0;
-    const name = form ? (radios(g)[index]?.textContent ?? "") : (ys[m] ?? String(m));
+    const name = k === "measure" ? (ys[m] ?? String(m)) : (radios(g)[index]?.textContent ?? "");
     host.announce(
       t(
         spec ?? {},

@@ -39,7 +39,8 @@ describe("heatmap", () => {
     const labels = (w: number) =>
       render(wide, { width: w, height: 200 }).match(/<text[^>]*data-in[^>]*>([^<]*)</g) ?? [];
     expect(labels(520).some((t) => /\d\.\d+M</.test(t))).toBe(true);
-    const tight = labels(200);
+    // Heatmap bands have no padding (M4), so the fallback starts below 200 px.
+    const tight = labels(170);
     expect(tight.length).toBeGreaterThan(0);
     expect(tight.every((t) => !/\d\.\d+M</.test(t))).toBe(true);
   });
@@ -71,23 +72,20 @@ describe("heatmap", () => {
     };
     expect(marks(render(tiny, { width: 200, height: 100 }))).toMatchInlineSnapshot(`
       [
-        "<rect data-maya="mark" data-hm="" data-key="r1~a" data-c="0" data-x="a" data-series="r1" data-y="1" data-f="1" data-q="0" x="41.18" y="17.6" width="60.24" height="50.8"/>",
-        "<rect data-maya="mark" data-hm="" data-key="r1~b" data-c="1" data-x="b" data-series="r1" data-y="3" data-f="3" data-q="9" x="118.98" y="17.6" width="60.24" height="50.8"/>",
+        "<rect data-maya="mark" data-hm="" data-key="r1~a" data-c="0" data-x="a" data-series="r1" data-y="1" data-f="1" data-q="0" x="33.4" y="11" width="75.8" height="64"/>",
+        "<rect data-maya="mark" data-hm="" data-key="r1~b" data-c="1" data-x="b" data-series="r1" data-y="3" data-f="3" data-q="9" x="111.2" y="11" width="75.8" height="64"/>",
       ]
     `);
   });
-  it("inks labels by ramp step: dark ink on steps 7 to 9, the tint ink on the paler ones", () => {
+  it("labels repeat their cell's ramp step so the ink follows the fill (data-ink a)", () => {
     const svg = render(spec, { width: 800, height: 400 });
     const t = svg.match(/<text [^>]*data-in[^>]*>/g) ?? [];
-    const q = marks(svg).map((m) => Number(/data-q="(\d)"/.exec(m)![1]));
+    const q = marks(svg).map((m) => /data-q="(\d)"/.exec(m)![1]);
     expect(t.length).toBe(11);
-    expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(q.filter((n) => n > 7).length);
-    expect(t.filter((x) => x.includes('data-ink="t"'))).toHaveLength(q.filter((n) => n < 8).length);
-    expect(t.filter((x) => x.includes("data-dark") && x.includes("data-q"))).toHaveLength(
-      q.filter((n) => n > 7).length,
-    );
+    expect(t.every((x) => x.includes('data-ink="a"'))).toBe(true);
+    expect(t.map((x) => /data-q="(\d)"/.exec(x)![1]).sort()).toEqual([...q].sort());
   });
-  it("small cells are squares, large ones fill the band; the legend names the field", () => {
+  it("cells fill their band (not forced square); a cell under 8 px drops its 1 px outline", () => {
     const wh = (svg: string) => {
       const t = marks(svg)[0]!;
       return [/ width="([\d.]+)"/, / height="([\d.]+)"/].map((re) => Number(re.exec(t)![1]));
@@ -95,7 +93,58 @@ describe("heatmap", () => {
     const [w, h] = wh(render(spec, { width: 400, height: 400 }));
     expect(w).not.toBe(h);
     const small = wh(render(spec, { width: 160, height: 400 }));
-    expect(small[0]).toBe(small[1]);
+    expect(small[0]).toBeLessThan(small[1]!);
     expect(renderParts(spec).legend).toContain("<b>v</b>");
+    const tiny = render(spec, { width: 70, height: 400 });
+    expect(marks(tiny)[0]).toContain('stroke-width="0"');
+    expect(marks(render(spec, { width: 800, height: 400 }))[0]).not.toContain("stroke-width");
+  });
+});
+
+describe("heatmap encodings", () => {
+  const skew = (extra: object = {}): ChartSpec => ({
+    ...spec,
+    data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 100].map((v, i) => ({ x: `c${i}`, r: "r", v })),
+    ...extra,
+  });
+  const qs = (s: ChartSpec) => marks(render(s)).map((t) => +/data-q="(\d)"/.exec(t)![1]!);
+  it("colorScale rank spreads a skewed ramp over every step; linear crushes it", () => {
+    expect(new Set(qs(skew())).size).toBeLessThan(3);
+    expect(new Set(qs(skew({ colorScale: "rank" }))).size).toBe(10);
+  });
+  it("quantile uses five classes and the legend shows the breaks between five swatches", () => {
+    const s = renderParts(skew({ colorScale: "quantile" }));
+    expect(new Set(qs(skew({ colorScale: "quantile" })))).toEqual(new Set([0, 2, 5, 7, 9]));
+    expect(s.legend.match(/<i data-q="\d"><\/i>/g)).toHaveLength(5);
+    expect(s.legend.match(/<span>/g)).toHaveLength(6);
+  });
+  it("a diverging ramp centres rampMid on rampMidValue", () => {
+    const d = [-10, -5, 0, 5, 10].map((v, i) => ({ x: `c${i}`, r: "r", v }));
+    const q = qs({ ...spec, data: d, theme: { rampMid: "#eee" } });
+    expect(q[2]).toBeGreaterThanOrEqual(4);
+    expect(q[2]).toBeLessThanOrEqual(5);
+    expect(q[0]).toBe(0);
+    expect(q[4]).toBe(9);
+  });
+  it("theme cellGap sets the gap; cellRadius is CSS", () => {
+    const w = (g?: string) =>
+      +/width="([\d.]+)"/.exec(
+        marks(
+          render({ ...spec, ...(g ? { theme: { cellGap: g } } : {}) }, { width: 400, height: 240 }),
+        )[0]!,
+      )![1]!;
+    expect(w("0")).toBeGreaterThan(w());
+    expect(w("6")).toBeLessThan(w());
+  });
+  it("tooltip.fields and was add data-more and data-was to the cell and its hit", () => {
+    const d = data.map((r) => ({ ...r, u: r.v * 2, old: r.v + 1 }));
+    const svg = render(
+      { ...spec, data: d, tooltip: { fields: ["u"] }, was: "old" },
+      { width: 100, height: 60 },
+    );
+    const cell = marks(svg).find((t) => t.includes('data-key="r1~a"'))!;
+    expect(cell).toContain('data-was="was 1"');
+    expect(cell).toContain('data-more="u\t0"');
+    expect(svg).toMatch(/data-maya="hit"[^>]*data-was="was 1"/);
   });
 });

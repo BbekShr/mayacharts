@@ -6,21 +6,78 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
-Fixes #76.
+Fixes #76, #79, #81, #82, #83, #84, #86, #87, #88, #89, #90, #91, #92, #93.
 
 ### Added
+
+- New core type `list`, an insight list: numbered moves in data order, each with its headline value in its own format (`rowFormat` names a field holding a preset or template per row), a sentence under it (`body`) and evidence rows (`path: [headline, evidence]`) that open on click or Enter, drawn as bars on a scale local to the move with `bars: true`. Rows are not aggregated: a move's value is its own row's. `expand: "first" | "none" | "all"` picks what starts open and `view.expanded` holds the open move; `select` fires `maya-select` on a move. Fixes #79.
+- Drill on more types: `path` with `drill` on radial, waffle (with `tint`), hexmap (a drilled state draws its children as horizontal bars) and waterfall; chord takes three path levels and splits the clicked target into its children while the sources stay; a marimekko without `series` takes it from the next path level, so drilling a region makes its families the columns. Fixes #81.
+- `seriesPath` on bar, line and area: the drill gesture on a mark splits its series into the next level (`view.drill` holds the series values). Not with `path`. Fixes #81.
+- waterfall `start`: the opening total, drawn first at its own y. A drilled waterfall step is rebased: it opens at the running total before it and closes at the total after it (text keys `before` and `after`). Fixes #81, #92.
+- heatmap `xPath` drills the columns on their own from a column header (`view.xDrill`, a second breadcrumb named by text key `crumbsX`), and `totals: true` adds a Total row and column. Fixes #81.
+- table `expand`: a sub-chart spec without data that opens under a clicked row over that row's rows (`view.expanded`). line `drillTo`: a sub-chart that replaces the line for a drilled series, with `was: "previous"` comparing it with the series before it. Fixes #81.
+- table: `page` (a "Show n more" row, text key `showMore`, `view.page`), `scroll` (every row, scrolling in the tile under a held header), `filter` (a search box, text key `filter`, `view.filter`), `columns` (text fields as sortable, filterable columns), `bars` per measure (`"bar"`, `"diverging"` or `"none"`) and `cells` strips (one square per period, toned by sign, from flat rows). Fixes #84.
+- `view.xDrill`, `view.expanded`, `view.page` and `view.filter` in `el.view` and the `maya-view` detail; `maya-drill-leaf` carries `axis: "x"` for a heatmap column.
+
+- `toggle: true` on kpi and gauge with a `y` array shows one measure at a time behind the measure control (`view.measure`); a gauge takes a `y` array only with it. `yDomain` and `colorBy` can be keyed by y field on kpi and gauge (`yDomain: { Sales: [0, 26e6] }`), and a toggled kpi takes `aggregate` keyed by y field, so a Price ratio sits beside Sales and Units. Fixes #82.
+- `was` keyed by y field (`was: { Sales: "SalesLY", Units: "UnitsLY" }`) with a `y` array: the ghosts and comparisons follow the measure toggle, and a kpi with one tile per field compares each with its own. Fixes #82.
+- `stack` takes an array of modes, such as `[true, "percent"]`: a Layout control switches between them and `view.stack` holds the choice. Text keys `stacks`, `unstacked`, `stacked`, `percent` and `stream`. Fixes #82.
+- kpi: `compare` picks which change lines print (`["was"]` drops the one against the previous period), `frame` shows one scope at a time (YTD or All), and `select` works on the sparkline points. Fixes #82, #83.
+- kpi `numberMotion: "roll"` rolls the headline digit by digit like an odometer (element). Fixes #83.
+- kpi `back`: a second chart spec over the same rows. A Details button (text key `flip`) turns the card over; `view.face` is `"front"` or `"back"`, so `renderShell` can render either face. Fixes #83.
+- gauge `arc: 180 | 270 | 360` (360 is a closed ring) and `tooltip.fields` on gauge. Fixes #83.
+- `view.stack` and `view.face` in `el.view` and the `maya-view` detail.
+
+- `theme` takes a registered name or `[name, overrides]`. `registerTheme(name, tokens)` (`maya.registerTheme` in the global builds) defines a house theme once for every chart; importing `mayacharts/themes` registers its 18 names, and `maya.global.js` ships them as `maya.themes`. An unknown name throws `invalid-theme` listing the registered names. Fixes #88.
+- Theme tokens `rampLow`, `rampHigh`, `rampMid` and `rampMidValue` (a value ramp independent of `accent`; `rampMid` makes it diverging), `up`, `down` and `total` (direction colours, separate from the series slots), `neutral` (Other, unmapped names, folded slices), `subtitleSize`, `labelSize`, `legendSize`, `heroSize`, `heroWeight`, `emptySize`, `numeric` ("tabular" or "proportional"), `cellGap`, `cellRadius`, `labelInk`, `labelInkOnFill`, `lineEmphasis` and `ghost`. Fixes #88.
+- `tint: true`: children of a drilled `path` and weave threads under a group `colorBy` take evenly spaced tints of their parent's colour. Fixes #88.
+- Colour precedence is written down: a `colors` map key beats a `colorBy` tone, which beats theme `series1` to `series8`, which beat a `colors` array, which beats `accent`. Fixes #88.
+- `form: "line"` on radial draws a radar, one closed line per series, with `dash`. Fixes #86.
+- `stack: "stream"` on area draws a streamgraph (wiggle baseline, value axis and grid off by default). Fixes #86.
+- Weave takes a group `colorBy` (one colour per group from `colors`) and up to 20 threads with it. Fixes #86.
+- `colorScale: "linear" | "rank" | "quantile" | "log"` on heatmap and hexmap. Fixes #86.
+- `brush: true` on parallel: drag a range on an axis to keep the lines inside it; the ranges are `view.brush` and reported by `maya-view`. Fixes #86.
+- `emphasis: [series values]` on line draws those series heavier. Fixes #86.
+- Beeswarm takes `yScale: "log"`, `size`, `tooltip.fields`, `rules` and `select: { peers: field }` (the selected mark's peers light up with their average; `view.peers`). Fixes #87.
+- Heatmap takes `tooltip.fields` and `was` (field and `{ by }` forms). Fixes #87.
+- Dumbbell takes `zero: false` (the value axis fits the values at every drill level), `sort: "change"` and `tooltip.fields`. Fixes #87.
+- Ridgeline takes `select`. Fixes #87.
+- `rules: [{ y2, label }]` runs a rule across the right axis of a bar with `y2`. Fixes #87.
+- Tooltip fields take `{ field, ratio: [numerator, denominator] }`, shown as sum(numerator) / sum(denominator) wherever rows combine. Fixes #87.
+- Text keys `peerMean`, `brushed` and `brushCleared`.
 
 - `aggregate` keyed by y field with a `y` array that toggles the measure, such as `aggregate: { price: { ratio: ["sales", "units"] } }`; the active measure uses its rule and unlisted fields sum (#76).
 - A series selector in data tokens: `{max.y:2025}`, `{last.y:2025}`, `{first.x:2025}`, `{total:2025}`, `{mean:2025}` read only that series. Without one, max, min, first and last read one point and `{total}` sums every series, as documented (#76).
 - Data tokens on scatter: max and min by y, first and last by x, `.x` the x value or `name` (#76).
 - Text key `perX` ("{0} per {1}") for the value of a slope rule (#76).
+- Each `text` key now says which string it controls: on hover in TypeScript, under TEXT KEYS in llms.txt and in the Text keys table of the docs. Fixes #93.
 
 ### Fixed
+
+- heatmap `was: { by }` where `by` is the series (a calendar of years) compares each cell with the same x under the previous series value instead of drawing a row named "undefined".
+- `colorScale: "quantile"` collapses tied breaks: the legend shows one label per distinct break and the colour steps spread over the real class count, so the lowest value no longer paints at a high step. `colorScale: "rank"` exposes lowest, median and highest values for its legend.
+- A rule whose label already holds its value ("80%") prints it once instead of "80% 80%".
+- A log axis over less than two decades takes 1-2-5 ticks and a domain nice to them ($5 to $300 data spans 5 to 500, not 1 to 1,000).
+- Band labels that a cut would make identical ("20…" eight times) are thinned and kept longer.
+- The docs example for `theme: [name, overrides]` names a registered theme.
+- `was` with `series` on bar draws one ghost per grouped bar; the docs no longer say it is refused (#82).
 
 - Sankey under drill with a `colors` map keeps the map colours, and an unmapped root stays neutral, at every level (regression from 0.15.0) (#76).
 - With no rows, a title or subtitle holding a data token is dropped instead of printing the raw token; the empty state is unchanged (#76).
 - `annotate: []`, `dash: []` and any other empty array option are accepted as unset, also on types the option does not apply to (#76).
 - In an element under 200 px tall the title is one line with an ellipsis (full text on hover) and the subtitle is hidden (#76).
+- A `colors` map key beats the theme's `series1` to `series8` slot tokens, so a named series keeps its colour under a theme; slots colour only the series the map does not name. Fixes #89.
+- A `colors` map is not capped at 8 keys (series past 8 share slots); an array is capped at 8 distinct colours, not 8 entries. Fixes #89.
+- An option set to `null`, such as `colorBy: null`, is treated as unset instead of throwing (`type` and `data` still need values). Fixes #89.
+- A bar's value axis spans its `was` values, so a ghost above every bar is no longer clipped at the plot top. Fixes #90.
+- Rule labels join the label collision pass: each takes the first free spot along its line inside the plot (after value labels and annotations) or is dropped, so it no longer overprints an annotation or a category label. Fixes #91.
+- An annotation on a point at the plot top draws: the plot keeps a label row of headroom when `annotate` is set. Fixes #91.
+- `text.noData` wraps to the box and breaks at `\n` instead of being clipped on a narrow tile. Fixes #91.
+- A short value axis no longer doubles its domain (51.6M gave 0, 50M, 100M at 300 x 260; now 0 to 60M): a tick step that leaves over 40% of the axis empty loses to one that keeps the top tick near the data. Fixes #92.
+- An off-step `yDomain` or `xDomain` end tick is not labelled when its label would touch the previous one ("+4%+5%"). Fixes #92.
+- Category axes with slots of 60 px or more cut each label to its slot instead of thinning to every 2nd to 5th label. Fixes #92.
+- A waterfall total before any step opens at its own y (shape and the value axis now match the bar), so a bridge can start at last year's figure. Fixes #92.
+- `stack: false` on radial throws `option-unsupported` instead of being ignored (a radial always stacks). Fixes #93.
 - A scatter slope rule label shows its value as y per x ("Average price $38 per unit"), placed at an end or the middle of the line clear of the points; the description says the same (#76).
 
 ## 0.16.0 - 2026-10-12

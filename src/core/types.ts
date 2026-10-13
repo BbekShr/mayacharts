@@ -1,4 +1,4 @@
-import type { TextKey } from "./strings.ts";
+import type { TEXT, TextKey } from "./strings.ts";
 
 export type { TextKey };
 
@@ -18,6 +18,7 @@ export type ChartType =
   | "beeswarm"
   | "parallel"
   | "table"
+  | "list"
   | "treemap"
   | "sunburst"
   | "sankey"
@@ -54,6 +55,7 @@ export type Rule =
   | number
   | "mean"
   | { readonly y: number | "mean"; readonly label?: string }
+  | { readonly y2: number; readonly label?: string }
   | { readonly slope: number | "mean"; readonly intercept?: number; readonly label?: string }
   | { readonly x: string | number; readonly label?: string }
   | { readonly band: readonly [number, number]; readonly label?: string };
@@ -100,6 +102,27 @@ export type ThemeToken =
   | "titleSize"
   | "titleWeight"
   | "axisSize"
+  | "subtitleSize"
+  | "labelSize"
+  | "legendSize"
+  | "heroSize"
+  | "heroWeight"
+  | "emptySize"
+  | "numeric"
+  | "rampLow"
+  | "rampHigh"
+  | "rampMid"
+  | "rampMidValue"
+  | "up"
+  | "down"
+  | "total"
+  | "neutral"
+  | "cellGap"
+  | "cellRadius"
+  | "labelInk"
+  | "labelInkOnFill"
+  | "lineEmphasis"
+  | "ghost"
   | "series1"
   | "series2"
   | "series3"
@@ -108,6 +131,18 @@ export type ThemeToken =
   | "series6"
   | "series7"
   | "series8";
+
+/** Theme token values: CSS strings (allowlisted), except `rampMidValue` (a number) and `numeric` ("tabular" or "proportional"). */
+export type ThemeTokens = Readonly<
+  Partial<Record<Exclude<ThemeToken, "rampMidValue">, string>> & { rampMidValue?: number }
+>;
+
+/** spec.theme: a registered theme's name, `[name, overrides]`, or the tokens themselves. */
+export type ThemeSpec = string | readonly [name: string, overrides: ThemeTokens] | ThemeTokens;
+
+/** A spec.tooltip.fields item: a field, or a ratio shown under `field` (sum(num) / sum(den) wherever rows combine). */
+export type TipField<F extends string = string> =
+  F | { readonly field: string; readonly ratio: readonly [F, F] };
 
 /**
  * colorBy thresholds. `better` says which way is good (default "higher"); `warn` sits on the bad
@@ -119,6 +154,17 @@ export interface Goal {
   readonly better?: "higher" | "lower";
 }
 
+/** A table `cells` entry: one square per distinct `by` value holding `field`, toned by sign. */
+export interface StripCell<F extends string = string> {
+  readonly type: "strip";
+  readonly field: F;
+  readonly by: F;
+  /** Keep the last n `by` values (data order). */
+  readonly last?: number;
+  /** The only tone: "sign" (the default). */
+  readonly tone?: "sign";
+}
+
 /** Field names of row type `R` (autocompletes for typed rows; `string` for `Row`). */
 export type Field<R> = Extract<keyof R, string>;
 
@@ -126,6 +172,7 @@ export type Field<R> = Extract<keyof R, string>;
  * The whole public API surface. Plain JSON on purpose: it must stay serializable,
  * LLM-generatable, diffable and hashable. Never add function-valued options.
  * Rule: `x` is always the category and `y` always the value, whatever the orientation.
+ * An option set to `null` (other than `type` and `data`) is treated as unset, as JSON hosts write it.
  */
 export interface ChartSpec<R extends object = Row> {
   /** Ignored; lets editors and LLMs find the JSON schema.
@@ -141,9 +188,9 @@ export interface ChartSpec<R extends object = Row> {
    * @example aggregate: "mean" or aggregate: { ratio: ["sales", "units"] } or y: ["gap", "price"], aggregate: { price: { ratio: ["sales", "units"] } } */
   aggregate?:
     Aggregate | Ratio<Field<R>> | Readonly<Partial<Record<Field<R>, Aggregate | Ratio<Field<R>>>>>;
-  /** Order categories by total across all series (hidden ones too). Default: data order. bar line area heatmap dumbbell table radial waffle orbit.
-   * @example sort: "desc" */
-  sort?: "asc" | "desc";
+  /** Order categories by total across all series (hidden ones too). Default: data order. "change" (dumbbell only) orders by to minus from, largest gain first. bar line area heatmap dumbbell table radial waffle orbit.
+   * @example sort: "desc" or sort: "change" */
+  sort?: "asc" | "desc" | "change";
   /** Keep the top N categories by total; the rest roll up into a final "Other". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`. bar line area heatmap dumbbell table radial waffle orbit.
    * @example limit: 10 */
   limit?: number;
@@ -154,51 +201,110 @@ export interface ChartSpec<R extends object = Row> {
   /** How x is spaced. "auto": a time axis when every x is an ISO 8601 date ("2024-03" or longer) on line, area or vertical bar without sort or limit; else categories. "time" also accepts epoch ms numbers. Default "auto".
    * @example xType: "category" */
   xType?: "auto" | "category" | "time";
-  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`; kpi: one tile each; gauge: one field only).
+  /** Value field; an array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`; kpi: one tile each, or one at a time with `toggle`; gauge: only with `toggle`).
    * @example y: ["revenue", "units"] */
   y: Field<R> | readonly Field<R>[];
+  /** With a `y` array: one measure at a time behind the measure control (view.measure) instead of one tile each (kpi); a gauge takes a `y` array only with it. kpi gauge.
+   * @example toggle: true */
+  toggle?: boolean;
   /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required; constellation: colours the stars by group). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation.
    * @example series: "region" */
   series?: Field<R>;
-  /** Hierarchy fields, outer to inner. treemap sunburst sankey chord; bar line area dumbbell table marimekko with `drill` (replaces `x`); heatmap with `drill` (replaces `series`, the rows).
+  /** Hierarchy fields, outer to inner. treemap sunburst sankey chord (chord: 2 or 3 levels, a third splits the target arcs while the sources stay); bar line area dumbbell table radial waffle hexmap waterfall marimekko with `drill` (replaces `x`; hexmap draws a drilled level as bars; marimekko without `series`: the next level is the series); heatmap with `drill` (replaces `series`, the rows); list: [headline, evidence].
    * @example path: ["region", "state"] */
   path?: readonly Field<R>[];
+  /** Series hierarchy, outer to inner: the series is the current level, and the drill gesture on a mark splits its series into the next level (view.drill holds the series values). Not with `path` or `series`. bar line area.
+   * @example seriesPath: ["family", "itemType"] */
+  seriesPath?: readonly Field<R>[];
+  /** Column hierarchy, outer to inner: replaces `x` and drills on its own from a column header (view.xDrill), beside `path` on the rows. heatmap only.
+   * @example xPath: ["family", "itemType"] */
+  xPath?: readonly Field<R>[];
   /** Levels drawn at once below the current branch, each parent holding its children under a name strip; a click drills into the parent under the pointer. Default: 1 with `drill`, every level without. treemap only.
    * @example depth: 2 */
   depth?: number;
   /** Sunburst slices narrower than this many whole degrees fold into one "Other (n)" slice per ring (the largest sibling never folds). 0 folds nothing. Default: slices under 4 px across fold. sunburst only.
    * @example minAngle: 2 */
   minAngle?: number;
-  /** Bubble area field (sqrt scale). scatter constellation.
+  /** Bubble area field (sqrt scale). scatter beeswarm constellation.
    * @example size: "population" */
   size?: Field<R>;
   /** Point identity and tooltip title (units: one dot per row, keyed by it). scatter, beeswarm, boxplot (outliers and dots) and units.
    * @example name: "country" */
   name?: Field<R>;
-  /** x values drawn as running-total bars. waterfall only.
-   * @example totals: ["Q1", "FY"] */
-  totals?: readonly string[];
-  /** Stack series instead of grouping them; "percent" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0). bar and area only.
-   * @example stack: "percent" */
-  stack?: boolean | "percent";
+  /** x values drawn as running-total bars; one before any step opens at its own y (last year's figure). waterfall; heatmap: `true` adds a Total row and column (combined by `aggregate` over the visible rows).
+   * @example totals: ["Q1", "FY"] or totals: true */
+  totals?: readonly string[] | true;
+  /** The x value of the opening total: drawn first, at its own y (last year's figure). A drilled level opens at the running total before the drilled step and closes after it (text.before, text.after). waterfall only.
+   * @example start: "2025 YTD" */
+  start?: string;
+  /** Stack series instead of grouping them; "percent" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0); "stream" (area only) centres the stack on a wiggle baseline (a streamgraph: values 0 or more, value axis and grid off by default, the tooltip shows each value). bar and area only.
+   * An array of 2 or more distinct modes (false: grouped bars or overlaid areas) adds a control that switches between them, first one shown (view.stack indexes it).
+   * @example stack: "percent" or stack: "stream" or stack: [true, "percent"] */
+  stack?: boolean | "percent" | "stream" | readonly (boolean | "percent" | "stream")[];
   /** Categories on the left axis. bar and dumbbell.
    * @example horizontal: true */
   horizontal?: boolean;
-  /** Playback: one frame per distinct value (data order); the chart shows one frame at a time, the last by default, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and "1" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell; not with `drill` or `zoom`.
+  /** Playback: one frame per distinct value (data order); the chart shows one frame at a time, the last by default, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and "1" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell kpi (a scope such as YTD or All); not with `drill` or `zoom`.
    * @example frame: "year" */
   frame?: Field<R>;
   /** Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction.
    * @example y2: "units" */
   y2?: Field<R>;
-  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). bar kpi gauge; not with `stack` or a `y` array.
-   * @example was: "lastYear" or was: { by: "year" } */
+  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a "was" tooltip row and table column). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). With a `y` array, key it by y field (`{ sales: "salesLY" }`): the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have none; an object with a string `by` is the long form. With `series` (bar): one ghost per grouped bar. Heatmap calendar form: `{ by }` equal to `series` compares each cell with the same x under the previous series value (the year before), and the first series value has none. bar kpi gauge heatmap; not with `stack`.
+   * @example was: "lastYear" or was: { by: "year" } or was: { sales: "salesLY", units: "unitsLY" } */
   was?:
     | Field<R>
     | {
         readonly by: Field<R>;
         readonly current?: string | number;
         readonly previous?: string | number;
-      };
+      }
+    | Readonly<Partial<Record<Field<R>, Field<R>>>>;
+  /** Which change lines a kpi prints under the headline, in this order: "previous" (the previous category), "was" (spec.was), "target" (colorBy target; the bullet and status stay). `[]` prints none. Default all three. kpi only.
+   * @example compare: ["was"] */
+  compare?: readonly ("previous" | "was" | "target")[];
+  /** How a kpi headline moves to a new number (element only; off under reduced motion): "count" counts up, "roll" rolls each digit like an odometer. Default "count". kpi only.
+   * @example numberMotion: "roll" */
+  numberMotion?: "count" | "roll";
+  /** A second face: a chart spec over the kpi's rows (no `data` of its own, any type but kpi). A Details button turns the card over (view.face); Escape returns. kpi only.
+   * @example back: { type: "bar", x: "month", y: "sales", horizontal: true, sort: "desc", limit: 3 } */
+  back?: Omit<ChartSpec<R>, "data" | "back">;
+  /** Sweep of the gauge dial in degrees: 180 (a half dial), 270 or 360 (a closed ring). Default 180. gauge only.
+   * @example arc: 360 */
+  arc?: 180 | 270 | 360;
+  /** Radial form: "bars" (stacked radial bars) or "line" (radar: one closed line per series, angle = x, radius = y from zero; `dash` draws series dashed). Default "bars". radial only.
+   * @example form: "line" */
+  form?: "bars" | "line";
+  /** table: a sub-chart under a row (a spec without `data`, over that row's rows; without `x` or `path` it takes the table's x); a click or Enter opens it, one row at a time (view.expanded). list: which moves start open, "first" (default), "none" or "all". table list.
+   * @example expand: { type: "bar", x: "month", y: "sales", was: "lastYear" } or expand: "all" */
+  expand?: Omit<ChartSpec<R>, "data" | "expand"> | "first" | "none" | "all";
+  /** A sub-chart that replaces the line when a series is drilled (a spec without `data`, over that series' rows; without `x` it takes the line's x). `was: "previous"` compares with the previous series at the same x. view.drill holds the series; Back and Escape return. line only, with `series`.
+   * @example drillTo: { type: "bar", y: "monthly", was: "previous" } */
+  drillTo?: Omit<ChartSpec<R>, "data" | "drillTo">;
+  /** Rows shown at first; a "Show n more" row (text.showMore) adds n each time (view.page). The table grows and scrolls inside the tile. table only.
+   * @example page: 25 */
+  page?: number;
+  /** Draw every row (at most 1000) and scroll inside the tile, the header held at the top. table only.
+   * @example scroll: true */
+  scroll?: boolean;
+  /** A search box (text.filter) keeping rows whose x or `columns` value contains the text, ignoring case (view.filter). table only.
+   * @example filter: true */
+  filter?: boolean;
+  /** table: the bar in each measure cell, "bar" (default, magnitude), "diverging" (left or right of the cell centre, theme `up` and `down`) or "none". list: `true` draws the evidence as bars on a scale local to each move. table list.
+   * @example bars: { sales: "bar", vsType: "diverging", units: "none" } or bars: true */
+  bars?: Readonly<Partial<Record<Field<R>, "bar" | "diverging" | "none">>> | boolean;
+  /** Text fields shown as their own columns after the row label (each row's first value), sortable and matched by `filter`. table only.
+   * @example columns: ["itemType", "region"] */
+  columns?: readonly Field<R>[];
+  /** Extra columns keyed by title. "strip": one square per distinct `by` value (data order; the last `last` of them) holding `field` combined by `aggregate`, toned by sign. table only.
+   * @example cells: { Form: { type: "strip", field: "change", by: "month", last: 5 } } */
+  cells?: Readonly<Record<string, StripCell<Field<R>>>>;
+  /** Text field shown under each headline (at most two lines on small tiles). list only.
+   * @example body: "text" */
+  body?: Field<R>;
+  /** Field holding each row's own format, a preset or a template ("currency", "{value} pts"). list only.
+   * @example rowFormat: "format" */
+  rowFormat?: Field<R>;
   /** Forms a units chart switches between, first one shown (view.form picks another); the element adds a form control when there are 2 or more. Default all three. units only.
    * @example forms: ["waffle", "swarm"] */
   forms?: readonly ("waffle" | "bars" | "swarm")[];
@@ -212,9 +318,9 @@ export interface ChartSpec<R extends object = Row> {
   /** Formatted values on marks. Default false (heatmap: true when cells are ≥ 24 px; treemap and sunburst: names, marimekko: shares, true).
    * @example labels: true */
   labels?: boolean;
-  /** Localised UI strings with `{0}` placeholders (see strings.ts for keys).
+  /** Localised UI strings with `{0}` placeholders; each key's own doc (hover, or "Text keys" in llms.txt) says which string it controls.
    * @example text: { noData: "Keine Daten", back: "Zurück" } */
-  text?: Readonly<Partial<Record<TextKey, string>>>;
+  text?: Readonly<{ [K in keyof typeof TEXT]?: string }>;
   /** BCP 47 locale for formatting. Default "en-US" (deterministic SSR).
    * @example locale: "de-DE" */
   locale?: string;
@@ -230,16 +336,20 @@ export interface ChartSpec<R extends object = Row> {
   /** Accessible description; auto-generated when omitted.
    * @example description: "Revenue doubled from January to December." */
   description?: string;
-  /** Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). kpi: the bullet scale; gauge: the dial range. Not allowed with a `y` array.
-   * @example yDomain: [0, 100] */
-  yDomain?: readonly [number, number];
+  /** Value axis includes zero. false fits the axis to the values (recomputed at each drill level), for small changes between large values. Default true. dumbbell only.
+   * @example zero: false */
+  zero?: boolean;
+  /** Fixed value-axis domain; [hi, lo] reverses it (ranks with 1 on top). kpi: the bullet scale; gauge: the dial range. Not with a `y` array, except keyed by y field on kpi and gauge (unlisted measures take the default).
+   * @example yDomain: [0, 100] or yDomain: { sales: [0, 26e6] } */
+  yDomain?:
+    readonly [number, number] | Readonly<Partial<Record<Field<R>, readonly [number, number]>>>;
   /** Fixed x domain. scatter only.
    * @example xDomain: [0, 1] */
   xDomain?: readonly [number, number];
-  /** Reference lines (at most 4): a number or "mean" across the value axis (mean of the visible values; stacked: of the category totals), `{ x }` across the category axis at that x, `{ band: [lo, hi] }` a shaded value range; each optionally labelled. Scatter also takes `{ slope, intercept? }`: the line y = slope * x + intercept, slope "mean" = sum of y / sum of x, labelled with its value as y per x. `[]` is unset. bar line area scatter dumbbell.
-   * @example rules: [{ y: 100, label: "Target" }, { x: "2025-06-01", label: "Launch" }, { band: [80, 100] }] */
+  /** Reference lines (at most 4): a number or "mean" across the value axis (mean of the visible values; stacked: of the category totals), `{ x }` across the category axis at that x, `{ band: [lo, hi] }` a shaded value range, `{ y2 }` across the right axis of a bar with `y2`; each optionally labelled. Scatter also takes `{ slope, intercept? }`: the line y = slope * x + intercept, slope "mean" = sum of y / sum of x, labelled with its value as y per x. `[]` is unset. bar line area scatter dumbbell beeswarm.
+   * @example rules: [{ y: 100, label: "Target" }, { x: "2025-06-01", label: "Launch" }, { band: [80, 100] }, { y2: 0.8, label: "80%" }] */
   rules?: readonly Rule[];
-  /** Log value axis (powers of 10 ticks); every plotted value must be above 0. line scatter (bars start at zero, so not bar).
+  /** Log value axis (powers of 10 ticks); every plotted value must be above 0. line scatter beeswarm (bars start at zero, so not bar).
    * @example yScale: "log" */
   yScale?: "log";
   /** Log x axis; every x must be above 0. scatter only.
@@ -248,28 +358,40 @@ export interface ChartSpec<R extends object = Row> {
   /** Label these points of each visible series with their value: "max", "min", "first", "last" (scatter: max and min by y, first and last by x); `{ x, text }` labels the mark at that x with the text. `[]` is unset. bar line area scatter.
    * @example annotate: ["max", "last", { x: "CA", text: "Largest store" }] */
   annotate?: readonly (Annotate | AnnotateAt)[];
-  /** Series values drawn dashed (line, the area outline), e.g. last year against this year. line area; needs `series`; `[]` is unset.
+  /** Series values drawn dashed (line, the area outline, a radar line), e.g. last year against this year. line area radial (with `form: "line"`); needs `series`; `[]` is unset.
    * @example dash: ["2024"] */
   dash?: readonly string[];
+  /** Series values drawn with a heavier stroke (theme `lineEmphasis`), e.g. this year against earlier years. line only; needs `series`; `[]` is unset.
+   * @example emphasis: ["2026"] */
+  emphasis?: readonly string[];
+  /** How values map to the colour ramp: "linear" (default), "rank" (even steps by order, for skewed totals), "quantile" (up to five equal-count classes (ties merge); the legend shows the breaks) or "log" (values above 0). heatmap hexmap.
+   * @example colorScale: "rank" */
+  colorScale?: "linear" | "rank" | "quantile" | "log";
+  /** Children take evenly spaced tints of their parent's colour instead of their own palette slots: drilled levels of a `path` (the parent is the drilled value, coloured by `colors` or its slot), and weave threads under a group `colorBy` (the parent is the group). A `colors` map then names path values or groups. treemap sunburst sankey chord waffle weave.
+   * @example tint: true */
+  tint?: boolean;
+  /** Drag a range on an axis to keep the lines inside it (ranges on several axes combine with AND; the rest dim); a click on the axis clears it. State in view.brush, reported by maya-view. parallel only.
+   * @example brush: true */
+  brush?: boolean;
 
-  /** Hover/keyboard tooltip. Default true. `{ fields }` adds those fields as rows (also data table columns), formatted by `format`; bar, line and area combine numeric fields by `aggregate`. fields: bar line area scatter.
-   * @example tooltip: false or tooltip: { fields: ["pricePerUnit"] } */
-  tooltip?: boolean | { readonly fields: readonly Field<R>[] };
+  /** Hover/keyboard tooltip. Default true. `{ fields }` adds those fields as rows (also data table columns), formatted by `format`; where rows combine (bar, line, area, heatmap, dumbbell) numeric fields combine by `aggregate`, and `{ field, ratio: [num, den] }` shows sum(num) / sum(den) under the name `field` (titles and format key it; it need not be in the rows). fields: bar line area scatter heatmap dumbbell beeswarm gauge (combined over every row).
+   * @example tooltip: false or tooltip: { fields: ["units", { field: "price", ratio: ["sales", "units"] }] } */
+  tooltip?: boolean | { readonly fields: readonly TipField<Field<R>>[] };
   /** Legend; clicking toggles series. "top", "bottom" or "right" places it (true is "top"). Default: true when `series` is set, and for waffle, hexmap (colour ramp) and units (toggles groups).
    * @example legend: "right" */
   legend?: boolean | "top" | "bottom" | "right";
   /** Line and area: name each series at its right end and drop the legend (keep it with `legend: true`). Default true.
    * @example endLabels: false */
   endLabels?: boolean;
-  /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With `select` too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires `maya-drill-leaf`. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap marimekko with `path`.
+  /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With `select` too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires `maya-drill-leaf`. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap radial waffle hexmap waterfall marimekko with `path`; bar line area with `seriesPath`; heatmap with `xPath`.
    * @example drill: true */
   drill?: boolean;
   /** With `drill`: a click on empty chart space goes back up one level. Default true.
    * @example drillOut: false */
   drillOut?: boolean;
-  /** Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. bar line area waterfall scatter heatmap dumbbell beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
-   * @example select: "multi" */
-  select?: true | "multi";
+  /** Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. `{ peers: field }` (beeswarm) selects one mark and also lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points; list: a move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
+   * @example select: "multi" or select: { peers: "itemType" } */
+  select?: true | "multi" | { readonly peers: Field<R> };
   /** Drag to zoom. line, area, scatter. Reset chip, double-click and Escape restore.
    * @example zoom: true */
   zoom?: boolean;
@@ -277,15 +399,15 @@ export interface ChartSpec<R extends object = Row> {
    * @example animate: false */
   animate?: boolean;
 
-  /** Palette in series order (max 8), or colours by series value. treemap and sunburst: by `path[0]` value; sankey and chord: by node name (links and inner levels inherit); waffle: by category. Keys that match nothing are ignored. Path types keep each name's colour through drill; a sankey root missing from the map stays neutral.
+  /** Palette in series order (at most 8 distinct colours), or colours by series value (any number of keys; series beyond 8 share slots). Precedence: a key by value beats colorBy tones, which beat theme `series1..8`, which beat the array, which beats `accent`; a value ramp (colorBy field, heatmap, hexmap) ignores the map. treemap and sunburst: by `path[0]` value; sankey and chord: by node name (links and inner levels inherit); waffle: by category; weave with a group colorBy and `tint` with `path`: by group or path value. Keys that match nothing are ignored. Path types keep each name's colour through drill; a sankey root missing from the map takes theme `neutral`.
    * @example colors: { North: "#0b6", South: "oklch(.6 .17 30)" } */
   colors?: readonly string[] | Readonly<Record<string, string>>;
-  /** Tone by sign of y, by a target (good at or past it; `better: "lower"` flips it), or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi and gauge: thresholds only, any of target, warn and better, warn needs target and sits on the bad side; kpi with a `y` array: also keyed by y field). bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation.
-   * @example colorBy: { target: 100, warn: 80 } or colorBy: { revenue: { target: 1.8e6 }, churn: { better: "lower" } } */
+  /** Tone by sign of y (theme `up` and `down`), by a target (good at or past it; `better: "lower"` flips it), or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi and gauge: thresholds only, any of target, warn and better, warn needs target and sits on the bad side; kpi with a `y` array: also keyed by y field; weave: a group field, one colour per group from `colors`, up to 20 threads). bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation weave.
+   * @example colorBy: { target: 100, warn: 80 } or colorBy: { revenue: { target: 1.8e6 }, churn: { better: "lower" } } or colorBy: "family" */
   colorBy?: "sign" | Goal | Readonly<Partial<Record<Field<R>, Goal>>> | Field<R>;
-  /** Theme token overrides (CSS values, allowlisted). `line` is the line width, `gridDash` a grid dash array. Ready-made sets: mayacharts/themes.
-   * @example theme: { accent: "#0b6", font: "'Inter', sans-serif", gridDash: "3 3" } */
-  theme?: Readonly<Partial<Record<ThemeToken, string>>>;
+  /** Theme tokens (CSS values, allowlisted), a registered theme's name, or `[name, overrides]`. Names come from `mayacharts/themes` (`maya.themes` in maya.global.js) or `registerTheme(name, tokens)`. `line` is the line width, `gridDash` a grid dash array; `series1..8` palette slots; `rampLow`, `rampHigh` and `rampMid` the value ramp (rampMid makes it diverging, centred on `rampMidValue`, default 0); `up`, `down`, `total` direction colours (waterfall, colorBy "sign", dumbbell connectors); `neutral` uncoloured marks (Other, unmapped names); `labelInk` / `labelInkOnFill` label colours on light and dark fills; `numeric` "tabular" or "proportional" figures. Precedence: `colors` map > colorBy > `series1..8` > `accent`.
+   * @example theme: { accent: "#0b6", font: "'Inter', sans-serif", gridDash: "3 3" } or theme: ["ocean", { accent: "#6A7891" }] */
+  theme?: ThemeSpec;
   /** Grid lines perpendicular to the value axis. Default true.
    * @example grid: false */
   grid?: boolean;
@@ -323,6 +445,22 @@ export interface View {
   frame?: number;
   /** Index into the units `forms`. Default 0; larger is clamped. */
   form?: number;
+  /** Parallel `brush` ranges: [field, lo, hi] per brushed axis (data units, lo <= hi); a line is kept when it is inside every range. */
+  brush?: readonly (readonly [field: string, lo: number, hi: number])[];
+  /** `select: { peers }`: the selected mark's value of the peers field (as a string); its peers light up with their average. */
+  peers?: string;
+  /** Index into a `stack` array of modes. Default 0; larger is clamped. */
+  stack?: number;
+  /** kpi with `back`: which face shows. Default "front". */
+  face?: "front" | "back";
+  /** heatmap `xPath`: drilled column branch, one raw value per level, outer first. */
+  xDrill?: readonly string[];
+  /** table `expand` and list: the open row's raw x value; "" closes every row. Default: none open (list: spec.expand). */
+  expanded?: string;
+  /** table `page`: pages added by "Show n more" (0 = the first page only). */
+  page?: number;
+  /** table `filter`: the search text. */
+  filter?: string;
 }
 
 export interface RenderOptions {
@@ -349,6 +487,8 @@ export interface MayaErrorDetail {
 /** maya-drill-leaf: the drill gesture on a mark at the last level. `path`: one raw value per `path` level, root first. */
 export interface MayaDrillLeafDetail {
   path: string[];
+  /** "x" when a heatmap column (xPath) is at its last level; `path` then holds xPath values. */
+  axis?: "x";
 }
 /** maya-settled: after the last animation of a render (with maya-render when nothing animates), and after maya-error with that error. */
 export interface MayaSettledDetail {
@@ -396,6 +536,12 @@ export interface ResolvedSpec {
   y: string;
   /** Every measure (`[y]` when `spec.y` is a string). */
   measures: string[];
+  /** spec.toggle (kpi, gauge): a kpi draws the active measure only. */
+  toggle: boolean;
+  /** kpi change lines to print, in order (default all three). */
+  compare: readonly ("previous" | "was" | "target")[];
+  /** Gauge sweep in degrees (default 180). */
+  arc: 180 | 270 | 360;
   /** Index of `y` in `measures`. */
   measure: number;
   series: string | null;
@@ -404,13 +550,33 @@ export interface ResolvedSpec {
   /** The field marks read the previous value from (bar, kpi, gauge): spec.was, or with the long form
    * `wasBy.by`, which the pivot fills with the previous period's value; null when unset. */
   was: string | null;
+  /** The previous-value field per measure: a string or long-form was applies to every measure, a keyed was to its keys (empty when unset). `was` is the active measure's entry. */
+  wasOf: ReadonlyMap<string, string>;
   /** spec.was long form: period field and the explicit periods as strings (null = latest, one before).
    * `data` is already pivoted (shape.ts pivotWas); titles default `by` to the previous period, formatted. */
   wasBy: { by: string; current: string | null; previous: string | null } | null;
   /** spec.dash as a set of series keys (empty when unset). */
   dash: ReadonlySet<string>;
-  /** spec.tooltip.fields ([] when tooltip is a boolean). */
+  /** spec.tooltip.fields names ([] when tooltip is a boolean); a ratio item contributes its `field`. */
   tipFields: readonly string[];
+  /** Tooltip fields shown as a ratio: name -> [numerator, denominator] (shape.ts colorVals divides the sums). */
+  tipRatio: ReadonlyMap<string, readonly [num: string, den: string]>;
+  /** spec.emphasis as a set of series keys (empty when unset). */
+  emphasis: ReadonlySet<string>;
+  /** spec.colorScale (default "linear"); scale.ts ramp() maps values with it. */
+  colorScale: "linear" | "rank" | "quantile" | "log";
+  /** spec.form "line" on radial (a radar). */
+  radar: boolean;
+  /** spec.tint. */
+  tint: boolean;
+  /** spec.zero (dumbbell; default true). */
+  zero: boolean;
+  /** view.brush entries on measures of a parallel with spec.brush (null when brushing is off). */
+  brush: readonly (readonly [field: string, lo: number, hi: number])[] | null;
+  /** select { peers }: the field and view.peers (null until a mark is selected); null otherwise. */
+  peers: { field: string; value: string | null } | null;
+  /** Diverging ramp centre: theme.rampMidValue (default 0) when the theme sets rampMid; else null. */
+  rampMid: number | null;
   xScale: "linear" | "log";
   yScale: "linear" | "log";
   /** spec.annotate kinds ([] when unset). */
@@ -421,16 +587,54 @@ export interface ResolvedSpec {
   forms: readonly ("waffle" | "bars" | "swarm")[];
   /** Index into `forms` from view.form, clamped. */
   form: number;
+  /** The full `path` length (a chord with 3 levels shows two of them at a time). */
+  levels: number;
   /** Remaining path levels below the drilled branch ([] when no path). */
   path: string[];
-  /** Applied drill values, outer first ([] at the root). */
+  /** Applied drill values, outer first ([] at the root). seriesPath: series values; a chord with 3 levels: the target only. */
   drilled: string[];
+  /** What the drill gesture pushes now: "x" (the category or branch), "series" (seriesPath, drillTo: the mark's data-series), or null (nothing deeper, or drill off). */
+  drillOn: "x" | "series" | null;
+  /** heatmap: xPath levels below view.xDrill ([] without xPath); x is its first. */
+  xPath: string[];
+  /** heatmap: applied column drill values, outer first. */
+  xDrilled: string[];
+  /** waterfall spec.start (it is also a total); null when unset. */
+  start: string | null;
+  /** heatmap totals: true (Shaped.margins). */
+  margins: boolean;
+  /** table: most rows drawn (page * (view.page + 1); 1000 with scroll); null = the rows that fit. */
+  shown: number | null;
+  /** spec.page on a table (rows a "Show n more" row adds), else null. */
+  page: number | null;
+  /** table page or scroll: the svg is as tall as its rows (MarkOut.height) and scrolls in the tile. */
+  scroll: boolean;
+  /** table: view.filter when spec.filter (data is already filtered); null otherwise. */
+  filter: string | null;
+  /** table: spec.columns ([] when unset). */
+  columns: readonly string[];
+  /** table: spec.cells strips by column title, in spec order. */
+  cells: ReadonlyMap<string, { field: string; by: string; last: number | null }>;
+  /** Bar kind per measure: table spec.bars (unlisted "bar"); list: y is "bar" with bars: true, else "none". */
+  bars: ReadonlyMap<string, "bar" | "diverging" | "none">;
+  /** Rows open: table with an expand sub-spec, list with an evidence level. */
+  expand: boolean;
+  /** Open rows (raw x values): view.expanded ("" = none), else list's spec.expand default. */
+  expanded: readonly string[];
+  /** list: path[1], the evidence field; null otherwise. */
+  evidence: string | null;
+  /** list: spec.body; null otherwise. */
+  body: string | null;
+  /** list: spec.rowFormat; null otherwise. */
+  rowFormat: string | null;
   /** Drilled: `slots` of the outermost drilled value (its palette slot, so a sunburst keeps the
    * branch's colour); null at the root. */
   hue: number | null;
   /** Path types (treemap sunburst sankey chord): palette slot (before % 8) per path value, from all
    * of spec.data before frame and drill: level by level, outer first, first appearance; a value
-   * an outer level already holds keeps its slot. Empty for other types. */
+   * an outer level already holds keeps its slot. Also `tint` with `path` on the drill types (path
+   * values, the same way) and weave with a group colorBy (group values, first appearance). Empty
+   * otherwise. A colors map keys these when they are set (render.ts). */
   slots: ReadonlyMap<string, number>;
   /** spec.depth; null = the default (1 with drill, every level without). */
   depth: number | null;
@@ -441,7 +645,10 @@ export interface ResolvedSpec {
   size: string | null;
   name: string | null;
   totals: string[];
-  stack: boolean | "percent";
+  /** The stack mode shown: spec.stack, or the view.stack entry of a stack array. */
+  stack: boolean | "percent" | "stream";
+  /** spec.stack as an array of modes ([] when it is not one): the control lists them, `stack` is the active one. */
+  stacks: readonly (boolean | "percent" | "stream")[];
   /** spec.frame: [field, distinct values in data order, index shown]; `data` holds that frame's rows. */
   frame: readonly [field: string, values: readonly string[], i: number] | null;
   horizontal: boolean;
@@ -449,7 +656,7 @@ export interface ResolvedSpec {
   aggregate: Aggregate;
   /** spec.aggregate.ratio [numerator, denominator]: a group's y is sum(num) / sum(den), null when sum(den) is 0. */
   ratio: readonly [num: string, den: string] | null;
-  sort: "asc" | "desc" | null;
+  sort: "asc" | "desc" | "change" | null;
   /** Table header sort from the view; null when unset. */
   sortBy: readonly [field: string, dir: "asc" | "desc"] | null;
   limit: number | null;
@@ -475,7 +682,10 @@ export interface ResolvedSpec {
   yAxis: boolean;
   locale: string;
   currency: string;
+  /** The active measure's domain (keyed yDomain: its entry or null). */
   yDomain: readonly [number, number] | null;
+  /** Domains per measure: the array form applies to every measure, the keyed form (kpi, gauge) to its keys. */
+  domains: ReadonlyMap<string, readonly [number, number]>;
   xDomain: readonly [number, number] | null;
   /** spec.rules across the value axis, in object form ([] when unset). */
   rules: readonly { y: number | "mean"; label: string | null }[];
@@ -483,6 +693,8 @@ export interface ResolvedSpec {
   slopes: readonly { k: number | "mean"; b: number; label: string | null }[];
   /** spec.rules `{ x }` items: rules across the category (or scatter x) axis. */
   xRules: readonly { x: string | number; label: string | null }[];
+  /** spec.rules `{ y2 }` items: rules across the right axis (bar with y2). */
+  y2Rules: readonly { y: number; label: string | null }[];
   /** spec.rules `{ band }` items, lo <= hi: shaded value-axis ranges. */
   bands: readonly { lo: number; hi: number; label: string | null }[];
   table: boolean;
@@ -492,7 +704,8 @@ export interface ResolvedSpec {
   colorBy: "sign" | ResolvedGoal | string | null;
   /** Thresholds per measure: the object form applies to every measure, the keyed form (kpi) to its keys. Empty otherwise. */
   goals: ReadonlyMap<string, ResolvedGoal>;
-  theme: Partial<Record<ThemeToken, string>>;
+  /** The theme's tokens: a name or [name, overrides] resolved through the registry. */
+  theme: ThemeTokens;
 }
 
 /** spec.colorBy thresholds with defaults: null when unset, better "higher". */
@@ -538,6 +751,8 @@ export interface Shaped {
   index: number[] | null;
   /** A bar with more categories than fit kept the top N and rolled the rest into Other: [N, categories before]; null otherwise. */
   capped: [kept: number, total: number] | null;
+  /** heatmap totals: true: each column's total (parallel to categories), each row's (parallel to series) and the grand total, combined by aggregate over the rows of visible series; absent otherwise. */
+  margins?: { x: (number | null)[]; series: (number | null)[]; all: number | null };
 }
 
 export interface BandScale {
@@ -673,6 +888,10 @@ export interface MarkOut {
   /** Replaces the hidden data table (plain text, escaped by a11y.ts): boxplot five numbers, funnel steps.
    * The first cell of each row is its row header. */
   table?: { head: readonly string[]; rows: readonly (readonly string[])[] };
+  /** The svg's height when the content is taller than the box (table page or scroll). */
+  height?: number;
+  /** Where an expanded table row's sub-chart goes: render.ts draws it there as `<svg data-maya="expand">`. */
+  expand?: Box;
 }
 
 /** A chart type. Core marks live in render.ts's CORE map; modules `register()` theirs. */

@@ -16,6 +16,27 @@ const keys = (s: string) =>
 const order = (s: string) => [...new Set(keys(s).map((k) => decodeURIComponent(k.split("~")[1]!)))];
 
 describe("table", () => {
+  it("at 280 px drops the rightmost columns that cannot hold their values, never two values touching", () => {
+    const y = ["sales", "units", "price", "cost", "profit"];
+    const row = {
+      item: "Hats",
+      sales: 137273,
+      units: 105.52,
+      price: 4521.5,
+      cost: 90210,
+      profit: 4420,
+    };
+    const s = svg({ ...base, y, data: [row] }, { width: 280, height: 200 });
+    const cols = new Set(keys(s).map((k) => k.split("~")[0]));
+    expect(cols.size).toBeGreaterThanOrEqual(1);
+    expect(cols.size).toBeLessThan(5);
+    expect([...cols]).toEqual(y.slice(0, cols.size)); // rightmost go first
+    const xs = [...s.matchAll(/<text data-key="v~[^"]*" x="([\d.]+)" y/g)].map((m) => +m[1]!);
+    for (let i = 1; i < xs.length; i++) expect(xs[i]! - xs[i - 1]!).toBeGreaterThan(40);
+    expect(
+      svg({ ...base, y, data: [row] }, { width: 900, height: 200 }).match(/data-key="v~/g),
+    ).toHaveLength(5);
+  });
   it("a column narrower than its padding draws no negative bar", () => {
     const y = ["a", "b", "c", "d", "e", "f"];
     const wide = Object.fromEntries(y.map((k, i) => [k, i + 1]));

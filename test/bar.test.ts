@@ -42,7 +42,7 @@ describe("bar", () => {
     expect(num(other, /data-y="([\d.]+)"/)).toBe(150); // the real value stays on the mark
   });
 
-  it("waterfall labels the first bar and the Total, and drops a step label wider than its column", () => {
+  it("waterfall labels the first bar and the Total when they fit their column, and drops any wider than it", () => {
     const data = Array.from({ length: 14 }, (_, i) => ({
       s: `s${i}`,
       d: i ? (i % 2 ? 123456 : -98765) : 500000,
@@ -55,9 +55,70 @@ describe("bar", () => {
       labels: true,
       data,
     };
-    const l = labels(renderParts(spec).svg);
+    const l = labels(renderParts(spec, { width: 1000, height: 300 }).svg);
     expect(l.length).toBeGreaterThan(1);
-    expect(l.length).toBeLessThan(data.length);
+    // Narrow: only the opening and the Total survive (edge-hugging); steps wider than their column drop.
+    expect(labels(renderParts(spec, { width: 260, height: 300 }).svg)).toHaveLength(2);
+  });
+
+  it("a waterfall opens at a leading total's own value; later totals keep the running sum (#92.4)", () => {
+    const rows = [
+      { k: "2025", v: 100 },
+      { k: "a", v: 20 },
+      { k: "b", v: -10 },
+      { k: "2026", v: 0 },
+    ];
+    const svg = renderParts(
+      { type: "waterfall", x: "k", y: "v", totals: ["2025", "2026"], data: rows },
+      { width: 400, height: 300 },
+    ).svg;
+    const ys = [...svg.matchAll(/<rect data-maya="mark"[^>]*data-y="(-?[\d.]+)"/g)].map(
+      (m) => +m[1]!,
+    );
+    expect(ys).toEqual([100, 20, -10, 110]);
+  });
+
+  it("the value axis includes `was` values so a ghost is never clipped (#90.1)", () => {
+    const rows = [
+      { Month: "2026-01", Sales: 13e6, "A year earlier": 24.7e6 },
+      { Month: "2026-02", Sales: 14e6, "A year earlier": 15e6 },
+    ];
+    const svg = renderParts(
+      { type: "bar", x: "Month", y: "Sales", was: "A year earlier", data: rows },
+      { width: 400, height: 300 },
+    ).svg;
+    const ticks = [...svg.matchAll(/text-anchor="end"[^>]*>([\d,.]+)([MK]?)</g)].map(
+      (m) => +m[1]!.replace(/,/g, "") * (m[2] === "M" ? 1e6 : 1),
+    );
+    expect(Math.max(...ticks)).toBeGreaterThanOrEqual(24.7e6);
+    const ghost = svg.match(/<rect[^>]*data-past[^>]*>/)![0];
+    expect(+/ y="([\d.-]+)"/.exec(ghost)![1]!).toBeGreaterThanOrEqual(0);
+  });
+
+  it("grouped labels: every bar of a series is labelled on its own bar, or the series is dropped whole (#91.6)", () => {
+    const rows = ["Q1", "Q2", "Q3", "Q4"].flatMap((Quarter, i) =>
+      ["2025", "2026"].map((Year, j) => ({ Quarter, Year, Sales: (12 + i * 2 + j * 5) * 1e6 })),
+    );
+    const g = (width: number) =>
+      renderParts(
+        {
+          type: "bar",
+          x: "Quarter",
+          series: "Year",
+          y: "Sales",
+          labels: true,
+          format: { Sales: "compact" },
+          data: rows,
+        },
+        { width, height: 260 },
+      ).svg;
+    const wide = g(700);
+    expect(wide.match(/data-in=""[^>]*data-key="2025~/g)).toHaveLength(4);
+    expect(wide.match(/data-in=""[^>]*data-key="2026~/g)).toHaveLength(4);
+    const narrow = g(260);
+    const n = (y: string) =>
+      narrow.match(new RegExp(`<text[^>]*data-key="${y}~[^>]*>[^<]*<`, "g"))?.length ?? 0;
+    for (const y of ["2025", "2026"]) expect([0, 4]).toContain(n(y));
   });
 
   it("axis-break slashes sit inside the plot when values fall below the domain", () => {
@@ -142,5 +203,71 @@ describe("annotate and tooltip fields", () => {
       titles: { t: "x\nRevenue\t$9M" },
     }).svg;
     expect(s).toMatch(/data-more="x Revenue \$9M\t30"/);
+  });
+});
+
+describe("waterfall direction", () => {
+  it("marks carry data-way up, down and total", () => {
+    const data = [
+      { s: "Start", v: 100 },
+      { s: "Gain", v: 30 },
+      { s: "Loss", v: -20 },
+      { s: "End", v: 110 },
+    ];
+    const svg = renderParts({ type: "waterfall", x: "s", y: "v", totals: ["End"], data }).svg;
+    const way = [...svg.matchAll(/<rect data-maya="mark"[^>]*?data-way="(\w+)"/g)].map((m) => m[1]);
+    expect(way).toEqual(["total", "up", "down", "total"]);
+  });
+  it("plain bars carry none", () => {
+    expect(
+      renderParts({ type: "bar", x: "s", y: "v", data: [{ s: "a", v: 1 }] }).svg,
+    ).not.toContain("data-way");
+  });
+});
+
+describe("was with series draws a tick per grouped bar (#82)", () => {
+  const data = ["a", "b"].flatMap((c) => ["x", "y"].map((s) => ({ c, s, v: 10, w: 8 })));
+  const ghost = (o: Partial<ChartSpec>) =>
+    [
+      ...renderParts({
+        type: "bar",
+        x: "c",
+        y: "v",
+        data,
+        was: "w",
+        ...o,
+      } as ChartSpec).svg.matchAll(/<rect[^>]*data-past[^>]*>/g),
+    ].map((m) => m[0]);
+  it("grouped: a 2px tick across each bar", () => {
+    const g = ghost({ series: "s" });
+    expect(g).toHaveLength(4);
+    for (const t of g) {
+      expect(t).toContain("data-tick");
+      expect(t).toContain('height="2"');
+    }
+  });
+  it("single series keeps the ghost box", () => {
+    const g = ghost({ data: data.filter((d) => d.s === "x") });
+    expect(g).toHaveLength(2);
+    expect(g[0]).not.toContain("data-tick");
+    expect(g[0]).not.toContain('height="2"');
+  });
+});
+
+describe("waterfall in-bar labels (M2 H4)", () => {
+  it("repeat data-way, so the ink follows up, down and total", () => {
+    const data = [
+      { s: "Start", v: 100 },
+      { s: "Gain", v: 30 },
+      { s: "Loss", v: -20 },
+      { s: "End", v: 110 },
+    ];
+    const svg = renderParts(
+      { type: "waterfall", x: "s", y: "v", totals: ["End"], data, labels: true },
+      { width: 300, height: 200 },
+    ).svg;
+    const inks = [...svg.matchAll(/<text[^>]*data-ink="a"[^>]*>/g)].map((m) => m[0]);
+    expect(inks.length).toBeGreaterThan(0);
+    for (const t of inks) expect(t).toMatch(/data-way="(up|down|total)"/);
   });
 });

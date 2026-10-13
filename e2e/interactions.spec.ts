@@ -909,3 +909,290 @@ test("a compact tile clamps the title to a line and hides the subtitle", async (
   expect(r.big.sub).not.toBe("none");
   expect(r.big.tip).toBe("");
 });
+
+test.describe("parallel brush and beeswarm peers", () => {
+  const stores = Array.from({ length: 12 }, (_, i) => ({
+    s: `S${i}`,
+    a: i * 10,
+    b: (i * 37) % 100,
+    c: 100 - i * 7,
+  }));
+  const par = { type: "parallel", x: "s", y: ["a", "b", "c"], brush: true, data: stores };
+
+  test("dragging an axis keeps the lines inside; a click clears it; Escape clears all", async ({
+    page,
+  }) => {
+    await mount(page, "par", par);
+    const axes = page.locator("#par [data-maya=axis][data-field]");
+    // The chart is 800 px wide: on a phone the middle axis starts off screen, where mouse events go nowhere.
+    const box = async (n: number) => {
+      await axes.nth(n).scrollIntoViewIfNeeded();
+      return (await axes.nth(n).boundingBox())!;
+    };
+    const drag = async (n: number, from: number, to: number) => {
+      const b = await box(n);
+      const x = b.x + b.width / 2;
+      await page.mouse.move(x, b.y + b.height * from);
+      await page.mouse.down();
+      await page.mouse.move(x, b.y + (b.height * (from + to)) / 2, { steps: 4 });
+      await page.mouse.move(x, b.y + b.height * to, { steps: 4 });
+      await page.mouse.up();
+    };
+    const off = () => page.locator("#par [data-maya=line][data-off]").count();
+    await drag(0, 0.1, 0.5);
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
+    const [f, lo, hi] = (await view(page, "par")).brush[0];
+    expect(f).toBe(await axes.nth(0).getAttribute("data-field"));
+    expect(lo).toBeLessThan(hi);
+    await expect.poll(off).toBeGreaterThan(0);
+    const one = await off();
+    await drag(1, 0.2, 0.6); // a second axis combines (AND): never fewer hidden
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(2);
+    expect(await off()).toBeGreaterThanOrEqual(one);
+    const b = await box(1);
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "par")).brush).toBeUndefined();
+    await expect.poll(off).toBe(0);
+  });
+
+  test("keyboard and two clicks brush an axis without dragging", async ({ page }) => {
+    await mount(page, "par", par);
+    const ax = page.locator("#par [data-maya=axis][data-field]").first();
+    await expect(ax).toHaveAttribute("role", "slider");
+    await ax.focus();
+    await page.keyboard.press("ArrowUp");
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
+    const [, lo, hi] = (await view(page, "par")).brush[0];
+    await page.keyboard.press("Shift+ArrowUp"); // grows; focus survives the repaint
+    await expect
+      .poll(
+        async () => (await view(page, "par")).brush[0][2] - (await view(page, "par")).brush[0][1],
+      )
+      .toBeGreaterThan(hi - lo);
+    await page.keyboard.press("Delete");
+    await expect.poll(async () => (await view(page, "par")).brush).toBeUndefined();
+    await ax.scrollIntoViewIfNeeded();
+    const b = (await ax.boundingBox())!;
+    for (const f of [0.2, 0.6]) await page.mouse.click(b.x + b.width / 2, b.y + b.height * f);
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
+  });
+
+  test("select { peers } sets view.peers from the mark and Escape clears both", async ({
+    page,
+  }) => {
+    const data = Array.from({ length: 24 }, (_, i) => ({
+      n: `P${i}`,
+      f: i % 2 ? "A" : "B",
+      i: `T${i % 4}`,
+      p: 10 + ((i * 13) % 50),
+    }));
+    await mount(page, "bs", {
+      type: "beeswarm",
+      x: "f",
+      y: "p",
+      name: "n",
+      select: { peers: "i" },
+      data,
+    });
+    const m = page.locator("#bs [data-maya=mark][data-peer]").first();
+    const peer = await m.getAttribute("data-peer");
+    expect(peer).toMatch(/^T\d$/);
+    await clickMark(page, m);
+    await expect.poll(async () => (await view(page, "bs")).peers).toBe(peer);
+    expect(await selected(page, "bs")).toHaveLength(1);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "bs")).peers).toBeUndefined();
+    expect(await selected(page, "bs")).toHaveLength(0);
+  });
+});
+
+test.describe("stack toggle, card flip, kpi toggle and select", () => {
+  const months = ["2026-07", "2026-08", "2026-09", "2026-10"].map((m, i) => ({
+    m,
+    s: 10 + i * 3,
+    u: 5 + i,
+    a: 1 + i,
+    b: 2 + i,
+  }));
+
+  test("a stack radio sets view.stack and the svg's data-stack, not view.measure", async ({
+    page,
+  }) => {
+    await mount(page, "st", {
+      type: "bar",
+      x: "m",
+      y: ["a", "b"],
+      stack: [false, true, "percent"],
+      data: months,
+    });
+    const radios = page.locator("#st [data-maya=stack] [role=radio]");
+    await expect(radios).toHaveCount(3);
+    await expect(page.locator("#st svg.maya-svg")).not.toHaveAttribute("data-stack", /.+/);
+    await radios.nth(2).click();
+    await expect.poll(async () => (await view(page, "st")).stack).toBe(2);
+    expect((await view(page, "st")).measure).toBeUndefined();
+    await expect(page.locator("#st svg.maya-svg")).toHaveAttribute("data-stack", "percent");
+    await radios.nth(2).focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect.poll(async () => (await view(page, "st")).stack).toBe(1);
+    // A plain stacked mode is a bare attribute.
+    await expect(page.locator("#st svg.maya-svg")).toHaveAttribute("data-stack", "");
+  });
+
+  test("kpi toggle: the measure radios show one tile at a time", async ({ page }) => {
+    await mount(page, "kt", { type: "kpi", x: "m", y: ["s", "u"], toggle: true, data: months });
+    const radios = page.locator("#kt .maya-ctl [role=radio]");
+    await expect(radios).toHaveCount(2);
+    const head = page.locator("#kt [data-key=v]");
+    await expect(head).toHaveCount(1);
+    const before = await head.textContent();
+    await radios.nth(1).click();
+    await expect.poll(async () => (await view(page, "kt")).measure).toBe(1);
+    await expect.poll(() => head.textContent()).not.toBe(before);
+  });
+
+  test("kpi select: a sparkline point selects its month; Escape clears", async ({ page }) => {
+    await mount(page, "ks", { type: "kpi", x: "m", y: "s", select: true, data: months });
+    const dot = page.locator("#ks [data-maya=mark][data-c]").nth(1);
+    await clickMark(page, dot);
+    await expect.poll(async () => (await selected(page, "ks")).length).toBe(1);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await selected(page, "ks")).length).toBe(0);
+  });
+
+  test("card flip: the button turns to the back, Escape and the button return", async ({
+    page,
+  }) => {
+    await mount(page, "fl", {
+      type: "kpi",
+      x: "m",
+      y: "s",
+      data: months,
+      back: { type: "bar", x: "m", y: "s", horizontal: true },
+    });
+    const flipBtn = page.locator("#fl .maya-flip");
+    await expect(flipBtn).toHaveAttribute("aria-pressed", "false");
+    await flipBtn.click();
+    await expect.poll(async () => (await view(page, "fl")).face).toBe("back");
+    await settle(page);
+    await expect(page.locator("#fl .maya-flip")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#fl rect[data-maya=mark]")).toHaveCount(months.length);
+    await expect(page.locator("#fl [data-key=v]")).toHaveCount(0);
+    await page.locator("#fl .maya-flip").focus();
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "fl")).face).toBeUndefined();
+    await settle(page);
+    await expect(page.locator("#fl [data-key=v]")).toHaveCount(1);
+    await page.locator("#fl .maya-flip").focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await view(page, "fl")).face).toBe("back");
+  });
+});
+
+test.describe("M4 drills, table paging and expand", () => {
+  const fam = ["Outerwear", "Bottoms"];
+  const items: Record<string, string[]> = {
+    Outerwear: ["Jackets", "Vests"],
+    Bottoms: ["Jeans", "Chino"],
+  };
+  const rows = fam.flatMap((f, i) =>
+    items[f]!.map((item, j) => ({ f, item, q: "2025", sales: 10 + 7 * i + 3 * j })),
+  );
+  const drilled = (page: Page, id: string, n: number) =>
+    expect.poll(async () => ((await view(page, id)).drill ?? []).length).toBe(n);
+
+  for (const type of ["radial", "waffle"] as const)
+    test(`${type}: click a mark drills, Back pops`, async ({ page }) => {
+      await mount(page, "d", { type, path: ["f", "item"], y: "sales", drill: true, data: rows });
+      await clickMark(page, page.locator("#d [data-maya=mark]").first());
+      await drilled(page, "d", 1);
+      await settle(page);
+      await page.locator("#d .maya-crumbs [data-depth='0']").click();
+      await drilled(page, "d", 0);
+    });
+
+  test("heatmap: a column header drills on its own axis, Escape pops columns first", async ({
+    page,
+  }) => {
+    const data = fam.flatMap((f) =>
+      items[f]!.flatMap((item) => ["W", "E"].map((r) => ({ f, item, r, sales: 5 }))),
+    );
+    await mount(page, "h", {
+      type: "heatmap",
+      x: "f",
+      y: "sales",
+      xPath: ["f", "item"],
+      path: ["r"],
+      drill: true,
+      data,
+    });
+    await clickMark(page, page.locator("#h [data-maya=axis-x] text[data-key]").first());
+    await expect.poll(async () => (await view(page, "h")).xDrill).toEqual(["Outerwear"]);
+    await expect(page.locator("#h .maya-crumbs[data-axis=x]")).toBeVisible();
+    await settle(page);
+    await page.locator("#h svg").focus();
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "h")).xDrill ?? []).toEqual([]);
+  });
+
+  test("area: a band's point drills the series", async ({ page }) => {
+    const data = ["1", "2", "3"].flatMap((q) =>
+      rows.map((r) => ({ ...r, q, sales: r.sales + +q })),
+    );
+    await mount(page, "a", {
+      type: "area",
+      x: "q",
+      y: "sales",
+      seriesPath: ["f", "item"],
+      drill: true,
+      data,
+    });
+    await clickMark(page, page.locator("#a [data-maya=mark]").first());
+    await drilled(page, "a", 1);
+  });
+
+  const stores = Array.from({ length: 12 }, (_, i) => ({
+    s: "Store " + i,
+    ytd: 100 - i,
+    m: "Jan",
+    v: i + 1,
+  }));
+  const table = { type: "table", x: "s", y: "ytd", page: 4, filter: true, data: stores };
+
+  test("table: Show more pages, the filter keeps focus and caret", async ({ page }) => {
+    await mount(page, "t", table);
+    await page.locator("#t [data-maya=more]").click();
+    await expect.poll(async () => (await view(page, "t")).page).toBe(1);
+    const input = page.locator("#t .maya-filter");
+    await input.click();
+    await page.keyboard.type("Store 1");
+    await expect.poll(async () => (await view(page, "t")).filter).toBe("Store 1");
+    await expect(input).toBeFocused();
+    await page.keyboard.type("1");
+    await expect.poll(async () => (await view(page, "t")).filter).toBe("Store 11");
+  });
+
+  test("table: a row opens its sub-chart, another row closes it", async ({ page }) => {
+    await mount(page, "t", { ...table, expand: { type: "bar", x: "m", y: "v" } });
+    const hit = (i: number) => page.locator("#t [data-maya=hit][aria-expanded]").nth(i);
+    await clickMark(page, hit(0));
+    await expect.poll(async () => (await view(page, "t")).expanded).toBe("Store 0");
+    await expect(page.locator("#t svg[data-maya=expand]")).toHaveCount(1);
+    await clickMark(page, hit(0));
+    await expect.poll(async () => (await view(page, "t")).expanded).toBe("");
+  });
+
+  test("list: the first move starts open and a click moves the opening", async ({ page }) => {
+    const data = ["A", "B", "C"].flatMap((m, i) => [
+      { m, v: i + 1 },
+      { m, e: "x", v: 1 },
+      { m, e: "y", v: 2 },
+    ]);
+    await mount(page, "l", { type: "list", x: "m", y: "v", path: ["m", "e"], data });
+    await expect(page.locator("#l svg[data-maya=expand]")).toHaveCount(1);
+    await clickMark(page, page.locator("#l [data-key='m~B']"));
+    await expect.poll(async () => (await view(page, "l")).expanded).toBe("B");
+  });
+});

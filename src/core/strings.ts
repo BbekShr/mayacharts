@@ -3,11 +3,15 @@
  * `spec.text` overrides any key; `{0}`, `{1}`… are positional placeholders.
  */
 export const TEXT = {
+  /** Empty-state text in the plot when no row holds a number; "\n" breaks a line, long text wraps. */
   noData: "No data",
+  /** Category name of the spec.limit roll-up, and the sunburst fold "Other (n)". */
   other: "Other",
   /** Category label for a row whose x (or path level) is null or missing. */
   blank: "(blank)",
+  /** Root breadcrumb button, and the live region after drilling back to the top. */
   back: "Back",
+  /** Button that resets a zoom window. */
   reset: "Reset zoom",
   /** Live region after a measure toggle: {0} = measure title. */
   showing: "Showing {0}",
@@ -19,6 +23,7 @@ export const TEXT = {
   zoomedTo: "Zoomed to {0} – {1}",
   /** Live region after selection: {0} = count. */
   selected: "{0} selected",
+  /** Live region after the selection is cleared. */
   selectionCleared: "Selection cleared",
   /** Auto description: {0} = noun, {1} = y title, {2} = x title. */
   chartOf: "{0} chart of {1} by {2}",
@@ -30,18 +35,21 @@ export const TEXT = {
   measures: "Measure",
   /** aria-label of the breadcrumb nav. */
   crumbs: "Drill path",
-  /** Tone text (never colour alone): colorBy "sign" and { target }. */
+  /** Tone word of a positive value with colorBy "sign" (tooltip, table, tone legend; not kpi). */
   positive: "Positive",
+  /** Tone word of a negative value with colorBy "sign" (not kpi). */
   negative: "Negative",
+  /** Tone word of a value on the good side of colorBy.target (tooltip, table, tone legend; the bad side when lower is better; not kpi, whose tile and tooltip say onTrack). */
   above: "above target",
+  /** Tone word of a value on the bad side of colorBy.target (the good side when lower is better; not kpi). */
   below: "below target",
-  /** Tone text for the warn band (colorBy { target, warn }). */
+  /** Tone word for the warn band, colorBy { target, warn } (tooltip, table, tone legend; not kpi, whose tile and tooltip say atRisk). */
   near: "at risk",
-  /** kpi and gauge status word for the good tone. */
+  /** kpi and gauge status word for the good tone (the kpi tooltip too). */
   onTrack: "On track",
-  /** kpi and gauge status word for the warn tone. */
+  /** kpi and gauge status word for the warn tone (the kpi tooltip too). */
   atRisk: "At risk",
-  /** kpi and gauge status word for the bad tone. */
+  /** kpi and gauge status word for the bad tone (the kpi tooltip too). */
   offTrack: "Off track",
   /** kpi delta: {0} = signed change, {1} = previous period. */
   vs: "{0} vs {1}",
@@ -49,17 +57,19 @@ export const TEXT = {
   change: "{0} {1} ({2}) vs {3}",
   /** kpi and gauge change on a percent measure: {0} = signed difference in points. */
   pts: "{0} pts",
-  /** kpi comparison label for colorBy.target (the {3} of `change`). */
+  /** kpi and gauge label of colorBy.target (the {3} of `change`, the gauge's target label) and the description's target. */
   target: "target",
   /** Live region after a table header click: {0} = column title, {1} = ascending/descending. */
   sortedBy: "Sorted by {0}, {1}",
+  /** The {1} of sortedBy for an ascending sort. */
   ascending: "ascending",
+  /** The {1} of sortedBy for a descending sort. */
   descending: "descending",
   /** Chart description of a warn threshold when higher is better: {0} = the warn value. */
   offBelow: "off track below {0}",
   /** Chart description of a warn threshold when lower is better: {0} = the warn value. */
   offAbove: "off track above {0}",
-  /** Sunburst centre at the root. */
+  /** Sunburst centre at the root; the heatmap `totals: true` Total row and column. */
   total: "Total",
   /** Sunburst tooltip share: {0} = percent, {1} = parent name. */
   shareOf: "{0} of {1}",
@@ -67,7 +77,7 @@ export const TEXT = {
   fromTo: "from {0} to {1}",
   /** Description when a time axis was downsampled: {0} = points drawn, {1} = points in the data. */
   reduced: "Showing {0} of {1} points",
-  /** Scatter density cell (too many points to draw): {0} = point count. */
+  /** Scatter density cell tooltip (too many points to draw): {0} = point count. */
   points: "{0} points",
   /** One scatter density cell holding a single point: {0} = 1. */
   point: "{0} point",
@@ -85,8 +95,9 @@ export const TEXT = {
   rule: "Reference line",
   /** Description with spec.xScale or spec.yScale "log": {0} = the axis title. */
   log: "{0} on a log scale",
-  /** Frame playback button (spec.frame), and its label while playing. */
+  /** Frame playback button (spec.frame). */
   play: "Play",
+  /** Frame playback button while playing. */
   pause: "Pause",
   /** Title with spec.frame: {0} = title, {1} = formatted frame value. */
   frameOf: "{0}, {1}",
@@ -96,10 +107,13 @@ export const TEXT = {
   was: "was {0}",
   /** Description with spec.was: {0} = was title, {1} = the 2 largest moves ("North +12%, West -10%"). */
   since: "Since {0}: {1}",
-  /** aria-label of the units form radiogroup, and its three options. */
+  /** aria-label of the units form radiogroup. */
   forms: "Form",
+  /** Units form option: waffle. */
   waffle: "Waffle",
+  /** Units form option: bars. */
   bars: "Bars",
+  /** Units form option: swarm. */
   swarm: "Swarm",
   /** Units description: {0} = the name (or x) title. */
   perDot: "Each dot is one {0}",
@@ -115,20 +129,56 @@ export const TEXT = {
   alike: "Closer points are more alike across {0}",
   /** Constellation tooltip: {0} = the nearest names joined with ", ". */
   nearest: "Closest: {0}",
-  /** Boxplot tooltip and table labels: the five numbers and the row count. */
+  /** Boxplot maximum label (tooltip, table); annotate "max" in the description. */
   max: "Max",
+  /** Boxplot upper quartile label. */
   q3: "Upper quartile",
+  /** Boxplot median label. */
   median: "Median",
+  /** Boxplot lower quartile label. */
   q1: "Lower quartile",
+  /** Boxplot minimum label (tooltip, table); annotate "min" in the description. */
   min: "Min",
+  /** Boxplot row count label. */
   rows: "Rows",
-  /** Funnel tooltip and table labels: step conversion. */
+  /** Funnel tooltip and table label: conversion from the previous step. */
   ofPrevious: "% of previous",
+  /** Funnel tooltip and table label: conversion from the first step. */
   ofFirst: "% of first",
-  /** Description of annotate: first and last point, and the sentence ({0} = the kinds joined with ", "). */
+  /** Annotate "first" in the description. */
   first: "First",
+  /** Annotate "last" in the description. */
   last: "Last",
+  /** Description of annotate: {0} = the kinds joined with ", ". */
   labelled: "Labelled points: {0}",
+  /** Beeswarm select { peers }: label of the peers' average line, {0} = the peers' value. */
+  peerMean: "{0} average",
+  /** Live region after a parallel brush: {0} = lines kept, {1} = all lines. */
+  brushed: "{0} of {1} shown",
+  /** Live region after the parallel brush is cleared. */
+  brushCleared: "Filter cleared",
+  /** kpi with spec.back: the button that turns the card over (aria-pressed says which face shows). */
+  flip: "Details",
+  /** aria-label of the stack mode radiogroup (spec.stack as an array). */
+  stacks: "Layout",
+  /** Stack mode option for false: grouped bars, overlaid areas. */
+  unstacked: "Separate",
+  /** Stack mode option for true. */
+  stacked: "Stacked",
+  /** Stack mode option for "percent". */
+  percent: "Percent",
+  /** Stack mode option for "stream". */
+  stream: "Stream",
+  /** aria-label and placeholder of the table search box (spec.filter). */
+  filter: "Filter",
+  /** Table row that shows the next page (spec.page): {0} = rows it adds. */
+  showMore: "Show {0} more",
+  /** aria-label of the heatmap column breadcrumb (spec.xPath with drill). */
+  crumbsX: "Column drill path",
+  /** Drilled waterfall opening total: {0} = the drilled value. */
+  before: "Before {0}",
+  /** Drilled waterfall closing total: {0} = the drilled value. */
+  after: "After {0}",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

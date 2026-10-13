@@ -32,7 +32,7 @@ describe("hexmap", () => {
     const l = /<g data-maya="labels">(.*?)<\/g>/.exec(svg)![1]!;
     expect(l).toMatch(/>TX<\/text>/);
     expect(l).toMatch(/>50<\/text>/);
-    expect(l).toMatch(/data-dark=""[^>]*>TX</);
+    expect(l).toMatch(/data-ink="a"[^>]*>TX</);
   });
   it("drops values then codes on a tiny map", () => {
     const big = spec([
@@ -107,16 +107,17 @@ describe("hexmap", () => {
   });
   it("snapshot", () =>
     expect(marks(render(base)).join("\n")).toMatchInlineSnapshot(`
-      "<path data-maya="mark" data-key="g~CA" data-c="0" data-s="0" data-x="California" data-series="" data-f="10" data-y="10" data-q="0" d="M129.87 149.77L129.87 170.23L112.15 180.46L94.44 170.23L94.44 149.77L112.15 139.54Z"/>
-      <path data-maya="mark" data-key="g~TX" data-c="1" data-s="0" data-x="Texas" data-series="" data-f="50" data-y="50" data-q="9" d="M268.43 252.63L268.43 273.09L250.72 283.31L233 273.09L233 252.63L250.72 242.4Z"/>
-      <path data-maya="mark" data-key="g~NY" data-c="2" data-s="0" data-x="New York" data-series="" data-f="30" data-y="30" data-q="5" d="M446.59 81.2L446.59 101.66L428.87 111.89L411.16 101.66L411.16 81.2L428.87 70.97Z"/>"
+      "<path data-maya="mark" data-key="g~CA" data-raw="CA" data-c="0" data-s="0" data-x="California" data-series="" data-f="10" data-y="10" data-q="0" d="M129.87 149.77L129.87 170.23L112.15 180.46L94.44 170.23L94.44 149.77L112.15 139.54Z"/>
+      <path data-maya="mark" data-key="g~TX" data-raw="Texas" data-c="1" data-s="0" data-x="Texas" data-series="" data-f="50" data-y="50" data-q="9" d="M268.43 252.63L268.43 273.09L250.72 283.31L233 273.09L233 252.63L250.72 242.4Z"/>
+      <path data-maya="mark" data-key="g~NY" data-raw=" ny " data-c="2" data-s="0" data-x="New York" data-series="" data-f="30" data-y="30" data-q="5" d="M446.59 81.2L446.59 101.66L428.87 111.89L411.16 101.66L411.16 81.2L428.87 70.97Z"/>"
     `));
-  it("marks state labels on dark ramp steps with data-dark", () => {
+  it("state labels carry their hex's ramp step and the auto ink, no halo class", () => {
     const t = (render(base).match(/<text [^>]*data-in[^>]*>[A-Z]{2}</g) ?? []).filter(
       (x) => !x.includes("opacity"),
     );
     expect(t).toHaveLength(3);
-    expect(t.map((x) => x.includes("data-dark"))).toEqual([false, true, false]);
+    expect(t.every((x) => x.includes('data-ink="a"') && x.includes("data-hx"))).toBe(true);
+    expect(t.map((x) => /data-q="(\d)"/.exec(x)![1])).toEqual(["0", "9", "5"]);
   });
   it("every value line is solid ink (no opacity) and carries its ramp step for the ink rule", () => {
     const l = /<g data-maya="labels">(.*?)<\/g>/.exec(render(base))![1]!;
@@ -124,5 +125,42 @@ describe("hexmap", () => {
     expect(v).toHaveLength(3);
     for (const x of v) expect(x).toMatch(/data-q="\d"/);
     expect(v.some((x) => x.includes("opacity"))).toBe(false);
+  });
+});
+
+describe("hexmap colorScale", () => {
+  const skew = spec(
+    ["CA", "TX", "NY", "FL", "WA", "OR", "NV", "AZ", "UT", "CO"].map((s, i) => ({
+      s,
+      v: i === 9 ? 1000 : i + 1,
+    })),
+  );
+  const qs = (sp: ChartSpec) => marks(render(sp)).map((m) => +attr(m, "data-q")!);
+  it("rank spreads a skewed ramp; quantile shows five classes with their breaks in the legend", () => {
+    expect(new Set(qs(skew)).size).toBeLessThan(3);
+    expect(new Set(qs({ ...skew, colorScale: "rank" })).size).toBe(10);
+    expect(new Set(qs({ ...skew, colorScale: "quantile" }))).toEqual(new Set([0, 2, 5, 7, 9]));
+    const legend = renderShell({ ...skew, colorScale: "quantile" });
+    expect(legend.match(/<i data-q="\d"><\/i>/g)).toHaveLength(5);
+  });
+  it("a diverging ramp centres the mid", () => {
+    const d = spec([
+      { s: "CA", v: -4 },
+      { s: "TX", v: 0 },
+      { s: "NY", v: 4 },
+    ]);
+    const q = qs({ ...d, theme: { rampMid: "#eee" } });
+    expect(q).toEqual([0, 5, 9]);
+  });
+});
+
+describe("hexmap labelSize (M2 L23)", () => {
+  const fs = (theme?: Record<string, string>) =>
+    +/data-hx[^>]*font-size="([\d.]+)"/.exec(
+      render({ ...base, ...(theme ? { theme } : {}) } as ChartSpec),
+    )![1]!;
+  it("caps the fitted label size", () => {
+    expect(fs({ labelSize: "8px" })).toBe(8);
+    expect(fs({ labelSize: "40px" })).toBe(fs());
   });
 });

@@ -14,12 +14,15 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Intro, idle, patch, type PatchOptions, ZOOM } from "./animate.ts";
+import { type Intro, idle, patch, type PatchOptions, turn, ZOOM } from "./animate.ts";
+import * as flip from "./flip.ts";
 import * as drill from "./drill.ts";
+import * as expand from "./expand.ts";
 import { html } from "./html.ts";
 import { listen } from "./listen.ts";
 import * as measure from "./measure.ts";
 import * as play from "./play.ts";
+import * as brush from "./brush.ts";
 import * as select from "./select.ts";
 import * as sort from "./sort.ts";
 import { still as reduced, type Tooltip, tooltip } from "./tooltip.ts";
@@ -36,7 +39,10 @@ export class MayaChart extends HTMLElement {
   #state: State = { view: {}, selected: [] };
   #seen: ChartSpec | undefined;
   #ix:
-    | (Record<"measure" | "drill" | "select" | "sort" | "play", Handlers> & {
+    | (Record<
+        "measure" | "drill" | "expand" | "select" | "brush" | "sort" | "play" | "flip",
+        Handlers
+      > & {
         zoom: ReturnType<typeof zoom.mount>;
       })
     | undefined;
@@ -56,6 +62,17 @@ export class MayaChart extends HTMLElement {
   #drawn = false;
   #intro = 0; // performance.now() of the animated first draw
   #idle: (() => void) | undefined; // cancels the queued data-table insert
+  #face = "front"; // the face last drawn
+  #turn: (() => void) | undefined; // cancels a card turn in flight
+  #bk: [ChartSpec, ChartSpec] | undefined; // [front, back with the front's rows]
+
+  /** What the interaction modules read: the back's options while the back shows (same rows). */
+  #act(): ChartSpec | undefined {
+    const s = this.spec;
+    if (!s?.back || this.#state.view.face !== "back") return s;
+    return (this.#bk =
+      this.#bk?.[0] === s ? this.#bk : [s, { ...s.back, data: s.data } as ChartSpec])[1];
+  }
 
   #gen = 0; // the latest paint; an older one's settle is dropped
   #end: ((e: Error | null) => void) | undefined; // settles #sp; undefined once settled
@@ -170,7 +187,7 @@ export class MayaChart extends HTMLElement {
     const host: Host = {
       root,
       el: this,
-      spec: () => this.spec,
+      spec: () => this.#act(),
       state: () => this.#state,
       commit: (next, target) => this.#commit(next, target ?? null),
       announce: (text) => this.#announce(text),
@@ -180,16 +197,19 @@ export class MayaChart extends HTMLElement {
       measure: measure.mount(host),
       select: select.mount(host), // before drill: a double click restores the selection, then drills
       drill: drill.mount(host),
+      expand: expand.mount(host),
+      brush: brush.mount(host),
       zoom: zoom.mount(host),
       sort: sort.mount(host),
       play: play.mount(host),
+      flip: flip.mount(host),
     };
     const box = root.querySelector(".maya-box")!;
     this.#tip = tooltip(
       root,
       () => this.spec?.tooltip !== false,
       (t) => this.#announce(t),
-      () => this.spec,
+      () => this.#act(),
     );
     this.#unlisten.push(this.#tip.off);
     this.#ro = new ResizeObserver(() => {
@@ -275,7 +295,9 @@ export class MayaChart extends HTMLElement {
     // Drilling zooms into the branch entered, or out of the branch left. Flows keep their
     // nodes in place across a drill (stable keys), so they morph instead.
     const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
-    this.#fl = d1.length !== d0.length;
+    this.#fl =
+      d1.length !== d0.length ||
+      (prev.view.xDrill?.length ?? 0) !== (next.view.xDrill?.length ?? 0);
     // A table row is a thin bar, not a container: its rows swap by key instead of zooming.
     if (/^(sankey|table)$/.test(this.spec?.type ?? "")) this.#fl && this.#tip?.hide();
     else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
@@ -292,7 +314,7 @@ export class MayaChart extends HTMLElement {
 
   /*
    * One keydown dispatcher. Escape priority: pinned tooltip (tooltip.ts, T2) -> brush in
-   * progress -> selection -> zoom window -> drill pop. Enter: select, else drill (drill first without
+   * progress -> card back face -> selection -> brush ranges -> zoom window -> drill pop. Enter: select, else drill (drill first without
    * select; Shift+Enter drills), on the keyboard-active mark. + or = halves the zoom window about the active mark, - doubles it. T2 routes the tooltip's own Escape/Enter/Space through here.
    */
   #key = (e: Event) => {
@@ -303,7 +325,13 @@ export class MayaChart extends HTMLElement {
     let done: boolean | undefined;
     if (k === "Escape")
       done =
-        ix.zoom.cancel?.() || ix.select.escape?.() || ix.zoom.escape?.() || ix.drill.escape?.();
+        ix.zoom.cancel?.() ||
+        ix.brush.cancel?.() ||
+        ix.flip.escape?.() ||
+        ix.select.escape?.() ||
+        ix.brush.escape?.() ||
+        ix.zoom.escape?.() ||
+        ix.drill.escape?.();
     else if (k === "Enter") {
       const m = this.#tip?.active();
       done = !!(
@@ -311,8 +339,8 @@ export class MayaChart extends HTMLElement {
         (e.target as Element).closest(".maya-svg") &&
         // Enter selects, else drills; Shift+Enter drills, else selects.
         ((e as KeyboardEvent).shiftKey
-          ? ix.drill.enter?.(m) || ix.select.enter?.(m)
-          : ix.select.enter?.(m) || ix.drill.enter?.(m))
+          ? ix.drill.enter?.(m) || ix.expand.enter?.(m) || ix.select.enter?.(m)
+          : ix.select.enter?.(m) || ix.drill.enter?.(m) || ix.expand.enter?.(m))
       );
     } else if (k === "+" || k === "=" || k === "-") {
       const { ctrlKey, metaKey, altKey } = e as KeyboardEvent;
@@ -384,8 +412,20 @@ export class MayaChart extends HTMLElement {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
       this.#state = select.reduce(
-        zoom.reduce(
-          sort.reduce(play.reduce(drill.reduce(measure.reduce(this.#state, ev), ev), ev), ev),
+        brush.reduce(
+          zoom.reduce(
+            sort.reduce(
+              play.reduce(
+                drill.reduce(
+                  expand.reduce(flip.reduce(measure.reduce(this.#state, ev), ev), ev),
+                  ev,
+                ),
+                ev,
+              ),
+              ev,
+            ),
+            ev,
+          ),
           ev,
         ),
         ev,
@@ -486,12 +526,24 @@ export class MayaChart extends HTMLElement {
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
     // A drill zoom moves marks under the pointer: no hover mark (its stroke would scale with the zoom) until it lands.
     if (this.#zoom) this.#tip?.hide(still ? 0 : 640);
-    patch(box, parts.svg, (this.#drawn || !!intro) && !still, {
-      intro,
-      zoom: this.#zoom,
-      after: () => this.#tip?.refresh(),
-      instant: resized,
-    });
+    const face = this.#state.view.face ?? "front";
+    const flipped = this.#drawn && face !== this.#face && spec.animate !== false;
+    this.#face = face;
+    this.#turn?.();
+    this.#turn = undefined;
+    const go = (anim: boolean) =>
+      patch(box, parts.svg, anim, {
+        intro,
+        zoom: this.#zoom,
+        after: () => this.#tip?.refresh(),
+        instant: resized,
+        roll: spec.numberMotion === "roll",
+      });
+    // A new face shares no keys with the old one: turn the card instead of diffing.
+    if (flipped && box.firstElementChild) {
+      this.#tip?.hide();
+      this.#turn = turn(box, () => go(false), still);
+    } else go((this.#drawn || !!intro) && !still);
     this.#zoom = undefined;
     const dy = top0 - box.getBoundingClientRect().top; // NaN: not measured
     if (dy && !still) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
@@ -551,13 +603,14 @@ const legend = (e: Event) => {
   const b = (e.target as Element).closest(".maya-legend [data-s]"),
     on = e.type === "pointerover",
     s = (b?.closest(".maya") as HTMLElement | undefined)?.style;
+  if (b?.getAttribute("aria-pressed") === "false") return; // hidden: nothing to highlight, dim nothing
   s?.setProperty("--d", on ? ".25" : "");
   s?.setProperty("--h" + b?.getAttribute("data-s"), on ? "1" : "");
 };
 
 const SLOTS: [keyof Parts, string][] = [
   ["title", ".maya-title,.maya-sub"],
-  ["controls", ".maya-ctl,.maya-play"],
+  ["controls", ".maya-ctls,.maya-ctl,.maya-play,.maya-flip"],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],
 ];
@@ -576,9 +629,12 @@ const INTRO: Record<string, Intro> = {
 
 const FOCUS: [string, string][] = [
   ["svg", ".maya-svg"],
+  ["axis", "[data-maya=axis]"],
   ["legend", "[data-maya=legend] button"],
   ["measure", ".maya-ctl [role=radio]"],
+  ["flip", ".maya-flip"],
   ["crumb", ".maya-crumbs :is(button,a)"],
+  ["filter", ".maya-filter"],
   ["reset", ".maya-reset"],
   ["play", ".maya-play"],
 ];

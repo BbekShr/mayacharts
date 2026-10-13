@@ -1,12 +1,24 @@
+import { colorVals } from "../shape.ts";
 import { el, hit, key, OTHER, r } from "../svg.ts";
 import type { Axis, BandScale, LinearScale, Mark } from "../types.ts";
+import { more } from "./bar.ts";
 
 /** Two dots per category (series 0 = from, 1 = to) joined by a connector toned by colorBy "sign". */
 export const dumbbell: Mark = {
   noun: "Dumbbell",
   axes(spec, shaped) {
     const cat: Axis = { kind: "band", field: spec.x, domain: shaped.categories };
-    const val: Axis = { kind: "linear", field: spec.y, domain: shaped.extent };
+    // zero: false fits the axis to the values drawn (shape runs per drill level, so each level refits), 5% padded.
+    let [lo, hi] = shaped.extent;
+    if (!spec.zero) {
+      const v = shaped.cells.flatMap((c) => (c.value === null ? [] : [c.value]));
+      if (v.length) {
+        [lo, hi] = [Math.min(...v), Math.max(...v)];
+        const p = (hi - lo || Math.abs(hi) || 1) * 0.05;
+        [lo, hi] = [lo - p, hi + p];
+      }
+    }
+    const val: Axis = { kind: "linear", field: spec.y, domain: [lo, hi] };
     return spec.horizontal ? [val, cat] : [cat, val];
   },
   draw(ctx) {
@@ -19,7 +31,7 @@ export const dumbbell: Mark = {
       of: (v: number) => Math.min(Math.max(of(v), Math.min(...range)), Math.max(...range)),
     };
     const rad = Math.max(3, Math.min(5, cat.bandwidth / 2 - 1));
-    // ponytail: sort stays shape's total-across-series order; sorting by the gap is out of scope.
+    const mv = spec.tipFields.map((f) => colorVals(spec, f));
     const pairs = new Map<number, [number?, number?]>();
     for (const c of shaped.cells)
       if (c.value !== null && c.si < 2)
@@ -55,13 +67,21 @@ export const dumbbell: Mark = {
         const d = {
           "data-key": key(ser, cname),
           "data-c": ci,
-          "data-s": si % 8,
+          // colorBy "sign": colour means direction (the connector), so the ends are neutral, hollow from and ink to.
+          ...(spec.colorBy === "sign"
+            ? {
+                "data-neu": si ? null : true,
+                "data-hollow": si ? null : true,
+                "data-to": si || null,
+              }
+            : { "data-s": si % 8 }),
           "data-x": ctx.fmt(spec.x, cname),
           "data-series": ser,
           "data-f": ctx.fmt(spec.y, v),
           "data-y": v,
           "data-neg": v < 0,
           "data-other": cname === OTHER,
+          "data-more": more(ctx, (_, k) => mv[k]!(cname, ser)),
         };
         dots += el("circle", { "data-maya": "mark", ...d, cx: r(cx), cy: r(cy), r: rad });
         hits += hit(d, cx - rad, cy - rad, rad * 2, rad * 2);

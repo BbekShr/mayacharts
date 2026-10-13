@@ -160,3 +160,69 @@ describe("gauge ratio", () => {
     expect(s).toContain(">3<");
   });
 });
+
+describe("hero number", () => {
+  it("the gauge value carries data-hero (theme heroSize and heroWeight)", () => {
+    expect(svg(base())).toMatch(/<text[^>]*data-hero[^>]*>62</);
+  });
+});
+
+describe("arc, tooltip fields (#83)", () => {
+  const rows = [{ v: 0.995, ytd: 142.1e6, py: 142.8e6 }];
+  const ring = (o: Partial<ChartSpec> = {}) =>
+    svg(
+      {
+        type: "gauge",
+        y: "v",
+        arc: 360,
+        yDomain: [0, 1.3],
+        data: rows,
+        format: { v: "percent", ytd: "currency", py: "currency" },
+        tooltip: { fields: ["ytd", "py"] },
+        ...o,
+      } as ChartSpec,
+      { width: 300, height: 260 },
+    );
+  it("arc 180 keeps the half dial start (9 o'clock)", () => {
+    expect(arc(svg(base()))).toMatch(/stroke-dashoffset="(180|179|178|177|176|175|\d{3}(\.\d+)?)"/);
+  });
+  it("arc 270 starts at 225 degrees, 360 at 12 o'clock", () => {
+    const off = (a: 180 | 270 | 360) =>
+      +arc(svg(base({ arc: a, yDomain: [0, 100] }, 0.0001 as number))).match(
+        /stroke-dashoffset="([\d.]+)"/,
+      )![1]!;
+    // 3 o'clock is 0; the start sits (360 - offset) degrees clockwise from it.
+    expect(Math.abs(360 - off(180) - 180)).toBeLessThan(12);
+    expect(Math.abs(360 - off(270) - 135)).toBeLessThan(12);
+    expect(Math.abs(360 - off(360) - 270)).toBeLessThan(12);
+  });
+  it("a closed ring has a full annulus track and hit, no end labels, the number centred", () => {
+    const s = ring();
+    expect(s).toMatch(/data-kpi="track"[^>]*d="M[^"]*Z/);
+    expect(s).not.toMatch(/data-kpi="of"[^>]*>0%</);
+    const t = s.match(/<text data-maya="mark" data-key="t"[^>]*>/)![0];
+    expect(t).toContain('text-anchor="middle"');
+    expect(s).toContain('pathLength="360"');
+  });
+  it("tooltip fields land on the value mark and its hit as title/value lines", () => {
+    const s = ring();
+    const more = 'data-more="ytd&#9;$142.1M&#10;py&#9;$142.8M"';
+    const m = s.match(/data-more="[^"]*"/g)!;
+    expect(m.length).toBeGreaterThanOrEqual(2);
+    expect(m[0]).toMatch(/ytd/);
+    expect(more).toBeTruthy();
+  });
+  it("a ratio item is sum(num) / sum(den)", () => {
+    const s = svg(
+      base({
+        data: [
+          { v: 1, a: 1, b: 4 },
+          { v: 1, a: 3, b: 4 },
+        ],
+        tooltip: { fields: [{ field: "r", ratio: ["a", "b"] }] },
+        format: { r: "percent" },
+      }),
+    );
+    expect(s).toMatch(/data-more="r\t?[^"]*50%/);
+  });
+});

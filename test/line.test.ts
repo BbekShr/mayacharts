@@ -344,3 +344,42 @@ describe("annotate notes", () => {
     expect(svg).toMatch(/data-ann="note"[^>]*>Launch</);
   });
 });
+
+describe("line emphasis and streams", () => {
+  const rows = ["2025", "2026"].flatMap((year, j) =>
+    months.map((m, i) => ({ m, year, v: (i + 1) * 10 + j * 5 })),
+  );
+  const s = (extra: object): ChartSpec =>
+    ({ type: "line", x: "m", y: "v", series: "year", data: rows, ...extra }) as ChartSpec;
+  it("emphasis puts data-em on that series' path and dots, and its legend button", () => {
+    const p = renderParts(s({ emphasis: ["2026"], legend: true }));
+    const em = [...p.svg.matchAll(/<(?:path|circle) [^>]*data-em[^>]*>/g)].map((m) => m[0]);
+    expect(em).toHaveLength(1 + months.length);
+    expect(em.every((t) => t.includes('data-series="2026"') || t.includes("l~2026"))).toBe(true);
+    expect(p.legend).toMatch(/<button[^>]*data-em[^>]*data-key="2026"/);
+  });
+  it("a stream is a filled area with no value axis, its tooltip the cell value, its dots mid-band", () => {
+    const st = renderParts({ ...s({ stack: "stream" }), type: "area" } as ChartSpec, {
+      width: 480,
+      height: 280,
+    });
+    expect(st.svg).toContain('data-stack="stream"');
+    expect(st.svg).toContain('data-maya="area"');
+    expect(st.svg).not.toMatch(/<g data-maya="axis-y">\s*<text/);
+    const dot = st.svg.match(/<circle[^>]*data-key="2026~Mar"[^>]*>/)![0];
+    expect(dot).toContain('data-y="35"');
+    expect(dot).toContain('data-f="35"');
+    // The hover dot sits on the stroke (the band top), not mid-band.
+    const area = st.svg.match(/data-key="a~2026"[^>]*d="([^"]*)"/)![1]!;
+    const ys = [...area.matchAll(/[ML]([\d.]+) ([\d.]+)/g)].map((m) => +m[2]!);
+    const cy = +/cy="([\d.]+)"/.exec(dot)![1]!;
+    expect(ys).toContain(cy);
+  });
+  it("stream end labels sit on the last band", () => {
+    const st = renderParts({ ...s({ stack: "stream" }), type: "area" } as ChartSpec, {
+      width: 480,
+      height: 280,
+    });
+    expect(st.svg.match(/data-end/g)).toHaveLength(2);
+  });
+});

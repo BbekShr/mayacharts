@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { niceTicks, toTime } from "../src/core/ticks.ts";
+import { logTicks, niceTicks, toTime } from "../src/core/ticks.ts";
 
 const cases: [number, number][] = [
   [0, 0],
@@ -83,4 +83,15 @@ describe("niceTicks equal huge range", () => {
       expect(t.values.every(Number.isFinite)).toBe(true);
     });
   }
+});
+
+describe("logTicks on a short span", () => {
+  it("5 to 300 snaps to 5 to 500, not 1 to 1000", () => {
+    const t = logTicks(5, 300);
+    expect(t.domain).toEqual([5, 500]);
+    expect(t.values).toEqual([5, 10, 20, 50, 100, 200, 500]);
+  });
+  it("a wide span stays on whole decades", () => {
+    expect(logTicks(2, 5000).values).toEqual([1, 10, 100, 1000, 10000]);
+  });
 });

@@ -51,6 +51,8 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   const cvOf = colorVals(spec);
   const px = (ci: number) => r(cat.at(ci) + cat.bandwidth / 2);
   const tipOf = spec.tipFields.map((f) => colorVals(spec, f));
+  // A stream's value is its band thickness: its end label sits at the band's middle; the hover markers sit on the stroke (the band top).
+  const mid = (c: Cell) => (spec.stack === "stream" ? (c.y0 + c.y1) / 2 : c.y1);
   const series = shaped.visible.map((si) => shaped.cells.filter((c) => c.si === si)); // ascending ci, as shape lays them out
   const paths = series.map((cells) =>
     cells.flatMap((c) => (c.value === null ? [] : [[px(c.ci), val.of(c.y1)] as const])),
@@ -174,6 +176,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         "data-other": other,
         "data-more": more(ctx, (_, k) => tipOf[k]!(cname, ser)),
         "data-dash": dash,
+        "data-em": spec.emphasis.has(ser),
         "data-last": done.has(c), // an annotated point keeps its dot
         r: 3,
         cx: px(c.ci),
@@ -183,7 +186,8 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
       if (sp) ctx.label(...sp);
     }
     const e = path.at(-1);
-    if (e) ep.push([e[1], e[0], si, tx[ep.length]!]);
+    const lc = cells.filter((c) => c.value !== null).at(-1);
+    if (e && lc) ep.push([val.of(mid(lc)), e[0], si, tx[ep.length]!]);
     if (fill) {
       const sh = runs
         .filter((run) => run.length > 0)
@@ -210,6 +214,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
       "data-key": key("l", ser),
       "data-s": si % 8,
       "data-dash": dash,
+      "data-em": spec.emphasis.has(ser),
       pathLength: 1,
       // pathLength 1 (the entrance wipe) makes a dash a fraction of the line: 6 px on, 4 off.
       "stroke-dasharray":

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "../src/index.ts";
+import { css } from "../src/styles/theme.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 const labels = (s: ChartSpec) =>
@@ -17,20 +18,16 @@ describe("bar value labels over the bar", () => {
       { k: "b", v: 80 },
     ],
   };
-  it("carry the dark ink on a full-strength bar", () => {
+  it("take the ink from their own fill: the label repeats the mark's colour attributes", () => {
     const l = labels(base);
     expect(l).toHaveLength(2);
-    expect(l.every((t) => t.includes('data-ink=""'))).toBe(true);
-  });
-  it("use the page background ink on the grey roll-up bar and on tone fills", () => {
+    expect(l.every((t) => t.includes('data-ink="a"') && t.includes('data-s="0"'))).toBe(true);
     const other = labels({ ...base, limit: 1, sort: "desc" });
-    expect(other.some((t) => t.includes('data-ink="b"'))).toBe(true);
-    expect(labels({ ...base, colorBy: "sign" }).every((t) => t.includes('data-ink="b"'))).toBe(
+    expect(other.some((t) => t.includes("data-other"))).toBe(true);
+    expect(labels({ ...base, colorBy: "sign" }).every((t) => t.includes('data-tone="good"'))).toBe(
       true,
     );
-  });
-  it("follow the ramp's dark-step rule when coloured by a field", () => {
-    const l = labels({
+    const q = labels({
       ...base,
       colorBy: "v",
       data: [
@@ -38,8 +35,19 @@ describe("bar value labels over the bar", () => {
         { k: "b", v: 60 },
       ],
     });
-    expect(l.some((t) => t.includes('data-ink=""'))).toBe(true);
-    expect(l.some((t) => !t.includes("data-ink"))).toBe(true);
+    expect(q.every((t) => /data-q="\d"/.test(t))).toBe(true);
+  });
+  it("ink rule: light ink below relative luminance .1831 of the fill, dark above (theme.series1 #1E1E24)", () => {
+    expect(css).toContain("color(from var(--c,var(--maya-series-1)) xyz-d65");
+    expect(css).toContain("(.1831 - y)*1e5");
+    // The stylesheet's K, for a fill of relative luminance y: near-black above the cut, white below, 4.5:1 either way (the dark blue 41,120,212 is y .1865).
+    const K = (y: number) => Math.min(1, Math.max(0.0017, 0.0017 + (0.1831 - y) * 1e5));
+    for (const y of [0.1865, 0.1832, 0.183, 0.1, 0.02, 0.5]) {
+      const ink = K(y);
+      expect((Math.max(y, ink) + 0.05) / (Math.min(y, ink) + 0.05)).toBeGreaterThanOrEqual(4.5);
+    }
+    const svg = render({ ...base, theme: { series1: "#1E1E24" } }, { width: 600, height: 300 });
+    expect(svg).toContain('data-ink="a"');
   });
 });
 
@@ -87,5 +95,32 @@ describe("stacked segment labels", () => {
       { width: 600, height: 300 },
     );
     expect(svg.slice(svg.indexOf('data-maya="labels"')).match(/<text/g)).toHaveLength(1);
+  });
+});
+
+describe("bar label placement under pressure", () => {
+  const wide = (type: "bar" | "waterfall", extra: Partial<ChartSpec> = {}): ChartSpec => ({
+    type,
+    x: "k",
+    y: "v",
+    labels: true,
+    data: ["a", "b", "c", "d"].map((k, i) => ({
+      k,
+      v: 1_234_567 + i * 90_000,
+      g: i % 2 ? "x" : "y",
+    })),
+    ...extra,
+  });
+  const texts = (s: ChartSpec, w: number) =>
+    (render(s, { width: w, height: 300 }).match(/<text[^>]*data-key[^>]*>/g) ?? []).length;
+  it("grouped labels wider than their bar still draw at 360 px", () => {
+    const g = wide("bar", { series: "g" });
+    expect(texts(g, 360)).toBeGreaterThan(0);
+  });
+  it("a waterfall keeps its opening and closing totals at 260 px", () => {
+    const w = render(wide("waterfall"), { width: 260, height: 300 });
+    const keys = (w.match(/<text[^>]*data-key="([^"]*)"/g) ?? []).join("");
+    expect(keys).toContain('"a"');
+    expect(keys).toContain('"d"');
   });
 });

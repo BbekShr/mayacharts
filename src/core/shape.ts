@@ -71,6 +71,11 @@ export function shape(
   s: ResolvedSpec,
   { hidden = [], window, plotWidth = Infinity, height = Infinity }: Opts = {},
 ): Shaped {
+  // A list's headline values are the moves' own rows (no evidence value): never summed with their evidence.
+  if (s.type === "list" && s.evidence) {
+    const e = s.evidence;
+    s = { ...s, data: memo(s.data, `own${e}`, () => s.data.filter((r) => r[e] == null)) };
+  }
   const series: string[] = [];
   const shown = () => series.flatMap((k, j) => (hidden.includes(k) ? [] : [j]));
   if (s.type === "scatter" || s.type === "units") {
@@ -181,8 +186,12 @@ export function shape(
         // Category totals and their sorted copy come once per row pass; a new limit (a resize
         // across a 40 px step) is then a selection and a merge, no row pass.
         // An auto roll-up ranks by magnitude, so a large negative bar is not hidden in Other.
-        const { tot, r, asc } = memo(base.cats, capped ? "ta" : "t", () => {
-          const tot = Float64Array.from(base.cats, total);
+        // sort "change" (dumbbell): to minus from, largest gain first.
+        const ch = s.sort === "change";
+        const { tot, r, asc } = memo(base.cats, `t${capped ? "a" : ""}${ch ? "c" : ""}`, () => {
+          const tot = Float64Array.from(base.cats, (c) =>
+            ch ? (c.vals[1] ?? 0) - (c.vals[0] ?? 0) : total(c),
+          );
           const r = capped ? tot.map(Math.abs) : tot;
           return { tot, r, asc: Float64Array.from(r).sort() };
         });
@@ -208,8 +217,9 @@ export function shape(
     // waterfall spans use running totals over every category, before the window.
     if (wf) {
       let run = 0;
-      for (const c of cats) {
-        if (s.totals.includes(c.label)) spans.set(c, [0, run]);
+      // A total before any step opens at its own value (last year's figure), as bar.ts draws it.
+      for (const [i, c] of cats.entries()) {
+        if (s.totals.includes(c.label)) spans.set(c, [0, i ? run : (run = total(c))]);
         else spans.set(c, [run, (run += total(c))]);
       }
     }
@@ -252,6 +262,7 @@ export function shape(
   const cells: Cell[] = [];
   let lo = 0;
   let hi = 0;
+  const g = s.stack === "stream" ? wiggle(cats, visible) : null;
   cats.forEach((c, i) => {
     let pos = 0;
     let neg = 0;
@@ -272,15 +283,32 @@ export function shape(
       let y0 = wf ? spans.get(c)![0] : 0,
         y1 = wf ? spans.get(c)![1] : v;
       if (s.stack) {
-        y0 = (v < 0 ? neg : pos) / k;
-        y1 = (v < 0 ? (neg += v) : (pos += v)) / k;
+        y0 = (v < 0 ? neg : pos) / k + (g ? g[i]! : 0);
+        y1 = (v < 0 ? (neg += v) : (pos += v)) / k + (g ? g[i]! : 0);
       }
       lo = Math.min(lo, y0, y1);
       hi = Math.max(hi, y0, y1);
       cells.push({ ci: i, si: j, value, y0, y1 });
     }
   });
+  // heatmap totals: true: a Total per column, per row and overall, from the rows of visible series.
+  let margins: Shaped["margins"];
+  if (s.margins) {
+    const ci = new Map(cats.map((c, i) => [c.label, i]));
+    const rest = ci.get(OTHER);
+    const on = new Map(visible.map((j) => [series[j]!, j]));
+    const mk = () => agg(s.aggregate, !!s.ratio);
+    const [cx, sy, all] = [cats.map(mk), series.map(mk), mk()];
+    for (const row of s.data) {
+      const j = on.get(s.series === null ? "" : String(row[s.series]));
+      const i = ci.get(String(row[s.x])) ?? rest;
+      if (j === undefined || i === undefined) continue;
+      for (const a of [cx[i]!, sy[j]!, all]) feed(a, row, s.y, s.ratio);
+    }
+    margins = { x: cx.map((a) => a.value()), series: sy.map((a) => a.value()), all: all.value() };
+  }
   return {
+    ...(margins && { margins }),
     categories: cats.map((c) => c.label),
     totals: cats.map((c) => s.totals.includes(c.label)),
     series,
@@ -293,6 +321,30 @@ export function shape(
     index: isTime ? cats.map((c) => c.i!) : index,
     capped,
   };
+}
+
+/**
+ * stack "stream": the baseline per category, Byron and Wattenberg's wiggle (as d3.stackOffsetWiggle:
+ * each step moves the baseline against the weighted slope of the layers) started centred on 0 at
+ * the first category. Values are 0 or more (validate.ts).
+ */
+function wiggle(cats: Cat[], on: number[]): number[] {
+  const v = (c: Cat, j: number) => c.vals[j] ?? 0;
+  const g = [-on.reduce((a, j) => a + v(cats[0]!, j), 0) / 2];
+  for (let i = 1; i < cats.length; i++) {
+    const [a, b] = [cats[i]!, cats[i - 1]!];
+    let s1 = 0;
+    let s2 = 0;
+    let below = 0;
+    for (const j of on) {
+      const d = v(a, j) - v(b, j);
+      s1 += v(a, j);
+      s2 += v(a, j) * (below + d / 2);
+      below += d;
+    }
+    g.push(g[i - 1]! - (s1 ? s2 / s1 : 0));
+  }
+  return g;
 }
 
 /** The Other bucket from the rolled-up categories' aggregates: values fold by the aggregate; a mean or ratio merges its reducers' sums. */
@@ -314,8 +366,9 @@ function other(s: ResolvedSpec, series: string[], rest: Cat[]): Cat {
   };
 }
 
-/** A kpi with a y array: each measure is a series (cell.si = measure index), thinned together. */
-const wide = (s: ResolvedSpec) => s.type === "kpi" && s.measures.length > 1;
+/** A kpi with a y array (not toggle): each measure is a series (cell.si = measure index), thinned together. */
+export const wide = (s: ResolvedSpec): boolean =>
+  s.type === "kpi" && s.measures.length > 1 && !s.toggle;
 
 /**
  * The row pass: one reducer per (category, series) and one for y2 per category; pairs with no row
@@ -599,18 +652,58 @@ export function pivotWas(
   });
 }
 
-/** A field (default: the colorBy field; also spec.was) aggregated per (category, series) like the marks; null without one. */
+/**
+ * Calendar form of spec.was (heatmap, `was.by` = spec.series): each cell's previous value is the
+ * same x under the previous series value (by time when all are dates, else data order). Adds the
+ * aggregated previous value as `field` on the first row of each cell, so colorVals reads it as a
+ * per-cell field. ponytail: the first series value has no previous; `count` aggregates one value.
+ */
+export function pivotPrevSeries(
+  rows: readonly Row[],
+  x: string,
+  series: string,
+  y: string,
+  field: string,
+  aggregate: Aggregate,
+): readonly Row[] {
+  return memo(rows, `p${x}\0${series}\0${y}\0${aggregate}`, () => {
+    const ks = new Map<string, Row[string]>();
+    for (const r of rows)
+      if (r[series] != null) ks.has(String(r[series])) || ks.set(String(r[series]), r[series]);
+    const t = (k: string) => toTime(ks.get(k));
+    const ord = [...ks.keys()];
+    if (!ord.some((k) => t(k) === null)) ord.sort((a, b) => t(a)! - t(b)!);
+    const sum = new Map<string, ReturnType<typeof agg>>();
+    for (const r of rows)
+      if (typeof r[y] === "number" && r[series] != null) {
+        const k = `${r[x]}\0${r[series]}`;
+        (sum.get(k) ?? sum.set(k, agg(aggregate)).get(k)!).add(r[y]);
+      }
+    const done = new Set<string>();
+    return rows.map((r) => {
+      const i = ord.indexOf(String(r[series]));
+      const k = `${r[x]}\0${ord[i - 1]}`;
+      if (i < 1 || done.has(`${r[x]}\0${r[series]}`) || !sum.has(k)) return r;
+      done.add(`${r[x]}\0${r[series]}`);
+      return { ...r, [field]: sum.get(k)!.value() };
+    });
+  });
+}
+
+/** A field (default: the colorBy field; also spec.was and tooltip fields) aggregated per (category,
+ * series) like the marks; null without one. A tooltip ratio field (spec.tipRatio) is sum(num) / sum(den). */
 export function colorVals(
   s: ResolvedSpec,
   cb: string | null = cbField(s),
 ): (c: string, ser: string) => number | null {
   const m = new Map<string, ReturnType<typeof agg>>();
+  const rt = (cb && s.tipRatio.get(cb)) || null;
   if (cb)
     for (const row of s.data) {
-      const v = row[cb];
-      if (typeof v !== "number") continue;
+      const v = row[rt ? rt[0] : cb];
+      if (typeof v !== "number" && !rt) continue;
       const k = String(row[s.x]) + "\0" + (s.series === null ? "" : String(row[s.series]));
-      (m.get(k) ?? m.set(k, agg(s.aggregate)).get(k)!).add(v);
+      feed(m.get(k) ?? m.set(k, agg(rt ? "sum" : s.aggregate, !!rt)).get(k)!, row, cb, rt);
     }
   return (c, ser) => m.get(c + "\0" + ser)?.value() ?? null;
 }
@@ -622,4 +715,73 @@ export function colorVals(
 export function thin(cols: readonly (readonly (number | null)[])[], max: number): number[] {
   const all = [...Array(cols[0]?.length ?? 0).keys()];
   return all.length <= max ? all : reduceTime(all, cols, max);
+}
+
+/** One list move: its own row (the first without an evidence value) and its evidence rows. */
+export interface Move {
+  /** Raw headline (String of x). */
+  x: string;
+  value: number | null;
+  /** rowFormat of the own row (a preset or template), null when unset. */
+  format: string | null;
+  body: string | null;
+  evidence: { name: string; value: number | null; format: string | null }[];
+}
+
+/**
+ * list (#79): moves in data order (the headline number is the index + 1), rows never aggregated.
+ * A move's own row is its first row without an evidence value; later ones are ignored. A move
+ * with only evidence rows has a null value and body. Memoised per data array.
+ */
+export function moves(s: ResolvedSpec): Move[] {
+  const { x, y, evidence: e, body, rowFormat: rf } = s;
+  return memo(s.data, `m${JSON.stringify([x, y, e, body, rf])}`, () => {
+    const by = new Map<string, Move>();
+    const own = new Set<string>();
+    const str = (v: unknown) => (v == null ? null : String(v));
+    for (const r of s.data) {
+      const k = String(r[x]);
+      let m = by.get(k);
+      if (!m) by.set(k, (m = { x: k, value: null, format: null, body: null, evidence: [] }));
+      const v = typeof r[y] === "number" ? r[y] : null;
+      const format = rf ? str(r[rf]) : null;
+      if (e && r[e] != null) m.evidence.push({ name: String(r[e]), value: v, format });
+      else if (!own.has(k)) {
+        own.add(k);
+        Object.assign(m, { value: v, format, body: body ? str(r[body]) : null });
+      }
+    }
+    return [...by.values()];
+  });
+}
+
+/**
+ * table cells (#84): per strip column, the `by` values kept (distinct, data order, the last
+ * `last`) and, per row label (String of x), `field` combined by aggregate for each of them
+ * (null where a row has none). Memoised per data array.
+ */
+export function strips(
+  s: ResolvedSpec,
+): Map<string, { labels: string[]; values: Map<string, (number | null)[]> }> {
+  return new Map(
+    [...s.cells].map(([title, c]) => [
+      title,
+      memo(s.data, `p${JSON.stringify([s.x, c, s.aggregate])}`, () => {
+        const all = [...new Set(s.data.map((r) => String(r[c.by])))];
+        const labels = c.last === null ? all : all.slice(-c.last);
+        const at = new Map(labels.map((l, i) => [l, i]));
+        const acc = new Map<string, ReturnType<typeof agg>[]>();
+        for (const r of s.data) {
+          const i = at.get(String(r[c.by]));
+          if (i === undefined) continue;
+          const k = String(r[s.x]);
+          let a = acc.get(k);
+          if (!a) acc.set(k, (a = labels.map(() => agg(s.aggregate))));
+          if (typeof r[c.field] === "number") a[i]!.add(r[c.field] as number);
+        }
+        const values = new Map([...acc].map(([k, a]) => [k, a.map((g) => g.value())]));
+        return { labels, values };
+      }),
+    ]),
+  );
 }

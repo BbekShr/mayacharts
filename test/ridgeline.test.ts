@@ -71,3 +71,25 @@ describe("ridgeline", () => {
     expect(() => render(rest as ChartSpec)).toThrow();
   });
 });
+
+describe("ridgeline select", () => {
+  it("dots are selectable marks: a series~category key, a data-c, one plot hit", () => {
+    const s = svg({ ...spec, select: true });
+    const dots = tags(s, 'circle data-maya="mark"');
+    expect(dots).toHaveLength(6);
+    for (const d of dots) {
+      expect(d).toMatch(/data-key="(East|West)~(Jan|Feb|Mar)"/);
+      expect(d).toContain("data-c=");
+    }
+    expect(tags(s, 'rect data-maya="hit"')).toHaveLength(1);
+  });
+});
+
+describe("ridge selection (M2 M15)", () => {
+  it("area and line carry the series and the ridge hook, so the theme can dim the others", () => {
+    const s = svg(spec);
+    for (const k of ["area", "line"])
+      for (const t of tags(s, `path data-maya="${k}"`))
+        expect(t).toMatch(/data-ridge.*data-s=|data-s=.*data-ridge/);
+  });
+});

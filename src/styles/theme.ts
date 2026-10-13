@@ -19,9 +19,9 @@ const A = rng(8)
       `svg:not([data-stack]) [data-maya=area][data-s="${n}"]{fill:url(#maya-a${n}) color-mix(in oklab,var(--c) 18%,transparent)}`,
   )
   .join("");
-// Ramp: 10 steps, 20% floor (about 32% in dark mode, see --b). ponytail: only steps >= 8 reach 3:1 as fill (3:1 needs about 80% accent, no range left), so heatmap cells and hexes carry an accent outline (3.9:1 light, 4.8:1 dark), which is the 1.4.11 mark.
+// Ramp: 10 steps (--q for the density rules, --u the position 0..1 along low, mid, high), 20% floor (about 32% in dark mode, see --b). ponytail: only steps >= 8 reach 3:1 as fill (3:1 needs about 80% accent, no range left), so heatmap cells and hexes carry an accent outline (3.9:1 light, 4.8:1 dark), which is the 1.4.11 mark.
 const Q = rng(10)
-  .map((n) => `[data-q="${n}"]{--q:${Math.round(35 + (n * 65) / 9)}%}`)
+  .map((n) => `[data-q="${n}"]{--q:${Math.round(35 + (n * 65) / 9)}%;--u:${+(n / 9).toFixed(4)}}`)
   .join("");
 // Sliding indicator of .maya-ctl: data-n = options (2..4; ponytail: more options need more rules), data-i = checked index (set by the element).
 const C =
@@ -37,12 +37,12 @@ const B = "border:0;background:none;font:inherit;color:var(--maya-fg-muted);curs
 const RADIAL =
   ":where(path[data-polar]){stroke:var(--maya-bg);stroke-width:1.5;stroke-linejoin:round}" +
   "[data-maya=grid] circle[data-disc]{fill:var(--maya-fg);fill-opacity:.035;stroke:none}" +
-  "[data-maya=labels] [data-tip],[data-maya=labels] [data-name]{font-size:11px;font-weight:600}";
+  "[data-maya=labels] [data-tip],[data-maya=labels] [data-name]{font-size:var(--maya-label-size,11px);font-weight:600}";
 
 // marimekko
 const MEKKO =
-  "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}[data-maya=labels] [data-ink=b]{fill:var(--maya-bg)}[data-maya=labels] [data-ink=t]{fill:light-dark(#12161c,#fff)}" +
-  "[data-maya=labels] [data-ax]{stroke:none;font-size:11px}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
+  "[data-maya=labels] [data-ink]{fill:var(--maya-label-ink,#12161c);font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}" +
+  "[data-maya=labels] [data-ax]{stroke:none;font-size:var(--maya-label-size,11px)}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
   "[data-maya=marks][data-hot] [data-mm]:not([data-active],[data-lit]){opacity:.62}";
 
 // flow
@@ -61,10 +61,10 @@ const FLOW =
   "[data-maya=labels] [data-nm]{font-weight:600}[data-maya=labels] [data-v]{font-weight:400;font-size:.9em}";
 
 // hexmap
-// Hexes: stronger ramp (36% floor), same-colour round-join stroke for soft corners, ring on hover.
+// Hexes: stronger ramp (48% floor, --fl), same-colour round-join stroke for soft corners, ring on hover.
 const HEX = 'path[data-key^="g~"]';
 const HEXMAP =
-  `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--maya-accent);stroke-width:1.5;stroke-linejoin:round}` +
+  `:is(.maya,.maya-root):has(${HEX}){--fl:48%}${HEX}{stroke:var(--maya-accent);stroke-width:1.5;stroke-linejoin:round}` +
   `${HEX}:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2.5}` +
   "[data-maya=grid] [data-none]{stroke-opacity:.7;shape-rendering:auto}" +
   "[data-hex] i{width:120px;height:10px}";
@@ -95,7 +95,7 @@ const SCATTER =
   "[data-maya=cross] [data-g]{transform:translateY(calc(-1*var(--y,0px)))}[data-maya=cross] [data-g=y]{transform:translateX(calc(-1*var(--x,0px)))}" +
   "[data-on][data-maya=cross] [data-g]{transition:transform .25s var(--maya-ease)}" +
   "[data-maya=cross] line[data-g]{stroke-dasharray:3 3;stroke-opacity:.7}" +
-  "[data-maya=cross] text,[data-maya=rules] text{font-size:11px;font-weight:600;fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:4;stroke-linejoin:round}";
+  "[data-maya=cross] text,[data-maya=rules] text{font-size:var(--maya-label-size,11px);font-weight:600;fill:var(--maya-fg);paint-order:stroke;stroke:var(--maya-bg);stroke-width:4;stroke-linejoin:round}";
 
 // [data-pt] points are hidden (fill-opacity 0); an opacity on each would only cost WebKit a paint group apiece.
 const DIM =
@@ -109,7 +109,7 @@ const ORBIT =
   "[data-trail]{fill:none;stroke:var(--c);stroke-width:2;stroke-opacity:.5;stroke-linecap:round}" +
   "g[data-s] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:1.5}g[data-s] circle[data-maya=mark]:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2}" +
   "[data-maya=marks][data-hot] g[data-s]:not([data-lit],:has([data-active])) :is(g[data-up],[data-trail]){opacity:.4}" +
-  "g[data-s] circle[data-below]{fill-opacity:.45;stroke:var(--c)}[data-up] text{font-size:11px;font-weight:600}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
+  "g[data-s] circle[data-below]{fill-opacity:.45;stroke:var(--c)}[data-up] text{font-size:var(--maya-label-size,11px);font-weight:600}[data-up] [data-g]{font-weight:400;fill:var(--maya-fg-muted)}" +
   "@media (prefers-reduced-motion:no-preference){@keyframes maya-orbit{to{transform:rotate(360deg)}}" +
   [80, 52, 36, 24, 16].map((s, i) => `g[data-v="${i + 1}"]{--p:${s}s}`).join("") +
   // Always turning; a name turns back about its own centre at the same rate, so it stays upright beside its planet.
@@ -121,55 +121,74 @@ const ORBIT =
   // Weave threads and halos: dim with legend hover, selection and the lit thread.
   "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks][data-hot] [data-w]:not([data-lit]){opacity:.18}" +
   // Memory ghost (bar `was`): the previous value, behind its bar.
-  "[data-past]{fill:var(--maya-fg);fill-opacity:.12;stroke:var(--maya-fg);stroke-opacity:.55;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}";
+  "[data-past]{fill:var(--maya-ghost,var(--maya-fg));fill-opacity:.12;stroke:var(--maya-ghost,var(--maya-fg));stroke-opacity:.55;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}" +
+  // A was tick (grouped bars): solid ink across the bar, no box.
+  "[data-past][data-tick]{fill-opacity:.7;stroke:none}";
 
 export const css =
   L +
   `@supports not (color:light-dark(#000,#fff)){:host,.maya-root{${D}}@media (prefers-color-scheme:dark){:host,.maya-root{${N}}}}` +
   ":host{display:block;position:relative;container-type:inline-size;min-height:min(200px,100%)}" +
-  ".maya{display:flex;flex-direction:column;height:100%;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums;color:var(--maya-fg)}" +
+  ".maya{display:flex;flex-direction:column;height:100%;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:var(--maya-numeric,tabular-nums);color:var(--maya-fg)}" +
   ".maya-title{font-weight:var(--maya-title-weight,600);font-size:var(--maya-title-size,15px);letter-spacing:-.01em;margin:0 0 6px}" +
   ":host([data-compact]) .maya-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}:host([data-compact]) .maya-sub{display:none}" +
-  ".maya-sub{margin:-3px 0 8px;color:var(--maya-fg-muted);line-height:1.35}" +
+  ".maya-sub{font-size:var(--maya-subtitle-size,inherit);margin:-3px 0 8px;color:var(--maya-fg-muted);line-height:1.35}" +
   // Legend placement (slot order never changes): bottom moves it after the chart; right makes the chart a grid whose last row holds the chart and the legend side by side (up to six rows above for title, subtitle, controls and crumbs).
   ".maya[data-legend=bottom] .maya-legend{order:1;margin:8px 0 0}" +
   `${R}{display:grid;grid-template:repeat(6,auto) minmax(0,1fr)/minmax(0,1fr) max-content}${R}>*{grid-column:1/-1}${R} .maya-box{grid-area:7/1}` +
   `${R} .maya-legend{grid-area:7/2;flex-flow:column;align-items:start;align-self:start;max-width:30cqw;margin:0 0 0 12px}` +
-  ".maya-legend,.maya-crumbs{color:var(--maya-fg-muted);display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;margin:0 0 8px}" +
+  ".maya-legend{font-size:var(--maya-legend-size,inherit)}.maya-legend,.maya-crumbs{color:var(--maya-fg-muted);display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;margin:0 0 8px}" +
   ".maya-crumbs{min-height:1.25em;line-height:1.25}" +
   // The current crumb is where you are, not a link: ink, bold, no hover.
   ".maya-crumbs [aria-current]{padding:2px 6px;color:var(--maya-fg);font-weight:600}" +
-  `.maya-legend :is(button,span),:is(.maya-crumbs,.maya-tip) button,.maya-reset,.maya-play{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
+  `.maya-legend :is(button,span),:is(.maya-crumbs,.maya-tip) button,.maya-reset,.maya-play,.maya-flip{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
   ":is(.maya-legend,.maya-crumbs,.maya-tip) button:hover{background:var(--maya-grid);color:var(--maya-fg)}" +
   ".maya-legend [aria-pressed=false]{opacity:.5}.maya-legend [aria-pressed=false] i{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}" +
   ":is(button,a):focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
   "i{width:10px;height:10px;border-radius:3px;background:var(--c)}" +
-  "[data-maya=ramp]{display:flex;align-items:center;gap:6px}[data-maya=ramp] span{unicode-bidi:plaintext}.maya-legend b{font-weight:500;color:var(--maya-fg);unicode-bidi:plaintext}[data-maya=ramp]:dir(rtl) i{scale:-1 1}" +
+  "[data-maya=ramp]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}[data-maya=ramp] span{unicode-bidi:plaintext}.maya-legend b{font-weight:500;color:var(--maya-fg);unicode-bidi:plaintext}[data-maya=ramp]:dir(rtl) i{scale:-1 1}" +
   ".maya-legend [data-past] i{background:color-mix(in oklab,var(--maya-fg) 12%,transparent);outline:1px dashed var(--maya-fg-muted);outline-offset:-1px}" +
   "[data-maya=ramp] circle{fill:none;stroke:var(--maya-fg-muted)}" +
-  // The ramp legend is the cells' ramp (--q 35% to 100% of the accent over --b); a constellation's stars use the density ramp.
-  `[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b)),var(--maya-accent))}.maya:has(circle[data-key^="c~"]) [data-maya=ramp] i{background:linear-gradient(90deg,var(--maya-accent),${DENS("75%")})}` +
+  // The ramp legend is the cells' ramp (low, mid, high); quantile classes are swatches; a constellation's stars use the density ramp.
+  `[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,var(--rl),var(--rm),var(--rh))}[data-maya=ramp] i[data-q]{width:16px;background:var(--c)}.maya:has(circle[data-key^="c~"]) [data-maya=ramp] i{background:linear-gradient(90deg,var(--maya-accent),${DENS("75%")})}` +
   // Ramp floor: the background, lifted toward the accent in dark mode so low steps stay visible.
   // Declared once where the theme overrides live, not on every ramp mark (speed).
-  ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))}" +
-  ".maya-reset,.maya-play{border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-reset{position:absolute;top:4px;right:4px}" +
-  ".maya-ctl,.maya-play{margin:0 0 8px;align-self:flex-start}.maya-play{min-height:24px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
+  // Ramp stops: tokens rampLow, rampMid, rampHigh; unset, the accent from 35% (--fl) over --b, the 50% mix of the two ends.
+  ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)));--rl:var(--maya-ramp-low,color-mix(in oklab,var(--maya-accent) var(--fl,35%),var(--b)));--rh:var(--maya-ramp-high,var(--maya-accent));--rm:var(--maya-ramp-mid,color-mix(in oklab,var(--rh),var(--rl)))}" +
+  ".maya-reset,.maya-play,.maya-flip{border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-reset{position:absolute;top:4px;right:4px}" +
+  ".maya-ctl,.maya-play,.maya-flip{margin:0 0 8px;align-self:flex-start}.maya-play,.maya-flip{min-height:24px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
   ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a;transition:transform .3s var(--maya-ease)}" +
   C +
   `.maya-ctl [role=radio]{${B};position:relative;padding:4px 12px;border-radius:6px;transition:color .2s}` +
   ".maya-ctl [aria-checked=true]{color:var(--maya-fg);font-weight:600}" +
+  // The kpi Details button is a toggle: pressed (the back face shows) it is ink on the control track.
+  ".maya-flip[aria-pressed=true]{background:var(--maya-grid);color:var(--maya-fg);font-weight:600}" +
+  // Controls share a row (a wrapper), the measure and stack controls side by side; a small tile tightens them and scrolls what still overflows.
+  ".maya-ctls{display:flex;flex-wrap:wrap;gap:0 8px;align-items:flex-start}.maya-ctls>.maya-ctl{margin-bottom:8px}" +
+  ":host([data-compact]) :is(.maya-ctl,.maya-flip,.maya-play){margin-bottom:4px;max-width:100%;overflow-x:auto;scrollbar-width:none}:host([data-compact]) .maya-ctl [role=radio]{padding:2px 8px;font-size:11px}" +
+  // The card turn (kpi back): the box holds the perspective, the face hides its back; a rolled digit shows through its own clip.
+  ".maya-box{perspective:900px}.maya-svg{backface-visibility:hidden}.maya-box svg[data-roll]{overflow:hidden}[data-roll] text{fill:var(--maya-fg);font-variant-numeric:var(--maya-numeric,tabular-nums)}" +
   ".maya-err{margin:0;padding:8px;color:var(--maya-bad);white-space:pre-wrap;font:12px monospace}" +
   ".maya-box{flex:1;min-height:0;position:relative}" +
   ".maya-box svg{display:block;width:100%;height:100%;overflow:visible}" +
-  ".maya-svg{direction:ltr;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}" +
+  ".maya-svg{direction:ltr;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:var(--maya-numeric,tabular-nums);-webkit-user-select:none;user-select:none}" +
   ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:var(--maya-axis-size,11px)}" +
   "[data-maya=grid] *{stroke:var(--maya-grid);stroke-dasharray:var(--maya-grid-dash);shape-rendering:crispEdges}" +
   S +
-  "[data-other],[data-total],[data-neu],[data-tone=zero]{--c:var(--maya-fg-muted)}" +
+  "[data-total],[data-tone=zero]{--c:var(--maya-fg-muted)}[data-other],[data-neu]{--c:var(--maya-neutral,var(--maya-fg-muted))}" +
   "[data-tone=good]{--c:var(--maya-good)}[data-tone=warn]{--c:var(--maya-warn,light-dark(#960,#fc3))}[data-tone=bad]{--c:var(--maya-bad)}" +
-  "[data-q]{--c:color-mix(in oklab,var(--maya-accent) var(--q),var(--b))}" +
+  // colorBy "sign" reads as direction (theme up, down); a waterfall's own bars take up, down, total (series 1 and 2 unset). A colors map key beats a tone (svg[data-mapped]).
+  ":is(svg,[data-maya=tone])[data-sign] [data-tone=good]{--c:var(--maya-up,var(--maya-good))}:is(svg,[data-maya=tone])[data-sign] [data-tone=bad]{--c:var(--maya-down,var(--maya-bad))}" +
+  "[data-way=up]{--c:var(--maya-up,var(--maya-series-1))}[data-way=down]{--c:var(--maya-down,var(--maya-series-2))}svg[data-plot] [data-way=total]{--c:var(--maya-total,var(--maya-fg-muted))}" +
+  rng(8)
+    .map(
+      (n) => `svg[data-mapped~="${n}"] [data-s="${n}"][data-tone]{--c:var(--maya-series-${n + 1})}`,
+    )
+    .join("") +
+  // Value ramp: low to mid at --u 0..1/2, mid to high above (two mixes); unset, mid is the 50% mix and it is one linear ramp.
+  "[data-q]{--c:color-mix(in oklab,var(--rh) clamp(0%,calc(var(--u)*200% - 100%),100%),color-mix(in oklab,var(--rm) clamp(0%,calc(var(--u)*200%),100%),var(--rl)))}" +
   Q +
-  "rect[data-hm]{stroke:var(--maya-accent)}" +
+  "rect[data-hm]{stroke:color-mix(in oklab,var(--c) 70%,var(--maya-bg));rx:var(--maya-cell-radius,var(--maya-radius))}" +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
   "[data-stack] rect[data-maya=mark],:not(circle)[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
   // Active mark: an ink ring, fill untouched, so in-mark labels keep their contrast.
@@ -177,17 +196,19 @@ export const css =
   "[data-pt] circle[data-maya=mark]:not([data-active],[data-lit],[data-selected],[data-last]){fill-opacity:0;stroke-opacity:0}" +
   "[data-pt] circle[data-maya=mark]{stroke:var(--maya-bg);stroke-width:2}[data-pt] circle[data-lit]{r:4px}" +
   "circle[data-maya=mark][data-active]{filter:drop-shadow(0 0 4px color-mix(in oklab,var(--c) 70%,transparent))}" +
-  "[data-maya=line]{fill:none;stroke:var(--c);stroke-width:var(--maya-line,2.25);stroke-linejoin:round;stroke-linecap:round}" +
+  "[data-maya=line]{fill:none;stroke:var(--c);stroke-width:var(--maya-line,2.25);stroke-linejoin:round;stroke-linecap:round}[data-maya=line][data-em]{stroke-width:var(--maya-line-emphasis,calc(var(--maya-line,2.25)*1.75))}" +
   "[data-maya=area]{fill:color-mix(in oklab,var(--c) 18%,transparent);stroke:none}[data-stack] [data-maya=area]{fill:color-mix(in oklab,var(--c) 45%,var(--maya-bg))}" +
   A +
   "stop{stop-color:var(--c)}" +
   // Dumbbell connector, kpi parts, y2 legend swatch.
+  "circle[data-to]{--c:var(--maya-fg)}circle[data-maya=mark][data-hollow]{fill:var(--maya-bg);stroke:var(--c);stroke-width:2}" +
   "line[data-maya=link]{stroke:var(--c,var(--maya-fg-muted));opacity:1}" +
-  "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
+  "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}text[data-hero]{font-weight:var(--maya-hero-weight,600)}[data-maya=empty]{font-size:var(--maya-empty-size,revert-layer)}:where([data-maya=labels]) text:not([font-size]){font-size:var(--maya-label-size,inherit)}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
   "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of],[data-ring],[data-tip],[data-ax],[data-v]){fill:var(--maya-fg-muted)}" +
   "[data-line] i{height:2px;border-radius:1px}" +
+  ".maya:has([data-radar]) .maya-legend button:not([data-dash]) i{height:2px;border-radius:1px}" +
   // Direct end labels of line and area, in their series colour.
-  "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
+  "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 70%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
   // Dashed series (spec.dash): square caps so the gaps stay open (the dash itself is the path's stroke-dasharray, in pathLength units); the legend key is the same dash. Annotations (spec.annotate) are the quiet bold; a slope rule is a faint diagonal.
   "[data-maya=line][data-dash]{stroke-linecap:butt}.maya-legend [data-dash] i{width:14px;height:2px;border-radius:0;background:repeating-linear-gradient(90deg,var(--c) 0 5px,#0000 5px 8px)}[data-ann]{font-weight:600}" +
   "line[data-slope]{stroke:var(--maya-fg-muted);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}" +
@@ -202,8 +223,7 @@ export const css =
   ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks][data-hot=p] path[data-maya=line]:not([data-active]){opacity:.25}" +
   // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
   // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.
-  "circle[data-depth][data-maya]{fill:none;stroke:color-mix(in oklab,var(--c) var(--t,100%),var(--maya-bg));transition:stroke .5s}" +
-  '[data-tint="2"]{--t:70%}[data-tint="3"]{--t:48%}' +
+  "circle[data-depth][data-maya]{fill:none;stroke:var(--c);transition:stroke .5s}" +
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
   `[data-maya=marks][data-hot] [data-maya=mark]${DIM}{opacity:.4}svg[data-still] [data-hot] [data-maya=mark]${DIM}{opacity:1;fill-opacity:.4;stroke-opacity:.4}` +
@@ -223,7 +243,7 @@ export const css =
   // scrollable, overflow below (a 1000-row table) would leave a page-long gap.
   ".maya-sr caption{position:absolute;clip-path:inset(50%)}.maya-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}table.maya-sr{table-layout:fixed;bottom:0}.maya-sr *{overflow:hidden}" +
   ".maya-probe{position:absolute;width:0;height:0;pointer-events:none;anchor-name:--maya-probe}" +
-  ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
+  ".maya-tip{margin:0;inset:auto;border:1px solid var(--maya-grid);padding:8px 10px;min-width:96px;background:var(--maya-tooltip-bg);color:var(--maya-tooltip-fg);border-radius:8px;box-shadow:0 1px 2px #0000000f,0 10px 28px -8px #0000004d;backdrop-filter:blur(8px);font:var(--maya-font-size)/1.4 var(--maya-font);font-variant-numeric:var(--maya-numeric,tabular-nums);pointer-events:none;opacity:0;translate:0 4px;transition:opacity .15s,translate .2s var(--maya-ease)}" +
   "@supports (anchor-name:--x){.maya-tip{position-anchor:--maya-probe;position-area:block-start;position-try-fallbacks:flip-block,block-start span-inline-start,block-start span-inline-end;margin:8px}.maya-tip[data-side]{position-area:inline-end span-block-end;position-try-fallbacks:flip-inline;margin:0 12px}}" +
   ".maya-tip.maya-open{opacity:1;translate:none}" +
   ".maya-tip button{display:block;margin:6px -4px -4px;padding:2px 4px;color:var(--maya-fg);pointer-events:auto}" +
@@ -235,21 +255,28 @@ export const css =
   // Constellation hover: links to the 3 nearest appear and those stars are ringed.
   "[data-maya=grid] line[data-a]{stroke:none}[data-maya=grid] line[data-a][data-lit]{stroke:var(--maya-fg);stroke-width:1.5;stroke-dasharray:none;shape-rendering:auto}circle[data-n][data-lit]{stroke:var(--maya-fg);stroke-width:2}" +
   "@media (pointer:coarse){:is(.maya-legend,.maya-crumbs) button,.maya-ctl [role=radio],.maya-reset,.maya-crumbs{min-height:24px}}" +
-  "@container (max-width:320px){.maya-legend{font-size:11px;gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend :not([data-line],[data-dash])>i{width:8px;height:8px}.maya-title{font-size:var(--maya-title-size,12px)}}" +
+  "@container (max-width:320px){.maya-legend{font-size:var(--maya-legend-size,11px);gap:0 2px;margin:0 0 4px}.maya-legend :is(button,span){gap:4px;padding:1px 4px}.maya-legend :not([data-line],[data-dash])>i{width:8px;height:8px}.maya-title{font-size:var(--maya-title-size,12px)}}" +
   RADIAL +
   MEKKO +
   FLOW +
-  // Treemap names: dark ink on full-strength slots; drilled tiles tint toward white so it holds.
-  "svg:has(rect[data-depth]) [data-maya=labels] [data-in]{fill:#12161c}" +
-  "rect[data-lt]{fill:color-mix(in oklab,var(--c) var(--t,100%),#fff)}" +
-  rng(7, 1)
-    .map((n) => `[data-lt="${n}"]{--t:${100 - n * 8}%}`)
+  // Tint of a parent's colour (data-lt 0..7, 0 = the parent): any mark (fill, stroke, label) reads --c.
+  // Steps mix toward the ink (--maya-fg: darker on light, lighter on dark), so each step only gains contrast on the page and a base that passes 3:1 keeps it.
+  rng(8)
+    .map(
+      (n) =>
+        `[data-s="${n}"][data-lt]{--c:color-mix(in oklab,var(--maya-series-${n + 1}) var(--t,100%),var(--maya-fg))}[data-lt="${n}"]{--t:${100 - n * 7}%}`,
+    )
     .join("") +
   // Nested treemap parent: a quiet frame of its branch colour behind its children.
   "rect[data-par]{fill:color-mix(in oklab,var(--c) 14%,var(--maya-bg))}" +
-  // Hexmap label ink by ramp step (4.5:1 each): black on steps 8 and 9, white on dark steps 6 and 7.
-  "[data-maya=labels] text[data-q][data-dark]{fill:light-dark(#12161c,#000)}" +
-  '[data-maya=labels] :is([data-q="6"],[data-q="7"]){fill:light-dark(var(--maya-fg),#fff)}' +
+  // labelInk and labelInkOnFill are the inks where relative colours are missing (the fallback below and the [data-ink] base); a browser with them keeps the luminance rule,
+  // because CSS cannot pick between two author colours by a channel of --c, and near-black / white are the only inks exact at the 4.5:1 threshold.
+  // Label ink from the mark's own fill (the label repeats the mark's colour attributes, so --c is the fill): a neutral grey at relative luminance .0017 (near-black)
+  // above Y .1831 (where both inks reach 4.5:1) and 1 (white) below it. The y channel of xyz-d65 is WCAG relative luminance itself (CIE L* is D50 and misjudges saturated blues).
+  // Only near-black and white are exact at the threshold, so the inks are constants, not tokens.
+  // Where relative colours are missing the dark [data-ink] rule stands, light on the fills known to be dark.
+  "@supports (color:color(from red xyz-d65 x y z)){[data-maya=labels] [data-ink=a]{fill:color(from var(--c,var(--maya-series-1)) xyz-d65 calc(clamp(.0017,.0017 + (.1831 - y)*1e5,1)*.9505) clamp(.0017,.0017 + (.1831 - y)*1e5,1) calc(clamp(.0017,.0017 + (.1831 - y)*1e5,1)*1.089))}}" +
+  "@supports not (color:color(from red xyz-d65 x y z)){[data-maya=labels] [data-ink=a]:is([data-other],[data-total],[data-tone]:not([data-tone=warn])){fill:var(--maya-label-ink-on,var(--maya-bg))}}" +
   HEXMAP +
   SCATTER +
   ORBIT +
@@ -264,4 +291,32 @@ export const css =
   "[data-pt] circle[data-maya=mark]{transition:fill-opacity .15s,stroke-opacity .15s}}" +
   // WebKit paints each per-element opacity as its own group: dense dumbbell connectors dim through the stroke.
   "[data-still] [data-hot] line[data-maya=link]{opacity:1;stroke-opacity:.08}" +
-  "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}";
+  "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}" +
+  // M4: table filter, scrolling table, show-more row, open-row sub-chart, heatmap column drill and Total margins.
+  ".maya-filter{font:inherit;color:var(--maya-fg);background:var(--maya-grid);border:0;border-radius:8px;padding:4px 10px;margin:0 0 8px;min-width:9em;max-width:100%;align-self:flex-start}.maya-filter::placeholder{color:var(--maya-fg-muted)}.maya-filter:focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
+  ".maya-box:has(svg[data-scroll]){overflow:auto;max-height:100%}.maya-box svg[data-scroll]{height:auto}" +
+  "svg[data-maya=expand]{overflow:hidden}" +
+  "svg[data-xdrill] [data-maya=axis-x] text[data-key]{pointer-events:auto;cursor:pointer}svg[data-xdrill] [data-maya=axis-x] text[data-key]:hover{text-decoration:underline}" +
+  ".maya-crumbs[data-axis=x]{margin-top:-4px}" +
+  // A heatmap Total sits outside the ramp: a quiet neutral fill (the label's ink follows it), bold value.
+  "[data-hm][data-sum]{--c:color-mix(in oklab,var(--maya-fg) 12%,var(--maya-bg))}text[data-hm][data-sum]{font-weight:700}" +
+  // Table: the header owns a page-coloured ground and its rule (the element pins it over scrolled rows); the open row's chevron; a diverging column's centre line; strip squares.
+  "[data-maya=thead]>rect[data-bg]{fill:var(--maya-bg);pointer-events:none}[data-maya=thead]>line{stroke:var(--maya-grid);stroke-width:1}" +
+  "[data-maya=marks] text[data-chev]{fill:var(--maya-fg-muted);font-size:10px}[data-maya=grid] line[data-centre]{stroke:var(--maya-fg-muted);stroke-opacity:.5}" +
+  "[data-way=zero]{--c:var(--maya-fg-muted)}rect[data-way][data-maya=mark]:not([data-s]){rx:2px}rect[data-nil]{fill:none;stroke:var(--maya-fg-muted);stroke-opacity:.4;rx:2px}" +
+  // Table: the Show more row.
+  "[data-maya=more]{cursor:pointer}[data-maya=more] text{fill:var(--maya-accent);font-weight:600}[data-maya=more]:is(:hover,:focus-visible) text{text-decoration:underline}[data-maya=more]:focus-visible{outline:2px solid var(--maya-focus)}" +
+  // List: bold headline over muted body, the value in its own weight, evidence names muted.
+  "[data-maya=marks] text tspan[data-num]{fill:var(--maya-fg-muted);font-variant-numeric:var(--maya-numeric,tabular-nums)}[data-maya=marks] text tspan[data-hd]{font-size:14px;font-weight:600}" +
+  "[data-maya=marks] text[data-v]{font-size:14px;font-weight:600;font-variant-numeric:var(--maya-numeric,tabular-nums)}[data-maya=marks] text[data-body],[data-maya=marks] text[data-ev=name]{fill:var(--maya-fg-muted)}" +
+  "[data-maya=marks] text[data-ev=value]{font-variant-numeric:var(--maya-numeric,tabular-nums)}" +
+  // Parallel brush and beeswarm peers (M2).
+  // Parallel brush: lines outside every range fade; the range is a band on its axis (the cross group is hidden by default).
+  "[data-off]{opacity:.12}" +
+  "[data-maya=cross]:has([data-range]){opacity:1}" +
+  "rect[data-range]{fill:var(--maya-accent);fill-opacity:.2;stroke:var(--maya-accent);pointer-events:none}" +
+  "rect[data-maya=axis]{cursor:ns-resize;touch-action:none}rect[data-maya=axis]:focus-visible{outline:2px solid var(--maya-focus)}" +
+  // Beeswarm select { peers }: the peers keep their ink, the rest step back; their mean is a dashed rule with a label.
+  "[data-maya=marks]:has([data-peer-on]) [data-peer]:not([data-peer-on]){opacity:.3}" +
+  "[data-peer-on]{stroke:var(--maya-fg);stroke-width:1.5;--o:1}" +
+  "[data-maya=grid] line[data-peer-mean]{stroke:var(--maya-fg);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}";

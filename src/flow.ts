@@ -21,6 +21,18 @@ const neutral = (ctx: MarkCtx, col: N[]) =>
     const c = ctx.spec.colors;
     n.s = c instanceof Map && c.has(n.name) ? slotOf(ctx, n) : -1;
   });
+/** spec.tint: step 1..7 (data-lt; 0 is the branch colour itself) of nodes sharing a branch colour, evenly spaced; others none. */
+const steps = (ctx: MarkCtx, cols: N[][]) => {
+  const lt = new Map<N, number>();
+  if (ctx.spec.tint)
+    for (const col of cols) {
+      const by = new Map<number, N[]>();
+      for (const n of col) if (n.s >= 0) (by.get(n.s) ?? by.set(n.s, []).get(n.s)!).push(n);
+      for (const g of by.values())
+        g.forEach((n, i) => lt.set(n, 1 + Math.round((6 * i) / Math.max(1, g.length - 1))));
+    }
+  return lt;
+};
 // Every node index upstream or downstream of a node along any path; hovering lights them.
 const reach = (ls: L[]) => {
   // Neighbours per node and direction, so a walk reads its own links, not every link per step.
@@ -122,7 +134,10 @@ const nodeAttrs = (ctx: MarkCtx, h: Reach, n: N, c: number, off: number, series 
   "data-depth": n.lv,
   // The next level to drill, short of the last column: the only nodes that take a click (cursor).
   "data-dr":
-    ctx.spec.drill && n.lv + off === ctx.spec.drilled.length && n.lv < ctx.spec.path.length - 1,
+    ctx.spec.drill &&
+    (ctx.spec.type === "chord" && ctx.spec.levels === 3
+      ? n.lv === 1 && !ctx.spec.drilled.length // a 3-level chord drills its targets
+      : n.lv + off === ctx.spec.drilled.length && n.lv < ctx.spec.path.length - 1),
 });
 
 /** Rows to nodes (one per name per level) and links (one per adjacent pair, aggregated). */
@@ -256,6 +271,7 @@ export const sankey: Mark = {
     // A column of single-parent nodes stays grouped under its parents: a backward pass would split families.
     for (let lv = cols - 2; lv > 0; lv--) order[lv]!.every(one) || sweep(lv, lv + 1);
 
+    const lt = steps(ctx, order);
     // Label room: the last column always keeps its labels beside it, clear of the flows; the first
     // does too on a wide tile, else its labels ride in the gap, over the flows, behind a halo.
     const val = (n: N) => ctx.fmt(spec.y, n.v);
@@ -299,11 +315,16 @@ export const sankey: Mark = {
       const [x0, x1, th, m] = [x(l.s) + W, x(l.t), l.v * k, (x(l.s) + W + x(l.t)) / 2];
       const [a, b] = [l.sy, l.ty];
       const d = `M${r(x0)} ${r(a)}C${r(m)} ${r(a)} ${r(m)} ${r(b)} ${r(x1)} ${r(b)}L${r(x1)} ${r(b + th)}C${r(m)} ${r(b + th)} ${r(m)} ${r(a + th)} ${r(x0)} ${r(a + th)}Z`;
-      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, off, tint(l)), d });
+      marks += el("path", {
+        ...linkAttrs(ctx, hov, l, c++, off, tint(l)),
+        "data-lt": lt.get(tint(l)),
+        d,
+      });
     }
     for (const n of nodes) {
       marks += el("rect", {
         ...nodeAttrs(ctx, hov, n, c++, off),
+        "data-lt": lt.get(n),
         x: r(x(n)),
         y: r(n.y),
         width: W,
@@ -358,7 +379,12 @@ export const chord: Mark = {
       ctx,
       nodes.filter((n) => n.lv === 0),
     );
-    nodes.filter((n) => n.lv === 1).forEach((n) => (n.s = slotOf(ctx, n)));
+    // tint on a drilled chord: the to-nodes share the drilled branch's colour, stepped in tints.
+    nodes
+      .filter((n) => n.lv === 1)
+      .forEach((n) => (n.s = spec.tint && spec.hue !== null ? spec.hue % 8 : slotOf(ctx, n)));
+    // Targets of a 3-level chord sit at the full path's level (a drilled one shows path[2] there), so a drill morphs the sources and re-enters the targets; a 2-level chord keeps its keys and morphs.
+    const off = (n: N) => (n.lv && spec.levels === 3 ? spec.drilled.length : 0);
     const hov = reach(ls);
     const total = ls.reduce((a, l) => a + l.v, 0);
     if (!(total > 0)) return { marks: "", hits: "" };
@@ -422,13 +448,18 @@ export const chord: Mark = {
         a += l.v * k;
       }
     }
+    const lt = steps(ctx, [sides[1]!]);
     let c = 0;
     let marks = "";
     for (const l of ls) {
       const [sa, ta] = [l.sy, l.ty];
       const [sb, tb] = [sa + l.v * k, ta + l.v * k];
       const d = `M${pt(sa, R)}${arc(sa, sb, R, 1)}${edge(sb, ta)}${arc(ta, tb, R, 1)}${edge(tb, sa)}Z`;
-      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, 0, l.s.s < 0 ? l.t : l.s), d });
+      marks += el("path", {
+        ...linkAttrs(ctx, hov, l, c++, 0, l.s.s < 0 ? l.t : l.s),
+        "data-lt": lt.get(l.t),
+        d,
+      });
     }
     // The group arc is a 10 px band inset 2 px; CSS strokes it 4 px with round joins in its own
     // colour, which rounds the ends and lands the band at R + 4 .. R + RING (clear of the ribbons).
@@ -437,14 +468,16 @@ export const chord: Mark = {
       const [a0, a1, r0, r1] = [n.a + ia, n.a + n.v * k - ia, R + 6, R + RING - 2];
       const d = `M${pt(a0, r1)}${arc(a0, a1, r1, 1)}L${pt(a1, r0)}${arc(a0, a1, r0, 0)}Z`;
       marks += el("path", {
-        ...nodeAttrs(ctx, hov, n, c++, 0, spec.titles.get(n.lv ? P1 : P0) ?? (n.lv ? P1 : P0)),
+        ...nodeAttrs(ctx, hov, n, c++, off(n), spec.titles.get(n.lv ? P1 : P0) ?? (n.lv ? P1 : P0)),
         "data-arc": true,
+        "data-lt": lt.get(n),
         d,
       });
     }
     // ponytail: labels are clipped to 20 characters; one that would overlap its neighbour on the
     // same side is dropped, after trying it on one line.
-    const room = [0, 1].map(() => slots(plot.y, plot.y + plot.h));
+    // A pole label is centred over both halves, so poles share one set (a left and a right pole label would otherwise overprint).
+    const room = [0, 1, 2].map(() => slots(plot.y, plot.y + plot.h));
     let labels = "";
     for (const n of [...nodes].sort((a, b) => b.v - a.v)) {
       const m = n.a + (n.v * k) / 2;
@@ -453,9 +486,18 @@ export const chord: Mark = {
       const [lx, ly] = [cx + rad * sn, cy - rad * cs];
       const pole = Math.abs(sn) < 0.25;
       // Top and bottom labels grow away from the ring; side labels centre on the arc.
-      const cyy = pole ? ly + (cs > 0 ? -14 : 14) : ly;
+      const cyy = pole ? ly + (cs > 0 ? -20 : 18) : ly;
       const anchor = pole ? "middle" : sn > 0 ? "start" : "end";
-      labels += lines(lx, cyy, anchor, nodeKey(n, 0), n.name, val(n), maxCh, room[sn > 0 ? 1 : 0]!);
+      labels += lines(
+        lx,
+        cyy,
+        anchor,
+        nodeKey(n, off(n)),
+        n.name,
+        val(n),
+        maxCh,
+        room[pole ? 2 : sn > 0 ? 1 : 0]!,
+      );
     }
     return { marks, hits: "", labels };
   },

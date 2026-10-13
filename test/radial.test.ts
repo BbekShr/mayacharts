@@ -140,4 +140,155 @@ describe("radial", () => {
     expect(svg(plain(d, { aggregate: "mean" }))).not.toContain('data-total=""');
     expect(svg(plain(d, { aggregate: "max" }))).not.toContain('data-total=""');
   });
+  it("a series with no row at a category has no sector (so no empty tooltip row) (#93.4)", () => {
+    const rows = [
+      { it: "Jackets", fam: "Outerwear", v: 189 },
+      { it: "Shirts", fam: "Tops", v: 68 },
+    ];
+    const m = marks(svg({ type: "radial", x: "it", y: "v", series: "fam", data: rows }));
+    expect(m).toHaveLength(2);
+    expect(m.some((t) => t.includes('data-x="Jackets"') && t.includes('data-series="Tops"'))).toBe(
+      false,
+    );
+  });
+  it("a value beyond its bar never overprints a category label, over 200 small tiles (#91.4)", () => {
+    const names = [
+      "Bags",
+      "Jackets",
+      "Shirts",
+      "Pants",
+      "Shoes",
+      "Hats",
+      "Socks",
+      "Swim",
+      "Belts",
+      "Ties",
+      "Gloves",
+      "Coats",
+    ];
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let t = 0; t < 200; t++) {
+      const [n, w, h] = [
+        3 + Math.floor(rnd() * 10),
+        180 + Math.floor(rnd() * 200),
+        200 + Math.floor(rnd() * 150),
+      ];
+      const ser = rnd() < 0.5;
+      const rows = names
+        .slice(0, n)
+        .flatMap((it) =>
+          (ser ? ["A", "B"] : [""]).map((f) => ({ it, f, v: Math.round((5 + rnd() * 100) * 1e6) })),
+        );
+      const s = renderParts(
+        {
+          type: "radial",
+          x: "it",
+          y: "v",
+          ...(ser ? { series: "f" } : {}),
+          format: { v: "compact" },
+          data: rows,
+        },
+        { width: w, height: h },
+      ).svg;
+      const cat = [
+        ...s.matchAll(
+          /<text x="([\d.]+)" y="([\d.]+)" text-anchor="(\w+)"[^>]*data-cat=""[^>]*>([^<]*)</g,
+        ),
+      ].map((m) => {
+        const len = m[4]!.length * 7.2;
+        const x = +m[1]!;
+        const l = m[3] === "middle" ? x - len / 2 : m[3] === "end" ? x - len : x;
+        return [l, +m[2]! - 7, l + len, +m[2]! + 7];
+      });
+      for (const m of s.matchAll(
+        /<text x="([\d.]+)" y="([\d.]+)" transform="rotate\(([-\d.]+)[^>]*data-tip=""[^>]*>([^<]*)</g,
+      )) {
+        const [x, y, a] = [+m[1]!, +m[2]!, (+m[3]! * Math.PI) / 180];
+        const len = m[4]!.length * 6.4;
+        const dir = /text-anchor="end"/.test(m[0]) ? -1 : 1;
+        const [x1, y1] = [x + dir * len * Math.cos(a), y + dir * len * Math.sin(a)];
+        for (const b of cat)
+          expect(
+            Math.min(x, x1) - 5 < b[2]! &&
+              Math.max(x, x1) + 5 > b[0]! &&
+              Math.min(y, y1) - 5 < b[3]! &&
+              Math.max(y, y1) + 5 > b[1]!,
+          ).toBe(false);
+      }
+    }
+  });
+});
+
+describe("radial value labels", () => {
+  it("a value that cannot go outside moves inside the top segment instead of vanishing", () => {
+    // Bars reach the rim, so no value fits outside; tall single-segment bars have room inside.
+    const d = M.map((m) => ({ m, v: 100 }));
+    const s = svg(plain(d, { labels: true }));
+    expect(
+      tags(s, "text[^>]*data-in[^>]*").length + tags(s, "text[^>]*data-tip").length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe("radial radar (form: line)", () => {
+  const Q = ["Jan", "Feb", "Mar", "Apr"];
+  const rows = ["2025", "2026"].flatMap((year, j) =>
+    Q.flatMap((m, i) =>
+      year === "2026" && m === "Apr" ? [] : [{ m, year, sales: 10 + i * 2 + j * 3 }],
+    ),
+  );
+  const radar = (more: Partial<ChartSpec> = {}): ChartSpec => ({
+    type: "radial",
+    x: "m",
+    y: "sales",
+    series: "year",
+    form: "line",
+    data: rows,
+    ...more,
+  });
+  const paths = (s: string) => tags(s, 'path data-maya="line"');
+  it("every radar line carries data-radar, so the legend keys are lines (M2 L19)", () => {
+    expect(paths(svg(radar())).every((t) => t.includes("data-radar"))).toBe(true);
+  });
+  it("one line per series keyed l~series; closed with every value, open where one is missing", () => {
+    const p = paths(svg(radar()));
+    expect(p).toHaveLength(2);
+    expect(p[0]).toContain('data-key="l~2025"');
+    expect(p[0]).toMatch(/d="M[^"]*Z"/);
+    expect(p[1]).toContain('data-key="l~2026"');
+    expect(p[1]).not.toMatch(/Z"/);
+    expect(svg(radar())).not.toContain("data-polar");
+  });
+  it("dash series are dashed and carry data-dash", () => {
+    const [a, b] = paths(svg(radar({ dash: ["2026"] })));
+    expect(a).not.toContain("data-dash");
+    expect(b).toContain("data-dash");
+    expect(b).toContain("stroke-dasharray");
+  });
+  it("a dot per value, and one wedge hit per category keyed to a dot so hover lists every series", () => {
+    const s = svg(radar());
+    expect(tags(s, 'circle data-maya="mark"')).toHaveLength(7);
+    const hits = tags(s, 'path data-maya="hit"');
+    expect(hits).toHaveLength(4);
+    expect(hits[0]).toContain('data-key="2025~Jan"');
+    expect(hits.map((h) => /data-c="(\d)"/.exec(h)![1]).join("")).toBe("0123");
+    for (const d of tags(s, 'circle data-maya="mark"')) expect(d).toMatch(/data-c="\d"/);
+  });
+  it("hiding a series (legend isolate) keeps the others' keys and draws one line", () => {
+    const p = paths(svg(radar(), ["2025"]));
+    expect(p).toHaveLength(1);
+    expect(p[0]).toContain("l~2026");
+  });
+  it("rings, spokes and category names are drawn", () => {
+    const s = svg(radar());
+    expect(tags(s, "line x1")).toHaveLength(4);
+    expect(s).toContain('data-disc=""');
+    expect(tags(s, "text[^>]*data-cat").map((t) => t)).toHaveLength(4);
+    expect(tags(s, "text[^>]*data-ring").length).toBeGreaterThan(0);
+  });
+  it("one category and an empty chart still draw", () => {
+    expect(paths(svg(radar({ data: [{ m: "Jan", year: "2025", sales: 5 }] })))).toHaveLength(1);
+    expect(() => svg(radar({ data: [] }))).not.toThrow();
+  });
 });

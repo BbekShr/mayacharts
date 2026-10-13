@@ -10,6 +10,7 @@ import type {
   Mark,
   MarkCtx,
   ResolvedSpec,
+  Row,
   Shaped,
 } from "../types.ts";
 
@@ -46,6 +47,14 @@ export const more = (ctx: MarkCtx, val: (f: string, i: number) => unknown) =>
     })
     .join("\n") || null;
 
+/** The value of a tooltip field in one row (scatter, beeswarm): a `{ field, ratio }` item is that row's num / den. */
+export const rowTip = (ctx: MarkCtx, row: Row) => (f: string) => {
+  const t = ctx.spec.tipRatio.get(f);
+  if (!t) return row[f];
+  const [a, b] = [row[t[0]], row[t[1]]];
+  return typeof a === "number" && typeof b === "number" && b !== 0 ? a / b : null;
+};
+
 /**
  * spec.annotate for every mark, through `place` (true when it placed the label): each `{ x, text }` note
  * on the first group's item at that x that takes it, then per group (a series) its max, min, first and
@@ -75,15 +84,16 @@ export function marked<T>(
   }
 }
 
-/** Ink for a label over the bar's own fill, picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps). */
-const inkOf = (d: Record<string, any>) =>
-  d["data-q"] === null
-    ? d["data-other"] || d["data-total"] || d["data-tone"]
-      ? "b"
-      : ""
-    : d["data-q"] >= 6
-      ? ""
-      : null;
+/** A label over the mark's own fill: theme.ts reads the fill from the same attributes and picks the ink (data-ink="a"). */
+export const inkOf = (d: Record<string, any>) => ({
+  "data-ink": "a",
+  "data-s": d["data-s"],
+  "data-tone": d["data-tone"],
+  "data-other": d["data-other"],
+  "data-total": d["data-total"],
+  "data-way": d["data-way"],
+  "data-q": d["data-q"],
+});
 
 interface Item {
   ci: number;
@@ -106,7 +116,11 @@ function steps(shaped: Shaped): Item[] {
   shaped.categories.forEach((_, ci) => {
     const c = by[ci];
     if (!c) return;
-    if (shaped.totals[ci]) return void out.push({ ci, si, y0: 0, y1: run, v: run, s: 2 });
+    if (shaped.totals[ci]) {
+      // A total before any step opens at its own value (last year's figure); later ones are the running sum.
+      if (!out.length && c.value !== null) run = c.value;
+      return void out.push({ ci, si, y0: 0, y1: run, v: run, s: 2 });
+    }
     if (c.value === null) return;
     out.push({ ci, si, y0: run, y1: (run += c.value), v: c.value, s: c.value < 0 ? 1 : 0 });
   });
@@ -132,6 +146,14 @@ export const bar: Mark = {
     if (spec.type === "waterfall" || (rows.length && rows.length < all.length)) {
       lo = hi = 0;
       for (const i of rows) ((lo = Math.min(lo, i.y0, i.y1)), (hi = Math.max(hi, i.y0, i.y1)));
+    }
+    // A ghost is part of the data: the previous values widen the domain so none is clipped.
+    if (spec.was !== null) {
+      const w = colorVals(spec, spec.was);
+      for (const i of rows) {
+        const v = w(shaped.categories[i.ci]!, shaped.series[i.si]!);
+        if (v !== null) ((lo = Math.min(lo, v)), (hi = Math.max(hi, v)));
+      }
     }
     const cat: Axis = shaped.time
       ? { kind: "time", field: spec.x, domain: shaped.categories, t: shaped.time }
@@ -204,21 +226,25 @@ export const bar: Mark = {
         const [g0, g1] = [clip(val.of(0)), clip(val.of(wv))];
         const gl = Math.min(g0, g1);
         const gn = Math.abs(g0 - g1);
+        // Grouped bars (series): a tick across the bar at the old value, not a box beside its neighbours.
+        const tick = spec.series !== null && !spec.stack;
+        const [ga, gb] = tick ? [g1 - 1, 2] : [gl, gn];
         ghosts += el("rect", {
           "data-key": key("\u0000was", ser, cname),
           "data-past": true,
+          "data-tick": tick,
           "data-c": c.ci,
           "data-s": c.s,
           "data-neg": wv < 0,
           fill: "none", // until the theme's [data-past] rule paints it
           ...(hz
-            ? { x: r(gl), y: r(pos), width: r(gn), height: r(th) }
-            : { x: r(pos), y: r(gl), width: r(th), height: r(gn) }),
+            ? { x: r(tick ? ga! : gl), y: r(pos), width: r(tick ? gb! : gn), height: r(th) }
+            : { x: r(pos), y: r(tick ? ga! : gl), width: r(th), height: r(tick ? gb! : gn) }),
         });
         if (wv)
           moves.push([ctx.fmt(spec.x, cname) + (ser && " " + ser), (c.v - wv) / Math.abs(wv)]);
       }
-      const d = {
+      const d: Record<string, any> = {
         "data-key": key(ser, cname),
         "data-c": c.ci,
         "data-i": shaped.index?.[c.ci],
@@ -236,6 +262,8 @@ export const bar: Mark = {
         // waterfall start and running total: neutral, so colour keeps one meaning (up or down)
         "data-total": shaped.totals[c.ci] || (wf && !tags.length),
       };
+      // Waterfall direction for the theme's up, down and total tokens (the labels repeat it; not on the hit).
+      if (wf) d["data-way"] = d["data-total"] ? "total" : c.v < 0 ? "down" : "up";
       marks += el("rect", {
         "data-maya": "mark",
         ...d,
@@ -244,7 +272,7 @@ export const bar: Mark = {
         width: r(w),
         height: r(h),
       });
-      hits += hit(d, x, y, w, h);
+      hits += hit({ ...d, "data-way": null }, x, y, w, h);
       // A clipped Other bar would otherwise show its total only on hover: print it at the break.
       if (cut !== null && cname === OTHER && !spec.labels)
         ctx.label(
@@ -282,7 +310,7 @@ export const bar: Mark = {
         hz ? y + h / 2 : neg ? y + h - 9 : y + 9,
         text,
         {
-          "data-ink": inkOf(d),
+          ...inkOf(d),
           "data-key": k,
           "data-ann": a,
           "text-anchor": hz ? (neg ? "start" : "end") : "middle",
@@ -307,7 +335,7 @@ export const bar: Mark = {
     if (spec.labels && tags.length) {
       // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
       // step label must fit inside its own column or it is dropped.
-      // ponytail: no thinning to a subset of steps: a label wider than its column is dropped.
+      // ponytail: a grouped label wider than its bar sits above it and is dropped only when it collides with another label; a waterfall step wider than its column is dropped (the first and the Total hug their edge).
       const first = tags[0]!;
       const last = tags.at(-1)!;
       // Horizontal bars label inside only when every label fits, else all outside (one rule per chart, not per bar).
@@ -336,7 +364,7 @@ export const bar: Mark = {
             pin && !hz ? (neg ? y + h - 10 : y + 10) : cy,
             text,
             {
-              "data-ink": inkOf(d),
+              ...inkOf(d),
               "data-key": dk,
               "text-anchor": pin && hz ? (neg ? "start" : "end") : "middle",
             },

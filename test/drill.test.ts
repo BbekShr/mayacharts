@@ -2,6 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import { reduce } from "../src/element/drill.ts";
+import { reduce as xreduce } from "../src/element/expand.ts";
 import { MODULES } from "../src/core/registry.ts";
 import "../src/hierarchy.ts";
 import "../src/flow.ts";
@@ -76,6 +77,54 @@ describe("drill reducer", () => {
   });
   it("resets when drill is turned off", () => {
     expect(reduce(st(["West"]), ev(spec(), spec({ drill: false }))).view.drill).toEqual([]);
+  });
+});
+
+describe("M4 reducers", () => {
+  const sp = (extra: object) =>
+    ({ type: "area", x: "q", y: "v", drill: true, data: [], ...extra }) as ChartSpec;
+  const push = (s: State, value: string, spec: ChartSpec) =>
+    reduce(s, { type: "drill", value, spec });
+  it("gates pushes on drillDepth: seriesPath, drillTo, chord with 3 levels", () => {
+    const sps = sp({ seriesPath: ["fam", "item"] });
+    const s1 = push(st(), "Outerwear", sps);
+    expect(s1.view.drill).toEqual(["Outerwear"]);
+    expect(push(s1, "Jackets", sps)).toBe(s1);
+    const dt = sp({ type: "line", series: "yr", drill: false, drillTo: { type: "bar" } });
+    expect(push(st(), "2025", dt).view.drill).toEqual(["2025"]);
+    const c3 = sp({ type: "chord", path: ["a", "b", "c"] });
+    const c1 = push(st(), "Outerwear", c3);
+    expect(push(c1, "x", c3)).toBe(c1);
+  });
+  it("persistence filters each level on its own field", () => {
+    const rows = [{ q: 1, fam: "O", item: "J", v: 1 }];
+    const a = sp({ seriesPath: ["fam", "item"], data: rows });
+    expect(reduce(st(["O"]), ev(a, { ...a, data: [...rows] })).view.drill).toEqual(["O"]);
+    expect(reduce(st(["Z"]), ev(a, { ...a, data: [...rows] })).view.drill).toEqual([]);
+    const dt = sp({ type: "line", series: "yr", drillTo: { type: "bar" }, data: [{ yr: 5 }] });
+    expect(reduce(st(["5"]), ev(dt, { ...dt, data: [{ yr: 5 }] })).view.drill).toEqual(["5"]);
+  });
+  it("column drill pushes, pops and resets on its own", () => {
+    const h = sp({ type: "heatmap", xPath: ["fam", "item"], path: ["reg", "st"] });
+    const s1 = reduce(st(), { type: "xdrill", value: "O", spec: h });
+    expect(s1.view.xDrill).toEqual(["O"]);
+    expect(reduce(s1, { type: "xdrill", value: "J", spec: h })).toBe(s1);
+    expect(reduce(s1, { type: "xpop", depth: 0 }).view.xDrill).toEqual([]);
+    expect(reduce(s1, ev(h, { ...h }))).toBe(s1);
+    expect(reduce(s1, ev(h, { ...h, xPath: ["item", "fam"] })).view.xDrill).toEqual([]);
+    expect(reduce(s1, ev(h, { ...h, drill: false })).view.xDrill).toEqual([]);
+  });
+  it("expand toggles one row, more pages, filter resets the page", () => {
+    const open = xreduce(st(), { type: "expand", value: "a", open: "" });
+    expect(open.view.expanded).toBe("a");
+    expect(xreduce(open, { type: "expand", value: "b", open: "a" }).view.expanded).toBe("b");
+    expect(xreduce(open, { type: "expand", value: "a", open: "a" }).view.expanded).toBe("");
+    const p = xreduce(open, { type: "more" });
+    expect(p.view.page).toBe(1);
+    const f = xreduce(p, { type: "filter", value: "jac" });
+    expect(f.view).toMatchObject({ filter: "jac", page: 0, expanded: "a" });
+    expect(xreduce(f, { type: "filter", value: "jac" })).toBe(f);
+    expect(xreduce(f, ev(sp({}), sp({ type: "bar" }))).view).toEqual({});
   });
 });
 
@@ -386,5 +435,179 @@ describe("nested treemap and title slot", () => {
     await frame();
     expect(q()).toEqual(["maya-title", "maya-sub"]);
     expect(el.shadowRoot!.querySelector(".maya-sub")!.textContent).toBe("S2");
+  });
+});
+
+describe("M4 interactions in <maya-chart>", () => {
+  const q = (el: Element, sel: string) => el.shadowRoot!.querySelector<SVGElement>(sel)!;
+  const click = (e: Element, detail = 1) =>
+    e.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail }));
+  const keydown = (e: Element, key: string) =>
+    e.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, composed: true, cancelable: true }),
+    );
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const leafs = (el: Element) => {
+    const out: unknown[] = [];
+    el.addEventListener("maya-drill-leaf", (e) => out.push((e as CustomEvent).detail));
+    return out;
+  };
+  const rows = ["O", "B"].flatMap((f) =>
+    [f + "1", f + "2"].flatMap((i) => ["W", "E"].map((r) => ({ f, i, r, s: r + "1", v: 3 }))),
+  );
+  const heat = (extra: object = {}): ChartSpec =>
+    ({
+      type: "heatmap",
+      path: ["r", "s"],
+      xPath: ["f", "i"],
+      y: "v",
+      drill: true,
+      data: rows,
+      ...extra,
+    }) as ChartSpec;
+
+  it("a column header drills (click, Enter), the second nav pops it, Escape pops columns first", async () => {
+    const el = await mount(heat());
+    const tick = () => q(el, "[data-maya=axis-x] text[data-key=O]");
+    expect(tick().getAttribute("tabindex")).toBe("0");
+    expect(tick().getAttribute("role")).toBe("button");
+    const leaf = leafs(el);
+    click(tick());
+    await frame();
+    expect(el.view.xDrill).toEqual(["O"]);
+    expect(el.view.drill ?? []).toEqual([]);
+    expect(el.shadowRoot!.querySelector('.maya-crumbs[data-axis="x"]')).toBeTruthy();
+    keydown(q(el, "[data-maya=axis-x] text[data-key=O1]"), "Enter");
+    expect(leaf).toEqual([{ path: ["O", "O1"], axis: "x" }]);
+    click(q(el, '.maya-crumbs[data-axis="x"] [data-depth="0"]'));
+    await frame();
+    expect(el.view.xDrill).toEqual([]);
+    click(tick());
+    await frame();
+    click(byCat(el, "O1"));
+    await frame();
+    expect(el.view.drill).toEqual(["W"]);
+    keydown(q(el, ".maya-svg"), "Escape");
+    await frame();
+    expect(el.view.xDrill).toEqual([]);
+    expect(el.view.drill).toEqual(["W"]);
+  });
+
+  it("a series drill pushes the mark's data-series; a total or Other never drills", async () => {
+    const data = [1, 2].flatMap((q) =>
+      ["O", "B"].flatMap((f) => ["J", "P"].map((i) => ({ q, f, i, v: q }))),
+    );
+    const el = await mount({
+      type: "area",
+      x: "q",
+      y: "v",
+      seriesPath: ["f", "i"],
+      drill: true,
+      data,
+    } as ChartSpec);
+    expect(q(el, ".maya-svg").getAttribute("data-drill")).toBe("series");
+    click(marks(el).find((m) => m.getAttribute("data-series") === "O")!);
+    await frame();
+    expect(el.view.drill).toEqual(["O"]);
+    const leaf = leafs(el);
+    click(marks(el)[0]!);
+    expect(leaf).toHaveLength(1);
+    const m = marks(el)[0]!;
+    m.setAttribute("data-way", "total");
+    click(m);
+    expect(leaf).toHaveLength(1);
+  });
+
+  const table = (extra: object = {}): ChartSpec =>
+    ({
+      type: "table",
+      x: "n",
+      y: "a",
+      page: 2,
+      filter: true,
+      expand: { type: "bar", x: "m", y: "v" },
+      data: [1, 2, 3, 4].map((i) => ({ n: "r" + i, a: i, m: "x", v: i })),
+      ...extra,
+    }) as ChartSpec;
+
+  it("table: a row opens and closes, one at a time", async () => {
+    const el = await mount(table());
+    click(q(el, '[data-maya=hit][data-key="a~r1"]'));
+    await frame();
+    expect(el.view.expanded).toBe("r1");
+    click(q(el, '[data-maya=hit][data-key="a~r2"]'));
+    await frame();
+    expect(el.view.expanded).toBe("r2");
+    click(q(el, '[data-maya=hit][data-key="a~r2"]'));
+    await frame();
+    expect(el.view.expanded).toBe("");
+  });
+
+  it("table: with select a click selects (no expand) and a double click expands", async () => {
+    const el = await mount(table({ select: true }));
+    const hit = () => q(el, '[data-maya=hit][data-key="a~r1"]');
+    click(hit(), 1);
+    await frame();
+    expect(el.view.expanded).toBeUndefined();
+    click(hit(), 2);
+    await frame();
+    expect(el.view.expanded).toBe("r1");
+  });
+
+  it("table: the more row pages by click and Enter and keeps focus on itself", async () => {
+    const el = await mount(
+      table({
+        expand: undefined,
+        data: [1, 2, 3, 4, 5, 6].map((i) => ({ n: "r" + i, a: i })),
+      }),
+    );
+    click(q(el, "[data-maya=more]"));
+    await frame();
+    expect(el.view.page).toBe(1);
+    keydown(q(el, "[data-maya=more]"), "Enter");
+    await frame();
+    expect(el.view.page).toBe(2);
+  });
+
+  it("table: the filter debounces, resets the page, and keeps focus and caret", async () => {
+    const el = await mount(table({ expand: undefined }));
+    el.view = { page: 1 };
+    await frame();
+    const input = () => q(el, "[data-maya=filter]") as unknown as HTMLInputElement;
+    input().focus();
+    input().value = "r3";
+    input().setSelectionRange(1, 1);
+    input().dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    expect(el.view.filter).toBeUndefined();
+    await wait(200);
+    expect(el.view).toMatchObject({ filter: "r3", page: 0 });
+    expect(input().value).toBe("r3");
+    expect(el.shadowRoot!.activeElement).toBe(input());
+    expect(input().selectionStart).toBe(1);
+  });
+
+  it("table: the header follows the box's scroll by CSSOM transform", async () => {
+    const el = await mount(table({ expand: undefined }));
+    const box = q(el, ".maya-box");
+    Object.defineProperty(box, "scrollTop", { value: 40, configurable: true });
+    box.dispatchEvent(new Event("scroll"));
+    expect(q(el, "[data-maya=thead]").style.transform).toBe("translateY(40px)");
+    expect(q(el, "[data-maya=thead]").hasAttribute("style")).toBe(true); // CSSOM write, not markup
+  });
+
+  it("list: the first move starts open and a click on it closes it", async () => {
+    const data = [
+      { m: "A", v: 1 },
+      { m: "A", e: "x", v: 1 },
+      { m: "B", v: 2 },
+      { m: "B", e: "y", v: 2 },
+    ];
+    const el = await mount({ type: "list", x: "m", y: "v", path: ["m", "e"], data } as ChartSpec);
+    click(q(el, '[data-key="m~A"]'));
+    await frame();
+    expect(el.view.expanded).toBe("");
+    click(q(el, '[data-key="m~B"]'));
+    await frame();
+    expect(el.view.expanded).toBe("B");
   });
 });

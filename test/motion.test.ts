@@ -635,3 +635,62 @@ describe("motion", () => {
     }
   });
 });
+
+describe("kpi numberMotion roll", () => {
+  const stub = (on: boolean) => {
+    // happy-dom has no text metrics; stub them on every class that could own them.
+    const Ps = [
+      SVGElement,
+      (globalThis as any).SVGGraphicsElement,
+      (globalThis as any).SVGTextElement,
+      (globalThis as any).SVGTextContentElement,
+    ]
+      .filter(Boolean)
+      .map((c) => c.prototype as any);
+    for (const P of Ps) {
+      P.getStartPositionOfChar = on ? (i: number) => ({ x: 10 + i * 8 }) : undefined;
+      P.getBBox = on ? () => ({ x: 10, y: 20, width: 40, height: 16 }) : undefined;
+    }
+  };
+  const mk = async (spec: object) => {
+    stub(true);
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = spec as ChartSpec;
+    document.body.append(el);
+    await frame();
+    return el;
+  };
+  const head = (el: Element) => root(el).querySelector<SVGElement>("text[data-key=v]")!;
+
+  it("swaps the headline for clipped per-digit columns, then restores the text", async () => {
+    const el = await mk({ ...kpi(1_234_000), format: "integer", numberMotion: "roll" });
+    const g = root(el).querySelector("svg[data-roll]")!;
+    expect(g).toBeTruthy();
+    expect(head(el).getAttribute("visibility")).toBe("hidden");
+    expect(g.querySelectorAll("text").length).toBeGreaterThan(4); // one per character, two in a rolling column
+    expect(g.querySelector("g")!.children[1]!.getAttribute("y")).not.toBe(
+      head(el).getAttribute("y"),
+    );
+    expect(g.querySelector("[data-key]")).toBeNull(); // the stand-in never duplicates the mark's key
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(root(el).querySelector("svg[data-roll]")).toBeNull();
+    expect(head(el).hasAttribute("visibility")).toBe(false);
+    el.remove();
+  });
+
+  it("counts, with no columns, unless numberMotion is roll", async () => {
+    const el = await mk({ ...kpi(1_234_000), format: "integer" });
+    expect(root(el).querySelector("svg[data-roll]")).toBeNull();
+    el.remove();
+  });
+
+  it("an update rolls only the digits that changed", async () => {
+    const el = await mk({ ...kpi(1_000), format: "integer", numberMotion: "roll" });
+    await new Promise((r) => setTimeout(r, 1500));
+    el.spec = { ...kpi(1_005), format: "integer", numberMotion: "roll" } as ChartSpec;
+    await frame();
+    const g = root(el).querySelector("svg[data-roll]")!;
+    expect([...g.children].filter((c) => c.localName === "g")).toHaveLength(1);
+    el.remove();
+  });
+});

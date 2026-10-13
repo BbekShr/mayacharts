@@ -61,6 +61,8 @@ export function nameId(seen: Map<string, number>, name: string | null, i: number
 
 /** Sentinel category for `limit`'s rolled-up rest. Cannot collide with real data text. */
 export const OTHER = "\u0000other";
+/** Sentinel band of the heatmap's Total row and column (`totals: true`). */
+export const TOTAL = "\u0000total";
 
 /**
  * Mark identity: each part `encodeURIComponent`ed (lone surrogates replaced, `~` -> %7E),
@@ -133,3 +135,7 @@ export function memo<T>(data: readonly unknown[], key: string, make: () => T): T
   m.set(k, v);
   return v;
 }
+
+// ponytail: px only; rem, em and calc() sizes cannot be compared with a fitted size without a layout engine, so they do not cap.
+/** A theme size token as px (a bare number or `12px`), else Infinity: the token caps a fitted size, other units cannot be compared. */
+export const px = (v?: string) => (/^[\d.]+(px)?$/.test(v ?? "") ? parseFloat(v!) : Infinity);

@@ -5,6 +5,7 @@ import { MayaChart } from "../src/element/maya-chart.ts";
 import { renderParts } from "../src/core/render.ts";
 import "../src/flow.ts";
 import "../src/stats.ts";
+import "../src/radial.ts";
 import { TEXT } from "../src/core/strings.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
@@ -718,7 +719,7 @@ describe("review fixes", () => {
     expect(n).toBe(0);
   });
 
-  it("tooltip tone words follow core: warn is near, lower-is-better swaps above and below", async () => {
+  it("kpi tooltip tone words are the tile status words, lower-is-better included", async () => {
     const words = async (better: "higher" | "lower", v: number) => {
       const el = await mount((e) => {
         e.spec = {
@@ -739,12 +740,13 @@ describe("review fixes", () => {
       );
       return el.shadowRoot!.querySelector(".maya-tip")!.textContent;
     };
-    expect(await words("higher", 5)).toContain("below target");
-    expect(await words("higher", 12)).toContain(TEXT.near);
-    expect(await words("higher", 20)).toContain("above target");
-    expect(await words("lower", 12)).toContain("below target");
-    expect(await words("lower", 18)).toContain(TEXT.near);
-    expect(await words("lower", 25)).toContain("above target");
+    // The kpi tooltip speaks the tile's status words (#93.5), so lower-is-better needs no swap.
+    expect(await words("higher", 5)).toContain(TEXT.offTrack);
+    expect(await words("higher", 12)).toContain(TEXT.atRisk);
+    expect(await words("higher", 20)).toContain(TEXT.onTrack);
+    expect(await words("lower", 12)).toContain(TEXT.onTrack);
+    expect(await words("lower", 18)).toContain(TEXT.atRisk);
+    expect(await words("lower", 25)).toContain(TEXT.offTrack);
   });
 
   it("kpi tooltip prints data-label and anchors around every headline number", async () => {
@@ -859,5 +861,216 @@ describe("maya-settled", () => {
     await expect(p).rejects.toMatchObject({ code: "unknown-field" });
     expect(log.slice(-2)).toEqual(["maya-error", "maya-settled!"]);
     vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+});
+
+describe("tooltip rows (issues #90.2, #93.3, #93.4, #93.5)", () => {
+  const tipOf = async (s: object, i = 0) => {
+    const el = await mount((e) => {
+      e.spec = s as ChartSpec;
+    });
+    const m = marks(el)[i]!;
+    m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+    m.dispatchEvent(
+      Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    return el.shadowRoot!.querySelector(".maya-tip")!.textContent!;
+  };
+  it("a bar with was lists the was row, field and long forms", async () => {
+    const d = [{ M: "Jan", S: 13, P: 24 }];
+    expect(await tipOf({ type: "bar", x: "M", y: "S", was: "P", data: d })).toContain("was 24");
+    const long = [
+      { M: "Jan", Y: 2025, S: 24 },
+      { M: "Jan", Y: 2026, S: 13 },
+    ];
+    expect(await tipOf({ type: "bar", x: "M", y: "S", was: { by: "Y" }, data: long })).toContain(
+      "was 24",
+    );
+  });
+  it("a field already shown appears once", async () => {
+    const data = [{ U: 1, P: 2, S: 3, N: "a" }];
+    const t = await tipOf({
+      type: "scatter",
+      x: "U",
+      y: "P",
+      size: "S",
+      name: "N",
+      tooltip: { fields: ["S"] },
+      data,
+    });
+    expect(t.split("S").length - 1).toBe(1);
+  });
+  it("radial lists only the series present at the category", async () => {
+    const data = [
+      { it: "Jackets", fam: "Outerwear", v: 189 },
+      { it: "Shirts", fam: "Tops", v: 68 },
+    ];
+    const t = await tipOf({ type: "radial", x: "it", y: "v", series: "fam", data });
+    expect(t).toContain("Outerwear");
+    expect(t).not.toContain("Tops");
+  });
+  it("kpi tooltip uses the tile's status keys", async () => {
+    const data = [
+      { m: "a", v: 1 },
+      { m: "b", v: 2 },
+    ];
+    const t = await tipOf({
+      type: "kpi",
+      x: "m",
+      y: "v",
+      colorBy: { target: 5 },
+      text: { offTrack: "Way off" },
+      data,
+    });
+    expect(t).toContain("Way off");
+  });
+});
+
+describe("parallel brush and select peers (issues #86.5, #87)", () => {
+  const ptr = (type: string, y: number) =>
+    Object.assign(new Event(type, { bubbles: true, composed: true }), {
+      clientX: 50,
+      clientY: y,
+      pointerId: 1,
+      pointerType: "mouse",
+      button: 0,
+      isPrimary: true,
+    });
+  const par = (extra: object = {}) =>
+    ({
+      type: "parallel",
+      x: "m",
+      y: ["a", "b"],
+      brush: true,
+      data: [
+        { m: "p", a: 1, b: 5 },
+        { m: "q", a: 3, b: 1 },
+      ],
+      ...extra,
+    }) as ChartSpec;
+  /** An axis rect 100..200 tall for a = 0..10 (top = 10); 1 css px = 1 viewBox unit. */
+  async function brushed() {
+    const el = await mount((e) => {
+      e.spec = par();
+    });
+    const root = el.shadowRoot!;
+    const svg = root.querySelector("svg.maya-svg") as SVGSVGElement;
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 640, height: 320 }) as DOMRect;
+    svg.setPointerCapture = svg.releasePointerCapture = () => {};
+    svg.setAttribute("viewBox", "0 0 640 320");
+    const ev: any[] = [];
+    el.addEventListener("maya-view", (e) => ev.push((e as CustomEvent).detail));
+    // A commit re-renders and drops the rect, so each gesture gets a fresh one.
+    const axis = () => {
+      const s = root.querySelector("svg.maya-svg") as SVGSVGElement;
+      s.getBoundingClientRect = () => ({ left: 0, top: 0, width: 640, height: 320 }) as DOMRect;
+      s.setPointerCapture = s.releasePointerCapture = () => {};
+      s.setAttribute("viewBox", "0 0 640 320");
+      const ax = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      for (const [k, v] of Object.entries({
+        "data-maya": "axis",
+        "data-field": "a",
+        "data-yd": "0 10",
+        x: 40,
+        y: 100,
+        width: 20,
+        height: 100,
+      }))
+        ax.setAttribute(k, String(v));
+      s.append(ax);
+      return ax;
+    };
+    const drag = (y0: number, y1: number) => {
+      const ax = axis();
+      ax.dispatchEvent(ptr("pointerdown", y0));
+      ax.dispatchEvent(ptr("pointermove", y1));
+      ax.dispatchEvent(ptr("pointerup", y1));
+    };
+    return { el, root, axis, ev, drag };
+  }
+  it("a drag inverts through data-yd, a click clears that axis, Escape clears all", async () => {
+    const { root, axis, ev, drag } = await brushed();
+    drag(120, 170); // top 10 at y100: 120 -> 8, 170 -> 3
+    await frame();
+    expect(ev.at(-1).brush).toEqual([["a", 3, 8]]);
+    await frame();
+    drag(110, 180);
+    expect(ev.at(-1).brush).toEqual([["a", 2, 9]]);
+    await frame();
+    const ax = axis();
+    ax.dispatchEvent(ptr("pointerdown", 150));
+    ax.dispatchEvent(ptr("pointerup", 150));
+    expect(ev.at(-1)).not.toHaveProperty("brush");
+    await frame();
+    drag(120, 170);
+    root
+      .querySelector(".maya")!
+      .dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+      );
+    expect(ev.at(-1)).not.toHaveProperty("brush");
+  });
+  it("announces kept of total, and the clear", async () => {
+    const { root, ev, drag } = await brushed();
+    const lines = [...root.querySelectorAll("[data-maya=line]")];
+    drag(120, 170);
+    await frame();
+    // Core marks data-off on the re-rendered lines; the stand-in marks one.
+    root.querySelectorAll("[data-maya=line]")[1]?.setAttribute("data-off", "");
+    root
+      .querySelector(".maya")!
+      .dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+      );
+    await new Promise((r) => setTimeout(r, 350));
+    expect(root.querySelector("[data-maya=live]")!.textContent).toBe(TEXT.brushCleared);
+    expect(lines.length).toBeGreaterThan(0);
+    expect(ev).toHaveLength(2);
+  });
+  it("select { peers } sets view.peers from data-peer and clears with the selection", async () => {
+    const data = [
+      { n: "a", f: "F", i: "x", p: 1 },
+      { n: "b", f: "F", i: "y", p: 2 },
+    ];
+    const el = await mount((e) => {
+      e.spec = {
+        type: "beeswarm",
+        x: "f",
+        y: "p",
+        name: "n",
+        select: { peers: "i" },
+        data,
+      } as ChartSpec;
+    });
+    const ev: any[] = [];
+    el.addEventListener("maya-view", (e) => ev.push((e as CustomEvent).detail));
+    const m = marks(el)[0]!;
+    m.setAttribute("data-peer", "x");
+    m.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await frame();
+    expect(ev.at(-1).peers).toBe("x");
+    expect(el.selected).toHaveLength(1);
+    el.shadowRoot!.querySelector(".maya")!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+    );
+    expect(ev.at(-1)).not.toHaveProperty("peers");
+  });
+});
+
+describe("maya-register (#88)", () => {
+  it("a failed invalid-theme chart and a connected one re-render on registerTheme", async () => {
+    const { registerTheme } = await import("../src/core/validate.ts");
+    const s = { ...spec(), theme: "late-house" } as ChartSpec;
+    const a = await mount((e) => {
+      e.spec = s;
+    });
+    expect(a.shadowRoot!.querySelector(".maya-err")).toBeTruthy();
+    registerTheme("late-house", { accent: "#ff0000" });
+    await frame();
+    expect(a.shadowRoot!.querySelector(".maya-err")).toBeNull();
+    expect(a.shadowRoot!.querySelector("svg.maya-svg")).toBeTruthy();
+    registerTheme("late-house", { accent: "#00ff00" });
+    await frame();
+    expect(a.shadowRoot!.querySelector(".maya")!.getAttribute("class")).toBeTruthy();
   });
 });

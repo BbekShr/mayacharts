@@ -113,11 +113,13 @@ describe("theme css", () => {
     expect(ratio(six(m![2]!), "#0d1117")).toBeGreaterThanOrEqual(4.5);
   });
   it("ramp: 10 steps from a 35% floor; upper steps reach 3:1", () => {
-    const q = [...css.matchAll(/\[data-q="(\d)"\]\{--q:(\d+)%\}/g)].map((m) => +m[2]!);
+    const q = [...css.matchAll(/\[data-q="(\d)"\]\{--q:(\d+)%;--u:([\d.]+)\}/g)].map((m) => +m[2]!);
     expect(q).toHaveLength(10);
     expect(q[0]).toBe(35);
     expect(q[9]).toBe(100);
-    expect(css).toContain("color-mix(in oklab,var(--maya-accent) var(--q),var(--b))");
+    expect(css).toContain(
+      "--rl:var(--maya-ramp-low,color-mix(in oklab,var(--maya-accent) var(--fl,35%),var(--b)))",
+    );
     expect(css).toContain(
       "--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)))",
     );
@@ -132,7 +134,7 @@ describe("theme css", () => {
       }
   });
   it("unlabelled ramp marks carry a 3:1 outline (heatmap rect, hexes) and ghost bars a 3:1 stroke", () => {
-    expect(css).toContain("rect[data-hm]{stroke:var(--maya-accent)}");
+    expect(css).toContain("rect[data-hm]{stroke:color-mix(in oklab,var(--c) 70%,var(--maya-bg))");
     expect(css).toContain("stroke:var(--maya-accent);stroke-width:1.5;stroke-linejoin:round");
     const acc = toRgb(oklab(...oklch("accent")));
     for (const bg of BGS) expect(rat(Y(acc), Y(bg))).toBeGreaterThanOrEqual(3);
@@ -197,7 +199,9 @@ describe("theme css", () => {
     expect(gzipSync(css).length).toBeLessThan(5300);
   });
   it("narrow containers compact the legend, never hide it", () => {
-    expect(css).toContain("@container (max-width:320px){.maya-legend{font-size:11px");
+    expect(css).toContain(
+      "@container (max-width:320px){.maya-legend{font-size:var(--maya-legend-size,11px)",
+    );
     expect(css).not.toContain("display:none}.maya-title");
   });
 });
@@ -213,21 +217,119 @@ describe("orbit and ghost rules", () => {
     expect(css).toContain(".maya:not([data-still]) g[data-v]");
   });
   it("styles the bar ghost", () => {
-    expect(css).toContain("[data-past]{fill:var(--maya-fg)");
+    expect(css).toContain("[data-past]{fill:var(--maya-ghost,var(--maya-fg))");
   });
   it("colours constellation stars with the legend ramp and isolates legend numbers", () => {
     expect(css).toContain('circle[data-key^="c~"][data-q]');
     expect(css).toContain("[data-maya=ramp] span{unicode-bidi:plaintext}");
   });
   it("heatmap cells use the generic ramp and its legend and ink match", () => {
-    expect(css).toContain("[data-maya=labels] [data-ink=t]{fill:light-dark(#12161c,#fff)}");
     expect(css).toContain(
-      "[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b))",
+      "[data-maya=labels] [data-ink=a]{fill:color(from var(--c,var(--maya-series-1)) xyz-d65",
+    );
+    expect(css).toContain(
+      "[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,var(--rl),var(--rm),var(--rh))",
     );
   });
   it("orbit names light with their planet through data-lit", () => {
     expect(css).toContain(
       "g[data-s]:not([data-lit],:has([data-active])) :is(g[data-up],[data-trail])",
     );
+  });
+});
+
+describe("M2 tokens", () => {
+  it("the default ramp is the accent ramp: low, mid, high stops reproduce q% of the accent at every step", () => {
+    // Accent share of the low stop (35% over --b), the 50% mix and the high stop, as the CSS mixes them.
+    const [L, H] = [0.35, 1];
+    for (let n = 0; n < 10; n++) {
+      const u = +(n / 9).toFixed(4);
+      const [wm, wh] = [Math.min(1, u * 2), Math.max(0, u * 2 - 1)];
+      const share = wh * H + (1 - wh) * (wm * ((L + H) / 2) + (1 - wm) * L);
+      expect(share).toBeCloseTo((35 + (n * 65) / 9) / 100, 2);
+    }
+    expect(css).toContain("--rm:var(--maya-ramp-mid,color-mix(in oklab,var(--rh),var(--rl)))");
+    expect(css).toContain("--fl:48%");
+  });
+  it("type scale, numeric and cell tokens fall back to today's values", () => {
+    for (const t of [
+      "font-size:var(--maya-subtitle-size,inherit)",
+      "font-size:var(--maya-legend-size,inherit)",
+      "font-size:var(--maya-label-size,11px)",
+      "font-size:var(--maya-label-size,inherit)",
+      "text[data-hero]{font-weight:var(--maya-hero-weight,600)}",
+      "[data-maya=empty]{font-size:var(--maya-empty-size,revert-layer)}",
+      "font-variant-numeric:var(--maya-numeric,tabular-nums)",
+      "rx:var(--maya-cell-radius,var(--maya-radius))",
+      "stroke-width:var(--maya-line-emphasis,calc(var(--maya-line,2.25)*1.75))",
+    ])
+      expect(css, t).toContain(t);
+    expect(css).not.toMatch(/font-variant-numeric:tabular-nums/);
+  });
+  it("direction, waterfall and neutral tokens", () => {
+    for (const t of [
+      ":is(svg,[data-maya=tone])[data-sign] [data-tone=good]{--c:var(--maya-up,var(--maya-good))}",
+      ":is(svg,[data-maya=tone])[data-sign] [data-tone=bad]{--c:var(--maya-down,var(--maya-bad))}",
+      "[data-way=up]{--c:var(--maya-up,var(--maya-series-1))}",
+      "svg[data-plot] [data-way=total]{--c:var(--maya-total,var(--maya-fg-muted))}",
+      "[data-other],[data-neu]{--c:var(--maya-neutral,var(--maya-fg-muted))}",
+    ])
+      expect(css, t).toContain(t);
+  });
+  it("a colors map key beats a tone: one rule per slot, after the tones", () => {
+    for (let n = 0; n < 8; n++) {
+      const rule = `svg[data-mapped~="${n}"] [data-s="${n}"][data-tone]{--c:var(--maya-series-${n + 1})}`;
+      expect(css).toContain(rule);
+      expect(css.indexOf(rule)).toBeGreaterThan(
+        css.indexOf("[data-tone=bad]{--c:var(--maya-bad)}"),
+      );
+    }
+  });
+  it("tints (data-lt 0..7) work on any mark through --c", () => {
+    for (let n = 0; n < 8; n++) {
+      expect(css).toContain(
+        `[data-s="${n}"][data-lt]{--c:color-mix(in oklab,var(--maya-series-${n + 1}) var(--t,100%),var(--maya-fg))}`,
+      );
+      expect(css).toContain(`[data-lt="${n}"]{--t:${100 - n * 7}%}`);
+    }
+  });
+  it("tints only add contrast: each step mixes toward the ink, and the contrast floor holds in both schemes", () => {
+    // Series slots as shipped (oklch), mixed in oklab toward --maya-fg by the same percentages as the stylesheet.
+    const S = [
+      oklab(0.6, 0.17, 255),
+      oklab(0.66, 0.16, 50),
+      oklab(0.62, 0.15, 160),
+      oklab(0.66, 0.17, 330),
+    ];
+    for (const [fg, bg] of [
+      ["#1f2328", "#ffffff"],
+      ["#e6edf3", "#0d1117"],
+    ] as const) {
+      const f = toLab(lin(fg));
+      for (const c of S) {
+        let last = 0;
+        for (let n = 0; n < 8; n++) {
+          const t = (100 - n * 7) / 100;
+          const k = rat(Y(toRgb(c.map((v, i) => v * t + f[i]! * (1 - t)))), Y(lin(bg)));
+          expect(k).toBeGreaterThanOrEqual(3);
+          expect(k).toBeGreaterThanOrEqual(last - 1e-9);
+          last = k;
+        }
+      }
+    }
+  });
+  it("labelInk and labelInkOnFill reach the inks that have no relative colours", () => {
+    expect(css).toContain("fill:var(--maya-label-ink,#12161c)");
+    expect(css).toContain("fill:var(--maya-label-ink-on,var(--maya-bg))");
+  });
+  it("brush and peers CSS ends the stylesheet", () => {
+    expect(css).toContain("[data-off]{opacity:.12}");
+    expect(css.endsWith("pointer-events:none}")).toBe(true);
+  });
+  it("styles the flip button, the stack control row, the card turn and the roll clip", () => {
+    expect(css).toContain(".maya-flip[aria-pressed=true]");
+    expect(css).toContain(".maya-ctls{display:flex");
+    expect(css).toContain("backface-visibility:hidden");
+    expect(css).toContain("svg[data-roll]{overflow:hidden}");
   });
 });
