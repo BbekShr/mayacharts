@@ -6,9 +6,15 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
-Fixes #76, #79, #81, #82, #83, #84, #86, #87, #88, #89, #90, #91, #92, #93.
+Fixes #76, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #88, #89, #90, #91, #92, #93.
 
 ### Added
+
+- `facet` on bar, line and area: small multiples, one panel per value in a grid that fits the width and scrolls past the tile height, each titled with its value and total (text key `panelOf`), ordered by data or by total with `sort`, capped by `limit`. Panels under 240 x 150 px are sparklines. Every panel holds every category in the same order, so one x lines up across panels. `facetScale: "shared" | "own"`, or both as an array for a Scale control (`view.facetScale`; text keys `facetScales`, `shared`, `own`). With `drill`, a click opens one panel full size with its axes (`view.drill`). Fixes #85.
+- `was` on line and area: a dashed ghost line of the previous values per series, keyed in the legend. Fixes #85.
+- `frameControl: "play" | "slider" | "both" | "tabs" | "select"` and `frameSpeed` (ms per frame) for `frame` playback; the slider, tabs and select set `view.frame` (text key `frames`). `trail: n` on a scatter with `frame` and `name` draws each name's previous positions; a selected name shows its whole path. `other: false` with `limit` drops the rest instead of an Other bar, so a race keeps each frame's own top N. Fixes #80.
+- `params`: up to 4 sliders and a Reset button (text keys `params`, `resetParams`), `view.params` in `el.view` and `maya-view`. `{ param: "id" }` stands in for a number in colorBy `target` and `warn` and in rules. `scale: { where, by, mode: "percent" }` multiplies the matching rows' values by the params. Title tokens `{total.base}`, `{count.below}` and `{count.above}`. Fixes #78.
+- `maya-view` reports `frame` when the viewer picks a frame, and `facetScale` and `params`.
 
 - New core type `list`, an insight list: numbered moves in data order, each with its headline value in its own format (`rowFormat` names a field holding a preset or template per row), a sentence under it (`body`) and evidence rows (`path: [headline, evidence]`) that open on click or Enter, drawn as bars on a scale local to the move with `bars: true`. Rows are not aggregated: a move's value is its own row's. `expand: "first" | "none" | "all"` picks what starts open and `view.expanded` holds the open move; `select` fires `maya-select` on a move. Fixes #79.
 - Drill on more types: `path` with `drill` on radial, waffle (with `tint`), hexmap (a drilled state draws its children as horizontal bars) and waterfall; chord takes three path levels and splits the clicked target into its children while the sources stay; a marimekko without `series` takes it from the next path level, so drilling a region makes its families the columns. Fixes #81.

@@ -384,6 +384,10 @@ export const SKIP = new Set([
   "columns",
   "cells",
   "bars",
+  "facet", // #85, #78: a field, an array and objects, set in the copied code
+  "facetScale",
+  "params",
+  "scale",
   ...ROLES,
 ]);
 

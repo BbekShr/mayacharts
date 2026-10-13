@@ -182,7 +182,7 @@ export function shape(
       capped = [lim, cats.length];
     }
     if (s.sort || (lim !== null && cats.length > lim))
-      cats = memo(base.cats, `s${s.sort}${lim}${capped ? "a" : ""}`, () => {
+      cats = memo(base.cats, `s${s.sort}${lim}${capped ? "a" : ""}${s.other}`, () => {
         // Category totals and their sorted copy come once per row pass; a new limit (a resize
         // across a 40 px step) is then a selection and a merge, no row pass.
         // An auto roll-up ranks by magnitude, so a large negative bar is not hidden in Other.
@@ -204,13 +204,18 @@ export function shape(
         let ties = lim - asc.reduce((n, v) => n + +(v > cut), 0);
         const top = all.filter((i) => r[i]! > cut || (r[i] === cut && ties-- > 0));
         const kept = new Set(top);
+        // other: false drops the rest (an auto roll-up always keeps its Other).
         return [
           ...by(top).map((i) => base.cats[i]!),
-          other(
-            s,
-            base.series,
-            base.cats.filter((_, i) => !kept.has(i)),
-          ),
+          ...(s.other || capped
+            ? [
+                other(
+                  s,
+                  base.series,
+                  base.cats.filter((_, i) => !kept.has(i)),
+                ),
+              ]
+            : []),
         ];
       });
 
