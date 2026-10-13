@@ -84,3 +84,12 @@ describe("ridgeline select", () => {
     expect(tags(s, 'rect data-maya="hit"')).toHaveLength(1);
   });
 });
+
+describe("ridge selection (M2 M15)", () => {
+  it("area and line carry the series and the ridge hook, so the theme can dim the others", () => {
+    const s = svg(spec);
+    for (const k of ["area", "line"])
+      for (const t of tags(s, `path data-maya="${k}"`))
+        expect(t).toMatch(/data-ridge.*data-s=|data-s=.*data-ridge/);
+  });
+});

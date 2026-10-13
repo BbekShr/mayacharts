@@ -153,3 +153,14 @@ describe("hexmap colorScale", () => {
     expect(q).toEqual([0, 5, 9]);
   });
 });
+
+describe("hexmap labelSize (M2 L23)", () => {
+  const fs = (theme?: Record<string, string>) =>
+    +/data-hx[^>]*font-size="([\d.]+)"/.exec(
+      render({ ...base, ...(theme ? { theme } : {}) } as ChartSpec),
+    )![1]!;
+  it("caps the fitted label size", () => {
+    expect(fs({ labelSize: "8px" })).toBe(8);
+    expect(fs({ labelSize: "40px" })).toBe(fs());
+  });
+});

@@ -107,6 +107,7 @@ export const ridgeline: Mark = {
       rows += el("path", {
         "data-maya": "line",
         "data-key": key("l", ser),
+        "data-ridge": true,
         "data-s": si % 8,
         pathLength: 1,
         d: live.map((run) => pts(run).join("")).join("") || null,

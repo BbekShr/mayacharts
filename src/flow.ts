@@ -21,7 +21,7 @@ const neutral = (ctx: MarkCtx, col: N[]) =>
     const c = ctx.spec.colors;
     n.s = c instanceof Map && c.has(n.name) ? slotOf(ctx, n) : -1;
   });
-/** spec.tint: step 0..7 (data-lt) of nodes sharing a branch colour, evenly spaced; others none. */
+/** spec.tint: step 1..7 (data-lt; 0 is the branch colour itself) of nodes sharing a branch colour, evenly spaced; others none. */
 const steps = (ctx: MarkCtx, cols: N[][]) => {
   const lt = new Map<N, number>();
   if (ctx.spec.tint)
@@ -29,7 +29,7 @@ const steps = (ctx: MarkCtx, cols: N[][]) => {
       const by = new Map<number, N[]>();
       for (const n of col) if (n.s >= 0) (by.get(n.s) ?? by.set(n.s, []).get(n.s)!).push(n);
       for (const g of by.values())
-        g.forEach((n, i) => lt.set(n, Math.round((7 * i) / Math.max(1, g.length - 1))));
+        g.forEach((n, i) => lt.set(n, 1 + Math.round((6 * i) / Math.max(1, g.length - 1))));
     }
   return lt;
 };

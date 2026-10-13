@@ -91,6 +91,7 @@ export const inkOf = (d: Record<string, any>) => ({
   "data-tone": d["data-tone"],
   "data-other": d["data-other"],
   "data-total": d["data-total"],
+  "data-way": d["data-way"],
   "data-q": d["data-q"],
 });
 
@@ -243,7 +244,7 @@ export const bar: Mark = {
         if (wv)
           moves.push([ctx.fmt(spec.x, cname) + (ser && " " + ser), (c.v - wv) / Math.abs(wv)]);
       }
-      const d = {
+      const d: Record<string, any> = {
         "data-key": key(ser, cname),
         "data-c": c.ci,
         "data-i": shaped.index?.[c.ci],
@@ -261,17 +262,17 @@ export const bar: Mark = {
         // waterfall start and running total: neutral, so colour keeps one meaning (up or down)
         "data-total": shaped.totals[c.ci] || (wf && !tags.length),
       };
+      // Waterfall direction for the theme's up, down and total tokens (the labels repeat it; not on the hit).
+      if (wf) d["data-way"] = d["data-total"] ? "total" : c.v < 0 ? "down" : "up";
       marks += el("rect", {
         "data-maya": "mark",
         ...d,
-        // Waterfall direction for the theme's up, down and total tokens (not on the hit).
-        "data-way": wf ? (d["data-total"] ? "total" : c.v < 0 ? "down" : "up") : null,
         x: r(x),
         y: r(y),
         width: r(w),
         height: r(h),
       });
-      hits += hit(d, x, y, w, h);
+      hits += hit({ ...d, "data-way": null }, x, y, w, h);
       // A clipped Other bar would otherwise show its total only on hover: print it at the break.
       if (cut !== null && cname === OTHER && !spec.labels)
         ctx.label(

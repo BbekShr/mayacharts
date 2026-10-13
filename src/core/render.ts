@@ -409,8 +409,9 @@
  *   svg[data-sign]  svg[data-mapped~="n"]  [data-ann] (annotate labels)  line[data-slope]
  *   [data-maya=rules] line|text  svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   Theme-only hooks (set by a mark or module, styled in theme.ts, never read by the element):
- *   data-ink data-hm data-nm data-ring data-arc data-disc data-ridge data-kpi data-polar data-tint
- *   data-hex data-last data-below data-brk data-way data-lt (tint step 0..7, 0 = the parent colour).
+ *   data-ink data-hm data-nm data-ring data-arc data-disc data-ridge data-kpi data-polar data-radar
+ *   data-hex data-last data-below data-brk data-way data-lt (tint step: the colour mixed toward the ink; 0 = the parent colour, siblings and
+ *   sunburst rings use 1..7, so a child never equals its parent).
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
  *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
  *   key on `svg[data-xd]` (both axes linear). Rules whose subject is a mark avoid a `:has()` on
@@ -423,6 +424,10 @@
  *   pop. While view.face is "back", the element's host.spec() is { ...spec.back, data }, so select,
  *   tooltip, drill and play read the back's options; a face change skips the key diff and turns the
  *   card (old svg rotateY 0 to 90deg 160 ms, swap, new -90 to 0 280 ms; reduced motion crossfades).
+ *   Parallel axis strips ([data-maya=axis]) are focusable sliders the element sets after paint:
+ *   Up/Down move the brush range a tenth of the axis (the first press starts a 20% range at that
+ *   end), Shift+Up/Down grow or shrink it, Delete or Backspace clear that axis. A plain click on
+ *   an unbrushed axis marks a pending end and a second click commits the range (WCAG 2.5.7).
  *   numberMotion "roll" hides the kpi headline text (visibility attribute) under a nested
  *   <svg data-roll> window of per-character <text> clones; a changed digit is a <g> column that
  *   translates one line, staggered 50 ms from the units digit, then the text is restored. Enter activates drill, else select, on the tooltip's active mark; Space pins. On a focused

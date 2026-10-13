@@ -208,7 +208,6 @@ export const beeswarm: Mark = {
 
     const seen = new Map<string, number>();
     let marks = "";
-    let labels = "";
     let grid = "";
     for (const [ci, g] of [...groups].sort((a, b) => a[0] - b[0])) {
       const mid = band ? band.at(ci) + band.bandwidth / 2 : plot.y + plot.h / 2;
@@ -256,18 +255,19 @@ export const beeswarm: Mark = {
         y1: r(plot.y),
         y2: r(plot.y + plot.h),
       });
-      const right = sx.of(m) < plot.x + plot.w / 2;
-      labels = el(
-        "text",
-        {
-          "data-peer-mean": true,
-          x: r(sx.of(m) + (right ? 4 : -4)),
-          y: r(plot.y + 10),
-          "text-anchor": right ? "start" : "end",
-        },
-        esc(`${ctx.t("peerMean", pe!.value!)} ${ctx.fmt(spec.y, m)}`),
-      );
+      // The label goes through ctx.label (so rule and tick labels keep their room): beside the top on the roomier side, then the other, then above the foot.
+      const [text, right] = [
+        `${ctx.t("peerMean", pe!.value!)} ${ctx.fmt(spec.y, m)}`,
+        sx.of(m) < plot.x + plot.w / 2,
+      ];
+      const sides = [
+        ["start", 4],
+        ["end", -4],
+      ] as const;
+      (right ? sides : [...sides].reverse()).some(([pl, dx]) =>
+        ctx.label(sx.of(m) + dx, plot.y + 10, text, pl, "peer~mean"),
+      ) || ctx.label(sx.of(m), plot.y + plot.h, text, "above", "peer~mean");
     }
-    return { marks, hits: "", grid, labels }; // no hit squares: the tooltip picks the nearest dot, as for scatter
+    return { marks, hits: "", grid }; // no hit squares: the tooltip picks the nearest dot, as for scatter
   },
 };

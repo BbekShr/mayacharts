@@ -133,3 +133,7 @@ export function memo<T>(data: readonly unknown[], key: string, make: () => T): T
   m.set(k, v);
   return v;
 }
+
+// ponytail: px only; rem, em and calc() sizes cannot be compared with a fitted size without a layout engine, so they do not cap.
+/** A theme size token as px (a bare number or `12px`), else Infinity: the token caps a fitted size, other units cannot be compared. */
+export const px = (v?: string) => (/^[\d.]+(px)?$/.test(v ?? "") ? parseFloat(v!) : Infinity);

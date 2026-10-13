@@ -1040,7 +1040,7 @@ maya-chart {
 | subtitleSize   | --maya-subtitle-size               | fontSize                             | fontSize              | Subtitle text size                                              |
 | labelSize      | --maya-label-size                  | 11px                                 | 11px                  | Value labels and annotations                                    |
 | legendSize     | --maya-legend-size                 | fontSize                             | fontSize              | Legend text size                                                |
-| heroSize       | --maya-hero-size                   | fitted to the tile                   | fitted to the tile    | The kpi and gauge number                                        |
+| heroSize       | --maya-hero-size                   | fitted to the tile                   | fitted to the tile    | The kpi and gauge number; a px value caps the fitted size       |
 | heroWeight     | --maya-hero-weight                 | 600                                  | 600                   | The kpi and gauge number weight                                 |
 | emptySize      | --maya-empty-size                  | fontSize                             | fontSize              | The no-data text                                                |
 | numeric        | --maya-numeric                     | tabular                              | tabular               | "tabular" or "proportional" figures                             |
@@ -1211,15 +1211,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 18,872 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 19,191 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,772,193,083 total, 3,384,948 output
-- claude-sonnet-5-5: 873,826,392 total, 116,388 output
+- claude-opus-5-5: 1,822,225,835 total, 3,401,657 output
+- claude-sonnet-5-5: 886,515,634 total, 117,687 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 30,518,833 total, 1,456 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 2,873,431,551 total, 3,938,020 output
+- all: 2,936,153,545 total, 3,956,028 output
 
 <!-- tokens:end -->
 

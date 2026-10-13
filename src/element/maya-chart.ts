@@ -590,6 +590,7 @@ const legend = (e: Event) => {
   const b = (e.target as Element).closest(".maya-legend [data-s]"),
     on = e.type === "pointerover",
     s = (b?.closest(".maya") as HTMLElement | undefined)?.style;
+  if (b?.getAttribute("aria-pressed") === "false") return; // hidden: nothing to highlight, dim nothing
   s?.setProperty("--d", on ? ".25" : "");
   s?.setProperty("--h" + b?.getAttribute("data-s"), on ? "1" : "");
 };
@@ -615,6 +616,7 @@ const INTRO: Record<string, Intro> = {
 
 const FOCUS: [string, string][] = [
   ["svg", ".maya-svg"],
+  ["axis", "[data-maya=axis]"],
   ["legend", "[data-maya=legend] button"],
   ["measure", ".maya-ctl [role=radio]"],
   ["flip", ".maya-flip"],

@@ -123,6 +123,7 @@ export function mount(host: Host): Handlers {
     host.announce(t(host.spec() ?? {}, "selectionCleared"));
     return true;
   };
+  let dimmed = false;
   return {
     escape: clear,
     enter(mark) {
@@ -134,11 +135,24 @@ export function mount(host: Host): Handlers {
     painted() {
       const sel = host.state().selected;
       // No selection: only marks still flagged need a visit (not every mark on every paint).
+      const live = new Set<string | null>();
       for (const m of root.querySelectorAll(
         sel.length ? "[data-maya=mark][data-key]" : "[data-selected]",
       ))
-        if (sel.some((q) => matches(q, m, type()))) m.setAttribute("data-selected", "");
-        else m.removeAttribute("data-selected");
+        if (sel.some((q) => matches(q, m, type()))) {
+          m.setAttribute("data-selected", "");
+          live.add(m.getAttribute("data-s"));
+        } else m.removeAttribute("data-selected");
+      // Lines and areas are not marks (ridges, series paths): the other series step back with --d.
+      if (sel.length || dimmed)
+        for (const l of root.querySelectorAll("[data-maya=line],[data-maya=area]"))
+          (l as SVGElement).style.setProperty(
+            "--d",
+            sel.length && l.hasAttribute("data-s") && !live.has(l.getAttribute("data-s"))
+              ? ".3"
+              : "",
+          );
+      dimmed = !!sel.length;
     },
     off: (() => {
       const a = listen(root, ["click", onClick]);

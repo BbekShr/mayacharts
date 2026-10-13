@@ -113,7 +113,8 @@ export const parallel: Mark = {
     let dots = "";
     let paths = "";
     let hits = "";
-    const ends: { y: number; ey: number; x: string; si: number; k: string }[] = [];
+    const ends: { y: number; ey: number; x: string; si: number; k: string; off: true | null }[] =
+      [];
     for (const { cat, ci, vals, si } of lines) {
       const x = ctx.fmt(spec.x, cat);
       let d = "";
@@ -153,7 +154,8 @@ export const parallel: Mark = {
       });
       if (!d) continue;
       // End labels are repelled below, never dropped; a line that stops early has none.
-      if (vals.at(-1) !== null) ends.push({ y: end[1]!, ey: end[1]!, x, si, k: key("l", cat) });
+      if (vals.at(-1) !== null)
+        ends.push({ y: end[1]!, ey: end[1]!, x, si, k: key("l", cat), off });
       paths += el("path", {
         "data-maya": "line",
         "data-key": key("l", cat),
@@ -193,6 +195,7 @@ export const parallel: Mark = {
             "text-anchor": "start",
             "dominant-baseline": "middle",
             "data-key": e.k,
+            "data-off": e.off, // fades with its line
           },
           esc(e.x),
         );

@@ -149,3 +149,12 @@ describe("parallel brush", () => {
     expect(render(spec)).not.toContain('data-maya="axis"');
   });
 });
+
+describe("brushed-out end labels (M2 M13)", () => {
+  it("fade with their line", () => {
+    const s = render({ ...spec, brush: true }, { view: { brush: [["sales", 15, 30]] } });
+    const off = tags(s, 'text[^>]*data-key="l~[^>]*').filter((t) => t.includes("data-off"));
+    expect(off.length).toBeGreaterThan(0);
+    expect(tags(render(spec), "text[^>]*data-off")).toHaveLength(0);
+  });
+});

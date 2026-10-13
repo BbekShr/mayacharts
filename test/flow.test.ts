@@ -265,7 +265,7 @@ describe("tint and neutral", () => {
     const svg = renderParts(spec(rows, drill), { view: { drill: ["Y"] } }).svg;
     const v = lts(svg).filter((x) => x !== undefined);
     expect(v.length).toBeGreaterThan(1);
-    expect(v).toContain("0");
+    expect(v).toContain("1"); // 0 is the branch colour itself
     expect(v).toContain("7");
     // links carry the tint of the node they are coloured by
     expect(tags(svg, "link").every((t) => at(t, "data-lt") !== undefined)).toBe(true);

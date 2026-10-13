@@ -1,5 +1,5 @@
 import { colorVals, thin } from "../shape.ts";
-import { clip, el, esc, key, plotHit, r } from "../svg.ts";
+import { clip, el, esc, key, plotHit, px, r } from "../svg.ts";
 import type { Cell, Mark, MarkCtx } from "../types.ts";
 
 const PAD = 12;
@@ -54,7 +54,13 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
   const period = spec.x ? ctx.fmt(spec.x, cats[ci]) : "";
   const fv = ctx.fmt(f, value);
   const cap = multi ? 32 : 72;
-  const fs0 = Math.min(H * (multi ? 0.28 : 0.32), cap, iw / (fv.length * 0.62));
+  // theme heroSize caps the fitted size (px only), so a large token never overflows a small tile.
+  const fs0 = Math.min(
+    H * (multi ? 0.28 : 0.32),
+    cap,
+    iw / (fv.length * 0.62),
+    px(spec.theme.heroSize),
+  );
   // No data-c: the headline and bullet are not the last sparkline dot's tooltip group.
   const goal = spec.goals.get(f);
   const target = goal?.target ?? null;

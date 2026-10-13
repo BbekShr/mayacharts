@@ -6,7 +6,7 @@
 // ctx.tone(v) gives "good" | "warn" | "bad" | null for data-tone. spec.was is the previous value.
 import { register } from "./core/registry.ts";
 import { TAU } from "./core/scale.ts";
-import { clip, el, esc, key, OTHER, r } from "./core/svg.ts";
+import { clip, el, esc, key, OTHER, px, r } from "./core/svg.ts";
 import { niceTicks } from "./core/ticks.ts";
 import type { Mark, MarkCtx, MarkOut } from "./core/types.ts";
 
@@ -110,6 +110,7 @@ const radar = (ctx: MarkCtx): MarkOut => {
       "data-maya": "line",
       "data-key": key("l", ser),
       "data-s": si % 8,
+      "data-radar": true, // the legend key is a line, as for a line chart (theme.ts)
       "data-dash": dash,
       "data-em": spec.emphasis.has(ser),
       pathLength: 1,
@@ -603,7 +604,15 @@ export const gauge: Mark = {
       d: full(),
     });
     // Value centred in the dial; it counts up as a keyed text mark.
-    const fs = Math.max(12, Math.min(ri * 0.55, 44, (ri * 1.5) / (f.length * 0.62)));
+    const fs = Math.max(
+      12,
+      Math.min(
+        ri * 0.55,
+        44,
+        (ri * 1.5) / (f.length * 0.62),
+        px(spec.theme.heroSize), // heroSize caps the fit
+      ),
+    );
     // On a ring the number sits on the centre (or just above it when a row of text follows).
     const row = wasV !== null || (status && !(ri * ri - (fs + 22) ** 2 >= 1300));
     const vy = wide ? (row ? cy - 2 : cy + fs * 0.35) : cy - 4;

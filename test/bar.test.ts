@@ -253,3 +253,21 @@ describe("was with series draws a tick per grouped bar (#82)", () => {
     expect(g[0]).not.toContain('height="2"');
   });
 });
+
+describe("waterfall in-bar labels (M2 H4)", () => {
+  it("repeat data-way, so the ink follows up, down and total", () => {
+    const data = [
+      { s: "Start", v: 100 },
+      { s: "Gain", v: 30 },
+      { s: "Loss", v: -20 },
+      { s: "End", v: 110 },
+    ];
+    const svg = renderParts(
+      { type: "waterfall", x: "s", y: "v", totals: ["End"], data, labels: true },
+      { width: 300, height: 200 },
+    ).svg;
+    const inks = [...svg.matchAll(/<text[^>]*data-ink="a"[^>]*>/g)].map((m) => m[0]);
+    expect(inks.length).toBeGreaterThan(0);
+    for (const t of inks) expect(t).toMatch(/data-way="(up|down|total)"/);
+  });
+});

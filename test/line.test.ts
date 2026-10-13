@@ -369,12 +369,11 @@ describe("line emphasis and streams", () => {
     const dot = st.svg.match(/<circle[^>]*data-key="2026~Mar"[^>]*>/)![0];
     expect(dot).toContain('data-y="35"');
     expect(dot).toContain('data-f="35"');
-    // The band's middle is between its edges, not on the top edge.
+    // The hover dot sits on the stroke (the band top), not mid-band.
     const area = st.svg.match(/data-key="a~2026"[^>]*d="([^"]*)"/)![1]!;
     const ys = [...area.matchAll(/[ML]([\d.]+) ([\d.]+)/g)].map((m) => +m[2]!);
     const cy = +/cy="([\d.]+)"/.exec(dot)![1]!;
-    expect(cy).toBeGreaterThan(Math.min(...ys));
-    expect(cy).toBeLessThan(Math.max(...ys));
+    expect(ys).toContain(cy);
   });
   it("stream end labels sit on the last band", () => {
     const st = renderParts({ ...s({ stack: "stream" }), type: "area" } as ChartSpec, {

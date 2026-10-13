@@ -340,7 +340,13 @@ export function tooltip(
         const f = a(k, "data-f");
         const tab = f.includes("\t");
         if (s) {
-          if (k.hasAttribute("data-s")) row.append(h("i", "", { "data-s": a(k, "data-s") }));
+          if (k.hasAttribute("data-s"))
+            row.append(
+              h("i", "", {
+                "data-s": a(k, "data-s"),
+                ...(k.hasAttribute("data-lt") && { "data-lt": a(k, "data-lt") }),
+              }),
+            );
           row.append(h("span", s));
         } else if (label && !tab) row.append(h("span", label));
         if (!tab) row.append(h("span", f, { "data-v": "" }));

@@ -217,6 +217,6 @@ describe("beeswarm M2", () => {
     const lit = dots(on).filter((d) => d.includes("data-peer-on"));
     expect(lit).toHaveLength(rows.filter((r) => r.kind === "Tee").length);
     expect(on).toContain("<line data-peer-mean");
-    expect(on).toMatch(/<text data-peer-mean[^>]*>Tee average/);
+    expect(on).toMatch(/<text[^>]*data-key="peer~mean"[^>]*>Tee average/); // through ctx.label
   });
 });

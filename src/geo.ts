@@ -1,7 +1,7 @@
 // US state hex cartogram. Importing this file registers the "hexmap" type.
 import { register } from "./core/registry.ts";
 import { ramp } from "./core/scale.ts";
-import { el, key, r, esc } from "./core/svg.ts";
+import { el, key, px, r, esc } from "./core/svg.ts";
 import type { Mark } from "./core/types.ts";
 
 // "CODE Name col row": odd-r offset grid (odd rows shift right half a hex), pointy-top.
@@ -96,7 +96,7 @@ export const hexmap: Mark = {
     let labels = "";
     let n = 0;
     const w = R3 * k;
-    const fc = Math.min(13, s * 0.55);
+    const fc = Math.min(13, s * 0.55, px(spec.theme.labelSize)); // labelSize caps the fit
     const fv = fc * 0.8;
     const text = (cx: number, cy: number, str: string, extra: Record<string, unknown>) =>
       el(

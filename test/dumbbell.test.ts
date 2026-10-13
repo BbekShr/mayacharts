@@ -211,3 +211,16 @@ describe("dumbbell M2", () => {
     expect(dots(s)[0]).toContain('data-more="u\t7"');
   });
 });
+
+describe("colorBy sign (M2 M14)", () => {
+  it("colour is direction only: from is a hollow neutral ring, to is ink", () => {
+    const s = svg({ ...spec, colorBy: "sign" });
+    const d = dots(s);
+    expect(d.every((t) => !t.includes("data-s="))).toBe(true);
+    expect(d.filter((t) => t.includes("data-hollow")).every((t) => t.includes("data-neu"))).toBe(
+      true,
+    );
+    expect(d.filter((t) => t.includes("data-to="))).toHaveLength(3);
+    expect(dots(svg(spec)).every((t) => t.includes("data-s="))).toBe(true);
+  });
+});

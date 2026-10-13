@@ -188,7 +188,7 @@ export const css =
   // Value ramp: low to mid at --u 0..1/2, mid to high above (two mixes); unset, mid is the 50% mix and it is one linear ramp.
   "[data-q]{--c:color-mix(in oklab,var(--rh) clamp(0%,calc(var(--u)*200% - 100%),100%),color-mix(in oklab,var(--rm) clamp(0%,calc(var(--u)*200%),100%),var(--rl)))}" +
   Q +
-  "rect[data-hm]{stroke:var(--maya-accent);rx:var(--maya-cell-radius,var(--maya-radius))}" +
+  "rect[data-hm]{stroke:color-mix(in oklab,var(--c) 70%,var(--maya-bg));rx:var(--maya-cell-radius,var(--maya-radius))}" +
   "[data-maya=mark]{fill:var(--c,var(--maya-series-1));rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;opacity:var(--h,var(--d,var(--o)))}" +
   "[data-stack] rect[data-maya=mark],:not(circle)[data-depth]{stroke:var(--maya-bg);stroke-width:1}" +
   // Active mark: an ink ring, fill untouched, so in-mark labels keep their contrast.
@@ -201,12 +201,14 @@ export const css =
   A +
   "stop{stop-color:var(--c)}" +
   // Dumbbell connector, kpi parts, y2 legend swatch.
+  "circle[data-to]{--c:var(--maya-fg)}circle[data-maya=mark][data-hollow]{fill:var(--maya-bg);stroke:var(--c);stroke-width:2}" +
   "line[data-maya=link]{stroke:var(--c,var(--maya-fg-muted));opacity:1}" +
-  "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}text[data-hero]{font-size:var(--maya-hero-size,revert-layer);font-weight:var(--maya-hero-weight,600)}[data-maya=empty]{font-size:var(--maya-empty-size,revert-layer)}:where([data-maya=labels]) text:not([font-size]){font-size:var(--maya-label-size,inherit)}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
+  "text[data-maya=mark]{fill:var(--maya-fg);font-weight:600}text[data-hero]{font-weight:var(--maya-hero-weight,600)}[data-maya=empty]{font-size:var(--maya-empty-size,revert-layer)}:where([data-maya=labels]) text:not([font-size]){font-size:var(--maya-label-size,inherit)}[data-kpi=track]{fill:var(--maya-grid)}[data-kpi=target]{stroke:var(--maya-fg)}" +
   "[data-maya=labels] [data-tone]{fill:var(--c)}[data-maya=labels] :is([data-kpi=period],[data-kpi=of],[data-ring],[data-tip],[data-ax],[data-v]){fill:var(--maya-fg-muted)}" +
   "[data-line] i{height:2px;border-radius:1px}" +
+  ".maya:has([data-radar]) .maya-legend button:not([data-dash]) i{height:2px;border-radius:1px}" +
   // Direct end labels of line and area, in their series colour.
-  "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 78%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
+  "[data-maya=labels] [data-end]{fill:color-mix(in oklab,var(--c) 70%,var(--maya-fg));font-weight:600}[data-end] [data-v]{font-weight:400}[data-lead]{stroke:var(--c);opacity:.6}" +
   // Dashed series (spec.dash): square caps so the gaps stay open (the dash itself is the path's stroke-dasharray, in pathLength units); the legend key is the same dash. Annotations (spec.annotate) are the quiet bold; a slope rule is a faint diagonal.
   "[data-maya=line][data-dash]{stroke-linecap:butt}.maya-legend [data-dash] i{width:14px;height:2px;border-radius:0;background:repeating-linear-gradient(90deg,var(--c) 0 5px,#0000 5px 8px)}[data-ann]{font-weight:600}" +
   "line[data-slope]{stroke:var(--maya-fg-muted);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}" +
@@ -221,8 +223,7 @@ export const css =
   ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks][data-hot=p] path[data-maya=line]:not([data-active]){opacity:.25}" +
   // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
   // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.
-  "circle[data-depth][data-maya]{fill:none;stroke:color-mix(in oklab,var(--c) var(--t,100%),var(--maya-bg));transition:stroke .5s}" +
-  '[data-tint="2"]{--t:70%}[data-tint="3"]{--t:48%}' +
+  "circle[data-depth][data-maya]{fill:none;stroke:var(--c);transition:stroke .5s}" +
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
   `[data-maya=marks][data-hot] [data-maya=mark]${DIM}{opacity:.4}svg[data-still] [data-hot] [data-maya=mark]${DIM}{opacity:1;fill-opacity:.4;stroke-opacity:.4}` +
@@ -258,25 +259,24 @@ export const css =
   RADIAL +
   MEKKO +
   FLOW +
-  // Treemap names: dark ink on full-strength slots; drilled tiles tint toward white so it holds.
-  "svg:has(rect[data-depth]) [data-maya=labels] [data-in]{fill:#12161c}" +
   // Tint of a parent's colour (data-lt 0..7, 0 = the parent): any mark (fill, stroke, label) reads --c.
+  // Steps mix toward the ink (--maya-fg: darker on light, lighter on dark), so each step only gains contrast on the page and a base that passes 3:1 keeps it.
   rng(8)
     .map(
       (n) =>
-        `[data-s="${n}"][data-lt]{--c:color-mix(in oklab,var(--maya-series-${n + 1}) var(--t,100%),#fff)}[data-lt="${n}"]{--t:${100 - n * 8}%}`,
+        `[data-s="${n}"][data-lt]{--c:color-mix(in oklab,var(--maya-series-${n + 1}) var(--t,100%),var(--maya-fg))}[data-lt="${n}"]{--t:${100 - n * 7}%}`,
     )
     .join("") +
   // Nested treemap parent: a quiet frame of its branch colour behind its children.
   "rect[data-par]{fill:color-mix(in oklab,var(--c) 14%,var(--maya-bg))}" +
   // labelInk and labelInkOnFill are the inks where relative colours are missing (the fallback below and the [data-ink] base); a browser with them keeps the luminance rule,
   // because CSS cannot pick between two author colours by a channel of --c, and near-black / white are the only inks exact at the 4.5:1 threshold.
-  // Label ink from the mark's own fill (the label repeats the mark's colour attributes, so --c is the fill): a neutral grey in CIE Lab, L* 1.5 (near-black) above L* 49.85
-  // (relative luminance .1831, where both inks reach 4.5:1) and 100 (white) below it. L* is a function of luminance, so this is WCAG luminance, not OKLab L.
+  // Label ink from the mark's own fill (the label repeats the mark's colour attributes, so --c is the fill): a neutral grey at relative luminance .0017 (near-black)
+  // above Y .1831 (where both inks reach 4.5:1) and 1 (white) below it. The y channel of xyz-d65 is WCAG relative luminance itself (CIE L* is D50 and misjudges saturated blues).
   // Only near-black and white are exact at the threshold, so the inks are constants, not tokens.
   // Where relative colours are missing the dark [data-ink] rule stands, light on the fills known to be dark.
-  "@supports (color:lab(from red l a b)){[data-maya=labels] [data-ink=a]{fill:lab(from var(--c,var(--maya-series-1)) clamp(1.5,calc(1.5 + (49.85 - l)*1e3),100) 0 0)}}" +
-  "@supports not (color:lab(from red l a b)){[data-maya=labels] [data-ink=a]:is([data-other],[data-total],[data-tone]:not([data-tone=warn])){fill:var(--maya-label-ink-on,var(--maya-bg))}}" +
+  "@supports (color:color(from red xyz-d65 x y z)){[data-maya=labels] [data-ink=a]{fill:color(from var(--c,var(--maya-series-1)) xyz-d65 calc(clamp(.0017,.0017 + (.1831 - y)*1e5,1)*.9505) clamp(.0017,.0017 + (.1831 - y)*1e5,1) calc(clamp(.0017,.0017 + (.1831 - y)*1e5,1)*1.089))}}" +
+  "@supports not (color:color(from red xyz-d65 x y z)){[data-maya=labels] [data-ink=a]:is([data-other],[data-total],[data-tone]:not([data-tone=warn])){fill:var(--maya-label-ink-on,var(--maya-bg))}}" +
   HEXMAP +
   SCATTER +
   ORBIT +
@@ -297,9 +297,8 @@ export const css =
   "[data-off]{opacity:.12}" +
   "[data-maya=cross]:has([data-range]){opacity:1}" +
   "rect[data-range]{fill:var(--maya-accent);fill-opacity:.2;stroke:var(--maya-accent);pointer-events:none}" +
-  "rect[data-maya=axis]{cursor:ns-resize;touch-action:none}" +
+  "rect[data-maya=axis]{cursor:ns-resize;touch-action:none}rect[data-maya=axis]:focus-visible{outline:2px solid var(--maya-focus)}" +
   // Beeswarm select { peers }: the peers keep their ink, the rest step back; their mean is a dashed rule with a label.
   "[data-maya=marks]:has([data-peer-on]) [data-peer]:not([data-peer-on]){opacity:.3}" +
-  "[data-peer-on]{stroke:var(--maya-fg);stroke-width:1.5}" +
-  "[data-maya=grid] line[data-peer-mean]{stroke:var(--maya-fg);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}" +
-  "[data-maya=labels] text[data-peer-mean]{fill:var(--maya-fg);font-weight:600;pointer-events:none}";
+  "[data-peer-on]{stroke:var(--maya-fg);stroke-width:1.5;--o:1}" +
+  "[data-maya=grid] line[data-peer-mean]{stroke:var(--maya-fg);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}";

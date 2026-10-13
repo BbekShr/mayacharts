@@ -16,6 +16,9 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 ## Known ceilings
 
+- Theme `heroSize` and `labelSize` cap the fitted kpi, gauge and hexmap sizes in px only; `rem`, `em` and `calc()` values do not cap (the fit stands).
+- Tints (`tint`, `data-lt`) only mix toward the ink, so a step never loses contrast on the page; there is no lighter-than-the-series step in light mode.
+
 - **Weave threads**: 8, or 20 with a group `colorBy`. Groups share the 8 palette slots and `tint` tells threads apart; past 20, filter or group first.
 - **Radar**: no area fill (overlapping series would hide each other); category names thin by collision.
 - **Label ink tokens**: `labelInk` and `labelInkOnFill` reach only browsers without relative colours; CSS cannot choose between two author colours by a channel of the fill, so modern browsers use near-black and white by luminance.

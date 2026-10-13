@@ -38,8 +38,14 @@ describe("bar value labels over the bar", () => {
     expect(q.every((t) => /data-q="\d"/.test(t))).toBe(true);
   });
   it("ink rule: light ink below relative luminance .1831 of the fill, dark above (theme.series1 #1E1E24)", () => {
-    expect(css).toContain("lab(from var(--c,var(--maya-series-1))");
-    expect(css).toContain("49.85");
+    expect(css).toContain("color(from var(--c,var(--maya-series-1)) xyz-d65");
+    expect(css).toContain("(.1831 - y)*1e5");
+    // The stylesheet's K, for a fill of relative luminance y: near-black above the cut, white below, 4.5:1 either way (the dark blue 41,120,212 is y .1865).
+    const K = (y: number) => Math.min(1, Math.max(0.0017, 0.0017 + (0.1831 - y) * 1e5));
+    for (const y of [0.1865, 0.1832, 0.183, 0.1, 0.02, 0.5]) {
+      const ink = K(y);
+      expect((Math.max(y, ink) + 0.05) / (Math.min(y, ink) + 0.05)).toBeGreaterThanOrEqual(4.5);
+    }
     const svg = render({ ...base, theme: { series1: "#1E1E24" } }, { width: 600, height: 300 });
     expect(svg).toContain('data-ink="a"');
   });

@@ -394,3 +394,16 @@ describe("measure toggle, was per measure, compare (#82)", () => {
     expect(s.match(/<(text|rect)[^>]*data-maya="mark"[^>]*data-c=/g)).toBeNull();
   });
 });
+
+describe("heroSize is a cap (M2 H5)", () => {
+  const size = (theme?: Record<string, string>) =>
+    +/data-hero[^>]*font-size="([\d.]+)"/.exec(
+      svg({ ...base, ...(theme ? { theme } : {}) }, { height: 150 }),
+    )![1]!;
+  it("never grows the fitted value, and shrinks it to a px token", () => {
+    const fit = size();
+    expect(size({ heroSize: "400px" })).toBe(fit);
+    expect(size({ heroSize: "20px" })).toBe(20);
+    expect(size({ heroSize: "3rem" })).toBe(fit); // other units cannot be compared: the fit stands
+  });
+});

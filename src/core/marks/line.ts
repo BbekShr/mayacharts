@@ -51,7 +51,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
   const cvOf = colorVals(spec);
   const px = (ci: number) => r(cat.at(ci) + cat.bandwidth / 2);
   const tipOf = spec.tipFields.map((f) => colorVals(spec, f));
-  // A stream's value is its band thickness: its point sits (and its end label) at the band's middle.
+  // A stream's value is its band thickness: its end label sits at the band's middle; the hover markers sit on the stroke (the band top).
   const mid = (c: Cell) => (spec.stack === "stream" ? (c.y0 + c.y1) / 2 : c.y1);
   const series = shaped.visible.map((si) => shaped.cells.filter((c) => c.si === si)); // ascending ci, as shape lays them out
   const paths = series.map((cells) =>
@@ -180,7 +180,7 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         "data-last": done.has(c), // an annotated point keeps its dot
         r: 3,
         cx: px(c.ci),
-        cy: r(val.of(mid(c))),
+        cy: r(val.of(c.y1)),
       });
       const sp = spec.labels && !done.has(c) ? spot(c) : null;
       if (sp) ctx.label(...sp);

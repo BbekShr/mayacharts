@@ -957,6 +957,28 @@ test.describe("parallel brush and beeswarm peers", () => {
     await expect.poll(off).toBe(0);
   });
 
+  test("keyboard and two clicks brush an axis without dragging", async ({ page }) => {
+    await mount(page, "par", par);
+    const ax = page.locator("#par [data-maya=axis][data-field]").first();
+    await expect(ax).toHaveAttribute("role", "slider");
+    await ax.focus();
+    await page.keyboard.press("ArrowUp");
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
+    const [, lo, hi] = (await view(page, "par")).brush[0];
+    await page.keyboard.press("Shift+ArrowUp"); // grows; focus survives the repaint
+    await expect
+      .poll(
+        async () => (await view(page, "par")).brush[0][2] - (await view(page, "par")).brush[0][1],
+      )
+      .toBeGreaterThan(hi - lo);
+    await page.keyboard.press("Delete");
+    await expect.poll(async () => (await view(page, "par")).brush).toBeUndefined();
+    await ax.scrollIntoViewIfNeeded();
+    const b = (await ax.boundingBox())!;
+    for (const f of [0.2, 0.6]) await page.mouse.click(b.x + b.width / 2, b.y + b.height * f);
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
+  });
+
   test("select { peers } sets view.peers from the mark and Escape clears both", async ({
     page,
   }) => {
@@ -1015,7 +1037,8 @@ test.describe("stack toggle, card flip, kpi toggle and select", () => {
     await radios.nth(2).focus();
     await page.keyboard.press("ArrowLeft");
     await expect.poll(async () => (await view(page, "st")).stack).toBe(1);
-    await expect(page.locator("#st svg.maya-svg")).toHaveAttribute("data-stack", "true");
+    // A plain stacked mode is a bare attribute.
+    await expect(page.locator("#st svg.maya-svg")).toHaveAttribute("data-stack", "");
   });
 
   test("kpi toggle: the measure radios show one tile at a time", async ({ page }) => {
@@ -1027,8 +1050,7 @@ test.describe("stack toggle, card flip, kpi toggle and select", () => {
     const before = await head.textContent();
     await radios.nth(1).click();
     await expect.poll(async () => (await view(page, "kt")).measure).toBe(1);
-    await settle(page);
-    expect(await head.textContent()).not.toBe(before);
+    await expect.poll(() => head.textContent()).not.toBe(before);
   });
 
   test("kpi select: a sparkline point selects its month; Escape clears", async ({ page }) => {

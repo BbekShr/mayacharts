@@ -248,6 +248,9 @@ describe("radial radar (form: line)", () => {
     ...more,
   });
   const paths = (s: string) => tags(s, 'path data-maya="line"');
+  it("every radar line carries data-radar, so the legend keys are lines (M2 L19)", () => {
+    expect(paths(svg(radar())).every((t) => t.includes("data-radar"))).toBe(true);
+  });
   it("one line per series keyed l~series; closed with every value, open where one is missing", () => {
     const p = paths(svg(radar()));
     expect(p).toHaveLength(2);

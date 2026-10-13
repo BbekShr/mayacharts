@@ -67,7 +67,14 @@ export const dumbbell: Mark = {
         const d = {
           "data-key": key(ser, cname),
           "data-c": ci,
-          "data-s": si % 8,
+          // colorBy "sign": colour means direction (the connector), so the ends are neutral, hollow from and ink to.
+          ...(spec.colorBy === "sign"
+            ? {
+                "data-neu": si ? null : true,
+                "data-hollow": si ? null : true,
+                "data-to": si || null,
+              }
+            : { "data-s": si % 8 }),
           "data-x": ctx.fmt(spec.x, cname),
           "data-series": ser,
           "data-f": ctx.fmt(spec.y, v),

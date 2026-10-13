@@ -209,8 +209,8 @@ describe("sunburst", () => {
   it("a drilled branch keeps its colour", () => {
     const d = tags(renderParts({ ...sb, drill: true }, { view: { drill: ["C"] } }).svg, "circle");
     expect(d.map((p) => at(p, "data-s"))).toEqual(["2", "2", "2"]);
-    // Tint by depth in the whole tree: the disk is C's own colour, its children one step lighter.
-    expect(d.map((p) => at(p, "data-tint"))).toEqual(["2", "2", "1"]);
+    // Shade by depth in the whole tree: the disk is C's own colour, its children step 3 toward the ink.
+    expect(d.map((p) => / data-lt="(\d)"/.exec(p)?.[1])).toEqual(["3", "3", undefined]);
   });
 });
 
@@ -311,7 +311,8 @@ describe("#71 nested treemap, minAngle, slots", () => {
   });
   it("a drilled branch spreads its tints", () => {
     const r = renderParts({ ...tm, drill: true }, { view: { drill: ["C"] } }).svg;
-    expect(r).toContain('data-lt="0"');
+    expect(r).toContain('data-lt="1"'); // step 0 is the parent itself, so siblings start at 1
+    expect(r).not.toContain('data-lt="0"');
   });
   it("minAngle 0 never lumps Other", () => {
     const many = Array.from({ length: 40 }, (_, i) => ({ g: "A", n: `n${i}`, v: i ? 1 : 500 }));
@@ -336,19 +337,24 @@ describe("tint and neutral", () => {
     const lt = tags(drilled(tm), "rect").map((t) => at(t, "data-lt"));
     expect(lt.length).toBeGreaterThan(1);
     expect(new Set(lt).size).toBe(lt.length);
-    expect(lt).toContain("0");
+    expect(lt).toContain("1");
     expect(lt).toContain("7");
+    // the treemap's names repeat the tile's paint, so the theme's ink is picked from the colour on screen
+    expect(drilled(tm)).toMatch(/<text[^>]*data-ink="a"[^>]*data-s="2"[^>]*data-lt="1"/);
   });
   it("a drilled sunburst's slices do too, siblings only", () => {
     const s = drilled(sb);
     const lt = tags(s, "circle")
       .filter((t) => at(t, "data-depth") === "1")
       .map((t) => at(t, "data-lt"));
-    expect(lt).toEqual(["0", "7"]);
+    expect(lt).toEqual(["1", "7"]);
   });
   it("the top level keeps its own colours (no data-lt) without a drill, and tint is off by default", () => {
     expect(renderParts({ ...sb, tint: true }).svg).not.toMatch(/data-depth="1"[^>]*data-lt/);
-    expect(renderParts(sb, { view: { drill: ["C"] } }).svg).not.toContain("data-lt");
+    // Without tint a drill shades by depth only, and every sunburst name carries its ring's paint.
+    const d = renderParts(sb, { view: { drill: ["C"] } }).svg;
+    expect(d).not.toMatch(/data-lt="[0147]"/);
+    expect(d).toMatch(/<text[^>]*data-ink="a"[^>]*data-lt="3"/);
   });
   it("a root-level lump with no top node is data-neu", () => {
     const many = Array.from({ length: 40 }, (_, i) => ({
