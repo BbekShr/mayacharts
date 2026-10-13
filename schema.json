@@ -136,9 +136,13 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "An array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`; kpi: one tile each; gauge: one field only)."
+          "description": "An array adds a measure toggle, first one active (parallel: one axis each; table: one column each; funnel without `x`: one stage each, its rows combined by `aggregate`; kpi: one tile each, or one at a time with toggle; gauge: only with toggle)."
         }
       ]
+    },
+    "toggle": {
+      "type": "boolean",
+      "description": "With a y array: one measure at a time behind the measure control (view.measure) instead of one tile each (kpi); a gauge takes a y array only with it. kpi gauge."
     },
     "y2": {
       "type": "string",
@@ -164,9 +168,39 @@
           },
           "required": ["by"],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "minProperties": 1
         }
       ],
-      "description": "Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), \"was\" in the tooltip, a data table column and a description sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a \"was\" tooltip row and table column). Long data: { by } names the period field; the latest distinct value is current and the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. current and previous pick periods explicitly. bar kpi gauge heatmap; not with stack or a y array."
+      "description": "Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), \"was\" in the tooltip, a data table column and a description sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a \"was\" tooltip row and table column). Long data: { by } names the period field; the latest distinct value is current and the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. current and previous pick periods explicitly. With a y array, key it by y field ({ sales: \"salesLY\" }): the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have none; an object with a string by is the long form. With series (bar): one ghost per grouped bar. bar kpi gauge heatmap; not with stack."
+    },
+    "compare": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["previous", "was", "target"]
+      },
+      "description": "Which change lines a kpi prints under the headline, in this order: previous (the previous category), was (spec.was), target (colorBy target; the bullet and status stay). [] prints none. Default all three. kpi only."
+    },
+    "numberMotion": {
+      "type": "string",
+      "enum": ["count", "roll"],
+      "default": "count",
+      "description": "How a kpi headline moves to a new number (element only; off under reduced motion): count counts up, roll rolls each digit like an odometer. kpi only."
+    },
+    "back": {
+      "type": "object",
+      "description": "A second face: a chart spec over the kpi's rows (no data of its own, any type but kpi). A Details button turns the card over (view.face); Escape returns. kpi only."
+    },
+    "arc": {
+      "enum": [180, 270, 360],
+      "default": 180,
+      "description": "Sweep of the gauge dial in degrees: 180 (a half dial), 270 or 360 (a closed ring). gauge only."
     },
     "forms": {
       "type": "array",
@@ -179,7 +213,7 @@
     },
     "frame": {
       "type": "string",
-      "description": "Playback: one frame per distinct value of this field (data order). Shows one frame, the last by default, names it in the title, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and \"1\" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell."
+      "description": "Playback: one frame per distinct value of this field (data order). Shows one frame, the last by default, names it in the title, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and \"1\" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell kpi (a scope such as YTD or All)."
     },
     "series": {
       "type": "string",
@@ -227,9 +261,24 @@
         {
           "type": "string",
           "enum": ["percent", "stream"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "enum": ["percent", "stream"]
+              }
+            ]
+          },
+          "uniqueItems": true
         }
       ],
-      "description": "Stack series instead of grouping them; \"percent\" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0); \"stream\" (area only) centres the stack on a wiggle baseline, a streamgraph (values 0 or more, value axis and grid off by default). bar and area only."
+      "description": "Stack series instead of grouping them; \"percent\" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0); \"stream\" (area only) centres the stack on a wiggle baseline, a streamgraph (values 0 or more, value axis and grid off by default). bar and area only. An array of 2 or more distinct modes (false: grouped bars or overlaid areas) adds a control that switches between them, first one shown (view.stack indexes it); [] is unset."
     },
     "horizontal": {
       "type": "boolean",
@@ -401,7 +450,13 @@
           "labelled",
           "peerMean",
           "brushed",
-          "brushCleared"
+          "brushCleared",
+          "flip",
+          "stacks",
+          "unstacked",
+          "stacked",
+          "percent",
+          "stream"
         ]
       }
     },
@@ -428,13 +483,28 @@
       "description": "Accessible description; auto-generated when omitted."
     },
     "yDomain": {
-      "type": "array",
-      "items": {
-        "type": "number"
-      },
-      "minItems": 2,
-      "maxItems": 2,
-      "description": "Fixed value-axis domain (kpi: the bullet scale; gauge: the dial range). Not allowed with a `y` array."
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      ],
+      "description": "Fixed value-axis domain (kpi: the bullet scale; gauge: the dial range); [hi, lo] reverses it. Not with a `y` array, except keyed by y field on kpi and gauge ({ sales: [0, 26e6] }; unlisted measures take the default)."
     },
     "xDomain": {
       "type": "array",
@@ -672,7 +742,7 @@
         }
       ],
       "default": true,
-      "description": "Hover/keyboard tooltip. { fields } adds those fields as tooltip rows and data table columns, formatted by format; where rows combine (bar, line, area, heatmap, dumbbell) numeric fields combine by aggregate, and { field, ratio: [num, den] } shows sum(num) / sum(den) under the name field (titles and format key it; it need not be in the rows). fields: bar line area scatter heatmap dumbbell beeswarm."
+      "description": "Hover/keyboard tooltip. { fields } adds those fields as tooltip rows and data table columns, formatted by format; where rows combine (bar, line, area, heatmap, dumbbell) numeric fields combine by aggregate, and { field, ratio: [num, den] } shows sum(num) / sum(den) under the name field (titles and format key it; it need not be in the rows). fields: bar line area scatter heatmap dumbbell beeswarm gauge (combined over every row)."
     },
     "legend": {
       "oneOf": [
@@ -720,7 +790,7 @@
           "additionalProperties": false
         }
       ],
-      "description": "Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. { peers: field } (beeswarm) selects one mark and lights every mark sharing its value of that field, with their average (view.peers). bar line area waterfall scatter heatmap dumbbell ridgeline beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
+      "description": "Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. { peers: field } (beeswarm) selects one mark and lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
     },
     "zoom": {
       "type": "boolean",

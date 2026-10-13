@@ -141,7 +141,10 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
         <p>
           colorBy thresholds land here too. A warn threshold needs a target and must sit on the bad
           side of it: below the target when higher is better, above it when lower is better. Keyed
-          thresholds (kpi with a y array) must name fields of y. A gauge takes one y field.
+          thresholds (kpi with a y array, gauge with toggle) must name fields of y, as must an
+          aggregate, was or yDomain keyed by y field. A gauge takes one y field, or a y array with
+          toggle: true. A kpi back face may not have data of its own or be a kpi; its other errors
+          name spec.back.&lt;path&gt;.
         </p>
         <pre><code>{ "type": "kpi", "colorBy": { "target": 100, "warn": 80 }, ... }
 { "type": "kpi", "colorBy": { "target": 5, "warn": 8, "better": "lower" }, ... }</code></pre>
@@ -153,7 +156,11 @@ data.map(r => ({ ...r, population: Number(r.population) }))</code></pre>
           For example, size applies only to scatter charts, path cannot be used with x (on heatmap,
           path replaces series), depth is treemap only and minAngle sunburst only. A ratio aggregate
           works where values sit side by side (bar line area heatmap dumbbell table kpi gauge
-          hexmap), not where sizes must add up to a whole, and not with stack, was or a y array.
+          hexmap), not where sizes must add up to a whole, and not with stack or was; with a y array
+          key it by y field (kpi only with toggle). was takes a y array only keyed by y field (<code
+            >{ "Sales": "SalesLY" }</code
+          >), and never stack. toggle needs a y array; a yDomain keyed by y field works on kpi and
+          gauge only.
         </p>
         <pre><code>// scatter chart with size field
 { "type": "scatter", "x": "x", "y": "y", "size": "population", ... }

@@ -4,6 +4,8 @@ import "../src/radial.ts";
 import "../src/weave.ts";
 import "../src/geo.ts";
 import { tw } from "../src/core/layout.ts";
+import { shape } from "../src/core/shape.ts";
+import { MayaSpecError, resolve, validateSpec } from "../src/core/validate.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 const months = ["Jan", "Feb", "Mar"];
@@ -924,5 +926,217 @@ describe("M1 design-critic follow-ups and SSR themes", () => {
     registerTheme("m2ssr", { accent: "#abcdef" });
     const html = renderShell({ ...simple, theme: ["m2ssr", { radius: "0px" }] });
     expect(html).toContain('"theme":{"accent":"#abcdef","radius":"0px"}');
+  });
+});
+
+describe("M3 contracts: measures, kpi and gauge (#82, #83)", () => {
+  const rows = [
+    { Scope: "YTD", Month: "2026-07", Sales: 1688, Units: 34, SalesLY: 1500, UnitsLY: 30 },
+    { Scope: "YTD", Month: "2026-08", Sales: 1551, Units: 33, SalesLY: 1600, UnitsLY: 31 },
+    { Scope: "All", Month: "2026-09", Sales: 1334, Units: 30, SalesLY: 1400, UnitsLY: 29 },
+  ];
+  const kpi: ChartSpec = {
+    type: "kpi",
+    x: "Month",
+    y: ["Sales", "Units", "Price"],
+    toggle: true,
+    aggregate: { Price: { ratio: ["Sales", "Units"] } },
+    yDomain: { Sales: [0, 2600] },
+    colorBy: { Sales: { target: 2480, warn: 1520 } },
+    data: rows,
+  };
+  const err = (spec: unknown): [string, string] => {
+    try {
+      validateSpec(spec);
+    } catch (e) {
+      if (e instanceof MayaSpecError) return [e.code, e.path];
+      throw e;
+    }
+    return ["ok", ""];
+  };
+
+  it("#82.1 kpi toggle: one measure control, keyed yDomain and colorBy follow view.measure", () => {
+    expect(err(kpi)).toEqual(["ok", ""]);
+    const p = renderParts(kpi);
+    expect(p.controls.match(/role="radio"/g)).toHaveLength(3);
+    const s0 = resolve(kpi);
+    expect([s0.toggle, s0.y, s0.yDomain, s0.colorBy]).toEqual([
+      true,
+      "Sales",
+      [0, 2600],
+      { target: 2480, warn: 1520, better: "higher" },
+    ]);
+    const s1 = resolve(kpi, { measure: 1 });
+    expect([s1.y, s1.yDomain, s1.colorBy]).toEqual(["Units", null, null]);
+    // Without toggle the tiles show together: no control, keyed aggregate refused.
+    const { toggle: _, ...all } = kpi;
+    expect(err(all)).toEqual(["option-unsupported", "aggregate"]);
+    expect(
+      err({ ...kpi, y: ["Sales", "Units"], toggle: undefined, aggregate: undefined }).at(0),
+    ).toBe("ok");
+    expect(err({ ...kpi, y: "Sales", aggregate: undefined, yDomain: undefined })).toEqual([
+      "option-unsupported",
+      "toggle",
+    ]);
+    expect(err({ ...kpi, yDomain: [0, 1] })).toEqual(["option-unsupported", "yDomain"]);
+    expect(err({ ...kpi, yDomain: { Margin: [0, 1] } })).toEqual([
+      "invalid-option",
+      "yDomain.Margin",
+    ]);
+    expect(err({ ...kpi, yDomain: { Sales: [1, 1] } })).toEqual([
+      "invalid-domain",
+      "yDomain.Sales",
+    ]);
+    expect(err({ ...simple, yDomain: { v: [0, 1] } })).toEqual(["option-unsupported", "yDomain"]);
+  });
+
+  it("#82.2 kpi toggle: the ratio measure is sum(num) / sum(den) per category", () => {
+    const s = resolve(kpi, { measure: 2 });
+    expect(s.ratio).toEqual(["Sales", "Units"]);
+    const v = shape(s).cells.map((c) => c.value);
+    expect(v).toEqual(rows.map((r) => r.Sales / r.Units));
+  });
+
+  it("#82.1 gauge takes a y array only with toggle; colorBy and yDomain keyed by field", () => {
+    const g: ChartSpec = { type: "gauge", y: ["Sales", "Units"], data: rows };
+    expect(err(g)).toEqual(["invalid-option", "y"]);
+    const t: ChartSpec = {
+      ...g,
+      toggle: true,
+      yDomain: { Units: [0, 50] },
+      colorBy: { Units: { target: 40 } },
+    };
+    expect(err(t)).toEqual(["ok", ""]);
+    expect(renderParts(t).controls).toContain('role="radiogroup"');
+    const s = resolve(t, { measure: 1 });
+    expect([s.y, s.yDomain, s.colorBy]).toEqual([
+      "Units",
+      [0, 50],
+      { target: 40, warn: null, better: "higher" },
+    ]);
+    expect(() => render(t, { view: { measure: 1 } })).not.toThrow();
+  });
+
+  it("#82.3 was keyed by y field follows the measure; was with series ghosts each bar", () => {
+    const b: ChartSpec = {
+      type: "bar",
+      x: "Month",
+      y: ["Sales", "Units"],
+      was: { Sales: "SalesLY" },
+      data: rows,
+    };
+    expect(err(b)).toEqual(["ok", ""]);
+    expect(renderParts(b).svg).toContain("data-past");
+    expect(renderParts(b, { view: { measure: 1 } }).svg).not.toContain("data-past");
+    expect(resolve(b).wasOf).toEqual(new Map([["Sales", "SalesLY"]]));
+    expect(err({ ...b, was: "SalesLY" })).toEqual(["option-unsupported", "was"]);
+    expect(err({ ...b, y: "Sales" })).toEqual(["option-unsupported", "was"]);
+    expect(err({ ...b, was: { Margin: "SalesLY" } })).toEqual(["invalid-option", "was.Margin"]);
+    expect(err({ ...b, was: { Sales: "Nope" } })).toEqual(["unknown-field", "was.Sales"]);
+    expect(err({ ...b, was: { Sales: "Scope" } })).toEqual(["non-numeric-field", "data[0].Scope"]);
+    // A wide kpi: one was column per measure in the data table.
+    const { toggle: _t, aggregate: _a, yDomain: _d, ...k } = kpi;
+    const table = renderParts({ ...k, y: ["Sales", "Units"], was: { Units: "UnitsLY" } }).table;
+    expect(table.match(/<th>[^<]*UnitsLY<\/th>/g)).toHaveLength(1);
+    // Grouped bars: one ghost per bar.
+    const g = render({
+      type: "bar",
+      x: "Region",
+      series: "Family",
+      y: "Share",
+      was: "Average",
+      data: [
+        { Region: "South", Family: "Outerwear", Share: 0.383, Average: 0.374 },
+        { Region: "South", Family: "Bottoms", Share: 0.21, Average: 0.22 },
+      ],
+    });
+    expect(g.match(/<rect[^>]*data-past/g)).toHaveLength(2);
+  });
+
+  it("#82.4 kpi compare and frame", () => {
+    expect(resolve(kpi).compare).toEqual(["previous", "was", "target"]);
+    expect(resolve({ ...kpi, compare: [] }).compare).toEqual([]);
+    expect(err({ ...kpi, compare: ["was", "was"] })).toEqual(["invalid-option", "compare"]);
+    expect(err({ ...simple, compare: ["was"] })).toEqual(["option-unsupported", "compare"]);
+    const f = renderParts({ ...kpi, frame: "Scope", title: "Sales" }, { view: { frame: 0 } });
+    expect(f.title).toContain("Sales, YTD");
+    expect(f.controls).toContain('data-maya="play"');
+    expect(f.frame).toEqual([0, 2]);
+  });
+
+  it("#82.5 stack as an array of modes: a Layout control, view.stack picks one", () => {
+    const st: ChartSpec = { ...stacked, stack: [true, "percent"] };
+    expect(err(st)).toEqual(["ok", ""]);
+    const p = renderParts(st);
+    expect(p.controls).toContain('data-maya="stack"');
+    expect(p.controls).toContain(">Stacked<");
+    expect(p.controls).toContain(">Percent<");
+    expect(p.svg).toContain('data-stack=""');
+    const q = renderParts(st, { view: { stack: 1 } });
+    expect(q.svg).toContain('data-stack="percent"');
+    expect(q.controls).toContain('data-i="1"');
+    expect(resolve(st, { stack: 1 }).format.get("v")).toBe("percent");
+    expect(resolve(st).format.has("v")).toBe(false);
+    expect(resolve({ ...st, stack: [] }).stack).toBe(false);
+    expect(err({ ...st, stack: [true] })).toEqual(["invalid-option", "stack"]);
+    expect(err({ ...st, stack: [true, true] })).toEqual(["invalid-option", "stack"]);
+    expect(err({ ...st, stack: [true, "stream"] })).toEqual(["option-unsupported", "stack"]);
+    expect(err({ ...st, was: "v" })).toEqual(["option-unsupported", "was"]);
+  });
+
+  it("#83.1 numberMotion and #83.4 select on kpi validate", () => {
+    expect(err({ ...kpi, numberMotion: "roll", select: true })).toEqual(["ok", ""]);
+    expect(err({ ...kpi, numberMotion: "spin" })).toEqual(["invalid-option", "numberMotion"]);
+    expect(err({ ...simple, numberMotion: "roll" })).toEqual([
+      "option-unsupported",
+      "numberMotion",
+    ]);
+  });
+
+  it("#83.2 kpi back: a flip button, view.face renders the back spec over the same rows", () => {
+    const k: ChartSpec = {
+      ...kpi,
+      frame: "Scope",
+      back: { type: "bar", x: "Month", y: "Units", horizontal: true, title: "Units" },
+    };
+    expect(err(k)).toEqual(["ok", ""]);
+    const front = renderParts(k);
+    expect(front.controls).toContain('data-maya="flip" aria-pressed="false">Details<');
+    const back = renderParts(k, { view: { face: "back" } });
+    expect(back.controls).toContain('aria-pressed="true"');
+    expect(back.svg).toContain('data-dir="h"');
+    // The frame applies: only the "All" frame's month is drawn.
+    expect(back.svg.match(/<rect[^>]*data-maya="mark"/g)).toHaveLength(1);
+    expect(renderShell(k)).toContain('"Units":34');
+    expect(err({ ...k, back: { ...k.back!, data: [] } })).toEqual(["invalid-option", "back.data"]);
+    expect(err({ ...k, back: { type: "kpi", y: "Sales" } })).toEqual([
+      "invalid-option",
+      "back.type",
+    ]);
+    expect(err({ ...k, back: { type: "bar", x: "Month", y: "Nope" } })).toEqual([
+      "unknown-field",
+      "back.y",
+    ]);
+    expect(() => render(k, { view: { face: "sideways" as "back" } })).toThrow(/view.face/);
+  });
+
+  it("#83.3 gauge arc and tooltip fields", () => {
+    const g: ChartSpec = {
+      type: "gauge",
+      y: "Sales",
+      arc: 360,
+      tooltip: { fields: ["SalesLY"] },
+      data: rows,
+    };
+    expect(err(g)).toEqual(["ok", ""]);
+    const { arc: _arc, ...half } = g;
+    expect([resolve(g).arc, resolve(half).arc]).toEqual([360, 180]);
+    expect(err({ ...g, arc: 90 })).toEqual(["invalid-option", "arc"]);
+    expect(err({ ...simple, arc: 360 })).toEqual(["option-unsupported", "arc"]);
+    expect(err({ ...g, tooltip: { fields: ["Scope"] } })).toEqual([
+      "non-numeric-field",
+      "data[0].Scope",
+    ]);
+    expect(() => render(g)).not.toThrow();
   });
 });

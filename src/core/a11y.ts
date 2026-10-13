@@ -1,4 +1,4 @@
-import { colorVals } from "./shape.ts";
+import { colorVals, wide as allY } from "./shape.ts";
 import { t } from "./strings.ts";
 import { cbField, esc, OTHER } from "./svg.ts";
 import type { MarkOut, ResolvedSpec, Shaped } from "./types.ts";
@@ -99,30 +99,19 @@ const ROWS = [
   "constellation",
 ];
 const CAP = 1000;
-/** Types whose description names every measure. */
-const ALL = ["constellation", "kpi"];
 
 export type Fmt = (field: string, v: unknown, step?: number) => string;
 
 export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: string): string {
   if (spec.description !== null) return spec.description;
   const ti = (f: string) => spec.titles.get(f) ?? f;
+  // A constellation or a kpi with a y array (not toggle) has no single value: name every measure.
+  const ys =
+    spec.type === "constellation" || allY(spec) ? spec.measures.map(ti).join(", ") : ti(spec.y);
   let s =
     spec.x || spec.path.length
-      ? t(
-          spec,
-          "chartOf",
-          noun,
-          // A constellation or a kpi with a y array has no single value: name every measure.
-          ALL.includes(spec.type) ? spec.measures.map(ti).join(", ") : ti(spec.y),
-          spec.x ? ti(spec.x) : spec.path.join(" / "),
-        )
-      : t(
-          spec,
-          "chartOfAll",
-          noun,
-          ALL.includes(spec.type) ? spec.measures.map(ti).join(", ") : ti(spec.y),
-        );
+      ? t(spec, "chartOf", noun, ys, spec.x ? ti(spec.x) : spec.path.join(" / "))
+      : t(spec, "chartOfAll", noun, ys);
   if (spec.series !== null && shaped.series.length) {
     // Name only series that hold a value (a series of nulls is not in the picture).
     const live = new Set(shaped.cells.flatMap((c) => (c.value === null ? [] : [c.si])));
@@ -140,7 +129,7 @@ export function describe(spec: ResolvedSpec, shaped: Shaped, fmt: Fmt, noun: str
   const f = (v: number) => fmt(spec.y, v);
   if (!n) return s + ". No data.";
   // A kpi with a y array mixes units, so no range (the mark may add a note).
-  if (spec.type === "kpi" && spec.measures.length > 1) return s + ".";
+  if (allY(spec)) return s + ".";
   const tm = shaped.time;
   if (tm?.length)
     s +=
@@ -235,34 +224,46 @@ export function dataTable(
       .join("");
   } else {
     // A kpi with a y array: one column per measure (its cells' si is the measure index).
-    const wide = spec.type === "kpi" && spec.measures.length > 1;
+    const wide = allY(spec);
     const keys = wide
       ? shaped.visible.map((j) => ti(spec.measures[j]!))
       : spec.series === null
         ? [ti(spec.y)]
         : shaped.visible.map((j) => shaped.series[j]!);
     n = shaped.categories.length;
-    // spec.was: a previous-value column after each value column.
-    const was = spec.was;
-    const wv = was === null ? null : colorVals(spec, was);
-    const wt = was === null ? "" : ti(was);
+    // spec.was: a previous-value column after each value column (a wide kpi: each measure's own).
+    const wasOf = (j: number) => (wide ? (spec.wasOf.get(spec.measures[j]!) ?? null) : spec.was);
+    const wvs = shaped.visible.map((j) => {
+      const f = wasOf(j);
+      return f === null ? null : colorVals(spec, f);
+    });
     h =
       `<th>${esc(ti(spec.x))}</th>` +
       keys
-        .map(
-          (k) =>
+        .map((k, i) => {
+          const f = wasOf(shaped.visible[i]!);
+          return (
             `<th>${esc(k)}</th>` +
-            (wv ? `<th>${esc(spec.series === null ? wt : `${k} ${wt}`)}</th>` : ""),
-        )
+            (f === null
+              ? ""
+              : `<th>${esc(spec.series === null && !wide ? ti(f) : `${k} ${ti(f)}`)}</th>`)
+          );
+        })
         .join("");
     const by = new Map(shaped.cells.map((c) => [c.ci + "," + c.si, c.value]));
     rows = "";
     for (let i = 0; i < Math.min(n, CAP); i++) {
       rows += `<tr><th scope="row">${esc(!spec.x ? ti(spec.y) : shaped.time ? fmt(spec.x, shaped.categories[i]) : shaped.categories[i]!)}</th>`;
-      for (const j of shaped.visible)
+      shaped.visible.forEach((j, v) => {
+        const m = wide ? spec.measures[j]! : spec.y;
+        const wv = wvs[v];
+        // A wide kpi's cells are keyed by measure, its rows have no series ("").
         rows +=
-          `<td>${cell(wide ? spec.measures[j]! : spec.y, by.get(i + "," + j))}</td>` +
-          (wv ? `<td>${esc(fmt(spec.y, wv(shaped.categories[i]!, shaped.series[j]!)))}</td>` : "");
+          `<td>${cell(m, by.get(i + "," + j))}</td>` +
+          (wv
+            ? `<td>${esc(fmt(m, wv(shaped.categories[i]!, wide ? "" : shaped.series[j]!)))}</td>`
+            : "");
+      });
       rows += "</tr>";
     }
   }

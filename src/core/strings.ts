@@ -157,6 +157,18 @@ export const TEXT = {
   brushed: "{0} of {1} shown",
   /** Live region after the parallel brush is cleared. */
   brushCleared: "Filter cleared",
+  /** kpi with spec.back: the button that turns the card over (aria-pressed says which face shows). */
+  flip: "Details",
+  /** aria-label of the stack mode radiogroup (spec.stack as an array). */
+  stacks: "Layout",
+  /** Stack mode option for false: grouped bars, overlaid areas. */
+  unstacked: "Separate",
+  /** Stack mode option for true. */
+  stacked: "Stacked",
+  /** Stack mode option for "percent". */
+  percent: "Percent",
+  /** Stack mode option for "stream". */
+  stream: "Stream",
 } as const;
 
 export type TextKey = keyof typeof TEXT;
