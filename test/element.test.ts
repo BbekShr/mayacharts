@@ -713,7 +713,7 @@ describe("review fixes", () => {
     const el = await mount((e) => (e.spec = spec()));
     let n = 0;
     el.addEventListener("maya-render", () => n++);
-    el.spec = spec(rows.map((r) => ({ ...r, v: r.v + 1 })));
+    el.spec = spec(rows.map((r) => ({ ...r, v: (r.v as number) + 1 })));
     el.remove();
     await frame();
     expect(n).toBe(0);
@@ -1187,7 +1187,7 @@ describe("M5 controls (#78 #80 #85)", () => {
     expect(ps.map((p) => p.getAttribute("data-facet"))).toEqual(["N", "S"]);
     expect(ps[0]!.querySelector("[data-maya=mark]")!.getAttribute("data-key")).toMatch(/^N~/);
     const keep = ps[1]!.querySelector("[data-maya=mark]");
-    el.data = fc().data.map((r) => ({ ...r, v: r.v + 1 }));
+    el.data = fc().data.map((r) => ({ ...r, v: (r.v as number) + 1 }));
     await frame();
     expect(root.querySelector("svg[data-maya=panel][data-facet=S] [data-maya=mark]")).toBe(keep);
     ps[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 }));

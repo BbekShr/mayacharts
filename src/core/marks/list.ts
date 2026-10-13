@@ -221,7 +221,7 @@ export const list: Mark = {
           y: r(y + MORE / 2),
           "dominant-baseline": "middle",
         },
-        esc(ctx.t("showMore", all.length - fit)), // ponytail: reuses showMore until core adds a "+{0} more" string
+        esc(ctx.t("moreMoves", all.length - fit)),
       );
     return {
       marks,

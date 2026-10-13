@@ -521,6 +521,8 @@
  *                       span for grouped bars, whose ghosts are ticks).
  *                       A spec.dash series' button (and its end label) carries data-dash.
  *                       No legend at all (series, was key, tone, ramp) when the chart is empty.
+ *                       Nor for a drilled marimekko (tinted segments). Heatmap xPath column labels that can drill
+ *                       further end in " ›"; the row crumb root is named by path[0].
  *   The tooltip reads its content from these attributes; the element never sees rows.
  *
  * Key grammar (svg.ts key(...parts)): each part encodeURIComponent'ed with `~` -> %7E,
@@ -1669,6 +1671,8 @@ function build(
   if (
     (s.series !== null || s.y2 !== null) &&
     s.legend &&
+    // A drilled marimekko tints its segments from the column colour, so slot swatches would lie.
+    !(s.type === "marimekko" && s.drilled.length) &&
     (!gutter || W < 400 || spec.legend || ends!.some((e) => !endFits(e, gutter)))
   )
     legend =
@@ -1796,7 +1800,9 @@ function build(
         ? trail(
             t(s, "crumbs"),
             // Two trails (heatmap xPath): each starts with its level's title.
-            spec.xPath && spec.path ? (s.titles.get(spec.path[0]!) ?? spec.path[0]!) : t(s, "back"),
+            spec.path && (spec.xPath || s.type === "heatmap")
+              ? (s.titles.get(spec.path[0]!) ?? spec.path[0]!)
+              : t(s, "back"),
             s.drilled,
           )
         : "") +

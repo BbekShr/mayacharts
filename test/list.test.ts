@@ -97,7 +97,7 @@ describe("list #79", () => {
   it("a short tile keeps one body line and counts the rows it dropped", () => {
     const { svg } = draw({}, { height: 190, width: 300 });
     expect(svg).toContain('data-body=""');
-    expect(svg).toMatch(/data-more=""[^>]*>Show \d more</);
+    expect(svg).toMatch(/data-more=""[^>]*>\+\d more</);
   });
   it("negative evidence diverges from a zero line in the down tone", () => {
     const d = [...data, { Move: "Lead with Jackets", Evidence: "Coats", Value: -20 }];

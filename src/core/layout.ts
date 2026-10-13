@@ -169,8 +169,12 @@ export function frame(
   const edge = bt ?? tt; // tick labels centred on the plot's ends need half their width as margin
   const lt = ly && ly.kind === "linear" ? ticks(spec, ly, fmt, compact ? 3 : 5) : null;
   // Band labels go through the field's format (month presets on x); left ones are cut at 40%.
+  // heatmap xPath columns that drill further end in a chevron (MED18).
+  const cue = spec.type === "heatmap" && spec.drill && spec.xDrilled.length < spec.xPath.length - 1;
   const bLab =
-    bx && !bt && !tt ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c)) : [];
+    bx && !bt && !tt
+      ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c) + (cue ? " ›" : ""))
+      : [];
   const lFull = ly && !lt ? (ly.domain as readonly string[]).map((c) => fmt(ly.field, c)) : [];
   const lLab = lt ? lt.labels : lFull.map((c) => clip(c, W * 0.4 - 8));
   const rt = ry && ry.kind === "linear" ? ticks(spec, ry, fmt, compact ? 3 : 5) : null;

@@ -177,6 +177,8 @@ export const TEXT = {
   noMatch: 'No rows match "{0}"',
   /** Overflow row of a list: {0} = the moves not shown. */
   moreMoves: "+{0} more",
+  /** Table row count when rows are paged or limited: {0} = rows shown, {1} = rows in all. */
+  rowsOf: "{0} of {1}",
   /** aria-label of the heatmap column breadcrumb (spec.xPath with drill). */
   crumbsX: "Column drill path",
   /** Drilled waterfall opening total: {0} = the drilled value. */

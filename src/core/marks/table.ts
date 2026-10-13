@@ -382,7 +382,7 @@ export const table: Mark = {
           el(
             "text",
             { x: PAD, y: r(y + (ROW + 6) / 2), "dominant-baseline": "middle" },
-            esc(ctx.t("showMore", step)),
+            esc(`${ctx.t("showMore", step)} · ${ctx.t("rowsOf", drawn.length, rows.length)}`),
           ),
       );
     }

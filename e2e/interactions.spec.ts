@@ -1196,3 +1196,99 @@ test.describe("M4 drills, table paging and expand", () => {
     await expect.poll(async () => (await view(page, "l")).expanded).toBe("B");
   });
 });
+
+test.describe("params, frame controls, facet panels (M5)", () => {
+  const sr = (id: string) => `#${id}`;
+  const prm = {
+    type: "bar",
+    x: "q",
+    y: "v",
+    colorBy: { target: { param: "t" }, better: "higher" },
+    params: [{ id: "t", label: "Target", min: 0, max: 100, step: 5, value: 40 }],
+    data: ["A", "B", "C", "D"].map((q, i) => ({ q, v: 20 + i * 18 })),
+  };
+  const facet = {
+    type: "line",
+    x: "m",
+    y: "v",
+    facet: "s",
+    drill: true,
+    facetScale: ["shared", "own"],
+    data: ["North", "South", "East", "West"].flatMap((s, i) =>
+      ["Jan", "Feb", "Mar", "Apr"].map((m, j) => ({ s, m, v: (i + 1) * 10 + j * (i + 2) * 3 })),
+    ),
+  };
+
+  test("a params slider keeps focus while the keyboard drags it; Reset restores the value", async ({
+    page,
+  }) => {
+    await mount(page, "p", prm);
+    const input = page.locator(`${sr("p")} [data-maya=param]`);
+    await input.focus();
+    for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
+    await expect.poll(async () => (await view(page, "p")).params).toEqual({ t: 55 });
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue("55");
+    await page.locator(`${sr("p")} [data-maya=params-reset]`).focus(); // a real click moves focus off the slider
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await view(page, "p")).params).toBeUndefined();
+    await expect(input).toHaveValue("40");
+  });
+
+  test("the frame slider and tabs set view.frame; the tabs are a radiogroup", async ({ page }) => {
+    const data = ["2021", "2022", "2023"].flatMap((yr, i) => [
+      { yr, k: "A", v: i + 1 },
+      { yr, k: "B", v: 3 },
+    ]);
+    await mount(page, "f", {
+      type: "bar",
+      x: "k",
+      y: "v",
+      frame: "yr",
+      frameControl: "both",
+      data,
+    });
+    const sl = page.locator("#f input[data-maya=frame]");
+    await sl.focus();
+    await page.keyboard.press("Home");
+    await expect.poll(async () => (await view(page, "f")).frame).toBe(0);
+    await expect(sl).toBeFocused();
+    await page.evaluate(() => {
+      const el = document.getElementById("f") as any;
+      el.spec = { ...el.spec, frameControl: "tabs" };
+    });
+    const tabs = page.locator("#f [data-maya=frame] [role=radio]");
+    await expect(tabs).toHaveCount(3);
+    await tabs.nth(1).dispatchEvent("click");
+    await expect.poll(async () => (await view(page, "f")).frame).toBe(1);
+    await expect(tabs.nth(1)).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("facet: panels, a shared crosshair, Tab between panels, drill and back", async ({
+    page,
+    isMobile,
+  }) => {
+    await mount(page, "x", facet);
+    const panels = page.locator("#x svg[data-maya=panel]");
+    await expect(panels).toHaveCount(4);
+    if (!isMobile) {
+      const b = (await panels.first().boundingBox())!;
+      await page.mouse.move(b.x + b.width * 0.6, b.y + b.height * 0.5);
+      await expect(page.locator("#x [data-maya=cross][data-on]")).toHaveCount(4);
+    }
+    // Arrow keys stay in the focused panel; Enter opens it.
+    await panels.nth(2).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("#x [data-active]")).toHaveCount(1);
+    expect(await panels.nth(2).locator("[data-active]").count()).toBe(1);
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await view(page, "x")).drill).toEqual(["East"]);
+    await expect(panels).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "x")).drill ?? []).toEqual([]);
+    await expect(panels).toHaveCount(4);
+    // The scale radios.
+    await page.locator("#x [data-maya=facetScale] [role=radio]").nth(1).dispatchEvent("click");
+    await expect.poll(async () => (await view(page, "x")).facetScale).toBe("own");
+  });
+});

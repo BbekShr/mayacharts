@@ -174,7 +174,13 @@ export function tooltip(
       const q = panelOf(g);
       cross1(
         g,
-        !p || !q || p === q ? m : byC.get(a(q, "data-facet") + "\0" + a(m!, "data-c"))?.[0],
+        !p
+          ? m
+          : q
+            ? p === q
+              ? m
+              : byC.get(a(q, "data-facet") + "\0" + a(m!, "data-c"))?.[0]
+            : undefined,
       );
     }
   };

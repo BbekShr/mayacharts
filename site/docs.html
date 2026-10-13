@@ -1062,8 +1062,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
                 median q1 min rows ofPrevious ofFirst first last labelled peerMean brushed
                 brushCleared flip stacks unstacked stacked percent stream filter showMore noMatch
-                moreMoves crumbsX before after frames panelOf facets facetScales shared own params
-                resetParams
+                moreMoves rowsOf crumbsX before after frames panelOf facets facetScales shared own
+                params resetParams
               </td>
             </tr>
             <tr>
@@ -1686,6 +1686,13 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><code>moreMoves</code></td>
               <td>"+{0} more"</td>
               <td>Overflow row of a list: {0} = the moves not shown.</td>
+            </tr>
+            <tr>
+              <td><code>rowsOf</code></td>
+              <td>"{0} of {1}"</td>
+              <td>
+                Table row count when rows are paged or limited: {0} = rows shown, {1} = rows in all.
+              </td>
             </tr>
             <tr>
               <td><code>crumbsX</code></td>
