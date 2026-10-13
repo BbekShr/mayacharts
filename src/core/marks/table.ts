@@ -368,13 +368,20 @@ export const table: Mark = {
     // A diverging column's centre line.
     kept.forEach((c, ci) => {
       if (c.k === "m" && spec.bars.get(c.f) === "diverging")
-        grid += el("line", {
-          x1: r(at[ci]! + wd[ci]! / 2),
-          x2: r(at[ci]! + wd[ci]! / 2),
-          y1: HEAD,
-          y2: r(y),
-          "data-centre": true,
-        });
+        // Not through the open row's sub-chart box.
+        for (const [y1, y2] of exBox
+          ? [
+              [HEAD, exBox.y],
+              [exBox.y + exBox.h, y],
+            ]
+          : [[HEAD, y]])
+          grid += el("line", {
+            x1: r(at[ci]! + wd[ci]! / 2),
+            x2: r(at[ci]! + wd[ci]! / 2),
+            y1: r(y1!),
+            y2: r(y2!),
+            "data-centre": true,
+          });
     });
     // The open row's rule above its sub-chart (the nested svg cannot draw its own border); like the header rule.
     if (exBox) grid += el("line", { x1: 0, x2: W, y1: exBox.y, y2: exBox.y, "data-rule": true });

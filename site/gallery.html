@@ -41,6 +41,7 @@
           <li><a href="#part">Part to whole</a></li>
           <li><a href="#flow">Flow and geography</a></li>
           <li><a href="#summary">Summary</a></li>
+          <li><a href="#decide">Decisions and what-ifs</a></li>
           <li><a href="#scale">Time and large data</a></li>
         </ul>
         <button type="button" data-reroll="">Re-roll all</button>
@@ -796,6 +797,150 @@
             <details>
               <summary>Spec</summary>
               <pre><code id="orbit-code"></code></pre>
+            </details>
+          </section>
+        </div>
+      </div>
+      <div class="group" id="decide">
+        <div class="group-head">
+          <h2>Decisions and what-ifs</h2>
+          <p>
+            Questions a viewer asks of the numbers: what next, what if, and how did we get here.
+          </p>
+        </div>
+        <div class="tiles">
+          <section>
+            <div class="tile-head">
+              <h2>Three moves for next quarter</h2>
+              <button type="button" data-reroll="list">Re-roll</button>
+            </div>
+            <p>
+              An insight list: each move carries its evidence as bars on a scale of its own, and the
+              first one starts open.
+            </p>
+            <maya-chart id="list" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="list-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Monthly sales in the six biggest states</h2>
+              <button type="button" data-reroll="facet">Re-roll</button>
+            </div>
+            <p>
+              Small multiples, biggest first. The Scale control switches between one shared axis and
+              a fit for each panel.
+            </p>
+            <maya-chart id="facet" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="facet-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>What if prices move?</h2>
+              <button type="button" data-reroll="what-if">Re-roll</button>
+            </div>
+            <p>
+              Two sliders: price change scales the projected months, and the goal line follows the
+              second. Reset puts both back.
+            </p>
+            <maya-chart id="what-if" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="what-if-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Sales and margin, month by month</h2>
+              <button type="button" data-reroll="trail">Re-roll</button>
+            </div>
+            <p>
+              Play or scrub the months. Each state drags a fading trail of its last three positions.
+            </p>
+            <maya-chart id="trail" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="trail-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Sales and units</h2>
+              <button type="button" data-reroll="kpi-flip">Re-roll</button>
+            </div>
+            <p>
+              Tabs pick the scope, a toggle picks the measure, and Details turns the card over to
+              the biggest months.
+            </p>
+            <maya-chart id="kpi-flip" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="kpi-flip-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Seasonality by region</h2>
+              <button type="button" data-reroll="radar">Re-roll</button>
+            </div>
+            <p>
+              A radar: one closed line per region, one spoke per month. Hover a spoke to read every
+              region.
+            </p>
+            <maya-chart id="radar" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="radar-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Orders shipped on time</h2>
+              <button type="button" data-reroll="gauge-ring">Re-roll</button>
+            </div>
+            <p>
+              A closed ring for a rate. The marker is last month, and the status reads against the
+              goal.
+            </p>
+            <maya-chart id="gauge-ring" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="gauge-ring-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>State growth against the nation</h2>
+              <button type="button" data-reroll="table-rich">Re-roll</button>
+            </div>
+            <p>
+              Search, show five at a time, diverging bars for second-half growth against the
+              national rate, and a monthly chart under each row.
+            </p>
+            <maya-chart id="table-rich" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="table-rich-code"></code></pre>
+            </details>
+          </section>
+          <section>
+            <div class="tile-head">
+              <h2>Sales by family, centred</h2>
+              <button type="button" data-reroll="stream">Re-roll</button>
+            </div>
+            <p>
+              A streamgraph: the stack floats on a wiggle baseline so the changing mix reads without
+              a floor.
+            </p>
+            <maya-chart id="stream" style="height: 320px"></maya-chart>
+            <details>
+              <summary>Spec</summary>
+              <pre><code id="stream-code"></code></pre>
             </details>
           </section>
         </div>
