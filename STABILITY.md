@@ -15,6 +15,7 @@ The following are covered by semantic versioning:
 - `view.form` and the `forms` spec field (units); `view.xDrill`, `view.expanded`, `view.page`, `view.filter`, `view.facetScale` and `view.params`
 - Interaction hooks on the svg: `data-drill` (empty, `"series"` when the drill gesture splits a series, `"facet"` when it opens a panel), `data-xdrill`, `data-scroll`, `data-expand`; `.maya-filter` (the table search box) and `.maya-crumbs[data-axis="x"]` (the heatmap column breadcrumb)
 - Facet panels: nested `<svg data-maya="panel" data-facet="value">` and the root's `<text data-facet>` titles; panel mark keys start with the encoded facet value and `~`
+- A table row's sub-chart: nested `<svg data-maya="expand" data-row="value">`, where `data-row` is the open row's x
 - Controls: `[data-maya="frame"]` (range input, `.maya-ctl` tabs or select), `[data-maya="facetScale"]`, `[data-maya="params"]` with `input[data-maya="param"][data-id]` and `[data-maya="params-reset"]`
 - Spec: chart types `boxplot`, `funnel`, `weave`, `units`, `orbit`, `constellation` and `gauge` and `list`, `stack: "percent"`, and `colorBy` thresholds `{ target, warn, better }`
 - `mayacharts/host` (`maya.host` in the global builds): the adapter function names and the spec they return
