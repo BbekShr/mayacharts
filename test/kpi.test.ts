@@ -328,3 +328,9 @@ describe("kpi and gauge description names the warn threshold", () => {
     expect(g).toContain("Ausser Plan unter 22.");
   });
 });
+
+describe("hero number", () => {
+  it("the kpi value carries data-hero (theme heroSize and heroWeight)", () => {
+    expect(svg(base)).toMatch(/<text[^>]*data-hero[^>]*>110</);
+  });
+});

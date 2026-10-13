@@ -205,3 +205,22 @@ describe("annotate and tooltip fields", () => {
     expect(s).toMatch(/data-more="x Revenue \$9M\t30"/);
   });
 });
+
+describe("waterfall direction", () => {
+  it("marks carry data-way up, down and total", () => {
+    const data = [
+      { s: "Start", v: 100 },
+      { s: "Gain", v: 30 },
+      { s: "Loss", v: -20 },
+      { s: "End", v: 110 },
+    ];
+    const svg = renderParts({ type: "waterfall", x: "s", y: "v", totals: ["End"], data }).svg;
+    const way = [...svg.matchAll(/<rect data-maya="mark"[^>]*?data-way="(\w+)"/g)].map((m) => m[1]);
+    expect(way).toEqual(["total", "up", "down", "total"]);
+  });
+  it("plain bars carry none", () => {
+    expect(
+      renderParts({ type: "bar", x: "s", y: "v", data: [{ s: "a", v: 1 }] }).svg,
+    ).not.toContain("data-way");
+  });
+});

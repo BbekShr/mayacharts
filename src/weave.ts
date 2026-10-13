@@ -2,7 +2,9 @@
  * mayacharts/weave: a bump chart whose threads weave. Imports only registry, svg, scale, ticks
  * and types.
  *
- * Spec: x = period (band axis, bottom), y = value, series = one thread each (required, 8 at most).
+ * Spec: x = period (band axis, bottom), y = value, series = one thread each (required, 8 at most;
+ * 20 with a group colorBy, which colours a thread by its group: data-s = the group's slot, and with
+ * spec.tint the group's threads take evenly spaced tints, data-lt 0..6; the legend then names groups).
  * Algorithm:
  *   - Per x, rank the visible series by y, descending (1 = largest; ties in series order). A
  *     null y leaves a gap in that thread; the others rank among themselves.
@@ -21,7 +23,7 @@
  */
 import { register } from "./core/registry.ts";
 import { clip, el, esc, key, plotHit, r } from "./core/svg.ts";
-import type { BandScale, Cell, Mark, Shaped } from "./core/types.ts";
+import type { BandScale, Cell, Mark, ResolvedSpec, Shaped } from "./core/types.ts";
 
 /**
  * Per period (in order), series index -> [slot, value, rank] of the series present, in slot order.
@@ -42,6 +44,26 @@ const ranks = (sh: Shaped) => {
       }),
     );
   });
+};
+
+/** A thread's palette slot and tint step under a group colorBy (spec.slots, first-seen order); null without one. */
+const groups = (spec: ResolvedSpec, sh: Shaped) => {
+  const f = typeof spec.colorBy === "string" ? spec.colorBy : null;
+  if (!f || !spec.series) return null;
+  const of = new Map<string, string>();
+  for (const row of spec.data)
+    of.has(String(row[spec.series])) || of.set(String(row[spec.series]), String(row[f]));
+  const by = sh.series.map((n) => of.get(n) ?? "");
+  return {
+    names: [...new Set(by)],
+    slot: (si: number) => (spec.slots.get(by[si]!) ?? 0) % 8,
+    // Tints run from the group's own colour to 6 steps lighter, evenly over its threads.
+    lt: (si: number) => {
+      if (!spec.tint) return null;
+      const m = by.flatMap((g, i) => (g === by[si] ? [i] : []));
+      return m.length > 1 ? Math.round((m.indexOf(si) * 6) / (m.length - 1)) : 0;
+    },
+  };
 };
 
 /** The visible series that have a value somewhere: the ones that get a slot, a thread and a name. */
@@ -79,12 +101,13 @@ export const weave: Mark = {
   check(spec, fail) {
     const f = spec.series as string;
     const n = new Set(spec.data.map((row) => String((row as Record<string, unknown>)[f]))).size;
-    // ponytail: 8 series, the palette slot cap; `limit` rolls up categories, never series.
-    if (n > 8)
+    // ponytail: 8 threads (the palette slots), 20 with a group colorBy (groups share slots; tints tell the threads apart); `limit` rolls up categories, never series.
+    const cap = typeof spec.colorBy === "string" ? 20 : 8;
+    if (n > cap)
       fail(
         "too-many-marks",
         "series",
-        `A weave draws at most 8 threads, and "${f}" has ${n} values.`,
+        `A weave draws at most ${cap} threads, and "${f}" has ${n} values.`,
         "Filter the rows to the series that matter, or group the rest into one series first.",
       );
   },
@@ -93,6 +116,12 @@ export const weave: Mark = {
     const X = ctx.x as BandScale;
     const Y = ctx.y as BandScale;
     const R = ranks(sh);
+    const gp = groups(spec, sh);
+    // A thread's colour attributes: its series slot, or its group's slot and tint.
+    const paint = (si: number) => ({
+      "data-s": gp ? gp.slot(si) : si % 8,
+      "data-lt": gp?.lt(si),
+    });
     const px = (ci: number) => r(X.at(ci) + X.bandwidth / 2);
     const py = (k: number) => r(Y.at(k - 1) + Y.bandwidth / 2);
 
@@ -115,7 +144,7 @@ export const weave: Mark = {
       for (const [si, a, b] of seg as [number, number, number][]) {
         const [y0, y1] = [py(a), py(b)];
         const d = `M${x0} ${y0}C${xm} ${y0} ${xm} ${y1} ${x1} ${y1}`;
-        const at = { "data-s": si % 8, "data-a": si, "data-c": i, d, fill: "none" };
+        const at = { ...paint(si), "data-a": si, "data-c": i, d, fill: "none" };
         const ser = sh.series[si]!;
         // Every segment has a halo, so its key is stable when crossings change in an update.
         threads += el("path", {
@@ -150,7 +179,7 @@ export const weave: Mark = {
           "data-maya": "mark",
           "data-key": kk,
           "data-c": ci,
-          "data-s": si % 8,
+          ...paint(si),
           "data-n": si,
           "data-a": si,
           "data-x": ctx.fmt(spec.x, sh.categories[ci]),
@@ -213,7 +242,7 @@ export const weave: Mark = {
           {
             "data-end": true,
             "data-key": key(sh.series[si], sh.categories[ci]),
-            "data-s": si % 8,
+            ...paint(si),
             x: at,
             y: py(k!) - (two ? 7 : 0),
             "dominant-baseline": "middle",
@@ -227,7 +256,13 @@ export const weave: Mark = {
       sh.categories.length
         ? `${ctx.fmt(spec.x, sh.categories[ci])}: ${[...R[ci]!].map(([si, [, v]], i, a) => (i ? (a[i - 1]![1][1] === v ? " = " : " > ") : "") + sh.series[si]).join("")}`
         : "";
+    const legend = gp
+      ? `<div class="maya-legend" data-maya="legend">${gp.names
+          .map((g) => `<span data-s="${(spec.slots.get(g) ?? 0) % 8}"><i></i>${esc(g)}</span>`)
+          .join("")}</div>`
+      : "";
     return {
+      ...(legend && { legend }),
       marks: threads + dots,
       labels: end,
       hits,

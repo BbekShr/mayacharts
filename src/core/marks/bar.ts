@@ -10,6 +10,7 @@ import type {
   Mark,
   MarkCtx,
   ResolvedSpec,
+  Row,
   Shaped,
 } from "../types.ts";
 
@@ -45,6 +46,14 @@ export const more = (ctx: MarkCtx, val: (f: string, i: number) => unknown) =>
       return v == null ? [] : [`${t(ctx.spec.titles.get(f) ?? f)}\t${t(ctx.fmt(f, v))}`];
     })
     .join("\n") || null;
+
+/** The value of a tooltip field in one row (scatter, beeswarm): a `{ field, ratio }` item is that row's num / den. */
+export const rowTip = (ctx: MarkCtx, row: Row) => (f: string) => {
+  const t = ctx.spec.tipRatio.get(f);
+  if (!t) return row[f];
+  const [a, b] = [row[t[0]], row[t[1]]];
+  return typeof a === "number" && typeof b === "number" && b !== 0 ? a / b : null;
+};
 
 /**
  * spec.annotate for every mark, through `place` (true when it placed the label): each `{ x, text }` note
@@ -251,6 +260,8 @@ export const bar: Mark = {
       marks += el("rect", {
         "data-maya": "mark",
         ...d,
+        // Waterfall direction for the theme's up, down and total tokens (not on the hit).
+        "data-way": wf ? (d["data-total"] ? "total" : c.v < 0 ? "down" : "up") : null,
         x: r(x),
         y: r(y),
         width: r(w),

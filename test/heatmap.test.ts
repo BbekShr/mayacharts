@@ -100,3 +100,51 @@ describe("heatmap", () => {
     expect(marks(render(spec, { width: 800, height: 400 }))[0]).not.toContain("stroke-width");
   });
 });
+
+describe("heatmap encodings", () => {
+  const skew = (extra: object = {}): ChartSpec => ({
+    ...spec,
+    data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 100].map((v, i) => ({ x: `c${i}`, r: "r", v })),
+    ...extra,
+  });
+  const qs = (s: ChartSpec) => marks(render(s)).map((t) => +/data-q="(\d)"/.exec(t)![1]!);
+  it("colorScale rank spreads a skewed ramp over every step; linear crushes it", () => {
+    expect(new Set(qs(skew())).size).toBeLessThan(3);
+    expect(new Set(qs(skew({ colorScale: "rank" }))).size).toBe(10);
+  });
+  it("quantile uses five classes and the legend shows the breaks between five swatches", () => {
+    const s = renderParts(skew({ colorScale: "quantile" }));
+    expect(new Set(qs(skew({ colorScale: "quantile" })))).toEqual(new Set([0, 2, 5, 7, 9]));
+    expect(s.legend.match(/<i data-q="\d"><\/i>/g)).toHaveLength(5);
+    expect(s.legend.match(/<span>/g)).toHaveLength(6);
+  });
+  it("a diverging ramp centres rampMid on rampMidValue", () => {
+    const d = [-10, -5, 0, 5, 10].map((v, i) => ({ x: `c${i}`, r: "r", v }));
+    const q = qs({ ...spec, data: d, theme: { rampMid: "#eee" } });
+    expect(q[2]).toBeGreaterThanOrEqual(4);
+    expect(q[2]).toBeLessThanOrEqual(5);
+    expect(q[0]).toBe(0);
+    expect(q[4]).toBe(9);
+  });
+  it("theme cellGap sets the gap; cellRadius is CSS", () => {
+    const w = (g?: string) =>
+      +/width="([\d.]+)"/.exec(
+        marks(
+          render({ ...spec, ...(g ? { theme: { cellGap: g } } : {}) }, { width: 400, height: 240 }),
+        )[0]!,
+      )![1]!;
+    expect(w("0")).toBeGreaterThan(w());
+    expect(w("6")).toBeLessThan(w());
+  });
+  it("tooltip.fields and was add data-more and data-was to the cell and its hit", () => {
+    const d = data.map((r) => ({ ...r, u: r.v * 2, old: r.v + 1 }));
+    const svg = render(
+      { ...spec, data: d, tooltip: { fields: ["u"] }, was: "old" },
+      { width: 100, height: 60 },
+    );
+    const cell = marks(svg).find((t) => t.includes('data-key="r1~a"'))!;
+    expect(cell).toContain('data-was="was 1"');
+    expect(cell).toContain('data-more="u\t0"');
+    expect(svg).toMatch(/data-maya="hit"[^>]*data-was="was 1"/);
+  });
+});

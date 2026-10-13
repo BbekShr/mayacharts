@@ -230,3 +230,62 @@ describe("radial value labels", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe("radial radar (form: line)", () => {
+  const Q = ["Jan", "Feb", "Mar", "Apr"];
+  const rows = ["2025", "2026"].flatMap((year, j) =>
+    Q.flatMap((m, i) =>
+      year === "2026" && m === "Apr" ? [] : [{ m, year, sales: 10 + i * 2 + j * 3 }],
+    ),
+  );
+  const radar = (more: Partial<ChartSpec> = {}): ChartSpec => ({
+    type: "radial",
+    x: "m",
+    y: "sales",
+    series: "year",
+    form: "line",
+    data: rows,
+    ...more,
+  });
+  const paths = (s: string) => tags(s, 'path data-maya="line"');
+  it("one line per series keyed l~series; closed with every value, open where one is missing", () => {
+    const p = paths(svg(radar()));
+    expect(p).toHaveLength(2);
+    expect(p[0]).toContain('data-key="l~2025"');
+    expect(p[0]).toMatch(/d="M[^"]*Z"/);
+    expect(p[1]).toContain('data-key="l~2026"');
+    expect(p[1]).not.toMatch(/Z"/);
+    expect(svg(radar())).not.toContain("data-polar");
+  });
+  it("dash series are dashed and carry data-dash", () => {
+    const [a, b] = paths(svg(radar({ dash: ["2026"] })));
+    expect(a).not.toContain("data-dash");
+    expect(b).toContain("data-dash");
+    expect(b).toContain("stroke-dasharray");
+  });
+  it("a dot per value, and one wedge hit per category keyed to a dot so hover lists every series", () => {
+    const s = svg(radar());
+    expect(tags(s, 'circle data-maya="mark"')).toHaveLength(7);
+    const hits = tags(s, 'path data-maya="hit"');
+    expect(hits).toHaveLength(4);
+    expect(hits[0]).toContain('data-key="2025~Jan"');
+    expect(hits.map((h) => /data-c="(\d)"/.exec(h)![1]).join("")).toBe("0123");
+    for (const d of tags(s, 'circle data-maya="mark"')) expect(d).toMatch(/data-c="\d"/);
+  });
+  it("hiding a series (legend isolate) keeps the others' keys and draws one line", () => {
+    const p = paths(svg(radar(), ["2025"]));
+    expect(p).toHaveLength(1);
+    expect(p[0]).toContain("l~2026");
+  });
+  it("rings, spokes and category names are drawn", () => {
+    const s = svg(radar());
+    expect(tags(s, "line x1")).toHaveLength(4);
+    expect(s).toContain('data-disc=""');
+    expect(tags(s, "text[^>]*data-cat").map((t) => t)).toHaveLength(4);
+    expect(tags(s, "text[^>]*data-ring").length).toBeGreaterThan(0);
+  });
+  it("one category and an empty chart still draw", () => {
+    expect(paths(svg(radar({ data: [{ m: "Jan", year: "2025", sales: 5 }] })))).toHaveLength(1);
+    expect(() => svg(radar({ data: [] }))).not.toThrow();
+  });
+});

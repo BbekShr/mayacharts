@@ -10,21 +10,30 @@ import { BUSY, decode as dec } from "./drill.ts";
 import { listen } from "./listen.ts";
 
 export type SelectEvent =
-  { type: "toggle"; sel: Sel; multi: boolean } | { type: "clear" } | SpecEvent;
+  | { type: "toggle"; sel: Sel; multi: boolean; peer?: string | null | undefined }
+  | { type: "clear" }
+  | SpecEvent;
 
 const FIELDS = ["x", "series", "name"] as const;
 // String compare: a numeric selection (x: 2024) matches the attribute-derived "2024".
 const same = (a: Sel, b: Sel) => FIELDS.every((f) => String(a[f]) === String(b[f]));
 
+// select { peers } keeps view.peers beside the selection; both go together.
+const bare = (s: State, selected: State["selected"]): State => {
+  if (!("peers" in s.view)) return { ...s, selected };
+  const { peers: _, ...view } = s.view;
+  return { ...s, selected, view };
+};
+
 export function reduce(s: State, e: SelectEvent): State {
-  if (e.type === "clear") return s.selected.length ? { ...s, selected: [] } : s;
+  if (e.type === "clear") return s.selected.length || "peers" in s.view ? bare(s, []) : s;
   if (e.type === "spec") {
     const p = e.prev;
     if (!p || !s.selected.length) return s;
     const n = e.next;
     const moved =
       p.type !== n.type || p.x !== n.x || JSON.stringify(p.path) !== JSON.stringify(n.path);
-    return moved ? { ...s, selected: [] } : s;
+    return moved ? bare(s, []) : s;
   }
   if (e.type !== "toggle") return s;
   const had = s.selected.some((q) => same(q, e.sel));
@@ -35,7 +44,8 @@ export function reduce(s: State, e: SelectEvent): State {
     : had && s.selected.length === 1
       ? []
       : [e.sel];
-  return { ...s, selected };
+  const n = bare(s, selected);
+  return selected.length && e.peer != null ? { ...n, view: { ...n.view, peers: e.peer } } : n;
 }
 
 /** Raw-value Sel of a mark, decoded from its data-key (`S~C`, scatter `S~name`, `h~…`). */
@@ -65,7 +75,12 @@ export function mount(host: Host): Handlers {
   const pick = (sel: Sel, target: Element | null) => {
     const spec = host.spec();
     if (!spec?.select) return;
-    const next = reduce(host.state(), { type: "toggle", sel, multi: spec.select === "multi" });
+    const next = reduce(host.state(), {
+      type: "toggle",
+      sel,
+      multi: spec.select === "multi",
+      peer: typeof spec.select === "object" ? target?.getAttribute("data-peer") : null,
+    });
     const y = target?.getAttribute("data-y") ?? "";
     host.commit(next, target ? { ...sel, value: y !== "" && !isNaN(+y) ? +y : y } : null);
     const n = next.selected.length;

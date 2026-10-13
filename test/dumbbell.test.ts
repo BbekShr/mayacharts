@@ -163,3 +163,51 @@ describe("dumbbell yDomain narrower than the data", () => {
     expect(links(s).map((l) => l.match(/data-tone="(\w+)"/)![1])).toEqual(["good", "bad"]);
   });
 });
+
+describe("dumbbell M2", () => {
+  const big = cats.flatMap((c, i) => [
+    { c, p: "2020", v: 1000 + i * 10 },
+    { c, p: "2024", v: 1020 + i * 10 },
+  ]);
+  const ys = (s: string) => dots(s).map((d) => +/ cy="([\d.]+)"/.exec(d)![1]!);
+  it("zero: false fits the axis to the values, so a small gap is visible", () => {
+    const gap = (z: boolean) => {
+      const [a, b] = ys(svg({ ...spec, data: big, zero: z }));
+      return Math.abs(a! - b!);
+    };
+    expect(gap(false)).toBeGreaterThan(40);
+    expect(gap(true)).toBeLessThan(5);
+  });
+  it("zero: false refits at each drill level", () => {
+    const rows = [
+      ...["N", "S"].flatMap((st) =>
+        ["Q1", "Q2"].flatMap((q) => [
+          { st, q, p: "2020", v: (st === "N" ? 1000 : 50) + (q === "Q1" ? 0 : 5) },
+          { st, q, p: "2024", v: (st === "N" ? 1030 : 70) + (q === "Q1" ? 0 : 5) },
+        ]),
+      ),
+    ];
+    const s: ChartSpec = {
+      type: "dumbbell",
+      path: ["st", "q"],
+      series: "p",
+      y: "v",
+      zero: false,
+      drill: true,
+      data: rows,
+    };
+    const top = ys(renderParts(s).svg);
+    const drilled = ys(renderParts(s, { view: { drill: ["N"] } }).svg);
+    expect(Math.max(...top) - Math.min(...top)).toBeGreaterThan(40);
+    expect(Math.max(...drilled) - Math.min(...drilled)).toBeGreaterThan(40);
+  });
+  it("sort: change orders by to minus from, largest gain first", () => {
+    const s = svg({ ...spec, sort: "change" });
+    expect(links(s).map((l) => /data-key="k~(\w)"/.exec(l)![1])).toEqual(["A", "C", "B"]); // A and C gain 20, B loses 6;
+  });
+  it("tooltip.fields add data-more to the dots", () => {
+    const rows = data.map((r) => ({ ...r, u: 7 }));
+    const s = svg({ ...spec, data: rows, tooltip: { fields: ["u"] } });
+    expect(dots(s)[0]).toContain('data-more="u\t7"');
+  });
+});

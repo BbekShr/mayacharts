@@ -617,7 +617,7 @@
     "tint": {
       "type": "boolean",
       "default": false,
-      "description": "Children take evenly spaced tints of their parent's colour: drilled levels of a path (parent = the drilled value) and weave threads under a group colorBy (parent = the group). A colors map then names path values or groups. bar line area dumbbell table heatmap marimekko treemap sunburst sankey chord weave."
+      "description": "Children take evenly spaced tints of their parent's colour: drilled levels of a path (parent = the drilled value) and weave threads under a group colorBy (parent = the group). A colors map then names path values or groups. treemap sunburst sankey chord weave."
     },
     "brush": {
       "type": "boolean",

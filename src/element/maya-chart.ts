@@ -20,6 +20,7 @@ import { html } from "./html.ts";
 import { listen } from "./listen.ts";
 import * as measure from "./measure.ts";
 import * as play from "./play.ts";
+import * as brush from "./brush.ts";
 import * as select from "./select.ts";
 import * as sort from "./sort.ts";
 import { still as reduced, type Tooltip, tooltip } from "./tooltip.ts";
@@ -36,7 +37,7 @@ export class MayaChart extends HTMLElement {
   #state: State = { view: {}, selected: [] };
   #seen: ChartSpec | undefined;
   #ix:
-    | (Record<"measure" | "drill" | "select" | "sort" | "play", Handlers> & {
+    | (Record<"measure" | "drill" | "select" | "brush" | "sort" | "play", Handlers> & {
         zoom: ReturnType<typeof zoom.mount>;
       })
     | undefined;
@@ -180,6 +181,7 @@ export class MayaChart extends HTMLElement {
       measure: measure.mount(host),
       select: select.mount(host), // before drill: a double click restores the selection, then drills
       drill: drill.mount(host),
+      brush: brush.mount(host),
       zoom: zoom.mount(host),
       sort: sort.mount(host),
       play: play.mount(host),
@@ -292,7 +294,7 @@ export class MayaChart extends HTMLElement {
 
   /*
    * One keydown dispatcher. Escape priority: pinned tooltip (tooltip.ts, T2) -> brush in
-   * progress -> selection -> zoom window -> drill pop. Enter: select, else drill (drill first without
+   * progress -> selection -> brush ranges -> zoom window -> drill pop. Enter: select, else drill (drill first without
    * select; Shift+Enter drills), on the keyboard-active mark. + or = halves the zoom window about the active mark, - doubles it. T2 routes the tooltip's own Escape/Enter/Space through here.
    */
   #key = (e: Event) => {
@@ -303,7 +305,12 @@ export class MayaChart extends HTMLElement {
     let done: boolean | undefined;
     if (k === "Escape")
       done =
-        ix.zoom.cancel?.() || ix.select.escape?.() || ix.zoom.escape?.() || ix.drill.escape?.();
+        ix.zoom.cancel?.() ||
+        ix.brush.cancel?.() ||
+        ix.select.escape?.() ||
+        ix.brush.escape?.() ||
+        ix.zoom.escape?.() ||
+        ix.drill.escape?.();
     else if (k === "Enter") {
       const m = this.#tip?.active();
       done = !!(
@@ -384,8 +391,11 @@ export class MayaChart extends HTMLElement {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
       this.#state = select.reduce(
-        zoom.reduce(
-          sort.reduce(play.reduce(drill.reduce(measure.reduce(this.#state, ev), ev), ev), ev),
+        brush.reduce(
+          zoom.reduce(
+            sort.reduce(play.reduce(drill.reduce(measure.reduce(this.#state, ev), ev), ev), ev),
+            ev,
+          ),
           ev,
         ),
         ev,

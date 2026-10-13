@@ -167,3 +167,56 @@ describe("beeswarm row-pass cache", () => {
       );
   });
 });
+
+describe("beeswarm M2", () => {
+  const rows = Array.from({ length: 12 }, (_, i) => ({
+    p: `p${i}`,
+    fam: i % 2 ? "Outer" : "Bottoms",
+    kind: i % 3 ? "Hoody" : "Tee",
+    price: 10 * 2 ** (i % 6),
+    sales: 100 * (i + 1),
+    units: 10,
+  }));
+  const base: ChartSpec = { type: "beeswarm", x: "fam", y: "price", name: "p", data: rows };
+  it("log axis spaces values by decade", () => {
+    const cx = (s: string) => dots(s).map((d) => num(d, "cx"));
+    const lin = cx(svg(base));
+    const log = cx(svg({ ...base, yScale: "log" }));
+    expect(svg({ ...base, yScale: "log" })).toContain('data-log="x"');
+    // 10, 20, 40, 80 are evenly spaced on a log axis, not on a linear one.
+    const at = (xs: number[], v: number) => xs[rows.findIndex((r) => r.price === v)]!;
+    const d = (xs: number[]) => (at(xs, 40) - at(xs, 20)) / (at(xs, 20) - at(xs, 10));
+    expect(d(log)).toBeCloseTo(1, 1);
+    expect(d(lin)).toBeGreaterThan(1.5);
+  });
+  it("size scales the radius by sqrt", () => {
+    const r = dots(svg({ ...base, size: "sales" })).map((d) => num(d, "r"));
+    expect(Math.max(...r)).toBeGreaterThan(Math.min(...r) + 2);
+    expect(new Set(dots(svg(base)).map((d) => num(d, "r"))).size).toBe(1);
+  });
+  it("tooltip.fields and ratios land in data-more", () => {
+    const s = svg({
+      ...base,
+      tooltip: { fields: ["units", { field: "ppu", ratio: ["sales", "units"] }] },
+    });
+    expect(dots(s)[0]).toContain('data-more="units\t10\nppu\t10"');
+  });
+  it("rules draw across the bottom value axis", () => {
+    const s = svg({ ...base, rules: [{ y: 12, label: "Median" }, "mean"] });
+    const lines = [...s.matchAll(/<g data-maya="rules"[^>]*>(.*?)<\/g>/gs)].flatMap((m) => [
+      ...m[1]!.matchAll(/<line [^>]*>/g),
+    ]);
+    expect(lines).toHaveLength(2);
+    for (const [l] of lines) expect(num(l, "x1")).toBe(num(l, "x2"));
+  });
+  it("select { peers } marks every dot, and lights the peers with their mean", () => {
+    const s: ChartSpec = { ...base, select: { peers: "kind" } };
+    expect(dots(svg(s)).every((d) => / data-peer="(Hoody|Tee)"/.test(d))).toBe(true);
+    expect(svg(s)).not.toContain("data-peer-on");
+    const on = renderParts(s, { view: { peers: "Tee" } }).svg;
+    const lit = dots(on).filter((d) => d.includes("data-peer-on"));
+    expect(lit).toHaveLength(rows.filter((r) => r.kind === "Tee").length);
+    expect(on).toContain("<line data-peer-mean");
+    expect(on).toMatch(/<text data-peer-mean[^>]*>Tee average/);
+  });
+});

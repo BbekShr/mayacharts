@@ -160,3 +160,9 @@ describe("gauge ratio", () => {
     expect(s).toContain(">3<");
   });
 });
+
+describe("hero number", () => {
+  it("the gauge value carries data-hero (theme heroSize and heroWeight)", () => {
+    expect(svg(base())).toMatch(/<text[^>]*data-hero[^>]*>62</);
+  });
+});

@@ -310,3 +310,15 @@ describe("scatter annotate and intercept", () => {
     expect(y(0)).not.toBe(y(5));
   });
 });
+
+describe("scatter tooltip ratio", () => {
+  it("shows that row's num / den under the field name", () => {
+    const data = [{ a: 1, b: 2, sales: 90, units: 3 }];
+    const svg = renderParts({
+      ...base,
+      data,
+      tooltip: { fields: [{ field: "price", ratio: ["sales", "units"] }] },
+    }).svg;
+    expect(attr(circles(svg)[0]!, "data-more")).toBe("price\t30");
+  });
+});

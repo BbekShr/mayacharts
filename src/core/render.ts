@@ -887,8 +887,10 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       [0, 1, 2, 3].map((k) => [text, ax, tp + 14 * k, end]);
     const tag = (text: string, ax: number, tp: number, end: boolean) =>
       spots(rows(text, ax, tp, end));
-    const v = s.horizontal ? f?.x : f?.y;
-    const cat = s.horizontal ? f?.y : f?.x;
+    // A beeswarm lays its values along the bottom axis.
+    const hz = s.horizontal || s.type == "beeswarm";
+    const v = hz ? f?.x : f?.y;
+    const cat = hz ? f?.y : f?.x;
     const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
     // A line across the plot at p on the x axis (vertical) or the y axis, and the box from p to q.
     const seg = (p: number, onX: boolean) =>
@@ -904,12 +906,12 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         say(u.label, t(s, "fromTo", fmt(s.y, u.lo), fmt(s.y, u.hi)));
         rules += el(
           "rect",
-          s.horizontal
+          hz
             ? { "data-band": true, x: r(p), y: y0, width: r(q - p), height: r(plot.h) }
             : { "data-band": true, x: r(plot.x), y: r(p), width: r(plot.w), height: r(q - p) },
         );
         if (u.label)
-          tag(u.label, s.horizontal ? q - 4 : plot.x + plot.w, s.horizontal ? plot.y : p + 2, true);
+          tag(u.label, hz ? q - 4 : plot.x + plot.w, hz ? plot.y : p + 2, true);
       });
       s.rules.forEach((u) => {
         const at = u.y === "mean" ? average(s, shaped) : u.y;
@@ -919,12 +921,12 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         const name = u.label ?? (u.y === "mean" ? t(s, "mean") : null);
         const val = fmt(s.y, at);
         say(name, val);
-        rules += el("line", seg(p, s.horizontal));
+        rules += el("line", seg(p, hz));
         // Above the line at its end, else at its start, else below; a vertical line: beside it at
         // the top (either side), stepping down along it.
         const text = name ? `${name} ${val}` : val;
         spots(
-          s.horizontal
+          hz
             ? [0, 1, 2, 3].flatMap((k): Spot[] => [
                 [text, p - 4, y0 + 14 * k, true],
                 [text, p + 4, y0 + 14 * k, false],
@@ -969,17 +971,17 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
             : typeof u.x === "number" && (u.x - cat.domain[0]) * (u.x - cat.domain[1]) <= 0
               ? cat.of(u.x)
               : NaN;
-        const [lo, hi] = s.horizontal ? [plot.y, plot.y + plot.h] : [plot.x, plot.x + plot.w];
+        const [lo, hi] = hz ? [plot.y, plot.y + plot.h] : [plot.x, plot.x + plot.w];
         if (!(p >= lo && p <= hi)) return;
         const at = r(p);
         const val = fmt(s.x, u.x);
         const text = u.label ? `${u.label} ${val}` : val;
         say(u.label, val);
-        rules += el("line", { "data-xrule": true, ...seg(at, !s.horizontal) });
+        rules += el("line", { "data-xrule": true, ...seg(at, !hz) });
         // Beside the line at the top, right then left, stepping down; then the label alone, then
         // the value alone; none free: the shortest clamped inside the plot at the top (M3).
         const texts = [text, ...(u.label ? [u.label, val] : [])];
-        if (s.horizontal) tag(text, plot.x + plot.w, at - 14, true);
+        if (hz) tag(text, plot.x + plot.w, at - 14, true);
         else {
           const short = texts.reduce((a, b) => (tw(b) < tw(a) ? b : a));
           const l = Math.max(plot.x, Math.min(at - tw(short) / 2, plot.x + plot.w - tw(short)));
@@ -1114,7 +1116,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         "desc",
         { id: sheet === null ? "maya-d" : null },
         esc(
-          describe(s, shaped, fmt, mark.noun) +
+          describe(s, shaped, fmt, s.radar ? "Radar" : mark.noun) +
             (s.description === null ? (note && " " + note) + said : ""),
         ),
       ) +

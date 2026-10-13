@@ -328,3 +328,35 @@ describe("#71 nested treemap, minAngle, slots", () => {
     expect(s(["C"])).toBe("2");
   });
 });
+
+describe("tint and neutral", () => {
+  const drilled = (t: ChartSpec) =>
+    renderParts({ ...t, tint: true, drill: true }, { view: { drill: ["C"] } }).svg;
+  it("a drilled treemap's children step through tints of the branch colour", () => {
+    const lt = tags(drilled(tm), "rect").map((t) => at(t, "data-lt"));
+    expect(lt.length).toBeGreaterThan(1);
+    expect(new Set(lt).size).toBe(lt.length);
+    expect(lt).toContain("0");
+    expect(lt).toContain("7");
+  });
+  it("a drilled sunburst's slices do too, siblings only", () => {
+    const s = drilled(sb);
+    const lt = tags(s, "circle")
+      .filter((t) => at(t, "data-depth") === "1")
+      .map((t) => at(t, "data-lt"));
+    expect(lt).toEqual(["0", "7"]);
+  });
+  it("the top level keeps its own colours (no data-lt) without a drill, and tint is off by default", () => {
+    expect(renderParts({ ...sb, tint: true }).svg).not.toMatch(/data-depth="1"[^>]*data-lt/);
+    expect(renderParts(sb, { view: { drill: ["C"] } }).svg).not.toContain("data-lt");
+  });
+  it("a root-level lump with no top node is data-neu", () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({
+      g: `g${i}`,
+      n: "x",
+      v: i === 0 ? 1000 : 1,
+    }));
+    const s = renderParts({ ...sb, data: many }).svg;
+    expect(s).toContain("data-neu");
+  });
+});

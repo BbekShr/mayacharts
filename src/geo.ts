@@ -1,5 +1,6 @@
 // US state hex cartogram. Importing this file registers the "hexmap" type.
 import { register } from "./core/registry.ts";
+import { ramp } from "./core/scale.ts";
 import { el, key, r, esc } from "./core/svg.ts";
 import type { Mark } from "./core/types.ts";
 
@@ -87,9 +88,7 @@ export const hexmap: Mark = {
       const st = find(shaped.categories[c.ci]);
       if (st && c.value !== null) sum.set(st, (sum.get(st) ?? 0) + c.value);
     });
-    const vals = [...sum.values()];
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
+    const { q: qOf, breaks } = ramp([...sum.values()], spec.colorScale, spec.rampMid);
 
     // Missing states stay on the map as dashed empty hexes with a faint code.
     let grid = "";
@@ -129,7 +128,7 @@ export const hexmap: Mark = {
     }
     for (const [st, v] of sum) {
       const [cx, cy] = at(st) as [number, number];
-      const q = hi > lo ? Math.min(9, Math.floor(((v - lo) / (hi - lo)) * 10)) : 9;
+      const q = qOf(v);
       marks += el("path", {
         "data-maya": "mark",
         "data-key": key("g", st.code),
@@ -151,8 +150,16 @@ export const hexmap: Mark = {
       if (showV) labels += text(cx, cy + fc * 0.62, f.get(st)!, { ...o, "font-size": r(fv) });
     }
     const legend =
-      hi > lo
-        ? `<div class="maya-legend" data-maya="ramp" data-hex><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
+      breaks[0]! < breaks.at(-1)!
+        ? `<div class="maya-legend" data-maya="ramp" data-hex><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b>${breaks
+            .map(
+              (b, k) =>
+                `<span>${esc(ctx.fmt(spec.y, b))}</span>` +
+                (k < breaks.length - 1
+                  ? `<i${breaks.length > 2 ? ` data-q="${[0, 2, 5, 7, 9][k]}"` : ""}></i>`
+                  : ""),
+            )
+            .join("")}</div>`
         : "";
     return { marks, hits: "", labels, grid, legend };
   },

@@ -1285,7 +1285,7 @@ describe("#86-#88 contracts (M2)", () => {
       "invalid-option",
       "options.view.brush",
     ]);
-    ok({ ...b, path: ["g", "m"], x: undefined, drill: true, tint: true });
+    ok({ type: "treemap", path: ["g", "m"], y: "v", drill: true, tint: true, data: d });
     expect(code({ ...b, tint: true })).toEqual(["option-unsupported", "tint"]);
     const w = { type: "weave", x: "m", y: "v", series: "s", colorBy: "g", tint: true, data: d };
     ok(w);

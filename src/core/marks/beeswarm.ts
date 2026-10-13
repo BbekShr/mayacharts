@@ -1,4 +1,4 @@
-import { cbField, el, memo, nameId, key, r } from "../svg.ts";
+import { cbField, el, esc, memo, nameId, key, r } from "../svg.ts";
 import type {
   Axis,
   BandScale,
@@ -6,9 +6,11 @@ import type {
   Mark,
   MarkCtx,
   ResolvedSpec,
+  Row,
   Shaped,
 } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
+import { more, rowTip } from "./bar.ts";
 import { level, ramp } from "./scatter.ts";
 
 interface Pt {
@@ -17,7 +19,8 @@ interface Pt {
   ci: number;
   si: number;
   name: string | null;
-  row: Record<string, unknown>;
+  sz: number | null;
+  row: Row;
 }
 
 /**
@@ -25,7 +28,7 @@ interface Pt {
  * An explicit yDomain clips; points outside it are skipped.
  */
 const memoKey = (spec: ResolvedSpec, shaped: Shaped) =>
-  `${spec.x}|${spec.y}|${spec.series}|${spec.name}|${spec.yDomain}|${shaped.visible}|${shaped.categories.join("\0")}`;
+  `${spec.x}|${spec.y}|${spec.series}|${spec.name}|${spec.size}|${spec.yDomain}|${shaped.visible}|${shaped.categories.join("\0")}`;
 // Kept per data array: axes(), draw() and every re-render of the same rows share one pass.
 const points = (spec: ResolvedSpec, shaped: Shaped): Pt[] =>
   memo(spec.data, `bs|${memoKey(spec, shaped)}`, () => scan(spec, shaped));
@@ -43,37 +46,47 @@ function scan(spec: ResolvedSpec, shaped: Shaped): Pt[] {
     const si = shaped.series.indexOf(spec.series === null ? "" : String(row[spec.series]));
     if (!shaped.visible.includes(si)) return;
     const nv = spec.name === null ? null : row[spec.name];
-    out.push({ i, v, ci, si, name: nv == null ? null : String(nv), row });
+    const sz = spec.size === null ? null : row[spec.size];
+    out.push({
+      i,
+      v,
+      ci,
+      si,
+      name: nv == null ? null : String(nv),
+      sz: typeof sz === "number" ? sz : null,
+      row,
+    });
   });
   return out;
 }
 
 /**
  * Dodge: points sorted by pixel x; each takes the smallest |offset| (from the band centre) at which
- * it clears every placed neighbour closer than one diameter. Candidates are 0 and the tangent
- * offsets of those neighbours. Deterministic: ties go to the positive offset.
+ * it clears every placed neighbour closer than the sum of their radii `rs`. Candidates are 0 and the
+ * tangent offsets of those neighbours. Deterministic: ties go to the positive offset.
  */
-function dodge(xs: number[], rad: number, limit: number): number[] {
+function dodge(xs: number[], rs: number[], half: number): number[] {
   const order = xs.map((_, i) => i).sort((a, b) => xs[a]! - xs[b]! || a - b);
-  const d2 = (2 * rad) ** 2;
+  const wide = 2 * Math.max(...rs);
   const out: number[] = new Array(xs.length).fill(0);
   const placed: number[] = []; // indices into xs, in placement order
   let from = 0; // placed[from..] may still be within a diameter in x
   for (const i of order) {
     const x = xs[i]!;
-    while (from < placed.length && x - xs[placed[from]!]! >= 2 * rad) from++;
+    while (from < placed.length && x - xs[placed[from]!]! >= wide) from++;
     // ponytail: only the 50 most recent neighbours are checked (ties would be quadratic); the swarm clamps past ~25 anyway.
     const near = placed.slice(Math.max(from, placed.length - 50));
     const cand = [0];
     for (const j of near) {
-      const h = Math.sqrt(Math.max(0, d2 - (x - xs[j]!) ** 2));
+      const h = Math.sqrt(Math.max(0, (rs[i]! + rs[j]!) ** 2 - (x - xs[j]!) ** 2));
       cand.push(out[j]! + h, out[j]! - h);
     }
     cand.sort((a, b) => Math.abs(a) - Math.abs(b) || b - a);
     const ok = (o: number) =>
-      near.every((j) => (x - xs[j]!) ** 2 + (o - out[j]!) ** 2 >= d2 - 1e-6);
+      near.every((j) => (x - xs[j]!) ** 2 + (o - out[j]!) ** 2 >= (rs[i]! + rs[j]!) ** 2 - 1e-6);
     let o = cand.find(ok) ?? 0;
     // ponytail: a swarm taller than its band is clamped, so the overflow overlaps instead of leaving the band.
+    const limit = Math.max(0, half - rs[i]!);
     o = Math.max(-limit, Math.min(limit, o));
     out[i] = o;
     placed.push(i);
@@ -102,13 +115,16 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
   const nx = Math.max(1, Math.min(Math.floor(plot.w / 6), Math.floor(MAX_MARKS / bands)));
   const cw = plot.w / nx;
   const [d0, d1] = sx.domain;
+  // Value at a fraction of the plot width (a log axis steps by decades).
+  const at = (f: number) =>
+    sx.log ? 10 ** (Math.log10(d0) + f * (Math.log10(d1) - Math.log10(d0))) : d0 + f * (d1 - d0);
   const grid = new Map<number, number>();
   sorted.forEach((a, ci) => {
     let from = 0;
     for (let i = 0; i < nx; i++) {
       let to = a.length; // the last column takes the rest, as the first took everything below it
       if (i < nx - 1) {
-        const e = d0 + ((i + 1) * cw * (d1 - d0)) / plot.w;
+        const e = at(((i + 1) * cw) / plot.w);
         for (let lo = from, hi = a.length; (to = lo) < hi;) {
           const m = (lo + hi) >> 1;
           a[m]! < e ? (lo = m + 1) : (hi = m);
@@ -120,9 +136,7 @@ function bins(ctx: MarkCtx, pts: Pt[]) {
   });
   const vals = [...grid.values()];
   const max = Math.max(...vals);
-  const edge = Array.from({ length: nx + 1 }, (_, i) =>
-    ctx.fmt(spec.y, d0 + (i * cw * (d1 - d0)) / plot.w),
-  );
+  const edge = Array.from({ length: nx + 1 }, (_, i) => ctx.fmt(spec.y, at((i * cw) / plot.w)));
   const ti = spec.titles.get(spec.y) ?? spec.y;
   let marks = "";
   [...grid]
@@ -177,13 +191,34 @@ export const beeswarm: Mark = {
     // Radius from density: the area each point of the busiest swarm gets, 3 to 6 px.
     const rad = Math.max(3, Math.min(6, Math.sqrt((plot.w * bh) / big) / 4));
     const cb = cbField(spec);
+    // size: radius by sqrt of |size| (scatter's rule) against the largest, 3 px up to a share of the lane.
+    let max = ctx.sizeMax ?? 0;
+    if (ctx.sizeMax === null) for (const p of pts) max = Math.max(max, Math.abs(p.sz ?? 0));
+    const scale = Math.min(plot.w, bh) / 12;
+    const radius = (p: Pt) =>
+      spec.size === null
+        ? rad
+        : p.sz === null || !max
+          ? 3
+          : 3 + Math.sqrt(Math.abs(p.sz) / max) * scale;
+    // select { peers }: every mark names its peer value; the selected value's marks light up with their mean.
+    const pe = spec.peers;
+    const peer = (p: Pt) => (pe ? String(p.row[pe.field] ?? "") : null);
+    const on = (p: Pt) => pe?.value != null && peer(p) === pe.value;
 
     const seen = new Map<string, number>();
     let marks = "";
+    let labels = "";
+    let grid = "";
     for (const [ci, g] of [...groups].sort((a, b) => a[0] - b[0])) {
       const mid = band ? band.at(ci) + band.bandwidth / 2 : plot.y + plot.h / 2;
       const xs = g.map((p) => sx.of(p.v));
-      const off = dodge(xs, rad + 0.5, Math.max(0, bh / 2 - rad));
+      const rs = g.map((p) => radius(p));
+      const off = dodge(
+        xs,
+        rs.map((q) => q + 0.5),
+        bh / 2,
+      );
       g.forEach((p, k) => {
         const ser = shaped.series[p.si]!;
         const f = ctx.fmt(spec.y, p.v);
@@ -196,16 +231,43 @@ export const beeswarm: Mark = {
           "data-series": ser || null,
           "data-y": p.v,
           "data-f": f,
+          "data-more": more(ctx, rowTip(ctx, p.row)),
           "data-neg": p.v < 0,
           "data-tone": ctx.tone(p.v),
           "data-q": typeof cv === "number" ? ctx.q(cv) : null,
+          "data-peer": peer(p),
+          "data-peer-on": on(p) || null,
         };
         const cx = xs[k]!;
         const cy = mid + off[k]!;
-        marks += el("circle", { "data-maya": "mark", ...d, r: r(rad), cx: r(cx), cy: r(cy) });
-        if (spec.labels) ctx.label(cx, cy - rad, f, "above", d["data-key"]);
+        marks += el("circle", { "data-maya": "mark", ...d, r: r(rs[k]!), cx: r(cx), cy: r(cy) });
+        if (spec.labels) ctx.label(cx, cy - rs[k]!, f, "above", d["data-key"]);
       });
     }
-    return { marks, hits: "" }; // no hit squares: the tooltip picks the nearest dot, as for scatter
+    // The lit peers' mean: one line across the plot, its label beside the top.
+    const lit = pts.filter(on);
+    if (lit.length) {
+      const m = lit.reduce((a, p) => a + p.v, 0) / lit.length;
+      const x = r(sx.of(m));
+      grid = el("line", {
+        "data-peer-mean": true,
+        x1: x,
+        x2: x,
+        y1: r(plot.y),
+        y2: r(plot.y + plot.h),
+      });
+      const right = sx.of(m) < plot.x + plot.w / 2;
+      labels = el(
+        "text",
+        {
+          "data-peer-mean": true,
+          x: r(sx.of(m) + (right ? 4 : -4)),
+          y: r(plot.y + 10),
+          "text-anchor": right ? "start" : "end",
+        },
+        esc(`${ctx.t("peerMean", pe!.value!)} ${ctx.fmt(spec.y, m)}`),
+      );
+    }
+    return { marks, hits: "", grid, labels }; // no hit squares: the tooltip picks the nearest dot, as for scatter
   },
 };

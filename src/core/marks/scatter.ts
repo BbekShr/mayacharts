@@ -1,5 +1,5 @@
 import { cbField, el, memo, nameId, esc, key, r } from "../svg.ts";
-import { marked, more } from "./bar.ts";
+import { marked, more, rowTip } from "./bar.ts";
 import type { LinearScale, Mark, MarkCtx, ResolvedSpec, Row, Shaped } from "../types.ts";
 import { MAX_MARKS } from "../validate.ts";
 
@@ -286,7 +286,7 @@ export const scatter: Mark = {
         // Guide pills: only when data-x / data-f are not already the formatted x and y.
         "data-gx": named ? x : null,
         "data-gy": named ? y : null,
-        "data-more": more(ctx, (f) => p.row[f]),
+        "data-more": more(ctx, rowTip(ctx, p.row)),
         "data-neg": p.y < 0,
         "data-tone": ctx.tone(p.y),
         "data-q": typeof cv === "number" ? ctx.q(cv) : null,

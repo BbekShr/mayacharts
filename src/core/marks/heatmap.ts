@@ -1,5 +1,7 @@
 import { el, esc, hit, key, r, tw } from "../svg.ts";
-import { inkOf, inText } from "./bar.ts";
+import { colorVals } from "../shape.ts";
+import { ramp } from "../scale.ts";
+import { inkOf, inText, more } from "./bar.ts";
 import type { BandScale, Mark } from "../types.ts";
 
 /** x = column category, series = row category; ramp legend; labels default on at >= 24 px. */
@@ -14,12 +16,16 @@ export const heatmap: Mark = {
     const cx = ctx.x as BandScale;
     const cy = ctx.y as BandScale;
     const cells = shaped.cells.filter((c) => c.value !== null);
-    let lo = Infinity;
-    let hi = -Infinity;
-    for (const c of cells) ((lo = Math.min(lo, c.value!)), (hi = Math.max(hi, c.value!)));
-    const q = (v: number) => (hi > lo ? Math.min(9, Math.floor(((v - lo) / (hi - lo)) * 10)) : 9);
-    // Cells fill their band, less a gap (1 px under 12 px bands keeps a calendar's cells readable on a phone).
-    const g = Math.min(cx.bandwidth, cy.bandwidth) < 12 ? 1 : 2;
+    const { q, breaks } = ramp(
+      cells.map((c) => c.value!),
+      spec.colorScale,
+      spec.rampMid,
+    );
+    const mv = spec.tipFields.map((f) => colorVals(spec, f));
+    const wasOf = spec.was === null ? null : colorVals(spec, spec.was);
+    // Cells fill their band, less a gap (theme cellGap; else 1 px under 12 px bands keeps a calendar's cells readable on a phone).
+    const tg = parseFloat(spec.theme.cellGap ?? "");
+    const g = tg >= 0 ? tg : Math.min(cx.bandwidth, cy.bandwidth) < 12 ? 1 : 2;
     const w = Math.max(0, cx.bandwidth - g);
     const h = Math.max(0, cy.bandwidth - g);
     // The 1 px accent outline is the 1.4.11 mark on pale cells; on a cell under 8 px it would be most of the cell.
@@ -34,6 +40,7 @@ export const heatmap: Mark = {
       const y = cy.at(row) + (cy.bandwidth - h) / 2;
       const col = shaped.categories[c.ci]!;
       const ser = shaped.series[c.si]!;
+      const wv = wasOf?.(col, ser) ?? null;
       const d = {
         "data-key": key(ser, col),
         "data-c": n,
@@ -42,6 +49,8 @@ export const heatmap: Mark = {
         "data-y": v,
         "data-f": ctx.fmt(spec.y, v),
         "data-q": q(v),
+        "data-was": wv === null ? null : ctx.t("was", ctx.fmt(spec.y, wv)),
+        "data-more": more(ctx, (_, k) => mv[k]!(col, ser)),
       };
       marks += el("rect", {
         "data-maya": "mark",
@@ -65,7 +74,16 @@ export const heatmap: Mark = {
     }
     const legend =
       cells.length > 0
-        ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b><span>${esc(ctx.fmt(spec.y, lo))}</span><i></i><span>${esc(ctx.fmt(spec.y, hi))}</span></div>`
+        ? `<div class="maya-legend" data-maya="ramp"><b>${esc(spec.titles.get(spec.y) ?? spec.y)}</b>${breaks
+            .map(
+              (b, k) =>
+                `<span>${esc(ctx.fmt(spec.y, b))}</span>` +
+                // Quantile: one swatch per class (steps 0 2 5 7 9), the breaks between them.
+                (k < breaks.length - 1
+                  ? `<i${breaks.length > 2 ? ` data-q="${[0, 2, 5, 7, 9][k]}"` : ""}></i>`
+                  : ""),
+            )
+            .join("")}</div>`
         : "";
     return { marks, hits, labels, grid: "", legend };
   },

@@ -8,13 +8,168 @@ import { register } from "./core/registry.ts";
 import { TAU } from "./core/scale.ts";
 import { clip, el, esc, key, OTHER, r } from "./core/svg.ts";
 import { niceTicks } from "./core/ticks.ts";
-import type { Mark } from "./core/types.ts";
+import type { Mark, MarkCtx, MarkOut } from "./core/types.ts";
 
 const W = 7.2; // estimated glyph width at 12px, the same estimate core layout uses
+
+/** The disc and its rings (the outermost always, then every other one, at most 3) with their values; `put` places a label at ring radius rr. */
+const rings = (
+  ctx: MarkCtx,
+  [cx, cy, R]: number[],
+  vals: number[],
+  rad: (v: number) => number,
+  put: (rr: number) => Parameters<typeof el>[1],
+) => {
+  let grid = el("circle", { cx: r(cx!), cy: r(cy!), r: r(R!), "data-disc": true });
+  let labels = "";
+  vals.forEach((v, i) => {
+    if (vals.length > 3 && (vals.length - 1 - i) % 2) return;
+    grid += el("circle", { cx: r(cx!), cy: r(cy!), r: r(rad(v)), fill: "none" });
+    const t = el(
+      "text",
+      { ...put(rad(v)), "dominant-baseline": "middle", "data-ring": "" },
+      esc(ctx.fmt(ctx.spec.y, v)),
+    );
+    labels += t;
+  });
+  return { grid, labels };
+};
+
+/**
+ * spec.form "line" (a radar): angle = x from 12 o'clock, radius = y from the centre, one line per
+ * series (key `l~SERIES`, the line mark's attributes: dash, emphasis, legend isolate), closed when the
+ * series has a value in every category and open where one is missing. A dot per value holds the
+ * tooltip; a wedge hit per category (keyed to its first dot) lists every series of that category.
+ * ponytail: no area fill (overlapping series would hide each other); categories are thinned by label collision.
+ */
+const radar = (ctx: MarkCtx): MarkOut => {
+  const { spec, shaped: sh, plot } = ctx;
+  const n = sh.categories.length;
+  if (!n || !sh.cells.length) return { marks: "", hits: "" };
+  const max = Math.max(0, ...sh.cells.map((c) => c.value ?? 0));
+  const ticks = niceTicks(0, max, 5);
+  const top = ticks.domain[1] || 1;
+  const names = sh.categories.map((c) =>
+    clip(ctx.fmt(spec.x, c), Math.max(4, Math.floor((plot.w * 0.2) / W))),
+  );
+  const lw = Math.max(...names.map((s) => s.length)) * W + 8;
+  const [cx, cy] = [plot.x + plot.w / 2, plot.y + plot.h / 2];
+  const R = Math.max(10, Math.min(plot.w / 2 - lw, plot.h / 2 - 18));
+  const ang = (k: number) => (k / n) * TAU;
+  const at = (rr: number, a: number): [number, number] => [
+    cx + rr * Math.sin(a),
+    cy - rr * Math.cos(a),
+  ];
+  let marks = "";
+  let dots = "";
+  let hits = "";
+  let grid = "";
+  const first = new Map<number, string>();
+  for (const si of sh.visible) {
+    const ser = sh.series[si]!;
+    const row = sh.categories.map(() => null as number | null);
+    for (const c of sh.cells) if (c.si === si && c.value !== null) row[c.ci] = Math.max(0, c.value);
+    const closed = n > 2 && row.every((v) => v !== null);
+    let d = "";
+    let len = 0;
+    let prev: [number, number] | null = null;
+    row.forEach((v, k) => {
+      if (v === null) return void (prev = null);
+      const p = at((v / top) * R, ang(k));
+      d += `${prev ? "L" : "M"}${r(p[0])} ${r(p[1])}`;
+      if (prev) len += Math.hypot(p[0] - prev[0], p[1] - prev[1]);
+      prev = p;
+      const cname = sh.categories[k]!;
+      const key_ = key(ser, cname);
+      first.has(k) || first.set(k, key_);
+      dots += el("circle", {
+        "data-maya": "mark",
+        "data-key": key_,
+        "data-c": k,
+        "data-s": si % 8,
+        "data-x": ctx.fmt(spec.x, cname),
+        "data-series": ser,
+        "data-y": sh.cells.find((c) => c.si === si && c.ci === k)!.value,
+        "data-f": ctx.fmt(spec.y, sh.cells.find((c) => c.si === si && c.ci === k)!.value),
+        "data-tone": ctx.tone(v),
+        "data-dash": spec.dash.has(ser),
+        "data-em": spec.emphasis.has(ser),
+        "data-last": n === 1,
+        r: 3,
+        cx: r(p[0]),
+        cy: r(p[1]),
+      });
+    });
+    if (closed) {
+      const f = at((row[0]! / top) * R, 0);
+      len += Math.hypot(f[0] - prev![0], f[1] - prev![1]);
+      d += "Z";
+    }
+    const dash = spec.dash.has(ser);
+    marks += el("path", {
+      "data-maya": "line",
+      "data-key": key("l", ser),
+      "data-s": si % 8,
+      "data-dash": dash,
+      "data-em": spec.emphasis.has(ser),
+      pathLength: 1,
+      "stroke-dasharray":
+        dash && len ? `${+(6 / len).toPrecision(3)} ${+(4 / len).toPrecision(3)}` : null,
+      d: d || null,
+    });
+  }
+  // Spokes and the wedge a category answers for.
+  const h = Math.min(Math.PI / n, 3);
+  for (let k = 0; k < n; k++) {
+    const [x, y] = at(R, ang(k));
+    grid += el("line", { x1: r(cx), y1: r(cy), x2: r(x), y2: r(y) });
+    const [a, b] = [at(R, ang(k) - h), at(R, ang(k) + h)];
+    if (first.has(k))
+      hits += el("path", {
+        "data-maya": "hit",
+        "data-key": first.get(k),
+        "data-c": k,
+        d: `M${r(cx)} ${r(cy)}L${r(a[0])} ${r(a[1])}A${r(R)} ${r(R)} 0 ${h * 2 > Math.PI ? 1 : 0} 1 ${r(b[0])} ${r(b[1])}Z`,
+        fill: "transparent",
+      });
+  }
+  const ring = rings(
+    ctx,
+    [cx, cy, R],
+    ticks.values.filter((v) => v > 0),
+    (v) => R * (v / top),
+    // Between the first two spokes, so neither a spoke's line nor a category name sits under a value.
+    (rr) => ({
+      x: r(at(rr, ang(0.5))[0]),
+      y: r(at(rr, ang(0.5))[1]),
+      "text-anchor": "middle",
+    }),
+  );
+  grid = ring.grid + grid;
+  let labels = ring.labels;
+  const boxes: number[][] = [];
+  names.forEach((name, k) => {
+    const a = ang(k);
+    const [x, y] = at(R + 8 + 4 * Math.abs(Math.cos(a)), a);
+    const s = Math.sin(a);
+    const anchor = Math.abs(s) < 0.2 ? "middle" : s > 0 ? "start" : "end";
+    const w = name.length * W;
+    const l = anchor === "middle" ? x - w / 2 : anchor === "start" ? x : x - w;
+    if (boxes.some((b) => l < b[2]! && l + w > b[0]! && y - 7 < b[3]! && y + 7 > b[1]!)) return;
+    boxes.push([l, y - 7, l + w, y + 7]);
+    labels += el(
+      "text",
+      { x: r(x), y: r(y), "text-anchor": anchor, "dominant-baseline": "middle", "data-cat": "" },
+      esc(name),
+    );
+  });
+  return { marks: marks + dots, hits, labels, grid };
+};
 
 export const radial: Mark = {
   noun: "Radial bar",
   draw(ctx) {
+    if (ctx.spec.radar) return radar(ctx);
     const { spec, shaped, plot } = ctx;
     const n = shaped.categories.length;
     if (!n || !shaped.cells.length) return { marks: "", hits: "" };
@@ -178,25 +333,19 @@ export const radial: Mark = {
     });
 
     // Disc and rings; the outermost ring always shows, every other one below it (at most 3).
-    let grid = el("circle", { cx: r(cx), cy: r(cy), r: r(R), "data-disc": true });
-    let labels = "";
-    const vals = ticks.values.filter((v) => v > 0);
-    const k = vals.length;
-    const rings = vals.filter((_, i) => (k > 3 ? (k - 1 - i) % 2 === 0 : true));
-    for (const v of rings) {
-      grid += el("circle", { cx: r(cx), cy: r(cy), r: r(rad(v)), fill: "none" });
-      labels += el(
-        "text",
-        {
-          x: r(cx),
-          y: r(cy - rad(v)),
-          "text-anchor": "middle",
-          "dominant-baseline": "middle",
-          "data-ring": "",
-        },
-        esc(fv(v)),
-      );
-    }
+    const ring = rings(
+      ctx,
+      [cx, cy, R],
+      ticks.values.filter((v) => v > 0),
+      rad,
+      (rr) => ({
+        x: r(cx),
+        y: r(cy - rr),
+        "text-anchor": "middle",
+      }),
+    );
+    const grid = ring.grid;
+    let labels = ring.labels;
 
     // Centre: the grand total under the measure's name.
     const tt = spec.titles.get(spec.y) ?? spec.y;
@@ -433,6 +582,7 @@ export const gauge: Mark = {
         ...d,
         "data-tone": null,
         "data-total": "",
+        "data-hero": true,
         x: r(cx),
         y: r(cy - 4),
         "text-anchor": "middle",

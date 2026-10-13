@@ -229,3 +229,50 @@ it("renders in core with no window or document", async () => {
     [w.window, w.document] = saved;
   }
 });
+
+describe("weave by group", () => {
+  const fam = ["Outerwear", "Bottoms", "Tops"];
+  const items = Array.from({ length: 12 }, (_, i) => ({ item: `item${i}`, family: fam[i % 3]! }));
+  const g = items.flatMap((it, i) =>
+    P.map((p, k) => ({ p, s: it.item, family: it.family, y: 100 - i * 3 + k * ((i % 4) - 1) })),
+  );
+  const grouped = (extra: object = {}) => spec({ colorBy: "family", ...extra }, g);
+  it("allows up to 20 threads with a group colorBy, still 8 without", () => {
+    expect(() => render(grouped())).not.toThrow();
+    expect(() => render(spec({}, g))).toThrow(/at most 8 threads/);
+    const many = Array.from({ length: 21 }, (_, i) => ({ p: "Q1", s: `s${i}`, family: "A", y: i }));
+    expect(() => render(spec({ colorBy: "family" }, many))).toThrow(/at most 20 threads/);
+  });
+  it("a thread takes its group's slot; same-group threads share data-s", () => {
+    const t = threads(render(grouped()));
+    const slot = (name: string) =>
+      at(
+        t.find((x) => at(x, "data-key") === `w~${name}~0`)!,
+        "data-s",
+      );
+    expect(slot("item0")).toBe(slot("item3"));
+    expect(slot("item0")).not.toBe(slot("item1"));
+    expect(new Set(t.map((x) => at(x, "data-s"))).size).toBe(3);
+  });
+  it("tint spaces a group's threads from its colour to a lighter step", () => {
+    const t = threads(render(grouped({ tint: true })));
+    const lt = (name: string) =>
+      at(
+        t.find((x) => at(x, "data-key") === `w~${name}~0`)!,
+        "data-lt",
+      );
+    // Outerwear holds item0, item3, item6, item9: first is the parent colour, last the lightest.
+    expect([0, 3, 6, 9].map((i) => lt(`item${i}`))).toEqual(["0", "2", "4", "6"]);
+    expect(threads(render(grouped())).every((x) => !x.includes("data-lt"))).toBe(true);
+  });
+  it("the legend names groups, not threads", () => {
+    const { legend } = renderParts(grouped({ tint: true }));
+    expect(legend.match(/<span data-s=/g)).toHaveLength(3);
+    expect(legend).toContain("Outerwear");
+    expect(legend).not.toContain("item0");
+  });
+  it("colors keyed by group reach each group's slot", () => {
+    const { svg, style } = renderParts(grouped({ colors: { Bottoms: "#0F9D8A" } }));
+    expect(style + svg).toContain("#0F9D8A");
+  });
+});

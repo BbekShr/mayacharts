@@ -109,7 +109,7 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = `${CPA},dumbbell,table,heatmap,marimekko,${PTH}`;
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge,heatmap forms:units size:scatter,beeswarm,constellation name:scatter,beeswarm,boxplot,units path:${DRL} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation,weave xDomain:scatter drill:${DRL} drillOut:${DRL} depth:treemap minAngle:sunburst select:${CPA},waterfall,scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter,dumbbell,beeswarm frame:${CPA},scatter,dumbbell xScale:scatter yScale:line,scatter,beeswarm annotate:${CPA},scatter dash:line,area,radial emphasis:line form:radial colorScale:heatmap,hexmap tint:${DRL},weave brush:parallel zero:dumbbell`,
+    `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge,heatmap forms:units size:scatter,beeswarm,constellation name:scatter,beeswarm,boxplot,units path:${DRL} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation,weave xDomain:scatter drill:${DRL} drillOut:${DRL} depth:treemap minAngle:sunburst select:${CPA},waterfall,scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter,dumbbell,beeswarm frame:${CPA},scatter,dumbbell xScale:scatter yScale:line,scatter,beeswarm annotate:${CPA},scatter dash:line,area,radial emphasis:line form:radial colorScale:heatmap,hexmap tint:${PTH},weave brush:parallel zero:dumbbell`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -1280,7 +1280,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     brush:
       spec.brush && spec.type === "parallel"
         ? (view.brush ?? []).filter(([f]) => measures.includes(f))
-        : [],
+        : null,
     peers: typeof sel === "object" ? { field: sel.peers, value: view.peers ?? null } : null,
     rampMid: theme.rampMid === undefined ? null : (theme.rampMidValue ?? 0),
     xScale: spec.xScale ?? "linear",

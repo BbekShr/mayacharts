@@ -21,6 +21,18 @@ const neutral = (ctx: MarkCtx, col: N[]) =>
     const c = ctx.spec.colors;
     n.s = c instanceof Map && c.has(n.name) ? slotOf(ctx, n) : -1;
   });
+/** spec.tint: step 0..7 (data-lt) of nodes sharing a branch colour, evenly spaced; others none. */
+const steps = (ctx: MarkCtx, cols: N[][]) => {
+  const lt = new Map<N, number>();
+  if (ctx.spec.tint)
+    for (const col of cols) {
+      const by = new Map<number, N[]>();
+      for (const n of col) if (n.s >= 0) (by.get(n.s) ?? by.set(n.s, []).get(n.s)!).push(n);
+      for (const g of by.values())
+        g.forEach((n, i) => lt.set(n, Math.round((7 * i) / Math.max(1, g.length - 1))));
+    }
+  return lt;
+};
 // Every node index upstream or downstream of a node along any path; hovering lights them.
 const reach = (ls: L[]) => {
   // Neighbours per node and direction, so a walk reads its own links, not every link per step.
@@ -256,6 +268,7 @@ export const sankey: Mark = {
     // A column of single-parent nodes stays grouped under its parents: a backward pass would split families.
     for (let lv = cols - 2; lv > 0; lv--) order[lv]!.every(one) || sweep(lv, lv + 1);
 
+    const lt = steps(ctx, order);
     // Label room: the last column always keeps its labels beside it, clear of the flows; the first
     // does too on a wide tile, else its labels ride in the gap, over the flows, behind a halo.
     const val = (n: N) => ctx.fmt(spec.y, n.v);
@@ -299,11 +312,16 @@ export const sankey: Mark = {
       const [x0, x1, th, m] = [x(l.s) + W, x(l.t), l.v * k, (x(l.s) + W + x(l.t)) / 2];
       const [a, b] = [l.sy, l.ty];
       const d = `M${r(x0)} ${r(a)}C${r(m)} ${r(a)} ${r(m)} ${r(b)} ${r(x1)} ${r(b)}L${r(x1)} ${r(b + th)}C${r(m)} ${r(b + th)} ${r(m)} ${r(a + th)} ${r(x0)} ${r(a + th)}Z`;
-      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, off, tint(l)), d });
+      marks += el("path", {
+        ...linkAttrs(ctx, hov, l, c++, off, tint(l)),
+        "data-lt": lt.get(tint(l)),
+        d,
+      });
     }
     for (const n of nodes) {
       marks += el("rect", {
         ...nodeAttrs(ctx, hov, n, c++, off),
+        "data-lt": lt.get(n),
         x: r(x(n)),
         y: r(n.y),
         width: W,
@@ -358,7 +376,10 @@ export const chord: Mark = {
       ctx,
       nodes.filter((n) => n.lv === 0),
     );
-    nodes.filter((n) => n.lv === 1).forEach((n) => (n.s = slotOf(ctx, n)));
+    // tint on a drilled chord: the to-nodes share the drilled branch's colour, stepped in tints.
+    nodes
+      .filter((n) => n.lv === 1)
+      .forEach((n) => (n.s = spec.tint && spec.hue !== null ? spec.hue % 8 : slotOf(ctx, n)));
     const hov = reach(ls);
     const total = ls.reduce((a, l) => a + l.v, 0);
     if (!(total > 0)) return { marks: "", hits: "" };
@@ -422,13 +443,18 @@ export const chord: Mark = {
         a += l.v * k;
       }
     }
+    const lt = steps(ctx, [sides[1]!]);
     let c = 0;
     let marks = "";
     for (const l of ls) {
       const [sa, ta] = [l.sy, l.ty];
       const [sb, tb] = [sa + l.v * k, ta + l.v * k];
       const d = `M${pt(sa, R)}${arc(sa, sb, R, 1)}${edge(sb, ta)}${arc(ta, tb, R, 1)}${edge(tb, sa)}Z`;
-      marks += el("path", { ...linkAttrs(ctx, hov, l, c++, 0, l.s.s < 0 ? l.t : l.s), d });
+      marks += el("path", {
+        ...linkAttrs(ctx, hov, l, c++, 0, l.s.s < 0 ? l.t : l.s),
+        "data-lt": lt.get(l.t),
+        d,
+      });
     }
     // The group arc is a 10 px band inset 2 px; CSS strokes it 4 px with round joins in its own
     // colour, which rounds the ends and lands the band at R + 4 .. R + RING (clear of the ribbons).
@@ -439,6 +465,7 @@ export const chord: Mark = {
       marks += el("path", {
         ...nodeAttrs(ctx, hov, n, c++, 0, spec.titles.get(n.lv ? P1 : P0) ?? (n.lv ? P1 : P0)),
         "data-arc": true,
+        "data-lt": lt.get(n),
         d,
       });
     }

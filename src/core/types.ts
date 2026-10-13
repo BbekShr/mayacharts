@@ -298,7 +298,7 @@ export interface ChartSpec<R extends object = Row> {
   /** How values map to the colour ramp: "linear" (default), "rank" (even steps by order, for skewed totals), "quantile" (five equal-count classes; the legend shows the breaks) or "log" (values above 0). heatmap hexmap.
    * @example colorScale: "rank" */
   colorScale?: "linear" | "rank" | "quantile" | "log";
-  /** Children take evenly spaced tints of their parent's colour instead of their own palette slots: drilled levels of a `path` (the parent is the drilled value, coloured by `colors` or its slot), and weave threads under a group `colorBy` (the parent is the group). A `colors` map then names path values or groups. bar line area dumbbell table heatmap marimekko treemap sunburst sankey chord weave.
+  /** Children take evenly spaced tints of their parent's colour instead of their own palette slots: drilled levels of a `path` (the parent is the drilled value, coloured by `colors` or its slot), and weave threads under a group `colorBy` (the parent is the group). A `colors` map then names path values or groups. treemap sunburst sankey chord weave.
    * @example tint: true */
   tint?: boolean;
   /** Drag a range on an axis to keep the lines inside it (ranges on several axes combine with AND; the rest dim); a click on the axis clears it. State in view.brush, reported by maya-view. parallel only.
@@ -480,8 +480,8 @@ export interface ResolvedSpec {
   tint: boolean;
   /** spec.zero (dumbbell; default true). */
   zero: boolean;
-  /** view.brush entries on measures of a parallel with spec.brush ([] otherwise). */
-  brush: readonly (readonly [field: string, lo: number, hi: number])[];
+  /** view.brush entries on measures of a parallel with spec.brush (null when brushing is off). */
+  brush: readonly (readonly [field: string, lo: number, hi: number])[] | null;
   /** select { peers }: the field and view.peers (null until a mark is selected); null otherwise. */
   peers: { field: string; value: string | null } | null;
   /** Diverging ramp centre: theme.rampMidValue (default 0) when the theme sets rampMid; else null. */

@@ -909,3 +909,74 @@ test("a compact tile clamps the title to a line and hides the subtitle", async (
   expect(r.big.sub).not.toBe("none");
   expect(r.big.tip).toBe("");
 });
+
+test.describe("parallel brush and beeswarm peers", () => {
+  const stores = Array.from({ length: 12 }, (_, i) => ({
+    s: `S${i}`,
+    a: i * 10,
+    b: (i * 37) % 100,
+    c: 100 - i * 7,
+  }));
+  const par = { type: "parallel", x: "s", y: ["a", "b", "c"], brush: true, data: stores };
+
+  test("dragging an axis keeps the lines inside; a click clears it; Escape clears all", async ({
+    page,
+  }) => {
+    await mount(page, "par", par);
+    const axes = page.locator("#par [data-maya=axis][data-field]");
+    const drag = async (n: number, from: number, to: number) => {
+      const b = (await axes.nth(n).boundingBox())!;
+      const x = b.x + b.width / 2;
+      await page.mouse.move(x, b.y + b.height * from);
+      await page.mouse.down();
+      await page.mouse.move(x, b.y + (b.height * (from + to)) / 2, { steps: 4 });
+      await page.mouse.move(x, b.y + b.height * to, { steps: 4 });
+      await page.mouse.up();
+    };
+    const off = () => page.locator("#par [data-maya=line][data-off]").count();
+    await drag(0, 0.1, 0.5);
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
+    const [f, lo, hi] = (await view(page, "par")).brush[0];
+    expect(f).toBe(await axes.nth(0).getAttribute("data-field"));
+    expect(lo).toBeLessThan(hi);
+    await expect.poll(off).toBeGreaterThan(0);
+    const one = await off();
+    await drag(1, 0.2, 0.6); // a second axis combines (AND): never fewer hidden
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(2);
+    expect(await off()).toBeGreaterThanOrEqual(one);
+    const b = (await axes.nth(1).boundingBox())!;
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+    await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "par")).brush).toBeUndefined();
+    await expect.poll(off).toBe(0);
+  });
+
+  test("select { peers } sets view.peers from the mark and Escape clears both", async ({
+    page,
+  }) => {
+    const data = Array.from({ length: 24 }, (_, i) => ({
+      n: `P${i}`,
+      f: i % 2 ? "A" : "B",
+      i: `T${i % 4}`,
+      p: 10 + ((i * 13) % 50),
+    }));
+    await mount(page, "bs", {
+      type: "beeswarm",
+      x: "f",
+      y: "p",
+      name: "n",
+      select: { peers: "i" },
+      data,
+    });
+    const m = page.locator("#bs [data-maya=mark][data-peer]").first();
+    const peer = await m.getAttribute("data-peer");
+    expect(peer).toMatch(/^T\d$/);
+    await clickMark(page, m);
+    await expect.poll(async () => (await view(page, "bs")).peers).toBe(peer);
+    expect(await selected(page, "bs")).toHaveLength(1);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "bs")).peers).toBeUndefined();
+    expect(await selected(page, "bs")).toHaveLength(0);
+  });
+});

@@ -877,7 +877,6 @@ describe("#86-#88 core contracts (M2)", () => {
         path: ["g", "m"],
         y: "v",
         drill: true,
-        tint: true,
         tooltip: { fields: [{ field: "p", ratio: ["v", "n"] }] },
         data: d,
       },

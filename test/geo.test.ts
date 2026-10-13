@@ -127,3 +127,29 @@ describe("hexmap", () => {
     expect(v.some((x) => x.includes("opacity"))).toBe(false);
   });
 });
+
+describe("hexmap colorScale", () => {
+  const skew = spec(
+    ["CA", "TX", "NY", "FL", "WA", "OR", "NV", "AZ", "UT", "CO"].map((s, i) => ({
+      s,
+      v: i === 9 ? 1000 : i + 1,
+    })),
+  );
+  const qs = (sp: ChartSpec) => marks(render(sp)).map((m) => +attr(m, "data-q")!);
+  it("rank spreads a skewed ramp; quantile shows five classes with their breaks in the legend", () => {
+    expect(new Set(qs(skew)).size).toBeLessThan(3);
+    expect(new Set(qs({ ...skew, colorScale: "rank" })).size).toBe(10);
+    expect(new Set(qs({ ...skew, colorScale: "quantile" }))).toEqual(new Set([0, 2, 5, 7, 9]));
+    const legend = renderShell({ ...skew, colorScale: "quantile" });
+    expect(legend.match(/<i data-q="\d"><\/i>/g)).toHaveLength(5);
+  });
+  it("a diverging ramp centres the mid", () => {
+    const d = spec([
+      { s: "CA", v: -4 },
+      { s: "TX", v: 0 },
+      { s: "NY", v: 4 },
+    ]);
+    const q = qs({ ...d, theme: { rampMid: "#eee" } });
+    expect(q).toEqual([0, 5, 9]);
+  });
+});

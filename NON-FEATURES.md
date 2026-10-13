@@ -16,6 +16,9 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 ## Known ceilings
 
+- **Weave threads**: 8, or 20 with a group `colorBy`. Groups share the 8 palette slots and `tint` tells threads apart; past 20, filter or group first.
+- **Radar**: no area fill (overlapping series would hide each other); category names thin by collision.
+- **Label ink tokens**: `labelInk` and `labelInkOnFill` reach only browsers without relative colours; CSS cannot choose between two author colours by a channel of the fill, so modern browsers use near-black and white by luminance.
 - **Compact tile on SSR**: `data-compact` (host height under 200 px, which clamps the title to a line and hides the subtitle) is set by the element, so a server-rendered tile shows the full title and subtitle until hydration.
 - **Value magnitude**: a numeric field (y, y2, size, was, colorBy, scatter x) must stay within 1e300 in absolute value; past it validation fails with the field's numeric error and the hint "Scale the value first". Sums of values that large overflow the scale and layout arithmetic to NaN, so the ceiling is checked per value, not per total (two 1e300 values still sum safely).
 - **Tooltip rows**: a tooltip shows at most 12 rows (a `+N` row counts the rest); a category with more series shows a window around the hovered one. Units: ArrowUp and ArrowDown do nothing because each dot is its own group, and during a form flight the pointer picks dots by where they will land. A boxplot outlier has no category group, so ArrowLeft and ArrowRight from it jump to the first box.

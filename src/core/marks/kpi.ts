@@ -147,6 +147,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
       "data-key": sKey("v"),
       ...payload,
       "data-tone": status,
+      "data-hero": true,
       "font-size": fs,
       y: top,
     },

@@ -257,3 +257,25 @@ describe("sankey", () => {
     }
   });
 });
+
+describe("tint and neutral", () => {
+  const drill = { drill: true, tint: true };
+  const lts = (svg: string) => tags(svg, "mark").map((t) => at(t, "data-lt"));
+  it("a drilled sankey's nodes under one branch step through tints", () => {
+    const svg = renderParts(spec(rows, drill), { view: { drill: ["Y"] } }).svg;
+    const v = lts(svg).filter((x) => x !== undefined);
+    expect(v.length).toBeGreaterThan(1);
+    expect(v).toContain("0");
+    expect(v).toContain("7");
+    // links carry the tint of the node they are coloured by
+    expect(tags(svg, "link").every((t) => at(t, "data-lt") !== undefined)).toBe(true);
+  });
+  it("no tint, no data-lt", () => {
+    expect(renderParts(spec(rows, { drill: true }), { view: { drill: ["Y"] } }).svg).not.toContain(
+      "data-lt",
+    );
+  });
+  it("uncoloured nodes are data-neu", () => {
+    expect(renderParts(spec(rows)).svg).toContain("data-neu");
+  });
+});

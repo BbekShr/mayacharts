@@ -133,6 +133,7 @@ function setup(ctx: MarkCtx, levels = Infinity, hue: number | null = null) {
       "data-key": key("h", ...(other ? [...parts.slice(0, -1), OTHER] : parts)),
       "data-c": c++,
       "data-s": s < 0 ? null : s % 8, // the depth-1 lump matches no top node: neutral
+      "data-neu": s < 0 || null,
       "data-x": parts.join(" › "),
       "data-series": "",
       "data-y": n.value,
@@ -148,6 +149,12 @@ function setup(ctx: MarkCtx, levels = Infinity, hue: number | null = null) {
 }
 
 const text = (s: string) => s.length * 7.2 + 4;
+
+/** spec.tint: step 0..7 (data-lt) of sibling `i` of `n`, evenly spaced; only below the parent's own level (a drilled view's first level included). */
+const spread = (ctx: MarkCtx, depth: number, i: number, n: number) =>
+  ctx.spec.tint && depth + ctx.spec.drilled.length > 1
+    ? Math.round((7 * i) / Math.max(1, n - 1))
+    : null;
 
 /** The no-data text, centred on the plot, for a mark with nothing to draw. */
 const none = (c: MarkCtx): MarkOut => (
@@ -166,7 +173,16 @@ const treemap: Mark = {
     const tinted = nest || spec.drilled.length > 0;
     let marks = "";
     let hits = "";
-    const walk = (n: Node, x: number, y: number, w: number, h: number, top = 1): void => {
+    const walk = (
+      n: Node,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      top = 1,
+      i = 0,
+      sib = 1,
+    ): void => {
       // 0.5 px inset below the top level: siblings sit 1 px apart (stroke adds more).
       const g = n.depth > 1 ? 0.5 : 0;
       const [bx, by, bw, bh] = [x + g, y + g, Math.max(0, w - 2 * g), Math.max(0, h - 2 * g)];
@@ -180,7 +196,13 @@ const treemap: Mark = {
       if (!n.children.length) {
         if (bw * bh < 4) return; // ponytail: leaves under ~2 px a side are not drawn
         // Lightness by value against the largest sibling, in 8 steps (ponytail: values within 1/8 share a tint).
-        const a = tile({ "data-lt": tinted ? Math.round(7 * (1 - n.value / top)) : null });
+        const a = tile({
+          "data-lt": spec.tint
+            ? spread(ctx, n.depth, i, sib)
+            : tinted
+              ? Math.round(7 * (1 - n.value / top))
+              : null,
+        });
         // Name over value when both fit (the name cut with an ellipsis, never dropped), else "name · value", else the value.
         const [lx, ly, f] = [bx + bw / 2, by + bh / 2, a["data-f"]];
         const cap = Math.floor((bw - 4) / 7.2);
@@ -209,7 +231,9 @@ const treemap: Mark = {
       } else if (n.depth === 1 && bw >= 28 && bh >= 30)
         ctx.label(bx + bw / 2, by + 9, clip(n.name, Math.floor((bw - 4) / 7.2)), "center");
       const sq = squarify(n.children, ix, iy, iw, ih);
-      for (const [c, cx, cy, cw, ch] of sq) walk(c, cx, cy, cw, ch, sq[0]![0].value);
+      sq.forEach(([c, cx, cy, cw, ch], k) =>
+        walk(c, cx, cy, cw, ch, sq[0]![0].value, k, sq.length),
+      );
     };
     walk(root, plot.x, plot.y, plot.w, plot.h);
     return { marks, hits };
@@ -250,7 +274,15 @@ const sunburst: Mark = {
     const names = spec.labels !== false; // on unless turned off: a sunburst without names is unreadable
     let marks = "";
     let labels = "";
-    const walk = (n: Node, a0: number, a1: number, parent: Node, other = false): void => {
+    const walk = (
+      n: Node,
+      a0: number,
+      a1: number,
+      parent: Node,
+      other = false,
+      i = 0,
+      sib = 1,
+    ): void => {
       const span = a1 - a0;
       if (n.depth) {
         const rm = (n.depth + 0.5) * w;
@@ -261,7 +293,11 @@ const sunburst: Mark = {
         const share = pct(n.value / parent.value);
         a["data-f"] += ` · ${n.depth > 1 ? ctx.t("shareOf", share, parent.name) : share}`;
         marks += circle(
-          { ...a, "data-tint": Math.min(3, n.depth + spec.drilled.length) },
+          {
+            ...a,
+            "data-tint": Math.min(3, n.depth + spec.drilled.length),
+            "data-lt": spread(ctx, n.depth, i, sib), // tint: siblings step through the branch's lightnesses
+          },
           rm,
           a0 + pad / 2,
           span - pad,
@@ -309,10 +345,18 @@ const sunburst: Mark = {
         ) {
           const name = `${ctx.t("other")} (${kids.length - i})`;
           const value = kids.slice(i).reduce((q, k) => q + k.value, 0); // by value: the tick moved the angle
-          walk({ ...c, name, value, children: [], parts: [...n.parts, name] }, a, a1, n, true);
+          walk(
+            { ...c, name, value, children: [], parts: [...n.parts, name] },
+            a,
+            a1,
+            n,
+            true,
+            i,
+            kids.length,
+          );
           break;
         }
-        walk(c, a, a + s, n);
+        walk(c, a, a + s, n, false, i, kids.length);
         a += s;
       }
     };
@@ -325,6 +369,7 @@ const sunburst: Mark = {
         ...attrs(root),
         "data-s": spec.hue === null ? null : spec.hue % 8,
         "data-tint": Math.min(3, spec.drilled.length) || null,
+        "data-neu": null,
         "data-x": name,
         "data-depth": 0,
       },
