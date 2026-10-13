@@ -1287,6 +1287,14 @@ test.describe("params, frame controls, facet panels (M5)", () => {
     await page.keyboard.press("Escape");
     await expect.poll(async () => (await view(page, "x")).drill ?? []).toEqual([]);
     await expect(panels).toHaveCount(4);
+    // A click on a panel's empty area (not a hit target: it lands on the root svg) opens it too.
+    if (!isMobile) {
+      const b = (await panels.nth(1).boundingBox())!;
+      await page.mouse.click(b.x + 4, b.y + b.height - 4);
+      await expect.poll(async () => (await view(page, "x")).drill).toEqual(["South"]);
+      await page.keyboard.press("Escape");
+      await expect(panels).toHaveCount(4);
+    }
     // The scale radios.
     await page.locator("#x [data-maya=facetScale] [role=radio]").nth(1).dispatchEvent("click");
     await expect.poll(async () => (await view(page, "x")).facetScale).toBe("own");

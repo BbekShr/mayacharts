@@ -194,3 +194,4 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Diverging bar chart**: use `colorBy: { target: 0 }` to tone positive and negative bars differently.
 - **Complex drill UI**: listen to `maya-select` and `maya-view` events and control `el.view` and `el.selected` from your app.
 - **Stacked negative bars**: supported (negatives stack below zero); for a running total use `waterfall`.
+- **Facet and expand motion**: in WebKit a surviving facet panel jumps to its new cell (WebKit ignores CSS transform on a nested svg). A line drillTo has no zoom box and pops in. An opened list move and its evidence rows overlap for about 120 ms. Two thin drilled marimekko columns side by side can overprint their short names.

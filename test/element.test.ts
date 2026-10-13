@@ -1245,3 +1245,62 @@ describe("M5 controls (#78 #80 #85)", () => {
     expect(el.shadowRoot!.querySelectorAll("text[data-maya=mark] tspan[data-hd]")).toHaveLength(2);
   });
 });
+
+describe("patch motion fixes", () => {
+  const bar = (v: number, extra: object = {}) =>
+    renderParts(
+      {
+        type: "bar",
+        x: "q",
+        y: "v",
+        rules: [{ y: v }],
+        data: ["A", "B", "C"].map((q, i) => ({ q, v: 10 + i * 5 + v })),
+        ...extra,
+      } as ChartSpec,
+      { width: 640, height: 320 },
+    ).svg;
+
+  it("a rules group that moves is followed, not ghosted and re-faded", () => {
+    const box = document.createElement("div");
+    patch(box, bar(12), false);
+    const g = box.querySelector("[data-maya=rules]");
+    patch(box, bar(13), true);
+    expect(box.querySelector("[data-maya=rules]")).toBe(g);
+    expect(box.querySelectorAll("[data-ghost]")).toHaveLength(0);
+  });
+
+  it("an interrupted bar restarts without its stagger delay", () => {
+    const box = document.createElement("div");
+    document.body.append(box);
+    const real = Element.prototype.animate;
+    const next = bar(0, { data: ["A", "B", "C"].map((q, i) => ({ q, v: 30 + i * 9 })) });
+    const delayOfLast = (interrupt: boolean) => {
+      patch(box, bar(0), false);
+      const last = [...box.querySelectorAll("rect[data-maya=mark]")].at(-1) as Element;
+      let d: number | undefined;
+      Element.prototype.animate = function (this: Element, _: unknown, o: { delay?: number }) {
+        if (this === last) d = o.delay ?? 0;
+        return { finished: Promise.resolve(), cancel() {}, addEventListener() {} } as never;
+      } as never;
+      const om = box.querySelector("[data-maya=marks]") as Element;
+      om.getAnimations = (() =>
+        interrupt ? [{ effect: { target: last }, cancel() {} }] : []) as never;
+      patch(box, next, true);
+      Element.prototype.animate = real;
+      return d;
+    };
+    expect(delayOfLast(false)).toBeGreaterThan(0);
+    expect(delayOfLast(true)).toBe(0);
+  });
+
+  it("a ghosted group keeps its computed paint", () => {
+    const box = document.createElement("div");
+    document.body.append(box);
+    patch(box, bar(0), false);
+    const labels = box.querySelector("[data-maya=labels], [data-maya=axis-x]");
+    expect(labels).toBeTruthy();
+    patch(box, bar(0, { xAxis: false, labels: false }), true);
+    for (const gh of box.querySelectorAll("[data-ghost]"))
+      expect(gh.hasAttribute("data-maya")).toBe(false);
+  });
+});

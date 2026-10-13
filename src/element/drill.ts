@@ -244,7 +244,16 @@ export const mount = (host: Host): Handlers => {
     const tk = el?.closest(".maya-tip [data-drill]")?.getAttribute("data-drill");
     const m = tk ? marks().find((x) => x.getAttribute("data-key") === tk) : host.mark(e);
     const tick = ticks() && el?.closest(TICK);
-    const fc = mode() === "facet" && !el?.closest(BUSY) && el?.closest("[data-facet]");
+    // An empty panel area is not a hit target (nested svgs only hit their painted content): the click lands on the root svg, so find the panel by its box.
+    const { clientX: cx, clientY: cy } = e as MouseEvent;
+    const fc =
+      mode() === "facet" &&
+      !el?.closest(BUSY) &&
+      (el?.closest("[data-facet]") ??
+        [...host.root.querySelectorAll(PANEL)].find((p) => {
+          const r = p.getBoundingClientRect();
+          return cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+        }));
     if (crumb)
       pop(Number(crumb.getAttribute("data-depth")), crumb.parentElement?.dataset.axis === "x");
     else if (tick) detail < 2 && pushX(tick);
