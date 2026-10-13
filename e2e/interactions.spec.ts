@@ -166,9 +166,21 @@ test.describe("drill", () => {
     await page.locator("#treemap").scrollIntoViewIfNeeded();
     await settle(page);
     await clickMark(page, page.locator("#treemap [data-maya=mark]").first());
-    await page.waitForTimeout(250);
-    await expect(page.locator("#treemap .maya-tip.maya-open")).toHaveCount(0);
-    await expect(page.locator("#treemap [data-active]")).toHaveCount(0);
+    // Sample every frame while the marks move: a fixed wait races the hold on a slow runner,
+    // where the hover rightly comes back once the zoom has landed.
+    const hot = await page.evaluate(async () => {
+      const r = document.getElementById("treemap")!.shadowRoot!;
+      const marks = () => [...r.querySelectorAll("[data-maya=mark]")];
+      const frame = () => new Promise(requestAnimationFrame);
+      let seen = 0;
+      for (let i = 0; i < 10 && !marks().some((e) => e.getAnimations().length); i++) await frame();
+      while (marks().some((e) => e.getAnimations().length)) {
+        if (r.querySelector("[data-active], .maya-tip.maya-open")) seen++;
+        await frame();
+      }
+      return seen;
+    });
+    expect(hot).toBe(0);
     await settle(page);
     const { x, y } = await center(page.locator("#treemap [data-maya=mark]").first());
     await page.mouse.move(x + 2, y + 2);
