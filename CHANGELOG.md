@@ -4,7 +4,7 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
-## 0.17.0 - Unreleased
+## 0.17.0 - 2026-10-12
 
 Fixes #76, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #88, #89, #90, #91, #92, #93.
 
