@@ -583,7 +583,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
   { type: "bar", x: "item", y: "sales" });</code></pre>
         <p>
           Without a bundler, <code>maya.global.js</code> holds everything. A tile that draws only
-          core types can load <code>maya.core.global.js</code> (the element, the twelve core types
+          core types can load <code>maya.core.global.js</code> (the element, the thirteen core types
           and <code>maya.host</code>) and add one classic script per module type it needs, after the
           core: <code>maya.hierarchy.global.js</code>, <code>maya.flow.global.js</code>,
           <code>maya.radial.global.js</code>, <code>maya.geo.global.js</code>,
@@ -864,12 +864,40 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><a class="spec-anchor" id="path"></a><code>path</code></td>
               <td>field[]</td>
               <td>
-                treemap sunburst sankey chord; bar line area dumbbell table marimekko heatmap with
-                drill
+                treemap sunburst sankey chord; bar line area dumbbell table radial waffle hexmap
+                waterfall marimekko heatmap with drill; list
               </td>
               <td>
-                Hierarchy outer to inner. On bar, line, area, dumbbell, table and marimekko replaces
-                <code>x</code>; on heatmap replaces <code>series</code>, its rows
+                Hierarchy outer to inner. On bar, line, area, dumbbell, table, radial, waffle,
+                hexmap, waterfall and marimekko replaces <code>x</code>; on heatmap replaces
+                <code>series</code>, its rows. A chord takes 2 or 3 levels: a third splits the
+                clicked target into its children while the sources stay. A drilled hexmap state
+                draws its children as horizontal bars, largest first. A marimekko without
+                <code>series</code> takes it from the next level, so
+                <code>["region", "family", "itemType"]</code> stacks regions by family, then a
+                region's families by item type. list: [headline, evidence]
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="seriesPath"></a><code>seriesPath</code></td>
+              <td>field[]</td>
+              <td>bar line area</td>
+              <td>
+                Series hierarchy, outer to inner: the series is the current level, and with drill
+                the gesture on a mark splits its series into the next level (view.drill holds the
+                series values; the svg carries <code>data-drill="series"</code>). Not with path or
+                series
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="xPath"></a><code>xPath</code></td>
+              <td>field[]</td>
+              <td>heatmap</td>
+              <td>
+                Column hierarchy, outer to inner: replaces x; with drill a column header click or
+                Enter drills the columns on their own (view.xDrill), with a second breadcrumb
+                (text.crumbsX). At the last column level maya-drill-leaf carries
+                <code>axis: "x"</code>
               </td>
             </tr>
             <tr>
@@ -907,12 +935,38 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               </td>
             </tr>
             <tr>
+              <td><a class="spec-anchor" id="body"></a><code>body</code></td>
+              <td>field</td>
+              <td>list</td>
+              <td>Text under each headline, two lines at most on small tiles</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="rowFormat"></a><code>rowFormat</code></td>
+              <td>field</td>
+              <td>list</td>
+              <td>
+                Field holding each row's own format, a preset or a template such as
+                <code>"{value} pts"</code>; a bad one is invalid-format naming the row
+              </td>
+            </tr>
+            <tr>
               <td><a class="spec-anchor" id="totals"></a><code>totals</code></td>
-              <td>string[]</td>
-              <td>waterfall</td>
+              <td>string[] / true</td>
+              <td>waterfall heatmap</td>
               <td>
                 x values drawn as running-total bars; one before any step opens at its own y, so a
-                bridge can start at last year's figure
+                bridge can start at last year's figure. heatmap: <code>true</code> adds a Total row
+                and column (text.total), combined by aggregate over the rows of visible series
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="start"></a><code>start</code></td>
+              <td>string</td>
+              <td>waterfall</td>
+              <td>
+                The x value of the opening total: drawn first wherever its row is, at its own y. A
+                drilled step opens at the running total before it (text.before) and closes at the
+                total after it (text.after)
               </td>
             </tr>
             <tr>
@@ -996,7 +1050,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 points point range density perCell mean perX rule log play pause frameOf frame was
                 since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
                 median q1 min rows ofPrevious ofFirst first last labelled peerMean brushed
-                brushCleared flip stacks unstacked stacked percent stream
+                brushCleared flip stacks unstacked stacked percent stream filter showMore crumbsX
+                before after
               </td>
             </tr>
             <tr>
@@ -1330,7 +1385,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             <tr>
               <td><code>total</code></td>
               <td>"Total"</td>
-              <td>Sunburst centre at the root.</td>
+              <td>Sunburst centre at the root; the heatmap totals row and column.</td>
             </tr>
             <tr>
               <td><code>shareOf</code></td>
@@ -1597,6 +1652,31 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>"Stream"</td>
               <td>Stack mode option for "stream".</td>
             </tr>
+            <tr>
+              <td><code>filter</code></td>
+              <td>"Filter"</td>
+              <td>aria-label and placeholder of the table search box (spec.filter).</td>
+            </tr>
+            <tr>
+              <td><code>showMore</code></td>
+              <td>"Show {0} more"</td>
+              <td>Table row that shows the next page (spec.page): {0} = rows it adds.</td>
+            </tr>
+            <tr>
+              <td><code>crumbsX</code></td>
+              <td>"Column drill path"</td>
+              <td>aria-label of the heatmap column breadcrumb (spec.xPath with drill).</td>
+            </tr>
+            <tr>
+              <td><code>before</code></td>
+              <td>"Before {0}"</td>
+              <td>Drilled waterfall opening total: {0} = the drilled value.</td>
+            </tr>
+            <tr>
+              <td><code>after</code></td>
+              <td>"After {0}"</td>
+              <td>Drilled waterfall closing total: {0} = the drilled value.</td>
+            </tr>
           </tbody>
         </table>
       </section>
@@ -1655,8 +1735,9 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 <code>maya-drill-leaf</code> with the full path. A sankey drill starts from the
                 first column, then continues one column at a time through any non-final node,
                 keeping the clicked node as its first column; a chord drills into one group's flows.
-                treemap sunburst sankey chord; bar line area dumbbell table heatmap marimekko with
-                path
+                treemap sunburst sankey chord; bar line area dumbbell table heatmap radial waffle
+                hexmap waterfall marimekko with path; bar line area with seriesPath; heatmap with
+                xPath
               </td>
             </tr>
             <tr>
@@ -1667,16 +1748,37 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               </td>
             </tr>
             <tr>
+              <td><a class="spec-anchor" id="expand"></a><code>expand</code></td>
+              <td>spec without data / "first" / "none" / "all"</td>
+              <td>
+                table: a sub-chart under a row, over that row's rows (without x or path it takes the
+                table's x); a click or Enter opens it, one row at a time (view.expanded); with
+                select the gestures split as with drill. It takes no drill, zoom, frame, expand,
+                drillTo, back, page, scroll or filter, and its errors name spec.expand.&lt;path&gt;.
+                list: which moves start open, "first" by default. table list
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="drillTo"></a><code>drillTo</code></td>
+              <td>spec without data</td>
+              <td>
+                line with series: the drill gesture on a series (view.drill = [series value])
+                replaces the line with this sub-chart over that series' rows, under a breadcrumb;
+                Back and Escape return. Without x it takes the line's x.
+                <code>was: "previous"</code> compares with the series before it at the same x. line
+              </td>
+            </tr>
+            <tr>
               <td><a class="spec-anchor" id="select"></a><code>select</code></td>
               <td>true / "multi" / {peers}</td>
               <td>
                 Click/Enter/legend selects marks; Escape clears. With drill, double-click or
                 Shift+Enter drills. <code>{ "peers": "itemType" }</code> (beeswarm) also lights the
                 marks sharing the selected one's value of that field, with their average
-                (text.peerMean); view.peers holds the value. kpi: the sparkline points. bar line
-                area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table
-                marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit
-                constellation
+                (text.peerMean); view.peers holds the value. kpi: the sparkline points. list: a
+                move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm
+                parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel
+                weave units orbit constellation
               </td>
             </tr>
             <tr>
@@ -1811,7 +1913,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 Children take evenly spaced tints of their parent's colour instead of their own
                 slots: the levels of a <code>path</code> below a drilled value, and weave threads
                 under a group <code>colorBy</code> (needed there). A <code>colors</code> map then
-                names path values or groups. treemap sunburst sankey chord weave
+                names path values or groups. treemap sunburst sankey chord waffle weave
               </td>
             </tr>
             <tr>
@@ -1865,6 +1967,54 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>boolean</td>
               <td>Visually hidden data table for screen readers (default true)</td>
             </tr>
+            <tr>
+              <td><a class="spec-anchor" id="page"></a><code>page</code></td>
+              <td>positive integer</td>
+              <td>
+                table: rows shown at first; a "Show n more" row (text.showMore) adds n (view.page).
+                The table grows and scrolls in the tile
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="scroll"></a><code>scroll</code></td>
+              <td>boolean</td>
+              <td>
+                table: every row (at most 1000), scrolling inside the tile with the header held at
+                the top
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="filter"></a><code>filter</code></td>
+              <td>boolean</td>
+              <td>
+                table: a search box (text.filter) keeping rows whose x or columns value contains the
+                text, ignoring case (view.filter)
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="columns"></a><code>columns</code></td>
+              <td>field[]</td>
+              <td>
+                table: text fields as their own columns after the row label, sortable and filtered
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="cells"></a><code>cells</code></td>
+              <td>{[title]: {type: "strip", field, by, last?}}</td>
+              <td>
+                table: a column of squares, one per distinct by value (data order, the last
+                <code>last</code>), holding field combined by aggregate, toned by sign
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="bars"></a><code>bars</code></td>
+              <td>{[y field]: "bar" / "diverging" / "none"} / boolean</td>
+              <td>
+                table: the bar in each measure cell, "bar" by default; diverging grows left or right
+                from the cell centre (theme up and down). list: true draws each move's evidence as
+                bars on a scale local to that move
+              </td>
+            </tr>
           </tbody>
         </table>
       </section>
@@ -1872,8 +2022,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
       <section id="chart-types">
         <h2>Chart types and modules</h2>
         <p>
-          Twenty-seven types. The twelve core types come with the element. Each other type lives in
-          an optional module: import it, or load its classic script after
+          Twenty-eight types. The thirteen core types come with the element. Each other type lives
+          in an optional module: import it, or load its classic script after
           <code>maya.core.global.js</code>. <code>maya.global.js</code> holds everything. A type
           whose module is not loaded fails with <code>unknown-type</code>, and the error names the
           import and the file.
@@ -1966,6 +2116,12 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><code>mayacharts/element</code></td>
               <td><code>maya.core.global.js</code></td>
               <td>Rows and measures, sortable, with in-cell bars</td>
+            </tr>
+            <tr>
+              <td><code>list</code></td>
+              <td><code>mayacharts/element</code></td>
+              <td><code>maya.core.global.js</code></td>
+              <td>Numbered moves with their own formats, evidence text and bars that open</td>
             </tr>
             <tr>
               <td><code>treemap</code></td>
@@ -2094,8 +2250,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>property</td>
               <td>
                 <code
-                  >{ measure, drill, window, hidden, form, stack, face, sortBy, frame, brush, peers
-                  }</code
+                  >{ measure, drill, window, hidden, form, stack, face, sortBy, frame, brush, peers,
+                  xDrill, expanded, page, filter }</code
                 >; <code>{}</code> resets; no events on set
               </td>
             </tr>
@@ -2146,21 +2302,25 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><code>maya-view</code></td>
               <td>
                 <code
-                  >{ measure, drill, window, hidden, form, stack, face, sortBy, brush, peers }</code
+                  >{ measure, drill, window, hidden, form, stack, face, sortBy, brush, peers,
+                  xDrill, expanded, page, filter }</code
                 >
               </td>
               <td>
                 Measure toggled, drilled, zoomed, a legend series hidden, a units form or stack mode
                 picked, a kpi card turned over, a table sorted, a parallel axis brushed (brush:
-                [field, lo, hi] per axis) or beeswarm peers selected (user actions only)
+                [field, lo, hi] per axis), beeswarm peers selected, heatmap columns drilled
+                (xDrill), a table row or list move opened (expanded: its raw x, "" for none), more
+                table rows shown (page) or the table filtered (filter) (user actions only)
               </td>
             </tr>
             <tr>
               <td><code>maya-drill-leaf</code></td>
-              <td><code>{ path: string[] }</code></td>
+              <td><code>{ path: string[], axis?: "x" }</code></td>
               <td>
                 The drill gesture on a mark at the last level; one raw value per path level, root
-                first; sankey and chord fire it once drilled to their last branch
+                first; sankey and chord fire it once drilled to their last branch. A heatmap column
+                at its last xPath level fires it with axis "x" and the xPath values
               </td>
             </tr>
             <tr>
@@ -2273,8 +2433,8 @@ await chart.settled; // drawn and still</code></pre>
           <code>.maya-sub</code>, <code>.maya-legend</code>, <code>.maya-crumbs</code>,
           <code>.maya-ctl</code>, <code>.maya-reset</code>, <code>.maya-box</code>,
           <code>.maya-svg</code>, <code>.maya-tip</code>, <code>.maya-err</code>,
-          <code>.maya-play</code> and <code>.maya-flip</code>. Marks carry
-          <code>data-maya="mark"</code>, <code>data-key</code>, <code>data-c</code>,
+          <code>.maya-play</code>, <code>.maya-flip</code> and <code>.maya-filter</code>. Marks
+          carry <code>data-maya="mark"</code>, <code>data-key</code>, <code>data-c</code>,
           <code>data-s</code> and <code>data-tone</code>.
         </p>
       </section>
@@ -2611,7 +2771,7 @@ await chart.settled; // drawn and still</code></pre>
             </tr>
             <tr>
               <td><code>mayacharts/element</code></td>
-              <td>Registers <code>&lt;maya-chart&gt;</code> and the twelve core types</td>
+              <td>Registers <code>&lt;maya-chart&gt;</code> and the thirteen core types</td>
             </tr>
             <tr>
               <td>
@@ -2653,7 +2813,7 @@ await chart.settled; // drawn and still</code></pre>
             </tr>
             <tr>
               <td><code>dist/maya.core.global.js</code></td>
-              <td>Element, the twelve core types and <code>maya.host</code></td>
+              <td>Element, the thirteen core types and <code>maya.host</code></td>
             </tr>
             <tr>
               <td>

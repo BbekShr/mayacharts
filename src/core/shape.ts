@@ -71,6 +71,11 @@ export function shape(
   s: ResolvedSpec,
   { hidden = [], window, plotWidth = Infinity, height = Infinity }: Opts = {},
 ): Shaped {
+  // A list's headline values are the moves' own rows (no evidence value): never summed with their evidence.
+  if (s.type === "list" && s.evidence) {
+    const e = s.evidence;
+    s = { ...s, data: memo(s.data, `own${e}`, () => s.data.filter((r) => r[e] == null)) };
+  }
   const series: string[] = [];
   const shown = () => series.flatMap((k, j) => (hidden.includes(k) ? [] : [j]));
   if (s.type === "scatter" || s.type === "units") {
@@ -286,7 +291,24 @@ export function shape(
       cells.push({ ci: i, si: j, value, y0, y1 });
     }
   });
+  // heatmap totals: true: a Total per column, per row and overall, from the rows of visible series.
+  let margins: Shaped["margins"];
+  if (s.margins) {
+    const ci = new Map(cats.map((c, i) => [c.label, i]));
+    const rest = ci.get(OTHER);
+    const on = new Map(visible.map((j) => [series[j]!, j]));
+    const mk = () => agg(s.aggregate, !!s.ratio);
+    const [cx, sy, all] = [cats.map(mk), series.map(mk), mk()];
+    for (const row of s.data) {
+      const j = on.get(s.series === null ? "" : String(row[s.series]));
+      const i = ci.get(String(row[s.x])) ?? rest;
+      if (j === undefined || i === undefined) continue;
+      for (const a of [cx[i]!, sy[j]!, all]) feed(a, row, s.y, s.ratio);
+    }
+    margins = { x: cx.map((a) => a.value()), series: sy.map((a) => a.value()), all: all.value() };
+  }
   return {
+    ...(margins && { margins }),
     categories: cats.map((c) => c.label),
     totals: cats.map((c) => s.totals.includes(c.label)),
     series,
@@ -655,4 +677,73 @@ export function colorVals(
 export function thin(cols: readonly (readonly (number | null)[])[], max: number): number[] {
   const all = [...Array(cols[0]?.length ?? 0).keys()];
   return all.length <= max ? all : reduceTime(all, cols, max);
+}
+
+/** One list move: its own row (the first without an evidence value) and its evidence rows. */
+export interface Move {
+  /** Raw headline (String of x). */
+  x: string;
+  value: number | null;
+  /** rowFormat of the own row (a preset or template), null when unset. */
+  format: string | null;
+  body: string | null;
+  evidence: { name: string; value: number | null; format: string | null }[];
+}
+
+/**
+ * list (#79): moves in data order (the headline number is the index + 1), rows never aggregated.
+ * A move's own row is its first row without an evidence value; later ones are ignored. A move
+ * with only evidence rows has a null value and body. Memoised per data array.
+ */
+export function moves(s: ResolvedSpec): Move[] {
+  const { x, y, evidence: e, body, rowFormat: rf } = s;
+  return memo(s.data, `m${JSON.stringify([x, y, e, body, rf])}`, () => {
+    const by = new Map<string, Move>();
+    const own = new Set<string>();
+    const str = (v: unknown) => (v == null ? null : String(v));
+    for (const r of s.data) {
+      const k = String(r[x]);
+      let m = by.get(k);
+      if (!m) by.set(k, (m = { x: k, value: null, format: null, body: null, evidence: [] }));
+      const v = typeof r[y] === "number" ? r[y] : null;
+      const format = rf ? str(r[rf]) : null;
+      if (e && r[e] != null) m.evidence.push({ name: String(r[e]), value: v, format });
+      else if (!own.has(k)) {
+        own.add(k);
+        Object.assign(m, { value: v, format, body: body ? str(r[body]) : null });
+      }
+    }
+    return [...by.values()];
+  });
+}
+
+/**
+ * table cells (#84): per strip column, the `by` values kept (distinct, data order, the last
+ * `last`) and, per row label (String of x), `field` combined by aggregate for each of them
+ * (null where a row has none). Memoised per data array.
+ */
+export function strips(
+  s: ResolvedSpec,
+): Map<string, { labels: string[]; values: Map<string, (number | null)[]> }> {
+  return new Map(
+    [...s.cells].map(([title, c]) => [
+      title,
+      memo(s.data, `p${JSON.stringify([s.x, c, s.aggregate])}`, () => {
+        const all = [...new Set(s.data.map((r) => String(r[c.by])))];
+        const labels = c.last === null ? all : all.slice(-c.last);
+        const at = new Map(labels.map((l, i) => [l, i]));
+        const acc = new Map<string, ReturnType<typeof agg>[]>();
+        for (const r of s.data) {
+          const i = at.get(String(r[c.by]));
+          if (i === undefined) continue;
+          const k = String(r[s.x]);
+          let a = acc.get(k);
+          if (!a) acc.set(k, (a = labels.map(() => agg(s.aggregate))));
+          if (typeof r[c.field] === "number") a[i]!.add(r[c.field] as number);
+        }
+        const values = new Map([...acc].map(([k, a]) => [k, a.map((g) => g.value())]));
+        return { labels, values };
+      }),
+    ]),
+  );
 }

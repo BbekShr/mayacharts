@@ -6,9 +6,18 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
-Fixes #76, #82, #83, #86, #87, #88, #89, #90, #91, #92, #93.
+Fixes #76, #79, #81, #82, #83, #84, #86, #87, #88, #89, #90, #91, #92, #93.
 
 ### Added
+
+- New core type `list`, an insight list: numbered moves in data order, each with its headline value in its own format (`rowFormat` names a field holding a preset or template per row), a sentence under it (`body`) and evidence rows (`path: [headline, evidence]`) that open on click or Enter, drawn as bars on a scale local to the move with `bars: true`. Rows are not aggregated: a move's value is its own row's. `expand: "first" | "none" | "all"` picks what starts open and `view.expanded` holds the open move; `select` fires `maya-select` on a move. Fixes #79.
+- Drill on more types: `path` with `drill` on radial, waffle (with `tint`), hexmap (a drilled state draws its children as horizontal bars) and waterfall; chord takes three path levels and splits the clicked target into its children while the sources stay; a marimekko without `series` takes it from the next path level, so drilling a region makes its families the columns. Fixes #81.
+- `seriesPath` on bar, line and area: the drill gesture on a mark splits its series into the next level (`view.drill` holds the series values). Not with `path`. Fixes #81.
+- waterfall `start`: the opening total, drawn first at its own y. A drilled waterfall step is rebased: it opens at the running total before it and closes at the total after it (text keys `before` and `after`). Fixes #81, #92.
+- heatmap `xPath` drills the columns on their own from a column header (`view.xDrill`, a second breadcrumb named by text key `crumbsX`), and `totals: true` adds a Total row and column. Fixes #81.
+- table `expand`: a sub-chart spec without data that opens under a clicked row over that row's rows (`view.expanded`). line `drillTo`: a sub-chart that replaces the line for a drilled series, with `was: "previous"` comparing it with the series before it. Fixes #81.
+- table: `page` (a "Show n more" row, text key `showMore`, `view.page`), `scroll` (every row, scrolling in the tile under a held header), `filter` (a search box, text key `filter`, `view.filter`), `columns` (text fields as sortable, filterable columns), `bars` per measure (`"bar"`, `"diverging"` or `"none"`) and `cells` strips (one square per period, toned by sign, from flat rows). Fixes #84.
+- `view.xDrill`, `view.expanded`, `view.page` and `view.filter` in `el.view` and the `maya-view` detail; `maya-drill-leaf` carries `axis: "x"` for a heatmap column.
 
 - `toggle: true` on kpi and gauge with a `y` array shows one measure at a time behind the measure control (`view.measure`); a gauge takes a `y` array only with it. `yDomain` and `colorBy` can be keyed by y field on kpi and gauge (`yDomain: { Sales: [0, 26e6] }`), and a toggled kpi takes `aggregate` keyed by y field, so a Price ratio sits beside Sales and Units. Fixes #82.
 - `was` keyed by y field (`was: { Sales: "SalesLY", Units: "UnitsLY" }`) with a `y` array: the ghosts and comparisons follow the measure toggle, and a kpi with one tile per field compares each with its own. Fixes #82.

@@ -182,6 +182,30 @@ export const SAMPLES: Readonly<Record<string, Omit<ChartSpec, "type">>> = {
     data: items,
   }),
   table: s({ title: "Item scorecard", x: "Item", y: ["Price", "Margin %", "Units"], data: items }),
+  list: s({
+    title: "Moves the numbers support",
+    y: "Value",
+    path: ["Move", "Evidence"],
+    body: "Note",
+    rowFormat: "Format",
+    bars: true,
+    data: [
+      {
+        Move: "Lead with outerwear",
+        Note: "Highest price per unit",
+        Value: 87,
+        Format: "currency",
+      },
+      { Move: "Lead with outerwear", Evidence: "Parka", Value: 87, Format: "currency" },
+      { Move: "Lead with outerwear", Evidence: "Tee", Value: 21, Format: "currency" },
+      {
+        Move: "Stock for the third quarter",
+        Note: "The peak quarter",
+        Value: 31,
+        Format: "{value}%",
+      },
+    ],
+  }),
   treemap: s({
     title: "Units by family and item",
     path: ["Family", "Item"],
@@ -296,7 +320,7 @@ export const label = (t: string): string =>
 
 /** Picker groups. A type missing here still shows, under "More". */
 export const GROUPS: readonly (readonly [string, readonly string[]])[] = [
-  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "gauge", "funnel", "table", "orbit"]],
+  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "gauge", "funnel", "table", "list", "orbit"]],
   ["Trend", ["line", "area", "ridgeline", "radial", "weave"]],
   ["Distribution", ["scatter", "beeswarm", "boxplot", "heatmap", "parallel", "constellation"]],
   ["Part to whole", ["treemap", "sunburst", "marimekko", "waffle", "units"]],
@@ -353,6 +377,13 @@ export const SKIP = new Set([
   "compare", // kpi: an array of change lines, set in the copied code
   "back", // kpi: a whole second spec
   "arc", // gauge: a number, set in the copied code
+  "seriesPath", // field arrays and sub-specs (#81, #84), set in the copied code
+  "xPath",
+  "expand",
+  "drillTo",
+  "columns",
+  "cells",
+  "bars",
   ...ROLES,
 ]);
 
@@ -374,6 +405,7 @@ export const TYPE_HELP: Readonly<Record<string, string>> = {
   beeswarm: "One dot per row along a value axis, spread out so none overlap.",
   parallel: "Each row is a line across several value axes, to compare many measures at once.",
   table: "The values in a sortable table.",
+  list: "Numbered moves, each with its key number, a sentence of evidence and bars that open on click.",
   treemap: "Nested rectangles sized by value, for parts of a whole with levels.",
   sunburst: "Rings of slices sized by value, for parts of a whole with levels.",
   sankey: "Flows between groups, with band widths sized by value.",
@@ -850,20 +882,16 @@ export const cutNote = (spec: ChartSpec): string =>
     : "";
 
 /**
- * chart.js for ThoughtSpot: the spec without rows, and the host adapter. The tile loads the library
- * itself, so the order of its tabs never matters, and a failed load still reports render-complete.
+ * chart.js for ThoughtSpot: the spec without rows, and the host adapter. chart.html loads the
+ * library, so chart.js stays light; it draws on window load when it runs before the library.
  * Rows, cell unwrapping and the settled signal come from maya.host.thoughtspot.
  */
 export function thoughtSpotJs(spec: ChartSpec): string {
   const { data: _, ...rest } = spec;
   return `// Column names match case-insensitively; a /regex/ works too (x: /item/i).
 const spec = ${flat(JSON.stringify(rest, null, 2)).replace(/</g, "\\u003c")};
-// Pin this file: add integrity: "sha384-..." and crossOrigin: "anonymous" from the release summary.
-document.head.append(Object.assign(document.createElement("script"), {
-  src: "${CDN}",
-  onload: () => maya.host.thoughtspot(viz, spec),
-  onerror: () => { document.getElementById("chart").textContent = "MayaCharts did not load"; viz?.events?.emitRenderCompletedEvent?.(); },
-}));
+const draw = () => maya.host.thoughtspot(viz, spec);
+window.maya ? draw() : window.addEventListener("load", draw);
 `;
 }
 
@@ -893,7 +921,8 @@ export function snippets(spec: ChartSpec): Record<Tab, File[]> {
     ThoughtSpot: [
       {
         name: "chart.html",
-        code: `<!-- chart.js loads mayaCharts and draws into this element. -->
+        code: `<!-- Pin this file: add integrity="sha384-..." and crossorigin="anonymous" from the release summary. -->
+<script src="${CDN}"></script>
 <maya-chart id="chart"></maya-chart>
 `,
       },

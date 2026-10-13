@@ -23,6 +23,7 @@ export type {
   Row,
   Rule,
   Sel,
+  StripCell,
   TextKey,
   ThemeSpec,
   ThemeToken,

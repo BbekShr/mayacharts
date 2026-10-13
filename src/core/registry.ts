@@ -35,6 +35,7 @@ export const CORE_TYPES = [
   "beeswarm",
   "parallel",
   "table",
+  "list",
 ] as const;
 
 /** Module types and the import that provides them (for the unknown-type hint). */

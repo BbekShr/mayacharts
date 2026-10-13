@@ -12,7 +12,7 @@
  *           touches window/document (a test deletes globalThis.window and imports it).
  *
  * State: interaction state is not in the spec. RenderOptions.view = { measure, drill, window,
- *   hidden, sortBy, frame, form, stack, face, brush, peers } and RenderOptions.selected = Sel[] (raw values). view.form
+ *   hidden, sortBy, frame, form, stack, face, brush, peers, xDrill, expanded, page, filter } and RenderOptions.selected = Sel[] (raw values). view.form
  *   indexes the units spec.forms (ResolvedSpec.forms/form, clamped); for units without colorBy
  *   resolve() also makes x the series, so the legend and view.hidden toggle groups. It applies
  *   measure (active y, measures[] kept for the control), frame (keep the rows of one distinct
@@ -247,8 +247,65 @@
  *   0), so everything downstream sees one mode. It counts as stacked for the was and ratio
  *   refusals; "stream" anywhere in it needs area. The svg's data-stack reflects the active mode.
  *
+ * Contract #79 #81 #84 (M4; where it differs, this paragraph wins over the older text):
+ *   View adds xDrill (heatmap column branch), expanded (open table row or list move, raw x; ""
+ *   = none), page (table pages added) and filter (table search text); all ride in maya-view.
+ *   Drill: validate.ts drillDepth(spec) is how many values view.drill may hold (path and
+ *   seriesPath: levels - 1; chord with 3 levels: 1, the target; marimekko without series:
+ *   levels - 2; drillTo: 1). ResolvedSpec.drillOn says what the gesture pushes next: "x" (the
+ *   mark's category or branch, as before), "series" (the mark's data-series: seriesPath,
+ *   drillTo) or null; the svg writes it as data-drill="" or data-drill="series" (absent: null),
+ *   so the element reads the gesture from the svg, never from the spec. New x-from-path types:
+ *   radial, waffle, hexmap, waterfall (PATHX). A drilled hexmap resolves to type "bar",
+ *   horizontal, sort "desc" (build() picks the mark after resolve), so its children draw as bars.
+ *   Chord with 3 levels: view.drill = [target]; rows keep path[1] = target; ResolvedSpec.path is
+ *   [path[0], path[1]] at the root and [path[0], path[2]] drilled, so the chord mark always sees
+ *   two levels. Marimekko without series: x = path[d], series = path[d + 1]. seriesPath: series =
+ *   seriesPath[d], rows filtered by the drilled series values, x unchanged; not with path or
+ *   series. heatmap xPath: x = xPath[view.xDrill.length], rows filtered by both drills; the svg
+ *   carries data-xdrill while columns can drill (the element drills from a column header,
+ *   [data-maya=axis-x] text[data-key], decoding its key); its breadcrumb is a second
+ *   <nav class="maya-crumbs" data-axis="x" aria-label=text.crumbsX> after the rows' one, root
+ *   button named by xPath[0]'s title; maya-drill-leaf from a last-level column carries
+ *   { path: xPath values, axis: "x" }. Escape pops columns first, then rows.
+ *   waterfall start: the start x is a total (first of ResolvedSpec.totals) and its rows move to
+ *   the front, so the leading-total rule draws it at its own y. Drilled (any waterfall with
+ *   path): resolve() replays the running sum up to the drilled value (start or a leading total
+ *   set it, later totals keep it, steps add) and frames the children with an opening total
+ *   text.before(value) at that sum and a closing total text.after(value) (y null: drawn as the
+ *   running total). Marks never see the replay. heatmap totals: true: Shaped.margins holds the
+ *   column, row and grand totals (aggregate over the rows of visible series; Other's column
+ *   holds the rest); categories and series stay as they were, so the ramp, table and
+ *   description ignore them unless the mark draws them.
+ *   table: resolve() applies view.filter (case-insensitive substring of x or a columns field)
+ *   before anything else sees the rows; ResolvedSpec.shown caps the rows drawn (page *
+ *   (view.page + 1), 1000 with scroll); scroll (page or scroll) makes the svg as tall as its
+ *   content through MarkOut.height and adds data-scroll (the box scrolls; the element holds the
+ *   header group at the top with a CSSOM transform). The controls slot gains, before Play,
+ *   <input type="search" class="maya-filter" data-maya="filter" aria-label placeholder=text.filter
+ *   value=view.filter>. bars (per measure), columns and cells (shape.ts strips(): per strip title
+ *   the kept by labels and per row label the values) are the mark's to draw. expand (a spec):
+ *   the mark returns MarkOut.expand, the box under the open row; build() renders
+ *   { ...subSpec(expand), data: rows whose x is the open row } at that size as a nested
+ *   <svg data-maya="expand" x y> appended after the hits group (no class, no ids, no tabindex);
+ *   a sub-chart error leaves the row shut and lands in Parts.warnings. The svg carries
+ *   data-expand when rows can open (table expand, list with an evidence level).
+ *   line drillTo: with view.drill = [series value], build() renders the sub-spec over that
+ *   series' rows (frame applied) instead of the line, with the line's crumbs (text.back, value);
+ *   was "previous" is pivoted in: the previous series' y summed per x under the field "\0was",
+ *   titled by that series' name. A sub-spec (expand, drillTo) without x or path takes the
+ *   parent's x (validate.ts subSpec); it may not set drill, zoom, frame, expand, drillTo, back,
+ *   page, scroll or filter; its errors name spec.expand.<path> / spec.drillTo.<path>.
+ *   list (core Mark, marks/list.ts): x = spec.x or path[0]; ResolvedSpec.evidence = path[1],
+ *   body, rowFormat, bars (y -> "bar" with bars: true), expanded (view.expanded, else spec.expand
+ *   "first" (default) / "all" / "none"). shape.ts moves(s) groups rows by x in data order: the
+ *   first row without an evidence value is the move's own (value, format, body), the rest are its
+ *   evidence; shape() uses only own rows, so cells, tokens and the description never sum
+ *   evidence. format.ts formatAs(s, field, rowFormat value, v) formats one row. Keys: move m~X,
+ *   evidence e~X~NAME. maya-select on a move: { x: raw move }.
+ *
  * Outputs
- *   render(spec, opts)      standalone `<svg class="maya-root">` with an embedded <style>.
+ *   render(spec, opts)     standalone `<svg class="maya-root">` with an embedded <style>.
  *                           Works as a file, in <img>, or rasterized by the hosted API.
  *   renderShell(spec, opts) `<maya-chart>` with Declarative Shadow DOM + JSON spec child.
  *                           The JSON child is the spec with rows projected to referenced
@@ -407,7 +464,9 @@
  *   [data-maya=link]  [data-depth]  [data-selected]  [data-past] (was ghosts)  [data-dash] (dashed
  *   series: path, legend swatch, end label)  [data-em] (emphasis series: path, legend swatch)
  *   svg[data-sign]  svg[data-mapped~="n"]  [data-ann] (annotate labels)  line[data-slope]
- *   [data-maya=rules] line|text  svg[data-drill]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
+ *   [data-maya=rules] line|text  svg[data-drill]  svg[data-xdrill]  svg[data-scroll]
+ *   svg[data-expand]  svg[data-maya=expand] (a table row's sub-chart)  .maya-filter
+ *   .maya-crumbs[data-axis=x]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   Theme-only hooks (set by a mark or module, styled in theme.ts, never read by the element):
  *   data-ink data-hm data-nm data-ring data-arc data-disc data-ridge data-kpi data-polar data-radar
  *   data-hex data-last data-below data-brk data-way data-lt (tint step: the colour mixed toward the ink; 0 = the parent colour, siblings and
@@ -517,6 +576,7 @@ import { beeswarm } from "./marks/beeswarm.ts";
 import { dumbbell } from "./marks/dumbbell.ts";
 import { heatmap } from "./marks/heatmap.ts";
 import { kpi } from "./marks/kpi.ts";
+import { list } from "./marks/list.ts";
 import { parallel } from "./marks/parallel.ts";
 import { ridgeline } from "./marks/ridgeline.ts";
 import { area, line } from "./marks/line.ts";
@@ -535,6 +595,7 @@ import {
   MAX_MARKS,
   ratios,
   resolve,
+  subSpec,
   themeOf,
   validateOptions,
   unset,
@@ -544,6 +605,7 @@ import type {
   Aggregate,
   Annotate,
   Axis,
+  Box,
   ChartSpec,
   LabelPlace,
   Mark,
@@ -571,6 +633,7 @@ const CORE: Readonly<Record<string, Mark>> = {
   beeswarm,
   parallel,
   table,
+  list,
 };
 
 /** Numeric rules and a bar's was values widen the value axis (a target or ghost above the data
@@ -646,13 +709,64 @@ const kebab = (s: string) => s.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase(
 const flip = (s: ResolvedSpec, on: boolean) =>
   `<button type="button" class="maya-flip" data-maya="flip" aria-pressed="${on}">${esc(t(s, "flip"))}</button>`;
 
-function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string | null): Parts {
+/** A breadcrumb nav: the root button (data-depth 0), then the trail; the last value is the current page. */
+const trail = (label: string, root: string, values: readonly string[], axis = "") =>
+  `<nav class="maya-crumbs"${axis && ` data-axis="${axis}"`} aria-label="${esc(label)}"><button type="button" data-depth="0">${esc(root)}</button>` +
+  values
+    .map(
+      (v, i) =>
+        `<span aria-hidden="true">›</span>` +
+        (i === values.length - 1
+          ? `<span aria-current="page">${esc(String(v))}</span>`
+          : `<button type="button" data-depth="${i + 1}">${esc(String(v))}</button>`),
+    )
+    .join("") +
+  `</nav>`;
+
+/** line drillTo: the sub-spec over the drilled series' rows; `was: "previous"` reads the series
+ * before it (first-appearance order) at the same x, under a NUL-prefixed field titled by its name. */
+function drillSub(spec: ChartSpec, s: ResolvedSpec, value: string): ChartSpec {
+  const sub = subSpec(spec, spec.drillTo!) as Omit<ChartSpec, "data">;
+  const ser = s.series!;
+  const rows = s.data.filter((r) => String(r[ser]) === value);
+  if (sub.was !== "previous") return { ...sub, data: rows } as ChartSpec;
+  const names = [...new Set(s.data.map((r) => String(r[ser])))];
+  const p = names[names.indexOf(value) - 1];
+  const { was: _, ...rest } = sub;
+  if (p === undefined || !sub.x) return { ...rest, data: rows } as ChartSpec;
+  const [x, y] = [sub.x, typeof sub.y === "string" ? sub.y : sub.y[0]!];
+  const prev = new Map<string, number>();
+  for (const r of s.data)
+    if (String(r[ser]) === p && typeof r[y] === "number")
+      prev.set(String(r[x]), (prev.get(String(r[x])) ?? 0) + (r[y] as number));
+  const k = "\u0000was";
+  return {
+    ...rest,
+    was: k,
+    titles: { ...rest.titles, [k]: p },
+    data: rows.map((r) => (prev.has(String(r[x])) ? { ...r, [k]: prev.get(String(r[x]))! } : r)),
+  } as ChartSpec;
+}
+
+function build(
+  spec: ChartSpec,
+  opts: RenderOptions | undefined,
+  sheet: string | null,
+  at?: Box,
+): Parts {
   spec = unset(spec);
   validateSpec(spec);
   if (opts !== undefined) validateOptions(opts);
-  // validateSpec guarantees the type is core or registered.
-  const mark = (Object.hasOwn(CORE, spec.type) ? CORE[spec.type] : MODULES.get(spec.type))!;
   const s0 = resolve(spec, opts?.view);
+  // validateSpec guarantees the type is core or registered; a drilled hexmap resolves to bar.
+  const mark = (Object.hasOwn(CORE, s0.type) ? CORE[s0.type] : MODULES.get(s0.type))!;
+  // line drillTo: the drilled series' sub-chart is the whole chart, under its breadcrumb.
+  const dv = spec.drillTo && opts?.view?.drill?.[0];
+  if (dv) {
+    const { drill: _, ...view } = opts!.view!;
+    const p = build(drillSub(spec, s0, dv), { ...opts, view }, sheet);
+    return { ...p, crumbs: trail(t(s0, "crumbs"), t(s0, "back"), [dv]) };
+  }
   // kpi back face: the back spec over the front's rows (frame applied) is the whole chart; only
   // the flip button is the front's.
   if (spec.back && opts?.view?.face === "back") {
@@ -685,7 +799,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     );
   // Scatter and beeswarm draw from rows and bin past MAX_MARKS; kpi and ridgeline thin their own
   // points; a table draws the rows that fit.
-  if (!["scatter", "beeswarm", "kpi", "ridgeline", "table"].includes(s.type))
+  if (!["scatter", "beeswarm", "kpi", "ridgeline", "table", "list"].includes(s.type))
     cap(shaped.cells.length);
 
   // Formatters are cached per (field, step): marks call fmt once per value.
@@ -873,6 +987,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     t: (k, ...a) => t(s, k, ...a),
   };
 
+  let svgH = H;
+  const warnings: string[] = [];
   let markLegend: string | null = null;
   let markTable: MarkOut["table"];
   let note = "";
@@ -1077,6 +1193,25 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     markLegend = m.legend ?? null;
     markTable = m.table;
     note = m.note ?? "";
+    svgH = m.height ?? H;
+    // table expand: the open row's sub-chart, over that row's rows, in the box the table left.
+    const ex = spec.expand;
+    let sub = "";
+    if (m.expand && s.expanded[0] !== undefined && typeof ex === "object")
+      try {
+        const rows = s.data.filter((r) => String(r[s.x]) === s.expanded[0]);
+        const b = m.expand;
+        sub = build(
+          { ...subSpec(spec, ex), data: rows } as ChartSpec,
+          { width: b.w, height: b.h },
+          null,
+          b,
+        ).svg;
+      } catch (e) {
+        // One row's rows can miss a field the whole table has: the row stays shut, the host is told.
+        if (!(e instanceof Error)) throw e;
+        warnings.push(`table expand: ${e.message.split("\n")[0]}`);
+      }
     // Area fills fade toward the baseline: one gradient per visible slot, kept in the grid group
     // (the marks group holds keyed marks only). ponytail: fixed ids, see NON-FEATURES.
     const fades =
@@ -1103,7 +1238,8 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       (rules && g("rules", rules)) +
       g("labels", (m.labels ?? "") + labels) +
       g("cross", m.cross ?? "") +
-      g("hits", m.hits);
+      g("hits", m.hits) +
+      sub;
   }
 
   // :host resolves --maya-series-1: var(--maya-accent) above these vars, so an accent override
@@ -1131,18 +1267,22 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   const svg = el(
     "svg",
     {
-      class: sheet === null ? "maya-svg" : "maya-root maya-svg",
-      viewBox: `0 0 ${W} ${H}`,
+      class: at ? null : sheet === null ? "maya-svg" : "maya-root maya-svg",
+      // A table row's sub-chart: a nested svg placed in the table's svg.
+      "data-maya": at ? "expand" : null,
+      x: at ? r(at.x) : null,
+      y: at ? r(at.y) : null,
+      viewBox: `0 0 ${W} ${svgH}`,
       width: W,
-      height: H,
+      height: svgH,
       // A table has focusable sort headers, which an img role would hide (children presentational).
       role: s.type === "table" ? "figure" : "img",
       // Standalone SVGs may share a page, so they can't use fixed ids; shadow roots scope them.
       // aria-label, not a <title>, in the element path: a root <title> pops the browser's own
       // tooltip over every hover. A standalone svg keeps the <title> too, for file viewers.
       "aria-label": titleText(s),
-      "aria-describedby": sheet === null ? "maya-d" : null,
-      tabindex: sheet === null ? "0" : null,
+      "aria-describedby": sheet === null && !at ? "maya-d" : null,
+      tabindex: sheet === null && !at ? "0" : null,
       style: sheet === null ? null : style || null,
       "data-plot": `${r(plot.x)} ${r(plot.y)} ${r(plot.w)} ${r(plot.h)}`,
       ...f?.attrs,
@@ -1157,20 +1297,21 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
       "data-pt": body.includes('data-maya="line"') || null,
       // ponytail: over 500 marks the svg is data-still: hover dim and glide are instant (theme.ts, NON-FEATURES.md).
       "data-still": body.split('data-maya="mark"').length > 501 || null,
-      // A click can drill further (pointer cursor on marks).
-      // A flow shows one level more than it has left to drill: its drilled node is its first column.
-      "data-drill":
-        (s.drill &&
-          (s.type === "sankey" || s.type === "chord"
-            ? s.drilled.length < s.path.length + Math.max(0, s.drilled.length - 1) - 1
-            : s.path.length > 1)) ||
-        null,
+      // A click can drill further (pointer cursor on marks): "series" when the gesture pushes the
+      // mark's series (seriesPath, drillTo), else empty (its category or branch).
+      "data-drill": s.drillOn === "series" ? "series" : s.drillOn === "x" || null,
+      // heatmap xPath: a column header click drills the columns.
+      "data-xdrill": (s.drill && s.xPath.length > 1) || null,
+      // table page or scroll: the svg is as tall as its rows and the box scrolls.
+      "data-scroll": s.scroll || null,
+      // table expand, list: rows open on click or Enter.
+      "data-expand": s.expand || null,
     },
     (sheet ? `<style>${sheet}</style>` : "") +
       (sheet === null ? "" : el("title", {}, esc(titleText(s)))) +
       el(
         "desc",
-        { id: sheet === null ? "maya-d" : null },
+        { id: sheet === null && !at ? "maya-d" : null },
         esc(
           describe(s, shaped, fmt, s.radar ? "Radar" : mark.noun) +
             (s.description === null ? (note && " " + note) + said : ""),
@@ -1276,24 +1417,27 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
             : "",
         ].filter(Boolean),
       ) +
+      (s.filter !== null
+        ? el("input", {
+            type: "search",
+            class: "maya-filter",
+            "data-maya": "filter",
+            "aria-label": t(s, "filter"),
+            placeholder: t(s, "filter"),
+            value: s.filter,
+          })
+        : "") +
       (fr && fr[1].length > 1
         ? `<button type="button" class="maya-play" data-maya="play">${esc(t(s, "play"))}</button>`
         : "") +
       (spec.back ? flip(s, false) : ""),
+    // root: nothing reserved (#66.3). heatmap xPath columns get their own nav (data-axis="x"),
+    // its root button named by the first column level.
     crumbs:
-      s.drilled.length > 0
-        ? `<nav class="maya-crumbs" aria-label="${esc(t(s, "crumbs"))}"><button type="button" data-depth="0">${esc(t(s, "back"))}</button>` +
-          s.drilled
-            .map(
-              (v, i) =>
-                `<span aria-hidden="true">›</span>` +
-                (i === s.drilled.length - 1
-                  ? `<span aria-current="page">${esc(String(v))}</span>`
-                  : `<button type="button" data-depth="${i + 1}">${esc(String(v))}</button>`),
-            )
-            .join("") +
-          `</nav>`
-        : "", // root: nothing reserved (#66.3)
+      (s.drilled.length ? trail(t(s, "crumbs"), t(s, "back"), s.drilled) : "") +
+      (s.xDrilled.length
+        ? trail(t(s, "crumbsX"), s.titles.get(spec.xPath![0]!) ?? spec.xPath![0]!, s.xDrilled, "x")
+        : ""),
     // Built on first read: the element inserts the table when the browser is idle.
     get table() {
       return (tbl ??= s.table ? dataTable(s, shaped, fmt, toneText, markTable) : "");
@@ -1305,6 +1449,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     style,
     vars,
     warnings: [
+      ...warnings,
       ...(shaped.capped
         ? [
             `${s.type}: ${shaped.capped[1]} categories: the top ${shaped.capped[0]} are drawn, the rest are in Other. Set spec.limit to choose.`,
@@ -1357,7 +1502,7 @@ function project(spec: ChartSpec): ChartSpec {
   };
 }
 
-/** Every field a spec references (a kpi's back face too). */
+/** Every field a spec references (sub-charts too). */
 function used(spec: Omit<ChartSpec, "data">): Set<unknown> {
   const keep = (o: object | string | undefined) => (typeof o === "object" ? Object.keys(o) : []);
   const was = spec.was;
@@ -1380,10 +1525,18 @@ function used(spec: Omit<ChartSpec, "data">): Set<unknown> {
     spec.size,
     spec.name,
     ...(spec.path ?? []),
+    ...(spec.seriesPath ?? []),
+    ...(spec.xPath ?? []),
+    ...(spec.columns ?? []),
+    ...Object.values(spec.cells ?? {}).flatMap((c) => [c.field, c.by]),
+    spec.body,
+    spec.rowFormat,
     typeof spec.colorBy === "string" ? spec.colorBy : undefined,
     ...keep(spec.format),
     ...keep(spec.titles),
     ...(spec.back ? used(spec.back) : []),
+    ...(typeof spec.expand === "object" ? used(spec.expand) : []),
+    ...(spec.drillTo ? used(spec.drillTo) : []),
   ]);
 }
 
