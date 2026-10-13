@@ -53,6 +53,7 @@ Fixes #76, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #88, #89, #90, #91,
 - Text keys `peerMean`, `brushed` and `brushCleared`.
 - A table whose `filter` matches no row says "No rows match \"{0}\"" (text key `noMatch`) and keeps the search box. Text key `moreMoves` ("+{0} more") for the insight list's dropped rows. Fixes #84.
 - Text key `rowsOf` ("{0} of {1}") for a table's row count when rows are paged or limited. A drilled marimekko drops its slot legend (its segments are tints). Heatmap column labels that drill further end in a chevron, and the row crumb root is named by the first path level.
+- Hardening: `back` refuses the options `expand` and `drillTo` refuse (drill, zoom, frame, expand, drillTo, back, page, scroll, filter). Options nested more than 24 levels, or cyclic, are `invalid-option` instead of a stack overflow. A registered theme is checked again when a chart reads it. A `drillTo` with `was: "previous"` whose previous series shares no x draws without the comparison.
 
 - `aggregate` keyed by y field with a `y` array that toggles the measure, such as `aggregate: { price: { ratio: ["sales", "units"] } }`; the active measure uses its rule and unlisted fields sum (#76).
 - A series selector in data tokens: `{max.y:2025}`, `{last.y:2025}`, `{first.x:2025}`, `{total:2025}`, `{mean:2025}` read only that series. Without one, max, min, first and last read one point and `{total}` sums every series, as documented (#76).

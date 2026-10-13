@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { renderParts } from "../src/core/render.ts";
 import "../src/hierarchy.ts";
+import { addThemes } from "../src/core/registry.ts";
+import { MayaSpecError } from "../src/core/validate.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 const P = (s: object, view?: object) =>
@@ -57,5 +59,53 @@ describe("M5 core leftovers", () => {
   it("rowsOf is a text key", async () => {
     const { TEXT } = await import("../src/core/strings.ts");
     expect(TEXT.rowsOf).toBe("{0} of {1}");
+  });
+
+  it("drillTo was previous with no shared x drops was instead of failing", () => {
+    const data = [
+      { m: "Jan", y: "2024", v: 1 },
+      { m: "Feb", y: "2024", v: 2 },
+      { m: "Mar", y: "2025", v: 3 },
+    ];
+    const spec = {
+      type: "line",
+      x: "m",
+      y: "v",
+      series: "y",
+      drillTo: { type: "bar", x: "m", y: "v", was: "previous" },
+      data,
+    };
+    const svg = P(spec, { drill: ["2025"] }).svg;
+    expect(svg).toContain("<svg");
+    expect(svg).not.toContain("data-past");
+  });
+  it("a registry theme is checked again when read", () => {
+    addThemes({ evil: { accent: "red; background:url(javascript:alert(1))" } as never });
+    const spec = { type: "bar", x: "c", y: "v", theme: "evil", data: [{ c: "a", v: 1 }] };
+    expect(() => P(spec)).toThrow(MayaSpecError);
+  });
+  it("back takes the options a sub-chart cannot use, like expand and drillTo", () => {
+    const spec = {
+      type: "kpi",
+      x: "c",
+      y: "v",
+      back: { type: "bar", x: "c", y: "v", drill: true },
+      data: [{ c: "a", v: 1 }],
+    };
+    expect(() => P(spec)).toThrow(/back\.drill/);
+  });
+  it("deeply nested or cyclic options throw MayaSpecError, not RangeError", () => {
+    const deep = (key: string) => {
+      const root: Record<string, unknown> = {};
+      let o = root;
+      for (let i = 0; i < 20000; i++) o = (o[key] = {}) as Record<string, unknown>;
+      return root;
+    };
+    const base = { type: "kpi", x: "c", y: "v", data: [{ c: "a", v: 1 }] };
+    for (const extra of [{ back: deep("back") }, { format: deep("a") }, { colors: deep("a") }])
+      expect(() => P({ ...base, ...extra })).toThrow(MayaSpecError);
+    const cyc: Record<string, unknown> = {};
+    cyc.a = cyc;
+    expect(() => P({ ...base, format: cyc })).toThrow(MayaSpecError);
   });
 });

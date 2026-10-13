@@ -926,6 +926,8 @@ function drillSub(spec: ChartSpec, s: ResolvedSpec, value: string): ChartSpec {
   for (const r of s.data)
     if (String(r[ser]) === p && typeof r[y] === "number")
       prev.set(String(r[x]), (prev.get(String(r[x])) ?? 0) + (r[y] as number));
+  // No shared x: nothing to compare, so no was (a field no row holds would fail validation).
+  if (!rows.some((r) => prev.has(String(r[x])))) return { ...rest, data: rows } as ChartSpec;
   const k = "\u0000was";
   return {
     ...rest,

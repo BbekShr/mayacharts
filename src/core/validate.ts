@@ -268,7 +268,12 @@ export const ratios = (a: ChartSpec["aggregate"]): [string, readonly string[]][]
   );
 };
 const show = (v: unknown) => {
-  const t = typeof v === "string" || isObj(v) || Array.isArray(v) ? JSON.stringify(v) : String(v);
+  let t: string;
+  try {
+    t = typeof v === "string" || isObj(v) || Array.isArray(v) ? JSON.stringify(v) : String(v);
+  } catch {
+    t = "[too deep]"; // a RangeError on deep JSON, a TypeError on a cycle
+  }
   return t.length > 60 ? t.slice(0, 59) + "…" : t;
 };
 
@@ -352,7 +357,10 @@ const themeParts = (th: unknown): [string | null, unknown] =>
 /** spec.theme as tokens: a name (or [name, overrides]) resolved through the registry. */
 export const themeOf = (th: ChartSpec["theme"]): ThemeTokens => {
   const [n, over] = themeParts(th ?? {});
-  return { ...(n === null ? {} : THEMES.get(n)), ...(over as ThemeTokens) };
+  const named = n === null ? undefined : THEMES.get(n);
+  // The registry is shared by every bundle on the page: check what it hands back, not only what we put in.
+  if (named) tokens(named, `theme ${JSON.stringify(n)}: `);
+  return { ...named, ...(over as ThemeTokens) };
 };
 
 /**
@@ -768,6 +776,25 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         own(HINTS, k) ?? dym(k, KEYS),
         `Known options: ${KEYS.join(", ")}.`,
       );
+
+  // Hostile JSON: options nested deeper than any real spec (or cyclic, or huge) are refused here,
+  // before a recursive walk (JSON.stringify, sub-specs) would overflow the stack.
+  {
+    const todo: [unknown, number][] = Object.entries(s)
+      .filter(([k]) => k !== "data")
+      .map(([, v]) => [v, 1]);
+    for (let n = 0, t; (t = todo.pop()); n++) {
+      const [v, d] = t;
+      if (n > 1e5 || (d > 24 && typeof v === "object" && v !== null))
+        F(
+          "invalid-option",
+          "spec",
+          "is nested too deeply (or is cyclic): options hold at most 24 levels.",
+        );
+      if (typeof v === "object" && v !== null)
+        for (const c of Object.values(v)) todo.push([c, d + 1]);
+    }
+  }
 
   const type = s.type;
   if (type === undefined)
@@ -1434,10 +1461,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (k === "back" && b.type === "kpi")
       F("invalid-option", "back.type", 'must not be "kpi": the back face is another chart.');
     // A sub-chart has no state of its own: these would never respond.
-    if (k !== "back")
-      for (const o of w("drill zoom frame expand drillTo back page scroll filter"))
-        if (b[o] !== undefined)
-          F("invalid-option", `${k}.${o}`, "is not available in a sub-chart.");
+    for (const o of w("drill zoom frame expand drillTo back page scroll filter"))
+      if (b[o] !== undefined) F("invalid-option", `${k}.${o}`, "is not available in a sub-chart.");
     const prev = k === "drillTo" && b.was === "previous";
     if (prev && !ONLY.was!.includes(b.type as string))
       F("option-unsupported", "drillTo.was", `${NS.replace("spec.type", "spec.drillTo.type")}`);
