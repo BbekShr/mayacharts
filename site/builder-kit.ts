@@ -846,20 +846,16 @@ export const cutNote = (spec: ChartSpec): string =>
     : "";
 
 /**
- * chart.js for ThoughtSpot: the spec without rows, and the host adapter. The tile loads the library
- * itself, so the order of its tabs never matters, and a failed load still reports render-complete.
+ * chart.js for ThoughtSpot: the spec without rows, and the host adapter. chart.html loads the
+ * library, so chart.js stays light; it draws on window load when it runs before the library.
  * Rows, cell unwrapping and the settled signal come from maya.host.thoughtspot.
  */
 export function thoughtSpotJs(spec: ChartSpec): string {
   const { data: _, ...rest } = spec;
   return `// Column names match case-insensitively; a /regex/ works too (x: /item/i).
 const spec = ${flat(JSON.stringify(rest, null, 2)).replace(/</g, "\\u003c")};
-// Pin this file: add integrity: "sha384-..." and crossOrigin: "anonymous" from the release summary.
-document.head.append(Object.assign(document.createElement("script"), {
-  src: "${CDN}",
-  onload: () => maya.host.thoughtspot(viz, spec),
-  onerror: () => { document.getElementById("chart").textContent = "MayaCharts did not load"; viz?.events?.emitRenderCompletedEvent?.(); },
-}));
+const draw = () => maya.host.thoughtspot(viz, spec);
+window.maya ? draw() : window.addEventListener("load", draw);
 `;
 }
 
@@ -889,7 +885,8 @@ export function snippets(spec: ChartSpec): Record<Tab, File[]> {
     ThoughtSpot: [
       {
         name: "chart.html",
-        code: `<!-- chart.js loads mayaCharts and draws into this element. -->
+        code: `<!-- Pin this file: add integrity="sha384-..." and crossorigin="anonymous" from the release summary. -->
+<script src="${CDN}"></script>
 <maya-chart id="chart"></maya-chart>
 `,
       },
