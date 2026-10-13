@@ -4,7 +4,7 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
-## Unreleased
+## 0.18.0 - 2026-10-13
 
 ### Changed
 
@@ -12,6 +12,9 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Fixed
 
+- Hovering an open table row no longer groups it with the first bar of its own sub-chart: the tooltip showed that bar's value and the bar lit with the row.
+- Opening a different table row crossfades the sub-chart. It used to slide the old row's sub-chart into the new row, with the rows passing through it and one row's bars morphing into the other's. The sub-chart svg now carries `data-row` (the open row's x).
+- Scatter trail segments are keyed by the frame they start at, so past segments stay put on every frame step (Chromium slid them off their dots, WebKit drew the trail twice).
 - `theme.labelInkOnFill` now reaches labels on dark fills in browsers without relative colours; the stylesheet read `--maya-label-ink-on` instead of `--maya-label-ink-on-fill`.
 
 ### Docs
