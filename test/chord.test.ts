@@ -55,9 +55,9 @@ describe("chord", () => {
   it("is deterministic", () => {
     expect(svg(spec)).toBe(svg(spec));
   });
-  it("rejects a path that is not two levels", () => {
+  it("rejects a path that is not two or three levels", () => {
     expect(() => svg({ ...spec, path: ["region"] })).toThrow();
-    expect(() => svg({ ...spec, path: ["region", "fam", "v"] })).toThrow();
+    expect(() => svg({ ...spec, path: ["region", "fam", "v", "w"] })).toThrow();
   });
   it("zero values are rejected", () => {
     expect(() => svg({ ...spec, data: [{ region: "A", fam: "B", v: 0 }] })).toThrow();

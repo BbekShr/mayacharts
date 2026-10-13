@@ -18,6 +18,7 @@ export type ChartType =
   | "beeswarm"
   | "parallel"
   | "table"
+  | "list"
   | "treemap"
   | "sunburst"
   | "sankey"
@@ -153,6 +154,17 @@ export interface Goal {
   readonly better?: "higher" | "lower";
 }
 
+/** A table `cells` entry: one square per distinct `by` value holding `field`, toned by sign. */
+export interface StripCell<F extends string = string> {
+  readonly type: "strip";
+  readonly field: F;
+  readonly by: F;
+  /** Keep the last n `by` values (data order). */
+  readonly last?: number;
+  /** The only tone: "sign" (the default). */
+  readonly tone?: "sign";
+}
+
 /** Field names of row type `R` (autocompletes for typed rows; `string` for `Row`). */
 export type Field<R> = Extract<keyof R, string>;
 
@@ -198,9 +210,15 @@ export interface ChartSpec<R extends object = Row> {
   /** Splits rows into series (heatmap: the row category; dumbbell: exactly two, from and to; ridgeline: one row each; marimekko: the segments; radial: stacked outward; boxplot: boxes side by side; weave: one thread each, required; constellation: colours the stars by group). bar line area scatter heatmap dumbbell ridgeline beeswarm parallel marimekko radial boxplot weave constellation.
    * @example series: "region" */
   series?: Field<R>;
-  /** Hierarchy fields, outer to inner. treemap sunburst sankey chord; bar line area dumbbell table marimekko with `drill` (replaces `x`); heatmap with `drill` (replaces `series`, the rows).
+  /** Hierarchy fields, outer to inner. treemap sunburst sankey chord (chord: 2 or 3 levels, a third splits the target arcs while the sources stay); bar line area dumbbell table radial waffle hexmap waterfall marimekko with `drill` (replaces `x`; hexmap draws a drilled level as bars; marimekko without `series`: the next level is the series); heatmap with `drill` (replaces `series`, the rows); list: [headline, evidence].
    * @example path: ["region", "state"] */
   path?: readonly Field<R>[];
+  /** Series hierarchy, outer to inner: the series is the current level, and the drill gesture on a mark splits its series into the next level (view.drill holds the series values). Not with `path` or `series`. bar line area.
+   * @example seriesPath: ["family", "itemType"] */
+  seriesPath?: readonly Field<R>[];
+  /** Column hierarchy, outer to inner: replaces `x` and drills on its own from a column header (view.xDrill), beside `path` on the rows. heatmap only.
+   * @example xPath: ["family", "itemType"] */
+  xPath?: readonly Field<R>[];
   /** Levels drawn at once below the current branch, each parent holding its children under a name strip; a click drills into the parent under the pointer. Default: 1 with `drill`, every level without. treemap only.
    * @example depth: 2 */
   depth?: number;
@@ -213,9 +231,12 @@ export interface ChartSpec<R extends object = Row> {
   /** Point identity and tooltip title (units: one dot per row, keyed by it). scatter, beeswarm, boxplot (outliers and dots) and units.
    * @example name: "country" */
   name?: Field<R>;
-  /** x values drawn as running-total bars; one before any step opens at its own y (last year's figure). waterfall only.
-   * @example totals: ["Q1", "FY"] */
-  totals?: readonly string[];
+  /** x values drawn as running-total bars; one before any step opens at its own y (last year's figure). waterfall; heatmap: `true` adds a Total row and column (combined by `aggregate` over the visible rows).
+   * @example totals: ["Q1", "FY"] or totals: true */
+  totals?: readonly string[] | true;
+  /** The x value of the opening total: drawn first, at its own y (last year's figure). A drilled level opens at the running total before the drilled step and closes after it (text.before, text.after). waterfall only.
+   * @example start: "2025 YTD" */
+  start?: string;
   /** Stack series instead of grouping them; "percent" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0); "stream" (area only) centres the stack on a wiggle baseline (a streamgraph: values 0 or more, value axis and grid off by default, the tooltip shows each value). bar and area only.
    * An array of 2 or more distinct modes (false: grouped bars or overlaid areas) adds a control that switches between them, first one shown (view.stack indexes it).
    * @example stack: "percent" or stack: "stream" or stack: [true, "percent"] */
@@ -254,6 +275,36 @@ export interface ChartSpec<R extends object = Row> {
   /** Radial form: "bars" (stacked radial bars) or "line" (radar: one closed line per series, angle = x, radius = y from zero; `dash` draws series dashed). Default "bars". radial only.
    * @example form: "line" */
   form?: "bars" | "line";
+  /** table: a sub-chart under a row (a spec without `data`, over that row's rows; without `x` or `path` it takes the table's x); a click or Enter opens it, one row at a time (view.expanded). list: which moves start open, "first" (default), "none" or "all". table list.
+   * @example expand: { type: "bar", x: "month", y: "sales", was: "lastYear" } or expand: "all" */
+  expand?: Omit<ChartSpec<R>, "data" | "expand"> | "first" | "none" | "all";
+  /** A sub-chart that replaces the line when a series is drilled (a spec without `data`, over that series' rows; without `x` it takes the line's x). `was: "previous"` compares with the previous series at the same x. view.drill holds the series; Back and Escape return. line only, with `series`.
+   * @example drillTo: { type: "bar", y: "monthly", was: "previous" } */
+  drillTo?: Omit<ChartSpec<R>, "data" | "drillTo">;
+  /** Rows shown at first; a "Show n more" row (text.showMore) adds n each time (view.page). The table grows and scrolls inside the tile. table only.
+   * @example page: 25 */
+  page?: number;
+  /** Draw every row (at most 1000) and scroll inside the tile, the header held at the top. table only.
+   * @example scroll: true */
+  scroll?: boolean;
+  /** A search box (text.filter) keeping rows whose x or `columns` value contains the text, ignoring case (view.filter). table only.
+   * @example filter: true */
+  filter?: boolean;
+  /** table: the bar in each measure cell, "bar" (default, magnitude), "diverging" (left or right of the cell centre, theme `up` and `down`) or "none". list: `true` draws the evidence as bars on a scale local to each move. table list.
+   * @example bars: { sales: "bar", vsType: "diverging", units: "none" } or bars: true */
+  bars?: Readonly<Partial<Record<Field<R>, "bar" | "diverging" | "none">>> | boolean;
+  /** Text fields shown as their own columns after the row label (each row's first value), sortable and matched by `filter`. table only.
+   * @example columns: ["itemType", "region"] */
+  columns?: readonly Field<R>[];
+  /** Extra columns keyed by title. "strip": one square per distinct `by` value (data order; the last `last` of them) holding `field` combined by `aggregate`, toned by sign. table only.
+   * @example cells: { Form: { type: "strip", field: "change", by: "month", last: 5 } } */
+  cells?: Readonly<Record<string, StripCell<Field<R>>>>;
+  /** Text field shown under each headline (at most two lines on small tiles). list only.
+   * @example body: "text" */
+  body?: Field<R>;
+  /** Field holding each row's own format, a preset or a template ("currency", "{value} pts"). list only.
+   * @example rowFormat: "format" */
+  rowFormat?: Field<R>;
   /** Forms a units chart switches between, first one shown (view.form picks another); the element adds a form control when there are 2 or more. Default all three. units only.
    * @example forms: ["waffle", "swarm"] */
   forms?: readonly ("waffle" | "bars" | "swarm")[];
@@ -316,7 +367,7 @@ export interface ChartSpec<R extends object = Row> {
   /** How values map to the colour ramp: "linear" (default), "rank" (even steps by order, for skewed totals), "quantile" (five equal-count classes; the legend shows the breaks) or "log" (values above 0). heatmap hexmap.
    * @example colorScale: "rank" */
   colorScale?: "linear" | "rank" | "quantile" | "log";
-  /** Children take evenly spaced tints of their parent's colour instead of their own palette slots: drilled levels of a `path` (the parent is the drilled value, coloured by `colors` or its slot), and weave threads under a group `colorBy` (the parent is the group). A `colors` map then names path values or groups. treemap sunburst sankey chord weave.
+  /** Children take evenly spaced tints of their parent's colour instead of their own palette slots: drilled levels of a `path` (the parent is the drilled value, coloured by `colors` or its slot), and weave threads under a group `colorBy` (the parent is the group). A `colors` map then names path values or groups. treemap sunburst sankey chord waffle weave.
    * @example tint: true */
   tint?: boolean;
   /** Drag a range on an axis to keep the lines inside it (ranges on several axes combine with AND; the rest dim); a click on the axis clears it. State in view.brush, reported by maya-view. parallel only.
@@ -332,13 +383,13 @@ export interface ChartSpec<R extends object = Row> {
   /** Line and area: name each series at its right end and drop the legend (keep it with `legend: true`). Default true.
    * @example endLabels: false */
   endLabels?: boolean;
-  /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With `select` too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires `maya-drill-leaf`. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap marimekko with `path`.
+  /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With `select` too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires `maya-drill-leaf`. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap radial waffle hexmap waterfall marimekko with `path`; bar line area with `seriesPath`; heatmap with `xPath`.
    * @example drill: true */
   drill?: boolean;
   /** With `drill`: a click on empty chart space goes back up one level. Default true.
    * @example drillOut: false */
   drillOut?: boolean;
-  /** Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. `{ peers: field }` (beeswarm) selects one mark and also lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
+  /** Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. `{ peers: field }` (beeswarm) selects one mark and also lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points; list: a move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
    * @example select: "multi" or select: { peers: "itemType" } */
   select?: true | "multi" | { readonly peers: Field<R> };
   /** Drag to zoom. line, area, scatter. Reset chip, double-click and Escape restore.
@@ -402,6 +453,14 @@ export interface View {
   stack?: number;
   /** kpi with `back`: which face shows. Default "front". */
   face?: "front" | "back";
+  /** heatmap `xPath`: drilled column branch, one raw value per level, outer first. */
+  xDrill?: readonly string[];
+  /** table `expand` and list: the open row's raw x value; "" closes every row. Default: none open (list: spec.expand). */
+  expanded?: string;
+  /** table `page`: pages added by "Show n more" (0 = the first page only). */
+  page?: number;
+  /** table `filter`: the search text. */
+  filter?: string;
 }
 
 export interface RenderOptions {
@@ -428,6 +487,8 @@ export interface MayaErrorDetail {
 /** maya-drill-leaf: the drill gesture on a mark at the last level. `path`: one raw value per `path` level, root first. */
 export interface MayaDrillLeafDetail {
   path: string[];
+  /** "x" when a heatmap column (xPath) is at its last level; `path` then holds xPath values. */
+  axis?: "x";
 }
 /** maya-settled: after the last animation of a render (with maya-render when nothing animates), and after maya-error with that error. */
 export interface MayaSettledDetail {
@@ -528,8 +589,40 @@ export interface ResolvedSpec {
   form: number;
   /** Remaining path levels below the drilled branch ([] when no path). */
   path: string[];
-  /** Applied drill values, outer first ([] at the root). */
+  /** Applied drill values, outer first ([] at the root). seriesPath: series values; a chord with 3 levels: the target only. */
   drilled: string[];
+  /** What the drill gesture pushes now: "x" (the category or branch), "series" (seriesPath, drillTo: the mark's data-series), or null (nothing deeper, or drill off). */
+  drillOn: "x" | "series" | null;
+  /** heatmap: xPath levels below view.xDrill ([] without xPath); x is its first. */
+  xPath: string[];
+  /** heatmap: applied column drill values, outer first. */
+  xDrilled: string[];
+  /** waterfall spec.start (it is also a total); null when unset. */
+  start: string | null;
+  /** heatmap totals: true (Shaped.margins). */
+  margins: boolean;
+  /** table: most rows drawn (page * (view.page + 1); 1000 with scroll); null = the rows that fit. */
+  shown: number | null;
+  /** table page or scroll: the svg is as tall as its rows (MarkOut.height) and scrolls in the tile. */
+  scroll: boolean;
+  /** table: view.filter when spec.filter (data is already filtered); null otherwise. */
+  filter: string | null;
+  /** table: spec.columns ([] when unset). */
+  columns: readonly string[];
+  /** table: spec.cells strips by column title, in spec order. */
+  cells: ReadonlyMap<string, { field: string; by: string; last: number | null }>;
+  /** Bar kind per measure: table spec.bars (unlisted "bar"); list: y is "bar" with bars: true, else "none". */
+  bars: ReadonlyMap<string, "bar" | "diverging" | "none">;
+  /** Rows open: table with an expand sub-spec, list with an evidence level. */
+  expand: boolean;
+  /** Open rows (raw x values): view.expanded ("" = none), else list's spec.expand default. */
+  expanded: readonly string[];
+  /** list: path[1], the evidence field; null otherwise. */
+  evidence: string | null;
+  /** list: spec.body; null otherwise. */
+  body: string | null;
+  /** list: spec.rowFormat; null otherwise. */
+  rowFormat: string | null;
   /** Drilled: `slots` of the outermost drilled value (its palette slot, so a sunburst keeps the
    * branch's colour); null at the root. */
   hue: number | null;
@@ -654,6 +747,8 @@ export interface Shaped {
   index: number[] | null;
   /** A bar with more categories than fit kept the top N and rolled the rest into Other: [N, categories before]; null otherwise. */
   capped: [kept: number, total: number] | null;
+  /** heatmap totals: true: each column's total (parallel to categories), each row's (parallel to series) and the grand total, combined by aggregate over the rows of visible series; absent otherwise. */
+  margins?: { x: (number | null)[]; series: (number | null)[]; all: number | null };
 }
 
 export interface BandScale {
@@ -789,6 +884,10 @@ export interface MarkOut {
   /** Replaces the hidden data table (plain text, escaped by a11y.ts): boxplot five numbers, funnel steps.
    * The first cell of each row is its row header. */
   table?: { head: readonly string[]; rows: readonly (readonly string[])[] };
+  /** The svg's height when the content is taller than the box (table page or scroll). */
+  height?: number;
+  /** Where an expanded table row's sub-chart goes: render.ts draws it there as `<svg data-maya="expand">`. */
+  expand?: Box;
 }
 
 /** A chart type. Core marks live in render.ts's CORE map; modules `register()` theirs. */

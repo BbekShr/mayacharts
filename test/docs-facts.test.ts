@@ -16,12 +16,12 @@ const only = (k: string) => [...ONLY[k]!].sort();
 describe("docs state what the code says", () => {
   it("type counts in README and the home page", () => {
     // ponytail: the counts are spelled out as words, so a new type fails here until the prose follows.
-    expect(TYPES).toHaveLength(27);
-    expect(CORE_TYPES).toHaveLength(12);
+    expect(TYPES).toHaveLength(28);
+    expect(CORE_TYPES).toHaveLength(13);
     expect(Object.keys(MODULE_OF)).toHaveLength(15);
-    for (const s of ["Twenty-seven chart types", "Show all 27 specs", "Twelve chart types with"])
+    for (const s of ["Twenty-eight chart types", "Show all 28 specs", "Thirteen chart types with"])
       expect(readme).toContain(s);
-    expect(index).toContain("<strong>27</strong>");
+    expect(index).toContain("<strong>28</strong>");
     expect(index).toContain("fifteen are optional modules");
   });
   it("README module table equals MODULE_OF", () => {

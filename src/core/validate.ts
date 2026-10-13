@@ -47,6 +47,7 @@ import type {
   RenderOptions,
   ResolvedGoal,
   ResolvedSpec,
+  Row,
   Rule,
   ThemeTokens,
   View,
@@ -75,11 +76,11 @@ export const MAX_POINTS = 1000;
 
 const w = (s: string) => s.split(" ");
 const S: Record<string, "string" | "boolean"> = Object.fromEntries([
-  ...w("$schema x y2 series size name title subtitle description locale currency frame").map(
-    (k) => [k, "string"],
-  ),
   ...w(
-    "horizontal labels endLabels drill drillOut zoom grid xAxis yAxis table animate tint brush zero toggle",
+    "$schema x y2 series size name title subtitle description locale currency frame start body rowFormat",
+  ).map((k) => [k, "string"]),
+  ...w(
+    "horizontal labels endLabels drill drillOut zoom grid xAxis yAxis table animate tint brush zero toggle scroll filter",
   ).map((k) => [k, "boolean"]),
 ]);
 /** Every spec key (schema.json is tested against this). */
@@ -89,11 +90,21 @@ export const KEYS = [
   ),
   ...w("was tooltip xScale yScale annotate dash depth minAngle legend form emphasis colorScale"),
   ...w("colors colorBy theme compare numberMotion back arc"),
+  ...w("seriesPath xPath expand drillTo page bars columns cells"),
   ...Object.keys(S),
 ];
 const CART = ["bar", "line", "area"];
 /** Types whose x can come from path with drill (the current level is the category). */
-const PATHX = [...CART, "dumbbell", "table", "marimekko"];
+const PATHX = [
+  ...CART,
+  "dumbbell",
+  "table",
+  "marimekko",
+  "radial",
+  "waffle",
+  "hexmap",
+  "waterfall",
+];
 /** Types that take path only for drill: PATHX, and heatmap, whose path replaces series (its rows). */
 const DRILLP = [...PATHX, "heatmap"];
 const PATH = ["treemap", "sunburst", "sankey", "chord"];
@@ -106,10 +117,11 @@ export const ALL_Y = ["parallel", "table", "funnel", "constellation", "kpi"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
-const DRL = `${CPA},dumbbell,table,heatmap,marimekko,${PTH}`;
+const DRL = `${CPA},dumbbell,table,heatmap,marimekko,radial,waffle,hexmap,waterfall,${PTH}`;
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge,heatmap forms:units size:scatter,beeswarm,constellation name:scatter,beeswarm,boxplot,units path:${DRL} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation,weave xDomain:scatter drill:${DRL} drillOut:${DRL} depth:treemap minAngle:sunburst select:${CPA},waterfall,scatter,heatmap,kpi,dumbbell,ridgeline,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter,dumbbell,beeswarm frame:${CPA},scatter,dumbbell,kpi xScale:scatter yScale:line,scatter,beeswarm annotate:${CPA},scatter dash:line,area,radial emphasis:line form:radial colorScale:heatmap,hexmap tint:${PTH},weave brush:parallel zero:dumbbell toggle:kpi,gauge compare:kpi numberMotion:kpi back:kpi arc:gauge`,
+    `seriesPath:${CPA} xPath:heatmap start:waterfall expand:table,list drillTo:line page:table scroll:table filter:table bars:table,list columns:table cells:table body:list rowFormat:list ` +
+      `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge,heatmap forms:units size:scatter,beeswarm,constellation name:scatter,beeswarm,boxplot,units path:${DRL},list totals:waterfall,heatmap series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation,weave xDomain:scatter drill:${DRL} drillOut:${DRL} depth:treemap minAngle:sunburst select:${CPA},waterfall,scatter,heatmap,kpi,dumbbell,ridgeline,beeswarm,parallel,table,list,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter,dumbbell,beeswarm frame:${CPA},scatter,dumbbell,kpi xScale:scatter yScale:line,scatter,beeswarm annotate:${CPA},scatter dash:line,area,radial emphasis:line form:radial colorScale:heatmap,hexmap tint:${PTH},waffle,weave brush:parallel zero:dumbbell toggle:kpi,gauge compare:kpi numberMotion:kpi back:kpi arc:gauge`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -189,6 +201,10 @@ const HINTS: Record<string, string> = {
   comparisons: 'Use compare: ["previous", "was", "target"] (kpi).',
   odometer: 'Use numberMotion: "roll" (kpi).',
   sweep: "Use arc: 180, 270 or 360 (gauge).",
+  pageSize: "Use page: <rows> (table), or scroll: true.",
+  search: "Use filter: true (table).",
+  dimensions: 'Use columns: ["<text field>"] (table).',
+  sparkline: 'Use cells: { <title>: { type: "strip", field, by } } (table).',
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -431,7 +447,40 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
     (v) => typeof v === "string" || strs(v, 1),
   ],
   ["path", "a non-empty array of field names", (v) => strs(v, 1)],
-  ["totals", "an array of x values (strings)", (v) => strs(v)],
+  ["seriesPath", "a non-empty array of field names", (v) => strs(v, 1)],
+  ["xPath", "a non-empty array of field names", (v) => strs(v, 1)],
+  ["columns", "an array of field names", (v) => strs(v)],
+  ["totals", "an array of x values (strings), or true (heatmap)", (v) => v === true || strs(v)],
+  ["page", "a positive integer", (v) => Number.isInteger(v) && v > 0],
+  [
+    "expand",
+    'a chart spec without data (table), or "first", "none" or "all" (list)',
+    (v) => isObj(v) || v === "first" || v === "none" || v === "all",
+  ],
+  ["drillTo", "a chart spec without data", (v) => isObj(v)],
+  [
+    "bars",
+    '{ <y field>: "bar" | "diverging" | "none" } (table), or a boolean (list)',
+    (v) =>
+      v === !!v ||
+      (isObj(v) && Object.values(v).every((b) => b === "bar" || b === "diverging" || b === "none")),
+  ],
+  [
+    "cells",
+    '{ <title>: { type: "strip", field, by, last?: positive integer, tone?: "sign" } }',
+    (v) =>
+      isObj(v) &&
+      Object.values(v).every(
+        (c) =>
+          isObj(c) &&
+          only(c, w("type field by last tone")) &&
+          c.type === "strip" &&
+          typeof c.field === "string" &&
+          typeof c.by === "string" &&
+          (c.last === undefined || (Number.isInteger(c.last) && (c.last as number) > 0)) &&
+          (c.tone === undefined || c.tone === "sign"),
+      ),
+  ],
   [
     "aggregate",
     `one of ${AGGS.join(", ")}, { ratio: [numerator field, denominator field] }, or either keyed by y field`,
@@ -601,11 +650,22 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   const isPath = PATH.includes(t);
   const need = isPath ? "path" : "x";
   const pth = (spec as Record<string, unknown>)["path"];
-  if (Array.isArray(pth) && (t === "sankey" ? pth.length < 2 : t === "chord" && pth.length !== 2))
+  if (
+    Array.isArray(pth) &&
+    (t === "sankey"
+      ? pth.length < 2
+      : t === "chord"
+        ? pth.length !== 2 && pth.length !== 3
+        : t === "list" && pth.length !== 2)
+  )
     F(
       "invalid-option",
       "path",
-      `needs ${t === "sankey" ? "at least" : "exactly"} two levels for a ${t}.`,
+      t === "sankey"
+        ? "needs at least two levels for a sankey."
+        : t === "chord"
+          ? "needs two or three levels for a chord (source, target, and the target's children)."
+          : "on a list needs two levels: [headline, evidence].",
     );
   const missing = (f: string) =>
     F(
@@ -641,11 +701,17 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     t !== "gauge" &&
     t !== "beeswarm" &&
     !(t === "funnel" && Array.isArray(s.y)) &&
-    !(need === "x" && PATHX.includes(t) && s.path !== undefined)
+    !(need === "x" && (PATHX.includes(t) || t === "list") && s.path !== undefined) &&
+    !(t === "heatmap" && s.xPath !== undefined)
   )
     missing(need);
   if (s.y === undefined) missing("y");
-  if (["dumbbell", "ridgeline", "marimekko", "weave"].includes(t) && s.series === undefined)
+  // A marimekko path of 2 or more levels takes its series from the next level.
+  if (
+    ["dumbbell", "ridgeline", "marimekko", "weave"].includes(t) &&
+    s.series === undefined &&
+    !(t === "marimekko" && strs(s.path, 2))
+  )
     missing("series");
   // parallel keeps its 0.x code; constellation has its own.
   if (t === "gauge" && Array.isArray(s.y) && s.toggle !== true)
@@ -823,6 +889,9 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         isObj(f) ? [f.field as string, f.ratio as string[]] : [f as string, null],
       )
     : [];
+  const cells = Object.entries(
+    (isObj(s.cells) ? s.cells : {}) as Record<string, { field: string; by: string }>,
+  );
   const pairs: [unknown, string, string, string?][] = [
     [
       colorBy != null && s.series != null && t !== "dumbbell" && t !== "weave",
@@ -925,7 +994,39 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     [t === "gauge" && s.x != null, "x", NS, "A gauge shows one value."],
     [t === "funnel" && s.x != null && Array.isArray(y), "x", `${CB} a y array on "funnel".`],
     [t === "boxplot" && s.aggregate != null, "aggregate", NS],
-    [cart && s.drill === true && path === undefined, "drill", `on "${t}" needs spec.path.`],
+    [
+      cart && s.drill === true && path === undefined && s.seriesPath == null && s.xPath == null,
+      "drill",
+      `on "${t}" needs spec.path${CART.includes(t) ? " or spec.seriesPath" : t === "heatmap" ? " or spec.xPath" : ""}.`,
+    ],
+    [
+      s.seriesPath != null && (path != null || s.series != null),
+      "seriesPath",
+      `${CB} spec.path or spec.series.`,
+      "Drill the categories with path, or the series with seriesPath: one or the other.",
+    ],
+    [s.xPath != null && s.x != null, "x", `${CB} spec.xPath (its levels are the columns).`],
+    [
+      t === "list" && strs(path) && s.x != null && s.x !== path[0],
+      "x",
+      "on a list must equal spec.path[0] (the headline level), or be left out.",
+    ],
+    [s.totals === true && t !== "heatmap", "totals", `= true ${NS}`, "It works with: heatmap."],
+    [strs(s.totals, 1) && t === "heatmap", "totals", 'on "heatmap" must be true.'],
+    [isObj(s.expand) && t === "list", "expand", 'on "list" must be "first", "none" or "all".'],
+    [
+      typeof s.expand === "string" && t === "table",
+      "expand",
+      'on "table" must be a chart spec without data.',
+    ],
+    [isObj(s.bars) && t === "list", "bars", 'on "list" must be a boolean.'],
+    [
+      typeof s.bars === "boolean" && t === "table",
+      "bars",
+      'on "table" must be { <y field>: "bar" | "diverging" | "none" }.',
+    ],
+    [s.drillTo != null && s.series == null, "drillTo", "needs spec.series (a series opens it)."],
+    [s.drillTo != null && path != null, "drillTo", `${CB} spec.path.`],
   ];
   for (const [hit, k, rest, detail] of pairs)
     if (hit)
@@ -945,6 +1046,12 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
             `is not in spec.y: ${(y as string[]).join(", ")}.`,
             dym(k, y as string[]),
           );
+  if (isObj(s.bars)) {
+    const ys = typeof y === "string" ? [y] : (y as string[]);
+    for (const k of Object.keys(s.bars))
+      if (!ys.includes(k))
+        F("invalid-option", `bars.${k}`, `is not in spec.y: ${ys.join(", ")}.`, dym(k, ys));
+  }
   if (isObj(colorBy)) {
     // Threshold keys win; otherwise a kpi or gauge with a y array may key thresholds by measure.
     const ks = Object.keys(colorBy);
@@ -997,6 +1104,15 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         ["size", s.size],
         ["name", s.name],
         ...arr("path", (path as string[] | undefined) ?? []),
+        ...arr("seriesPath", (s.seriesPath as string[] | undefined) ?? []),
+        ...arr("xPath", (s.xPath as string[] | undefined) ?? []),
+        ...arr("columns", (s.columns as string[] | undefined) ?? []),
+        ...cells.flatMap(([k, c]): [string, string][] => [
+          [`cells.${k}.field`, c.field],
+          [`cells.${k}.by`, c.by],
+        ]),
+        ["body", s.body],
+        ["rowFormat", s.rowFormat],
         ["colorBy", colorBy === "sign" ? undefined : colorBy],
         ["frame", s.frame],
       ];
@@ -1070,6 +1186,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         if (n !== 2)
           F("invalid-option", "series", `on "dumbbell" needs exactly 2 values, found ${n}.`);
       }
+      for (const [k, c] of cells) numeric(c.field, "non-numeric-field", `cells.${k}.field`);
+      // waterfall start: an x value of the top level.
+      const x0 = typeof s.x === "string" ? s.x : strs(path, 1) ? path[0]! : null;
+      if (typeof s.start === "string" && x0)
+        among("start", x0, [s.start], x0 === s.x ? "x" : "path[0]");
+      // list rowFormat: every value is a preset or a template.
+      if (typeof s.rowFormat === "string")
+        scan(s.rowFormat, (v, i) => {
+          if (v != null) format(`data[${i}].${s.rowFormat}`, v, locale);
+        });
       if (t === "scatter" && typeof s.x === "string") numeric(s.x, "non-numeric-field", "x");
       if (s.xType === "time" && typeof s.x === "string")
         scan(s.x, (v, i) => {
@@ -1102,25 +1228,62 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       if (isPath || t === "funnel" || t === "ridgeline") for (const f of ys) pos(f, t, !isPath);
     });
   MODULES.get(t)?.check?.(spec as unknown as ChartSpec, fail);
-  // kpi back: a spec over the same rows, checked as one; its errors name spec.back.<path>.
-  if (isObj(s.back)) {
-    const b = unset(s.back);
+  // Sub-charts over the same rows (kpi back, table expand, line drillTo), each checked as a spec;
+  // their errors name spec.<key>.<path>.
+  for (const k of ["back", "expand", "drillTo"]) {
+    if (!isObj(s[k])) continue;
+    const b = unset(s[k] as Record<string, unknown>);
     if (Object.hasOwn(b, "data"))
-      F("invalid-option", "back.data", "is not allowed: the back face uses the kpi's rows.");
-    if (b.type === "kpi")
+      F("invalid-option", `${k}.data`, "is not allowed: a sub-chart uses the chart's rows.");
+    if (k === "back" && b.type === "kpi")
       F("invalid-option", "back.type", 'must not be "kpi": the back face is another chart.');
+    // A sub-chart has no state of its own: these would never respond.
+    if (k !== "back")
+      for (const o of w("drill zoom frame expand drillTo back page scroll filter"))
+        if (b[o] !== undefined)
+          F("invalid-option", `${k}.${o}`, "is not available in a sub-chart.");
+    const prev = k === "drillTo" && b.was === "previous";
+    if (prev && !ONLY.was!.includes(b.type as string))
+      F("option-unsupported", "drillTo.was", `${NS.replace("spec.type", "spec.drillTo.type")}`);
     try {
-      validateSpec({ ...b, data: rows });
+      const sub = k === "back" ? b : subSpec(s as unknown as ChartSpec, b);
+      validateSpec({ ...sub, ...(prev && { was: undefined }), data: rows });
     } catch (e) {
       if (!(e instanceof MayaSpecError)) throw e;
       throw new MayaSpecError(
         e.code,
-        `back.${e.path}`,
-        e.message.replace("mayacharts: spec.", "mayacharts: spec.back."),
+        `${k}.${e.path}`,
+        e.message.replace("mayacharts: spec.", `mayacharts: spec.${k}.`),
       );
     }
   }
 }
+
+/** Types whose x is required (a sub-chart without x or path takes its parent's). */
+const needsX = (b: { type?: unknown; y?: unknown }) =>
+  typeof b.type === "string" &&
+  !PATH.includes(b.type) &&
+  !w("kpi gauge beeswarm").includes(b.type) &&
+  !(b.type === "funnel" && Array.isArray(b.y));
+
+/** A table expand or line drillTo sub-spec, with the parent's x when it names neither x nor path. */
+export const subSpec = <T extends object>(parent: ChartSpec, b: T): T => {
+  const o = b as { x?: unknown; path?: unknown; type?: unknown; y?: unknown };
+  return o.x !== undefined || o.path !== undefined || !needsX(o) || !parent.x
+    ? b
+    : { ...b, x: parent.x };
+};
+
+/** How many drill values view.drill may hold (0: no drill). drillTo: one series; seriesPath and
+ * path: one per level but the last; a chord with 3 levels: the target only; a marimekko whose
+ * series is the next path level: one per level but the last two. */
+export const drillDepth = (spec: ChartSpec): number => {
+  if (spec.drillTo) return 1;
+  if (!spec.drill) return 0;
+  const p = spec.seriesPath ?? spec.path ?? [];
+  if (spec.type === "chord" && p.length === 3) return 1;
+  return Math.max(0, p.length - (spec.type === "marimekko" && !spec.series ? 2 : 1));
+};
 
 export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   if (opts === undefined) return;
@@ -1152,9 +1315,27 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   const { view: v, selected: sel, nonce } = o;
   if (v !== undefined) {
     if (!isObj(v)) inv("view", v, "an object");
-    const vk = w("measure drill window hidden sortBy frame form brush peers stack face");
+    const vk = w(
+      "measure drill window hidden sortBy frame form brush peers stack face xDrill expanded page filter",
+    );
     for (const k of Object.keys(v as object)) if (!vk.includes(k)) unknown("options.view", k, vk);
-    const { drill, window: win, hidden, sortBy, brush, peers, face } = v as Record<string, unknown>;
+    const {
+      drill,
+      window: win,
+      hidden,
+      sortBy,
+      brush,
+      peers,
+      face,
+      xDrill,
+      expanded,
+      filter,
+    } = v as Record<string, unknown>;
+    if (xDrill !== undefined && !strs(xDrill)) inv("view.xDrill", xDrill, "an array of strings");
+    if (expanded !== undefined && typeof expanded !== "string")
+      inv("view.expanded", expanded, "a string");
+    if (filter !== undefined && !(typeof filter === "string" && filter.length <= 200))
+      inv("view.filter", filter, "a string of at most 200 characters");
     if (face !== undefined && face !== "front" && face !== "back")
       inv("view.face", face, '"front" or "back"');
     if (
@@ -1184,7 +1365,7 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
       )
     )
       inv("view.sortBy", sortBy, '[field, "asc" | "desc"]');
-    for (const k of ["measure", "frame", "form", "stack"]) {
+    for (const k of ["measure", "frame", "form", "stack", "page"]) {
       const n = (v as Record<string, unknown>)[k];
       if (n !== undefined && !(Number.isInteger(n) && (n as number) >= 0))
         inv("view." + k, n, "an index (integer >= 0)");
@@ -1238,13 +1419,30 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   // One drilled value per level but the last. A flow keeps the drilled node as its first column:
   // it draws full.slice(drilled - 1), so a click on the next column's node drills one step further.
   const flow = spec.type === "sankey" || spec.type === "chord";
-  const drilled = spec.drill ? (view.drill ?? []).slice(0, Math.max(0, full.length - 1)) : [];
-  const path = full.slice(flow ? Math.max(0, drilled.length - 1) : drilled.length);
+  // A chord with 3 levels drills its target (path[1]) and draws [source, target's children].
+  const chord3 = spec.type === "chord" && full.length === 3;
+  // seriesPath: view.drill walks the series levels instead of path.
+  const sp = spec.seriesPath ? [...spec.seriesPath] : null;
+  // drillTo: build() renders the sub-chart; the line itself is never filtered.
+  const depth = spec.drillTo ? 0 : drillDepth(spec);
+  const drilled = (view.drill ?? []).slice(0, depth);
+  const levels = chord3 ? [full[1]!] : (sp ?? full);
+  const path = sp
+    ? sp.slice(drilled.length)
+    : chord3
+      ? [full[0]!, full[drilled.length ? 2 : 1]!]
+      : full.slice(flow ? Math.max(0, drilled.length - 1) : drilled.length);
+  // heatmap xPath: columns drill on their own (view.xDrill).
+  const xp = spec.xPath ? [...spec.xPath] : [];
+  const xDrilled = spec.drill ? (view.xDrill ?? []).slice(0, Math.max(0, xp.length - 1)) : [];
   const f = spec.format;
   const F = spec.frame;
   const fv = F ? [...new Set(spec.data.flatMap((r) => (r[F] == null ? [] : [String(r[F])])))] : [];
   const fi = Math.min(view.frame ?? fv.length, fv.length - 1);
-  const x = spec.x ?? (PATHX.includes(spec.type) ? (path[0] ?? "") : "");
+  const x =
+    spec.x ??
+    xp[xDrilled.length] ??
+    (PATHX.includes(spec.type) || spec.type === "list" ? (path[0] ?? "") : "");
   // An aggregate keyed by y field resolves to the active measure's rule, so marks see one rule.
   const ag = aggOf(spec.aggregate, measures[measure]!);
   const ratio = typeof ag === "object" ? ag.ratio : null;
@@ -1274,7 +1472,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const bf =
     NOBLANK.includes(spec.type) || spec.xType === "time"
       ? []
-      : [x, spec.series, ...(DRILLP.includes(spec.type) ? full : [])].filter(
+      : [x, spec.series, ...(DRILLP.includes(spec.type) ? full : []), ...(sp ?? []), ...xp].filter(
           (k): k is string => !!k,
         );
   const rows = bf.length
@@ -1295,13 +1493,18 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     : frameRows;
   // Units: the group is the series (legend toggles, view.hidden and colors by group), unless colorBy colours the dots.
   // Heatmap: path levels are the rows (series); the drill advances them like x elsewhere.
+  // seriesPath: the current level; marimekko without series: the level after x.
   const series =
     spec.series ??
-    (spec.type === "units" && !spec.colorBy
-      ? spec.x!
-      : spec.type === "heatmap" && path.length
-        ? path[0]!
-        : null);
+    (sp
+      ? path[0]!
+      : spec.type === "units" && !spec.colorBy
+        ? spec.x!
+        : spec.type === "heatmap" && path.length
+          ? path[0]!
+          : spec.type === "marimekko" && path.length > 1
+            ? path[1]!
+            : null);
   // spec.was long form: pivot the periods into the wide form the marks read (shape.ts).
   const W = spec.was;
   const str = (v: unknown) => (v === undefined ? null : String(v));
@@ -1351,11 +1554,84 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     ]),
     ...entries<string>(spec.titles),
   ]);
+  // Drill (rows and xPath columns), then waterfall rebasing and the table filter.
+  let kept =
+    drilled.length || xDrilled.length
+      ? data.filter(
+          (r) =>
+            drilled.every((d, i) => String(r[levels[i]!]) === d) &&
+            xDrilled.every((d, i) => String(r[xp[i]!]) === d),
+        )
+      : data;
+  const start = spec.type === "waterfall" ? (spec.start ?? null) : null;
+  const totals = [
+    ...(start === null ? [] : [start]),
+    ...(Array.isArray(spec.totals) ? spec.totals : []),
+  ];
+  // The opening total is drawn first whatever its place in the rows.
+  const x0 = spec.x ?? full[0] ?? "";
+  const lead = (rs: readonly Row[]) => [
+    ...rs.filter((r) => String(r[x0]) === start),
+    ...rs.filter((r) => String(r[x0]) !== start),
+  ];
+  if (spec.type === "waterfall" && drilled.length) {
+    // The drilled step, rebased: an opening total at the running sum before it (the start or a
+    // leading total sets it), its children, a closing total after them.
+    // ponytail: replays sums, so a waterfall under another aggregate rebases as if it summed.
+    let run = 0;
+    let rs = start === null ? data : lead(data);
+    drilled.forEach((d, i) => {
+      const sums = new Map<string, number>();
+      for (const r of rs) {
+        const v = r[ym];
+        sums.set(
+          String(r[full[i]!]),
+          (sums.get(String(r[full[i]!])) ?? 0) + (typeof v === "number" ? v : 0),
+        );
+      }
+      let j = 0;
+      for (const [k, v] of sums) {
+        if (k === d) break;
+        if (!i && (k === start || (!j && totals.includes(k)))) run = v;
+        else if (i || !totals.includes(k)) run += v;
+        j++;
+      }
+      rs = rs.filter((r) => String(r[full[i]!]) === d);
+    });
+    const d = drilled.at(-1)!;
+    const [b, a] = [txt(spec, "before", d), txt(spec, "after", d)];
+    kept = [{ [x]: b, [ym]: run }, ...kept, { [x]: a, [ym]: null }];
+    totals.push(b, a);
+  } else if (start !== null) kept = lead(kept);
+  const table = spec.type === "table";
+  const columns = table ? [...(spec.columns ?? [])] : [];
+  const q = table && spec.filter && view.filter ? view.filter.toLocaleLowerCase(spec.locale) : "";
+  if (q)
+    kept = kept.filter((r) =>
+      [x, ...columns].some((k) =>
+        String(r[k] ?? "")
+          .toLocaleLowerCase(spec.locale)
+          .includes(q),
+      ),
+    );
+  const list = spec.type === "list";
+  const expand = (table && isObj(spec.expand)) || (list && full.length === 2);
+  const firsts = () => [...new Set(kept.map((r) => String(r[x])))];
+  const ex = spec.expand ?? "first";
+  const expanded = !expand
+    ? []
+    : view.expanded !== undefined
+      ? view.expanded
+        ? [view.expanded]
+        : []
+      : list && ex !== "none"
+        ? firsts().slice(0, ex === "first" ? 1 : Infinity)
+        : [];
+  // A drilled hexmap draws its children as horizontal bars, largest first.
+  const hexBars = spec.type === "hexmap" && drilled.length > 0;
   const out: ResolvedSpec = {
-    type: spec.type,
-    data: drilled.length
-      ? data.filter((r) => drilled.every((d, i) => String(r[full[i]!]) === d))
-      : data,
+    type: hexBars ? "bar" : spec.type,
+    data: kept,
     frame: F ? [F, fv, fi] : null,
     x,
     xType: spec.xType ?? "auto",
@@ -1394,6 +1670,45 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     form: Math.max(0, Math.min(view.form ?? 0, forms.length - 1)),
     path,
     drilled,
+    drillOn: spec.drillTo ? "series" : drilled.length < depth ? (sp ? "series" : "x") : null,
+    xPath: xp.slice(xDrilled.length),
+    xDrilled,
+    start,
+    margins: spec.type === "heatmap" && spec.totals === true,
+    // ponytail: a scrolling or paged table draws at most 1000 rows (one svg, no virtualisation); NON-FEATURES.
+    shown: table
+      ? spec.page
+        ? Math.min(MAX_POINTS, spec.page * ((view.page ?? 0) + 1))
+        : spec.scroll
+          ? MAX_POINTS
+          : null
+      : null,
+    scroll: table && !!(spec.scroll || spec.page),
+    filter: table && spec.filter ? (view.filter ?? "") : null,
+    columns,
+    cells: new Map(
+      Object.entries(table ? (spec.cells ?? {}) : {}).map(([k, c]) => [
+        k,
+        { field: c.field, by: c.by, last: c.last ?? null },
+      ]),
+    ),
+    bars: new Map(
+      table
+        ? measures.map((m) => [
+            m,
+            (typeof spec.bars === "object" &&
+              own(spec.bars as Record<string, "bar" | "diverging" | "none">, m)) ||
+              "bar",
+          ])
+        : list
+          ? [[ym, spec.bars === true ? "bar" : "none"]]
+          : [],
+    ),
+    expand,
+    expanded,
+    evidence: list ? (full[1] ?? null) : null,
+    body: list ? (spec.body ?? null) : null,
+    rowFormat: list ? (spec.rowFormat ?? null) : null,
     // Colour slot of the drilled top-level name, as the hierarchy marks colour it.
     hue: drilled.length ? (slots.get(drilled[0]!) ?? null) : null,
     slots,
@@ -1402,14 +1717,14 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     window: view.window && view.window.length === 4 ? view.window : null,
     size: spec.size ?? null,
     name: spec.name ?? null,
-    totals: [...(spec.totals ?? [])],
+    totals,
     stack,
     stacks,
-    horizontal: spec.horizontal ?? false,
+    horizontal: spec.horizontal ?? hexBars,
     // A ratio sums both fields; long-form was has already counted its rows into y, so it sums those.
     aggregate: ratio || (pv && ag === "count") ? "sum" : ((ag as Aggregate | undefined) ?? "sum"),
     ratio: ratio ? [ratio[0], ratio[1]] : null,
-    sort: spec.sort ?? null,
+    sort: spec.sort ?? (hexBars ? "desc" : null),
     sortBy: view.sortBy ?? null,
     limit: spec.limit ?? null,
     // stack "percent" shows shares: percent unless the spec formats the measure.

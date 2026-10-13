@@ -69,7 +69,7 @@ export const TEXT = {
   offBelow: "off track below {0}",
   /** Chart description of a warn threshold when lower is better: {0} = the warn value. */
   offAbove: "off track above {0}",
-  /** Sunburst centre at the root. */
+  /** Sunburst centre at the root; the heatmap `totals: true` Total row and column. */
   total: "Total",
   /** Sunburst tooltip share: {0} = percent, {1} = parent name. */
   shareOf: "{0} of {1}",
@@ -169,6 +169,16 @@ export const TEXT = {
   percent: "Percent",
   /** Stack mode option for "stream". */
   stream: "Stream",
+  /** aria-label and placeholder of the table search box (spec.filter). */
+  filter: "Filter",
+  /** Table row that shows the next page (spec.page): {0} = rows it adds. */
+  showMore: "Show {0} more",
+  /** aria-label of the heatmap column breadcrumb (spec.xPath with drill). */
+  crumbsX: "Column drill path",
+  /** Drilled waterfall opening total: {0} = the drilled value. */
+  before: "Before {0}",
+  /** Drilled waterfall closing total: {0} = the drilled value. */
+  after: "After {0}",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

@@ -26,6 +26,7 @@
         "beeswarm",
         "parallel",
         "table",
+        "list",
         "treemap",
         "sunburst",
         "sankey",
@@ -197,6 +198,93 @@
       "type": "object",
       "description": "A second face: a chart spec over the kpi's rows (no data of its own, any type but kpi). A Details button turns the card over (view.face); Escape returns. kpi only."
     },
+    "expand": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "table: a chart spec without data over the row's rows"
+        },
+        {
+          "enum": ["first", "none", "all"]
+        }
+      ],
+      "description": "table: a sub-chart under a row (a spec without data over that row's rows; without x or path it takes the table's x), one row open at a time (view.expanded). list: which moves start open, first (default), none or all. table list."
+    },
+    "drillTo": {
+      "type": "object",
+      "description": "A sub-chart that replaces the line when a series is drilled (a spec without data over that series' rows; without x it takes the line's x). was: \"previous\" compares with the previous series at the same x. view.drill holds the series. line only, with series."
+    },
+    "page": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Rows shown at first; a \"Show n more\" row (text.showMore) adds n each time (view.page). The table grows and scrolls inside the tile. table only."
+    },
+    "scroll": {
+      "type": "boolean",
+      "default": false,
+      "description": "Draw every row (at most 1000) and scroll inside the tile, the header held at the top. table only."
+    },
+    "filter": {
+      "type": "boolean",
+      "default": false,
+      "description": "A search box (text.filter) keeping rows whose x or columns value contains the text, ignoring case (view.filter). table only."
+    },
+    "bars": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": {
+            "enum": ["bar", "diverging", "none"]
+          }
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "description": "table: the bar in each measure cell, \"bar\" (default), \"diverging\" (left or right of the cell centre, theme up and down) or \"none\", keyed by y field. list: true draws the evidence as bars on a scale local to each move. table list."
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Text fields shown as their own columns after the row label (each row's first value), sortable and matched by filter. table only."
+    },
+    "cells": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": ["strip"]
+          },
+          "field": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string"
+          },
+          "last": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tone": {
+            "enum": ["sign"]
+          }
+        },
+        "required": ["type", "field", "by"],
+        "additionalProperties": false
+      },
+      "description": "Extra columns keyed by title. \"strip\": one square per distinct by value (data order; the last `last`) holding field combined by aggregate, toned by sign. table only."
+    },
+    "body": {
+      "type": "string",
+      "description": "Text field shown under each headline. list only."
+    },
+    "rowFormat": {
+      "type": "string",
+      "description": "Field holding each row's own format, a preset or a template (\"currency\", \"{value} pts\"). list only."
+    },
     "arc": {
       "enum": [180, 270, 360],
       "default": 180,
@@ -225,7 +313,23 @@
         "type": "string"
       },
       "minItems": 1,
-      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey chord; bar line area dumbbell table marimekko with drill (replaces x); heatmap with drill (replaces series, the rows)."
+      "description": "Hierarchy fields, outer to inner. treemap sunburst sankey chord (chord: 2 or 3 levels, a third splits the target arcs while the sources stay); bar line area dumbbell table radial waffle hexmap waterfall marimekko with drill (replaces x; hexmap draws a drilled level as bars; marimekko without series: the next level is the series); heatmap with drill (replaces series, the rows); list: [headline, evidence]."
+    },
+    "seriesPath": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "Series hierarchy, outer to inner: the series is the current level and the drill gesture on a mark splits its series into the next level (view.drill). Not with path or series. bar line area."
+    },
+    "xPath": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "Column hierarchy, outer to inner: replaces x and drills on its own from a column header (view.xDrill), beside path on the rows. heatmap only."
     },
     "depth": {
       "type": "integer",
@@ -247,11 +351,23 @@
       "description": "Point identity and tooltip title (units: one dot per row). scatter, beeswarm, boxplot (outliers and dots) and units."
     },
     "totals": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "x values drawn as running-total bars. waterfall only."
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "boolean",
+          "enum": [true]
+        }
+      ],
+      "description": "x values drawn as running-total bars; one before any step opens at its own y (waterfall). heatmap: true adds a Total row and column. waterfall heatmap."
+    },
+    "start": {
+      "type": "string",
+      "description": "The x value of the opening total: drawn first, at its own y. A drilled level opens at the running total before the drilled step and closes after it (text.before, text.after). waterfall only."
     },
     "stack": {
       "oneOf": [
@@ -456,7 +572,12 @@
           "unstacked",
           "stacked",
           "percent",
-          "stream"
+          "stream",
+          "filter",
+          "showMore",
+          "crumbsX",
+          "before",
+          "after"
         ]
       }
     },
@@ -687,7 +808,7 @@
     "tint": {
       "type": "boolean",
       "default": false,
-      "description": "Children take evenly spaced tints of their parent's colour: drilled levels of a path (parent = the drilled value) and weave threads under a group colorBy (parent = the group). A colors map then names path values or groups. treemap sunburst sankey chord weave."
+      "description": "Children take evenly spaced tints of their parent's colour: drilled levels of a path (parent = the drilled value) and weave threads under a group colorBy (parent = the group). A colors map then names path values or groups. treemap sunburst sankey chord waffle weave."
     },
     "brush": {
       "type": "boolean",
@@ -763,7 +884,7 @@
     },
     "drill": {
       "type": "boolean",
-      "description": "Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With select too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires maya-drill-leaf. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap marimekko with path."
+      "description": "Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With select too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires maya-drill-leaf. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap radial waffle hexmap waterfall marimekko with path; bar line area with seriesPath; heatmap with xPath."
     },
     "drillOut": {
       "type": "boolean",
@@ -790,7 +911,7 @@
           "additionalProperties": false
         }
       ],
-      "description": "Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. { peers: field } (beeswarm) selects one mark and lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
+      "description": "Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. { peers: field } (beeswarm) selects one mark and lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points; list: a move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
     },
     "zoom": {
       "type": "boolean",

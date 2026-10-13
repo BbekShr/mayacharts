@@ -20,6 +20,14 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Radar**: no area fill (overlapping series would hide each other); category names thin by collision.
 - **Label ink tokens**: `labelInk` and `labelInkOnFill` reach only browsers without relative colours; CSS cannot choose between two author colours by a channel of the fill, so modern browsers use near-black and white by luminance.
 - **kpi back face**: the back face shares the front's view (a toggled kpi's `view.measure` also indexes a `y` array on the back) and its rows (the active frame's), and the shell holds one face at a time, so turning the card re-renders. A back face cannot have its own `data`, `back` or kpi type.
+- **Table rows**: `scroll` draws at most 1000 rows and `page` stops adding past 1000; filter or aggregate beyond that. The search matches substrings of x and `columns`, ignoring case, with no wildcards.
+- **Table expand**: one row open at a time, and its sub-chart has no state of its own (no drill, zoom, frame, paging or filter). A row whose rows miss a field the sub-chart needs stays shut and the reason is in `Parts.warnings`.
+- **Waterfall drill**: a drilled step is rebased by summing the rows before it, whatever `aggregate` says.
+- **Heatmap totals**: the Total row and column combine the rows of visible series over the drawn columns (an Other column holds the rest); they are not part of the colour ramp.
+- **Series drill**: `seriesPath` and `path` do not combine on one chart; drill the categories or the series. A line's `drillTo` opens one series at a time.
+- **Chord drill**: three levels at most; the drill splits one target, the sources never split.
+- **Table strip cells**: a strip reads flat rows, one per row label and period; array-valued cells are not supported.
+- **List**: the moves keep data order (no sort or limit) and one move's evidence shares one scale.
 - **Stack modes**: a `stack` array switches between whole-chart modes; `was`, a ratio aggregate and (on bar) `stream` are refused for the whole array, even when one mode would allow them.
 
 - **Compact tile on SSR**: `data-compact` (host height under 200 px, which clamps the title to a line and hides the subtitle) is set by the element, so a server-rendered tile shows the full title and subtitle until hydration.

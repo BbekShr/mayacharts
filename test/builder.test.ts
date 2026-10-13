@@ -315,7 +315,9 @@ describe("guidance", () => {
       headline: '"Split by" is required but missing.',
       hint: 'Choose a column for "Split by" under Fields.',
     });
-    expect(at({ ...sample("bar"), drill: true }).headline).toBe('"Drill" on "bar" needs "Levels".');
+    expect(at({ ...sample("bar"), drill: true }).headline).toBe(
+      '"Drill" on "bar" needs "Levels" or "Series path".',
+    );
     expect(at({ ...sample("line"), stack: true }).headline).toBe(
       '"Stack" is not supported with a Line chart.',
     );

@@ -181,3 +181,10 @@ export function formatter(
     return prefix + out + suffix;
   };
 }
+
+/** A value in a row's own format (list rowFormat): `f` (a preset or template) replaces format[field]; null keeps it. */
+export const formatAs = (s: ResolvedSpec, field: string, f: string | null, v: unknown): string =>
+  formatter(
+    f === null ? s : { ...s, format: new Map(s.format).set(field, f as FieldFormat) },
+    field,
+  )(v);
