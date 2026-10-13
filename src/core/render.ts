@@ -534,6 +534,10 @@
  *             crossfades out over the new one.
  *     text:   a text mark whose number changed counts to it with rAF, replacing digits in
  *             place so the formatter's separators survive (exception 2).
+ *     roll:   numberMotion "roll" (kpi headline): the text is hidden and a nested `svg[data-roll]`
+ *             stands in as a clip window (overflow hidden, so the digits show only inside it);
+ *             each changed digit is a column of two texts a line apart that translateY by one
+ *             line. Transform only, digits paired right-aligned; the window leaves when done.
  *     drill:  rect marks zoom (transform/opacity): in, the branch's marks map onto the plot,
  *             children start inside the branch's box, the rest is pushed out; out reverses
  *             it. The marks group is clipped to the plot meanwhile. Flows morph instead.

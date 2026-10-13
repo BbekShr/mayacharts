@@ -113,7 +113,10 @@ export const mount = (host: Host): Handlers => {
         root.querySelector<HTMLElement>("[data-maya=more]")?.focus({ preventScroll: true });
       }
       const i = root.querySelector<HTMLInputElement>("[data-maya=filter]");
-      if (caret && i && root.activeElement === i) i.setSelectionRange(caret[0], caret[1]);
+      if (caret && i) {
+        i.focus({ preventScroll: true }); // the repaint replaced the box the user was typing in
+        i.setSelectionRange(caret[0], caret[1]);
+      }
       caret = undefined;
     },
     off: (() => {

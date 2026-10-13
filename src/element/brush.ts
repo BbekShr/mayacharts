@@ -8,6 +8,7 @@
  * paint; Up/Down move the range a tenth of the axis, Shift+Up/Down grow/shrink it, Delete clears.
  */
 import { t } from "../core/strings.ts";
+import { key as enc } from "../core/svg.ts";
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
 import { listen } from "./listen.ts";
 
@@ -62,10 +63,31 @@ export const mount = (host: Host): Handlers => {
   const unpend = () => (pend?.el.remove(), (pend = undefined));
   let said = JSON.stringify(host.state().view.brush ?? []);
 
+  let want: (readonly [string, number, number])[] | undefined; // the ranges the lines should show right now
+  let frame = 0;
+  /** Fade lines in or out against `rs` now, without a render: the drag shows its filter live. */
+  const preview = (rs: readonly (readonly [string, number, number])[]) => {
+    const gone = new Map<string, boolean>();
+    for (const e of root.querySelectorAll("path[data-maya=line],circle[data-maya=mark]")) {
+      const c = e.getAttribute("data-c") ?? "";
+      if (!gone.has(c))
+        gone.set(
+          c,
+          rs.some(([f, lo, hi]) => {
+            const v = root
+              .querySelector(`circle[data-c="${c}"][data-key$="~${enc(f)}"]`)
+              ?.getAttribute("data-y");
+            return v == null || +v < lo || +v > hi;
+          }),
+        );
+      e.toggleAttribute("data-off", gone.get(c));
+    }
+  };
   const stop = () => {
     band?.remove();
-    band = down = undefined;
+    band = down = want = undefined;
   };
+  const undo = () => (band && preview(host.state().view.brush ?? []), stop());
   /** Pointer height on the axis rect: 0 at its top, 1 at its bottom. */
   const frac = (d: NonNullable<typeof down>, e: PointerEvent) => {
     const r = d.svg.getBoundingClientRect();
@@ -106,6 +128,14 @@ export const mount = (host: Host): Handlers => {
     band.setAttribute("width", ax.getAttribute("width")!);
     band.setAttribute("y", String(y + Math.min(a, b) * h));
     band.setAttribute("height", String(Math.abs(a - b) * h));
+    const [lo = 0, hi = 1] = num(ax.getAttribute("data-yd")),
+      f = ax.getAttribute("data-field")!,
+      [u, w] = [hi - a * (hi - lo), hi - b * (hi - lo)];
+    want = [
+      ...(host.state().view.brush ?? []).filter((r) => r[0] !== f),
+      [f, Math.min(u, w), Math.max(u, w)],
+    ];
+    frame ||= requestAnimationFrame(() => ((frame = 0), want && preview(want)));
   };
   const onUp = (ev: Event) => {
     const e = ev as PointerEvent;
@@ -197,12 +227,12 @@ export const mount = (host: Host): Handlers => {
     ["pointerdown", onDown],
     ["pointermove", onMove],
     ["pointerup", onUp],
-    ["pointercancel", stop],
+    ["pointercancel", undo],
   );
   return {
     cancel() {
       if (!band && !pend) return false;
-      stop();
+      undo();
       unpend();
       return true;
     },

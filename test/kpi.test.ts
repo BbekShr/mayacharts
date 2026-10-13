@@ -347,7 +347,7 @@ describe("measure toggle, was per measure, compare (#82)", () => {
     ({ type: "kpi", x: "m", y: ["a", "b"], data: rows, ...o }) as ChartSpec;
   it("toggle draws one tile, the sparkline and the change lines at 300x260", () => {
     const s = svg(multi({ toggle: true, was: { a: "aLY" } }), { height: 260 });
-    expect(s.match(/data-key="v"/g)).toHaveLength(1);
+    expect(s.match(/data-key="v~a"/g)).toHaveLength(1); // keyed by field: a switch crossfades the number
     expect(s).toContain('data-y="110"');
     expect(s).toContain('data-maya="line"');
     expect(s).toContain("circle");

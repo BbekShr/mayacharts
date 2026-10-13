@@ -411,27 +411,42 @@ function roll(e: Element, from: string, o: KeyframeAnimationOptions): void {
     t.textContent = c;
     p.append(t);
   };
-  const L = to.length;
+  // Digits pair right-aligned, whatever sits between them; a column the old number lacks rolls in from blank.
+  // Different decimals or suffix (1.5 to 12.25, K to M) would pair the wrong places: count instead.
+  const fd = [...from].filter((c) => /\d/.test(c));
+  const nd = [...to].filter((c) => /\d/.test(c)).length;
+  const tail = (t: string) => {
+    const m = /(\d*)(\D*)$/.exec(t)!; // digits after the last separator, then the suffix
+    return m[1]!.length + m[2]!;
+  };
+  if (from && tail(from) !== tail(to)) return count(e, from, o);
+  const cols: Element[] = [];
+  let r = nd;
   [...to].forEach((c, j) => {
     const x = (e as SVGTextElement).getStartPositionOfChar(j).x;
-    const old = from[from.length - (L - j)] ?? "";
-    if (!/\d/.test(c) || c === old) return put(g, c, x);
+    const old = /\d/.test(c) ? (fd[fd.length - r--] ?? "") : c;
+    if (c === old) return put(g, c, x);
     const col = document.createElementNS("http://www.w3.org/2000/svg", "g");
     put(col, old, x);
     put(col, c, x, bb.height);
     g.append(col);
+    cols.push(col);
+  });
+  // Units first, 50 ms a column, the whole cascade capped at 150 ms.
+  const lag = Math.min(50, 150 / Math.max(1, cols.length - 1));
+  cols.forEach((col, i) =>
     run(col, [{ transform: "none" }, { transform: `translateY(${-bb.height}px)` }], {
       ...o,
-      delay: Number(o.delay ?? 0) + (L - 1 - j) * 50,
+      delay: Number(o.delay ?? 0) + (cols.length - 1 - i) * lag,
       fill: "forwards",
-    });
-  });
+    }),
+  );
   if (!from) run(g, [{ opacity: 0 }, { opacity: 1 }], { ...o, duration: 240 });
   rolls.get(e)?.remove();
   rolls.set(e, g);
   e.setAttribute("visibility", "hidden");
   e.after(g);
-  const ms = Number(o.duration) + Number(o.delay ?? 0) + L * 50;
+  const ms = Number(o.duration) + Number(o.delay ?? 0) + 150;
   hold(e, performance.now() + ms);
   setTimeout(() => {
     if (rolls.get(e) !== g) return;
@@ -554,6 +569,8 @@ function marks(o: Element, w: Element, origin?: Box): void {
     if (shaped && !instant) moved = true;
     if (shaped && !morphed && !instant) crossfade(m); // the ghost keeps the old outline
     const [x0, y0] = [n(m, "x"), n(m, "y")];
+    rolls.get(m)?.remove(); // sync drops the hidden text's visibility: a stale roll window would double it
+    rolls.delete(m);
     sync(m, e);
     // Keyed text (table cells on a re-sort) glides from where it stood.
     const [dx, dy] = [x0 - n(m, "x"), y0 - n(m, "y")];
@@ -681,7 +698,13 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
   for (const m of old) {
     if (used.has(m)) continue;
     // Cross in place with the new text, never a gap; a keyed one (its mark left) goes with the mark.
-    fade(m, true, () => m.remove(), key(m) ? UI : late);
+    // A changed unkeyed label (a comparison line) leaves before its successor arrives: no two texts in one place.
+    fade(
+      m,
+      true,
+      () => m.remove(),
+      key(m) ? UI : num ? { ...late, delay: Number(late.delay) - 220 } : late,
+    );
     retire(m);
   }
 }
@@ -788,13 +811,31 @@ function intro(svg: Element, kind: Intro): void {
   const l = part("labels");
   // Memory (spec.was): each bar grows from its ghost's box (key "%00was~" + the bar's), its label with the bar's end.
   const past = new Map<string, Box>(),
-    bars = new Map<string, Element>();
+    bars = new Map<string, Element>(),
+    ticks = new Set<string>();
   for (const e of m.children) {
     const k = e.getAttribute("data-key")!;
     if (!e.hasAttribute("data-past")) bars.set(k, e);
-    else if (geo(e)) past.set(k.slice(7), geo(e)!);
+    else if (geo(e)) {
+      past.set(k.slice(7), geo(e)!);
+      if (e.hasAttribute("data-tick")) ticks.add(k.slice(7));
+    }
   }
   const hz = svg.getAttribute("data-dir") === "h";
+  // A grouped bar's ghost is a tick: grow the bar from its baseline to the tick, not from a 2 px sliver floating off the axis.
+  for (const k of ticks) {
+    const [p, b] = [past.get(k)!, bars.get(k)],
+      g = b && geo(b),
+      i = +!hz;
+    if (!g) continue;
+    const [c, base] = [p[i]! + 1, hz !== b!.hasAttribute("data-neg") ? g[i]! : g[i]! + g[i + 2]!];
+    past.set(
+      k,
+      hz
+        ? [Math.min(c, base), p[1], Math.abs(c - base), p[3]]
+        : [p[0], Math.min(c, base), p[2], Math.abs(c - base)],
+    );
+  }
   for (const t of l?.children ?? []) {
     const k = t.getAttribute("data-key") ?? "",
       [p, bar] = [past.get(k), bars.get(k)],
@@ -925,33 +966,35 @@ export function patch(
 
 /**
  * The card turn (kpi back): the old face rotates edge-on (0 to 90deg, 160 ms ease-in), `swap`
- * replaces it, the new one comes round (-90 to 0deg, 280 ms ease-out). Transform only; with
- * `fade` (reduced motion) the same two beats are an opacity crossfade (100 + 140 ms). Returns a canceller.
+ * replaces it, the new one comes round (-90 to 0deg, 280 ms ease-out). Transform only. Holds
+ * `settled` for the whole 440 ms. Returns a canceller; `undo` (turned back before the swap) plays
+ * the first half in reverse instead of snapping flat.
  */
-export function turn(box: Element, swap: () => void, fade: boolean): () => void {
-  const face = (a: number, b: number) =>
-    fade
-      ? [{ opacity: 1 - a }, { opacity: 1 - b }]
-      : [
-          { transform: `perspective(900px) rotateY(${a}deg)` },
-          { transform: `perspective(900px) rotateY(${b}deg)` },
-        ];
-  const out = box.firstElementChild?.animate?.(face(0, fade ? 1 : 90), {
-    duration: fade ? 100 : 160,
+export function turn(box: Element, swap: () => void): (undo?: boolean) => void {
+  const face = (a: number, b: number) => [
+    { transform: `perspective(900px) rotateY(${a}deg)` },
+    { transform: `perspective(900px) rotateY(${b}deg)` },
+  ];
+  hold(box, performance.now() + 440);
+  const out = box.firstElementChild?.animate?.(face(0, 90), {
+    duration: 160,
     easing: "ease-in",
     fill: "forwards",
   });
   let back: Animation | undefined;
+  let swapped = false;
   const go = () => {
+    swapped = true;
     swap();
-    back = box.firstElementChild?.animate?.(face(fade ? 1 : -90, 0), {
-      duration: fade ? 140 : 280,
-      easing: EASE,
-    });
+    back = box.firstElementChild?.animate?.(face(-90, 0), { duration: 280, easing: EASE });
   };
   if (out) out.onfinish = go;
   else go();
-  return () => (out && (out.onfinish = null), out?.cancel(), back?.cancel());
+  return (undo) => {
+    if (out) out.onfinish = null;
+    if (undo && out && !swapped) ((out.onfinish = () => out.cancel()), out.reverse());
+    else (out?.cancel(), back?.cancel());
+  };
 }
 
 const live = (root: ShadowRoot) =>

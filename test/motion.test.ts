@@ -693,4 +693,32 @@ describe("kpi numberMotion roll", () => {
     expect([...g.children].filter((c) => c.localName === "g")).toHaveLength(1);
     el.remove();
   });
+
+  it("pairs digits right-aligned past separators: 99,500 to 142,100 rolls four columns, none from a separator", async () => {
+    const m = { format: "integer", numberMotion: "roll" };
+    const el = await mk({ ...kpi(99_500), ...m });
+    await new Promise((r) => setTimeout(r, 1500));
+    el.spec = { ...kpi(142_100), ...m } as ChartSpec;
+    await frame();
+    const cols = [...root(el).querySelector("svg[data-roll]")!.children].filter(
+      (c) => c.localName === "g",
+    );
+    expect(cols).toHaveLength(4); // 1 (from blank), 4, 2, 1; the two zeros stay
+    for (const c of cols) expect(c.children[0]!.textContent).toMatch(/^\d?$/);
+    el.remove();
+  });
+
+  it("a render with the same text mid-roll removes the window instead of doubling the number", async () => {
+    const m = { format: "integer", numberMotion: "roll" };
+    const el = await mk({ ...kpi(1_000), ...m });
+    await new Promise((r) => setTimeout(r, 1500));
+    el.spec = { ...kpi(1_005), ...m } as ChartSpec;
+    await frame();
+    expect(root(el).querySelectorAll("svg[data-roll]")).toHaveLength(1);
+    el.spec = { ...kpi(1_005), ...m, title: "again" } as ChartSpec;
+    await frame();
+    expect(root(el).querySelector("svg[data-roll]")).toBeNull();
+    expect(head(el).hasAttribute("visibility")).toBe(false);
+    el.remove();
+  });
 });

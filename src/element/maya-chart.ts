@@ -1,6 +1,6 @@
 import { VERSION } from "../core/registry.ts";
 import { renderParts, shellInner } from "../core/render.ts";
-import { MayaSpecError } from "../core/validate.ts";
+import { MayaSpecError, subSpec } from "../core/validate.ts";
 import type {
   ChartSpec,
   Handlers,
@@ -63,15 +63,23 @@ export class MayaChart extends HTMLElement {
   #intro = 0; // performance.now() of the animated first draw
   #idle: (() => void) | undefined; // cancels the queued data-table insert
   #face = "front"; // the face last drawn
-  #turn: (() => void) | undefined; // cancels a card turn in flight
-  #bk: [ChartSpec, ChartSpec] | undefined; // [front, back with the front's rows]
+  #turn: ((undo?: boolean) => void) | undefined; // cancels a card turn in flight
+  #bk: [ChartSpec, ChartSpec, object] | undefined; // [front, sub-spec with the front's rows, sub-spec]
 
   /** What the interaction modules read: the back's options while the back shows (same rows). */
   #act(): ChartSpec | undefined {
     const s = this.spec;
-    if (!s?.back || this.#state.view.face !== "back") return s;
+    const sub =
+      this.#state.view.face === "back" && s?.back
+        ? s.back
+        : s?.drillTo && this.#state.view.drill?.length // a drilled line is the sub-chart: its measure, its titles
+          ? subSpec(s, s.drillTo)
+          : undefined;
+    if (!s || !sub) return s;
     return (this.#bk =
-      this.#bk?.[0] === s ? this.#bk : [s, { ...s.back, data: s.data } as ChartSpec])[1];
+      this.#bk?.[0] === s && this.#bk[2] === sub
+        ? this.#bk
+        : [s, { ...sub, data: s.data } as ChartSpec, sub])[1];
   }
 
   #gen = 0; // the latest paint; an older one's settle is dropped
@@ -528,8 +536,8 @@ export class MayaChart extends HTMLElement {
     if (this.#zoom) this.#tip?.hide(still ? 0 : 640);
     const face = this.#state.view.face ?? "front";
     const flipped = this.#drawn && face !== this.#face && spec.animate !== false;
-    this.#face = face;
-    this.#turn?.();
+    // Turned back before the swap: the card reverses out instead of snapping flat.
+    this.#turn?.(face === this.#face);
     this.#turn = undefined;
     const go = (anim: boolean) =>
       patch(box, parts.svg, anim, {
@@ -540,17 +548,20 @@ export class MayaChart extends HTMLElement {
         roll: spec.numberMotion === "roll",
       });
     // A new face shares no keys with the old one: turn the card instead of diffing.
-    if (flipped && box.firstElementChild) {
+    if (flipped && box.firstElementChild && !still) {
       this.#tip?.hide();
-      this.#turn = turn(box, () => go(false), still);
-    } else go((this.#drawn || !!intro) && !still);
+      this.#turn = turn(box, () => ((this.#face = face), go(false)));
+    } else {
+      this.#face = face;
+      go((this.#drawn || !!intro) && !still);
+    }
     this.#zoom = undefined;
     const dy = top0 - box.getBoundingClientRect().top; // NaN: not measured
     if (dy && !still) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
     if (intro && !still) this.#intro = performance.now();
     this.#drawn = true;
+    for (const h of Object.values(this.#ix ?? {})) h.painted?.(); // before restore: it makes axes focusable
     this.#restore(focus);
-    for (const h of Object.values(this.#ix ?? {})) h.painted?.();
     this.#emit("maya-render", {});
     this.#settle(null, idle(root));
   }
@@ -610,7 +621,7 @@ const legend = (e: Event) => {
 
 const SLOTS: [keyof Parts, string][] = [
   ["title", ".maya-title,.maya-sub"],
-  ["controls", ".maya-ctls,.maya-ctl,.maya-play,.maya-flip"],
+  ["controls", ".maya-ctls,.maya-ctl,.maya-play,.maya-flip,.maya-filter"],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],
 ];

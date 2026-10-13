@@ -24,6 +24,11 @@ describe("formatter number presets", () => {
     expect(f(undefined, "v", 0.5)(1.5)).toBe("1.5");
     expect(f("auto", "v", 1)(1234.5)).toBe("1,234.5");
   });
+  it("negatives of 1000 or more keep their sign (the fast path decides it before the commas)", () => {
+    expect(f(undefined)(-21002)).toBe("-21,002");
+    expect(f(undefined)(-2100.5)).toBe("-2,100.5");
+    expect(f(undefined)(-1234567)).toBe("-1,234,567");
+  });
   it("integer decimal compact percent currency", () => {
     expect(f("integer")(1234.6)).toBe("1,235");
     expect(f("decimal")(3)).toBe("3.00");

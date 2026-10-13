@@ -153,7 +153,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
   let head = text(
     {
       "data-maya": "mark",
-      "data-key": sKey("v"),
+      "data-key": spec.toggle ? key("v", f) : sKey("v"), // toggle: each measure is its own number, so a switch crossfades instead of counting across
       ...payload,
       "data-tone": status,
       "data-hero": true,

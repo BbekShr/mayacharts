@@ -314,7 +314,12 @@ export function tooltip(
     // tooltip:false: keys and the live region still work, the popover and guides do not.
     if (!on()) return say && speak();
     // Rows without a series name the measure ("Sales  1.2M"); scatter values carry their own.
-    const sp = spec(),
+    const sp0 = spec(),
+      // A mark in a table row's sub-chart names that chart's measure.
+      sp =
+        sp0 && m.closest("[data-maya=expand]") && typeof sp0.expand === "object"
+          ? ({ ...sp0, ...sp0.expand } as ChartSpec)
+          : sp0,
       ys = sp?.y,
       y = Array.isArray(ys) ? ys[(host as { view?: View }).view?.measure ?? 0] : ys,
       label =
@@ -563,7 +568,19 @@ export function tooltip(
           : ty === "constellation" && v && ring;
       if (i < 0) next = list[0];
       else if (c) next = c[(c.indexOf(cur!) + d + c.length) % c.length];
-      else if (v) {
+      else if (v && (ty === "list" || ty === "table")) {
+        // Rows: a list's headlines (its evidence bars share their indices), a table's first mark per row.
+        const hs =
+          ty === "list"
+            ? list.filter((m) => /^m~/.test(a(m, "data-key")))
+            : [...byC.values()].map((g) => g[0]!);
+        next =
+          hs[
+            hs.findIndex((m) =>
+              ty === "list" ? m === cur : a(m, "data-c") === a(cur!, "data-c"),
+            ) + d
+          ];
+      } else if (v) {
         const g = group(list[i]!);
         next = g[g.indexOf(list[i]!) + d];
       } else {

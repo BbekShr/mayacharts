@@ -49,7 +49,7 @@ for (const scheme of ["light", "dark"] as const)
   test(`every chart type draws its sample (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     const all = await types(page);
-    expect(all.length).toBe(27);
+    expect(all.length).toBe(28);
     for (const t of all) {
       await pick(page, t);
       await expect.poll(async () => ((await spec(page)) as { type: string }).type).toBe(t);
@@ -297,7 +297,7 @@ test("the ThoughtSpot files run against a stub viz for every type", async ({ pag
     const [html, css, js] = await page.locator("#panel code").allTextContents();
     // Muze Studio hands the search as a DataModel: getData() is { schema, data: row arrays }.
     const { data } = (await spec(page)) as { data: Record<string, unknown>[] };
-    const names = Object.keys(data[0]!);
+    const names = [...new Set(data.flatMap((r) => Object.keys(r)))]; // a column the first row lacks (list evidence) still exists
     const search = {
       schema: names.map((name) => ({ name })),
       data: data.map((r) => names.map((n) => ({ v: r[n] }))),

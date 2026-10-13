@@ -1045,7 +1045,7 @@ test.describe("stack toggle, card flip, kpi toggle and select", () => {
     await mount(page, "kt", { type: "kpi", x: "m", y: ["s", "u"], toggle: true, data: months });
     const radios = page.locator("#kt .maya-ctl [role=radio]");
     await expect(radios).toHaveCount(2);
-    const head = page.locator("#kt [data-key=v]");
+    const head = page.locator("#kt [data-key^='v~']");
     await expect(head).toHaveCount(1);
     const before = await head.textContent();
     await radios.nth(1).click();
@@ -1106,7 +1106,8 @@ test.describe("M4 drills, table paging and expand", () => {
   for (const type of ["radial", "waffle"] as const)
     test(`${type}: click a mark drills, Back pops`, async ({ page }) => {
       await mount(page, "d", { type, path: ["f", "item"], y: "sales", drill: true, data: rows });
-      await clickMark(page, page.locator("#d [data-maya=mark]").first());
+      // A radial arc's bounding-box centre can sit in its hole: click the mark itself.
+      await page.locator("#d [data-maya=mark]").first().dispatchEvent("click");
       await drilled(page, "d", 1);
       await settle(page);
       await page.locator("#d .maya-crumbs [data-depth='0']").click();
@@ -1121,7 +1122,6 @@ test.describe("M4 drills, table paging and expand", () => {
     );
     await mount(page, "h", {
       type: "heatmap",
-      x: "f",
       y: "sales",
       xPath: ["f", "item"],
       path: ["r"],
@@ -1190,9 +1190,9 @@ test.describe("M4 drills, table paging and expand", () => {
       { m, e: "x", v: 1 },
       { m, e: "y", v: 2 },
     ]);
-    await mount(page, "l", { type: "list", x: "m", y: "v", path: ["m", "e"], data });
-    await expect(page.locator("#l svg[data-maya=expand]")).toHaveCount(1);
-    await clickMark(page, page.locator("#l [data-key='m~B']"));
+    await mount(page, "l", { type: "list", x: "m", y: "v", path: ["m", "e"], bars: true, data });
+    await expect(page.locator("#l [data-maya=hit][aria-expanded=true]")).toHaveCount(1); // the first move starts open
+    await page.locator("#l [data-maya=hit][data-key='m~B']").dispatchEvent("click"); // 800 px wide: its centre is off a phone screen
     await expect.poll(async () => (await view(page, "l")).expanded).toBe("B");
   });
 });

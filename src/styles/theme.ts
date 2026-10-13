@@ -167,10 +167,10 @@ export const css =
   ".maya-ctls{display:flex;flex-wrap:wrap;gap:0 8px;align-items:flex-start}.maya-ctls>.maya-ctl{margin-bottom:8px}" +
   ":host([data-compact]) :is(.maya-ctl,.maya-flip,.maya-play){margin-bottom:4px;max-width:100%;overflow-x:auto;scrollbar-width:none}:host([data-compact]) .maya-ctl [role=radio]{padding:2px 8px;font-size:11px}" +
   // The card turn (kpi back): the box holds the perspective, the face hides its back; a rolled digit shows through its own clip.
-  ".maya-box{perspective:900px}.maya-svg{backface-visibility:hidden}.maya-box svg[data-roll]{overflow:hidden}[data-roll] text{fill:var(--maya-fg);font-variant-numeric:var(--maya-numeric,tabular-nums)}" +
+  ".maya-svg{backface-visibility:hidden}.maya-box svg[data-roll]{overflow:hidden}[data-roll] text{fill:var(--maya-fg);font-variant-numeric:var(--maya-numeric,tabular-nums)}" +
   ".maya-err{margin:0;padding:8px;color:var(--maya-bad);white-space:pre-wrap;font:12px monospace}" +
   ".maya-box{flex:1;min-height:0;position:relative}" +
-  ".maya-box svg{display:block;width:100%;height:100%;overflow:visible}" +
+  ".maya-box svg{display:block;overflow:visible}.maya-box svg:not([data-roll]){width:100%;height:100%}" +
   ".maya-svg{direction:ltr;font:var(--maya-font-size) var(--maya-font);font-variant-numeric:var(--maya-numeric,tabular-nums);-webkit-user-select:none;user-select:none}" +
   ".maya-svg text{fill:var(--maya-fg-muted);unicode-bidi:plaintext}[data-maya^=axis] text{font-size:var(--maya-axis-size,11px)}" +
   "[data-maya=grid] *{stroke:var(--maya-grid);stroke-dasharray:var(--maya-grid-dash);shape-rendering:crispEdges}" +
@@ -223,7 +223,7 @@ export const css =
   ":is([data-maya=line],[data-maya=area]){transition:opacity .25s;opacity:var(--h,var(--d))}[data-maya=marks][data-hot=p] path[data-maya=line]:not([data-active]){opacity:.25}" +
   // Sunburst rings: the stroke is the slice. Tint follows depth in the whole tree, so a slice
   // keeps its colour through a drill; the root disk is neutral, a drilled one its branch's.
-  "circle[data-depth][data-maya]{fill:none;stroke:var(--c);transition:stroke .5s}" +
+  "circle[data-depth][data-maya]{fill:none;stroke:var(--c);transition:stroke .5s}circle[data-key=v][data-depth]{transition-duration:.83s;transition-timing-function:cubic-bezier(.25,1,.5,1)}" +
   "circle[data-depth]:focus{outline:none}circle[data-depth]:focus-visible{stroke:color-mix(in oklab,var(--c),var(--maya-fg) 22%)}" +
   'circle[data-depth="0"]:not([data-s])[data-maya]{stroke:color-mix(in oklab,var(--maya-fg) 5%,var(--maya-bg))}' +
   `[data-maya=marks][data-hot] [data-maya=mark]${DIM}{opacity:.4}svg[data-still] [data-hot] [data-maya=mark]${DIM}{opacity:1;fill-opacity:.4;stroke-opacity:.4}` +
