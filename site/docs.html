@@ -517,6 +517,15 @@
           them in your stylesheet to style every chart at once. A strict CSP is fine: no inline
           style attribute is needed.
         </p>
+        <p>
+          Put them on <code>maya-chart</code> itself, by tag, class or id. A value on
+          <code>:root</code>, <code>html</code>, <code>body</code> or another ancestor does nothing:
+          the chart sets its own defaults on the element, and those beat anything it would inherit.
+          <code>spec.theme</code> beats the CSS. <code>numeric</code> is written as its font value,
+          <code>--maya-numeric: tabular-nums</code>. <code>axisSize</code>, <code>labelSize</code>,
+          <code>heroSize</code> and <code>cellGap</code> also size the layout, and
+          <code>rampMid</code> makes a ramp diverging, so set those in <code>spec.theme</code>.
+        </p>
         <pre><code>maya-chart {
   --maya-font: "Inter", sans-serif;
   --maya-accent: #7c3aed;
@@ -579,6 +588,7 @@ host.renderComplete();</code></pre>
 // chart.html: &lt;script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"&gt;&lt;/script&gt;
 //             &lt;maya-chart id="chart"&gt;&lt;/maya-chart&gt;
 // chart.css:  #chart { --maya-accent: ...; --maya-series-2: ...; }
+//             (theme tokens go on #chart itself; on :root, html or body they never reach the chart)
 // chart.js:   const draw = () =&gt; maya.host.thoughtspot(viz, spec);
 //             window.maya ? draw() : document.querySelector("script[src*=mayacharts]")
 //               .addEventListener("load", draw);
@@ -2595,7 +2605,8 @@ await chart.settled; // drawn and still</code></pre>
         <h3 id="hooks">CSS custom properties and hooks</h3>
         <p>
           Style a chart through the <code>--maya-*</code> custom properties (see Theme tokens) on
-          <code>maya-chart</code> or an ancestor; they cross the shadow boundary.
+          <code>maya-chart</code> itself; they cross the shadow boundary. On an ancestor they are
+          ignored, since the chart sets its own defaults on the element.
           <code>--maya-ease</code> sets the easing of stylesheet transitions. Inside the shadow root
           these classes are stable for tests and hosts: <code>.maya-title</code>,
           <code>.maya-sub</code>, <code>.maya-legend</code>, <code>.maya-crumbs</code>,

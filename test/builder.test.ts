@@ -44,6 +44,7 @@ import {
   roles,
   sample,
   snippets,
+  splitTheme,
 } from "../site/builder-kit.ts";
 
 // M0 stubs (plan maya-signature) register and validate but draw nothing yet; M1 drops each type
@@ -146,6 +147,28 @@ describe("snippets", () => {
         expect(got, t).toEqual(rest);
       }
     }
+  });
+
+  it("ThoughtSpot keeps theme tokens in chart.css on #chart, layout tokens and names in the spec", () => {
+    const theme = {
+      accent: "#0b6",
+      series2: "red",
+      fontSize: "13px",
+      numeric: "tabular",
+      axisSize: "14px",
+    };
+    const spec = { ...sample("bar"), theme } as ChartSpec;
+    const [, css, js] = snippets(spec).ThoughtSpot;
+    expect(css!.code).toContain(
+      "#chart {\n  display: block;\n  height: 100%;\n  color-scheme: light;\n  --maya-accent: #0b6;\n  --maya-series-2: red;\n  --maya-font-size: 13px;\n  --maya-numeric: tabular-nums;\n}",
+    );
+    expect(js!.code).not.toContain("#0b6");
+    expect(splitTheme(spec).spec.theme).toEqual({ axisSize: "14px" });
+    expect(splitTheme({ ...spec, theme: { accent: "#0b6" } }).spec).not.toHaveProperty("theme");
+    expect(splitTheme({ ...spec, theme: "ocean" })).toMatchObject({
+      vars: "",
+      spec: { theme: "ocean" },
+    });
   });
 
   it("imports the module a type needs", () => {

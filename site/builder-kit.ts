@@ -885,14 +885,38 @@ export const cutNote = (spec: ChartSpec): string =>
     ? `The code holds the first ${SHOWN} of ${n(spec.data.length)} rows. Load your full data where it says data.`
     : "";
 
+/** Theme tokens core also reads to lay out or to make a ramp diverging: they stay in spec.theme. */
+const LAYOUT = new Set(["axisSize", "labelSize", "heroSize", "cellGap", "rampMid", "rampMidValue"]);
+
 /**
- * chart.js for ThoughtSpot: the spec without rows, and the host adapter. chart.html loads the
- * library, so chart.js stays light. When it runs first it waits on that script's load: ThoughtSpot
- * adds the HTML after the page has loaded, so window load never comes.
+ * A ThoughtSpot tile keeps the look in chart.css: each theme token becomes --maya-<kebab> on
+ * #chart itself (the chart sets its own defaults on the element, so a value on :root or body
+ * never reaches it). Returns those declarations and the spec left for chart.js, without rows.
+ */
+export function splitTheme(spec: ChartSpec): { vars: string; spec: ChartSpec } {
+  const { data: _, theme, ...rest } = spec;
+  if (!theme || typeof theme !== "object" || Array.isArray(theme))
+    return { vars: "", spec: { ...rest, ...(theme && { theme }) } as ChartSpec };
+  const keep = Object.fromEntries(Object.entries(theme).filter(([k]) => LAYOUT.has(k)));
+  const vars = Object.entries(theme)
+    .filter(([k]) => !LAYOUT.has(k))
+    // numeric "tabular" | "proportional" is written "tabular-nums", as render.ts does.
+    .map(
+      ([k, v]) =>
+        `  --maya-${k.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase())}: ${k === "numeric" ? `${v}-nums` : v};\n`,
+    )
+    .join("");
+  return { vars, spec: { ...rest, ...(Object.keys(keep).length && { theme: keep }) } as ChartSpec };
+}
+
+/**
+ * chart.js for ThoughtSpot: the spec without rows or CSS theme tokens, and the host adapter.
+ * chart.html loads the library, so chart.js stays light. When it runs first it waits on that
+ * script's load: ThoughtSpot adds the HTML after the page has loaded, so window load never comes.
  * Rows, cell unwrapping and the settled signal come from maya.host.thoughtspot.
  */
 export function thoughtSpotJs(spec: ChartSpec): string {
-  const { data: _, ...rest } = spec;
+  const rest = splitTheme(spec).spec;
   return `// Column names match case-insensitively; a /regex/ works too (x: /item/i).
 const spec = ${flat(JSON.stringify(rest, null, 2)).replace(/</g, "\\u003c")};
 const draw = () => maya.host.thoughtspot(viz, spec);
@@ -944,7 +968,7 @@ body {
   display: block;
   height: 100%;
   color-scheme: light;
-}
+${splitTheme(spec).vars}}
 `,
       },
       { name: "chart.js", code: thoughtSpotJs(spec) },

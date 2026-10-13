@@ -281,7 +281,7 @@ export const css =
   // Only near-black and white are exact at the threshold, so the inks are constants, not tokens.
   // Where relative colours are missing the dark [data-ink] rule stands, light on the fills known to be dark.
   "@supports (color:color(from red xyz-d65 x y z)){[data-maya=labels] [data-ink=a]{fill:color(from var(--c,var(--maya-series-1)) xyz-d65 calc(clamp(.0017,.0017 + (.1831 - y)*1e5,1)*.9505) clamp(.0017,.0017 + (.1831 - y)*1e5,1) calc(clamp(.0017,.0017 + (.1831 - y)*1e5,1)*1.089))}}" +
-  "@supports not (color:color(from red xyz-d65 x y z)){[data-maya=labels] [data-ink=a]:is([data-other],[data-total],[data-tone]:not([data-tone=warn])){fill:var(--maya-label-ink-on,var(--maya-bg))}}" +
+  "@supports not (color:color(from red xyz-d65 x y z)){[data-maya=labels] [data-ink=a]:is([data-other],[data-total],[data-tone]:not([data-tone=warn])){fill:var(--maya-label-ink-on-fill,var(--maya-bg))}}" +
   HEXMAP +
   SCATTER +
   ORBIT +
