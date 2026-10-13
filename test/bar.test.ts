@@ -224,3 +224,32 @@ describe("waterfall direction", () => {
     ).not.toContain("data-way");
   });
 });
+
+describe("was with series draws a tick per grouped bar (#82)", () => {
+  const data = ["a", "b"].flatMap((c) => ["x", "y"].map((s) => ({ c, s, v: 10, w: 8 })));
+  const ghost = (o: Partial<ChartSpec>) =>
+    [
+      ...renderParts({
+        type: "bar",
+        x: "c",
+        y: "v",
+        data,
+        was: "w",
+        ...o,
+      } as ChartSpec).svg.matchAll(/<rect[^>]*data-past[^>]*>/g),
+    ].map((m) => m[0]);
+  it("grouped: a 2px tick across each bar", () => {
+    const g = ghost({ series: "s" });
+    expect(g).toHaveLength(4);
+    for (const t of g) {
+      expect(t).toContain("data-tick");
+      expect(t).toContain('height="2"');
+    }
+  });
+  it("single series keeps the ghost box", () => {
+    const g = ghost({ data: data.filter((d) => d.s === "x") });
+    expect(g).toHaveLength(2);
+    expect(g[0]).not.toContain("data-tick");
+    expect(g[0]).not.toContain('height="2"');
+  });
+});

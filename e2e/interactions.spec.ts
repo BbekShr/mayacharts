@@ -924,8 +924,13 @@ test.describe("parallel brush and beeswarm peers", () => {
   }) => {
     await mount(page, "par", par);
     const axes = page.locator("#par [data-maya=axis][data-field]");
+    // The chart is 800 px wide: on a phone the middle axis starts off screen, where mouse events go nowhere.
+    const box = async (n: number) => {
+      await axes.nth(n).scrollIntoViewIfNeeded();
+      return (await axes.nth(n).boundingBox())!;
+    };
     const drag = async (n: number, from: number, to: number) => {
-      const b = (await axes.nth(n).boundingBox())!;
+      const b = await box(n);
       const x = b.x + b.width / 2;
       await page.mouse.move(x, b.y + b.height * from);
       await page.mouse.down();
@@ -944,7 +949,7 @@ test.describe("parallel brush and beeswarm peers", () => {
     await drag(1, 0.2, 0.6); // a second axis combines (AND): never fewer hidden
     await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(2);
     expect(await off()).toBeGreaterThanOrEqual(one);
-    const b = (await axes.nth(1).boundingBox())!;
+    const b = await box(1);
     await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
     await expect.poll(async () => (await view(page, "par")).brush?.length).toBe(1);
     await page.keyboard.press("Escape");
@@ -978,5 +983,88 @@ test.describe("parallel brush and beeswarm peers", () => {
     await page.keyboard.press("Escape");
     await expect.poll(async () => (await view(page, "bs")).peers).toBeUndefined();
     expect(await selected(page, "bs")).toHaveLength(0);
+  });
+});
+
+test.describe("stack toggle, card flip, kpi toggle and select", () => {
+  const months = ["2026-07", "2026-08", "2026-09", "2026-10"].map((m, i) => ({
+    m,
+    s: 10 + i * 3,
+    u: 5 + i,
+    a: 1 + i,
+    b: 2 + i,
+  }));
+
+  test("a stack radio sets view.stack and the svg's data-stack, not view.measure", async ({
+    page,
+  }) => {
+    await mount(page, "st", {
+      type: "bar",
+      x: "m",
+      y: ["a", "b"],
+      stack: [false, true, "percent"],
+      data: months,
+    });
+    const radios = page.locator("#st [data-maya=stack] [role=radio]");
+    await expect(radios).toHaveCount(3);
+    await expect(page.locator("#st svg.maya-svg")).not.toHaveAttribute("data-stack", /.+/);
+    await radios.nth(2).click();
+    await expect.poll(async () => (await view(page, "st")).stack).toBe(2);
+    expect((await view(page, "st")).measure).toBeUndefined();
+    await expect(page.locator("#st svg.maya-svg")).toHaveAttribute("data-stack", "percent");
+    await radios.nth(2).focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect.poll(async () => (await view(page, "st")).stack).toBe(1);
+    await expect(page.locator("#st svg.maya-svg")).toHaveAttribute("data-stack", "true");
+  });
+
+  test("kpi toggle: the measure radios show one tile at a time", async ({ page }) => {
+    await mount(page, "kt", { type: "kpi", x: "m", y: ["s", "u"], toggle: true, data: months });
+    const radios = page.locator("#kt .maya-ctl [role=radio]");
+    await expect(radios).toHaveCount(2);
+    const head = page.locator("#kt [data-key=v]");
+    await expect(head).toHaveCount(1);
+    const before = await head.textContent();
+    await radios.nth(1).click();
+    await expect.poll(async () => (await view(page, "kt")).measure).toBe(1);
+    await settle(page);
+    expect(await head.textContent()).not.toBe(before);
+  });
+
+  test("kpi select: a sparkline point selects its month; Escape clears", async ({ page }) => {
+    await mount(page, "ks", { type: "kpi", x: "m", y: "s", select: true, data: months });
+    const dot = page.locator("#ks [data-maya=mark][data-c]").nth(1);
+    await clickMark(page, dot);
+    await expect.poll(async () => (await selected(page, "ks")).length).toBe(1);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await selected(page, "ks")).length).toBe(0);
+  });
+
+  test("card flip: the button turns to the back, Escape and the button return", async ({
+    page,
+  }) => {
+    await mount(page, "fl", {
+      type: "kpi",
+      x: "m",
+      y: "s",
+      data: months,
+      back: { type: "bar", x: "m", y: "s", horizontal: true },
+    });
+    const flipBtn = page.locator("#fl .maya-flip");
+    await expect(flipBtn).toHaveAttribute("aria-pressed", "false");
+    await flipBtn.click();
+    await expect.poll(async () => (await view(page, "fl")).face).toBe("back");
+    await settle(page);
+    await expect(page.locator("#fl .maya-flip")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#fl rect[data-maya=mark]")).toHaveCount(months.length);
+    await expect(page.locator("#fl [data-key=v]")).toHaveCount(0);
+    await page.locator("#fl .maya-flip").focus();
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await view(page, "fl")).face).toBeUndefined();
+    await settle(page);
+    await expect(page.locator("#fl [data-key=v]")).toHaveCount(1);
+    await page.locator("#fl .maya-flip").focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await view(page, "fl")).face).toBe("back");
   });
 });

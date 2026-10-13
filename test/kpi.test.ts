@@ -334,3 +334,63 @@ describe("hero number", () => {
     expect(svg(base)).toMatch(/<text[^>]*data-hero[^>]*>110</);
   });
 });
+
+describe("measure toggle, was per measure, compare (#82)", () => {
+  const rows = months.map((m, i) => ({
+    m,
+    a: [100, 80, 90, 110][i]!,
+    b: [5, 6, 7, 8][i]!,
+    aLY: 100,
+    bLY: 10,
+  }));
+  const multi = (o: Partial<ChartSpec> = {}) =>
+    ({ type: "kpi", x: "m", y: ["a", "b"], data: rows, ...o }) as ChartSpec;
+  it("toggle draws one tile, the sparkline and the change lines at 300x260", () => {
+    const s = svg(multi({ toggle: true, was: { a: "aLY" } }), { height: 260 });
+    expect(s.match(/data-key="v"/g)).toHaveLength(1);
+    expect(s).toContain('data-y="110"');
+    expect(s).toContain('data-maya="line"');
+    expect(s).toContain("circle");
+    expect(s.match(/data-kpi="(delta|of)"/g)!.length).toBeGreaterThanOrEqual(2);
+    expect(s).not.toContain("data-series");
+  });
+  it("without toggle there is one tile per measure", () => {
+    expect(svg(multi()).match(/data-hero/g)).toHaveLength(2);
+  });
+  it("the was field is per measure: only the keyed tile has a was line", () => {
+    const s = svg(multi({ was: { a: "aLY" } }), { width: 400, height: 260 });
+    expect(s.match(/vs aLY|aLY/g)).toHaveLength(1);
+  });
+  it("the bullet scale is per measure", () => {
+    const s = svg(
+      multi({
+        colorBy: { target: 50 },
+        yDomain: { a: [0, 200], b: [0, 10] },
+      }),
+      { width: 400, height: 260 },
+    );
+    const w = [...s.matchAll(/data-kpi="fill"[^>]*width="([\d.]+)"/g)].map((m) => +m[1]!);
+    expect(w).toHaveLength(2);
+    expect(w[0]).not.toBe(w[1]);
+  });
+  it("compare picks and orders the change lines; without target the bullet stays", () => {
+    const sp = (compare: NonNullable<ChartSpec["compare"]>) =>
+      svg({ ...base, colorBy: { target: 100 }, compare }, { height: 260 });
+    const lines = (s: string) =>
+      [...s.matchAll(/data-kpi="(?:delta|of)"[^>]*>(.*?)<\/text>/g)].map((m) =>
+        m[1]!.replace(/<[^>]*>/g, ""),
+      );
+    expect(lines(sp(["target", "previous"]))[0]).toMatch(/target/);
+    expect(lines(sp(["previous"])).some((l) => /target/.test(l))).toBe(false);
+    expect(sp(["previous"])).toContain('data-kpi="fill"');
+    expect(sp(["previous"])).toContain("On track");
+    expect(sp([]).includes('data-kpi="delta"')).toBe(false);
+  });
+  it("the sparkline dots are select targets; the headline and bullet are not", () => {
+    const s = svg({ ...base, colorBy: { target: 100 }, select: true } as ChartSpec, {
+      height: 260,
+    });
+    expect(s.match(/<circle[^>]*data-c=/g)).toHaveLength(4);
+    expect(s.match(/<(text|rect)[^>]*data-maya="mark"[^>]*data-c=/g)).toBeNull();
+  });
+});

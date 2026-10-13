@@ -2,6 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { MayaChart } from "../src/element/maya-chart.ts";
 import { reduce } from "../src/element/measure.ts";
+import * as flip from "../src/element/flip.ts";
 import "../src/units.ts";
 import type { ChartSpec, State } from "../src/core/types.ts";
 
@@ -165,5 +166,103 @@ describe("units form control", () => {
     await frame();
     expect(el.view.form).toBe(2);
     expect(el.shadowRoot!.activeElement).toBe(forms(el)[2]);
+  });
+});
+
+describe("stack toggle", () => {
+  const stacked = () => spec({ stack: [false, true, "percent"] });
+  const group = (el: Element) => [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>("[data-maya=stack] [role=radio]"),
+  ];
+  it("reduce: stack sets and clamps, resets when spec.stack changes, not when y does", () => {
+    expect(reduce({ view: {}, selected: [] }, { type: "stack", index: 9, count: 3 }).view).toEqual({
+      stack: 2,
+    });
+    const s: State = { view: { stack: 1, measure: 1 }, selected: [] };
+    const prev = stacked();
+    expect(
+      reduce(s, { type: "spec", prev, next: { ...prev, stack: [true, "percent"] } as ChartSpec })
+        .view,
+    ).toEqual({ measure: 1 });
+    expect(
+      reduce(s, { type: "spec", prev, next: { ...prev, y: ["b", "a"] } as ChartSpec }).view.stack,
+    ).toBe(1);
+  });
+  it("a stack radio sets view.stack, never view.measure, and announces its label", async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = stacked();
+    document.body.append(el);
+    await frame();
+    expect(group(el)).toHaveLength(3);
+    group(el)[2]!.click();
+    await frame();
+    await new Promise((r) => setTimeout(r, 320));
+    expect(el.view).toEqual({ stack: 2 });
+    expect(group(el)[2]!.getAttribute("aria-checked")).toBe("true");
+    expect(el.shadowRoot!.querySelector("[data-maya=live]")!.textContent).toContain(
+      group(el)[2]!.textContent,
+    );
+    expect(el.shadowRoot!.querySelector("svg")!.getAttribute("data-stack")).toBe("percent");
+  });
+});
+
+describe("card flip", () => {
+  const card = (): ChartSpec =>
+    ({
+      type: "kpi",
+      x: "q",
+      y: "a",
+      data: rows,
+      back: { type: "bar", x: "q", y: "a", horizontal: true },
+    }) as ChartSpec;
+  const btn = (el: Element) => el.shadowRoot!.querySelector<HTMLElement>(".maya-flip")!;
+  const make2 = async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    el.spec = card();
+    document.body.append(el);
+    await frame();
+    return el;
+  };
+  it("reduce: toggles, goes to a named face, drops the face when back goes away", () => {
+    const s: State = { view: {}, selected: [] };
+    const b = flip.reduce(s, { type: "flip" });
+    expect(b.view.face).toBe("back");
+    expect(flip.reduce(b, { type: "flip" }).view).toEqual({});
+    expect(flip.reduce(b, { type: "flip", to: "back" })).toBe(b);
+    expect(flip.reduce(s, { type: "flip", to: "front" })).toBe(s);
+    const { back: _, ...bare } = card();
+    expect(flip.reduce(b, { type: "spec", prev: card(), next: bare as ChartSpec }).view).toEqual(
+      {},
+    );
+    expect(flip.reduce(b, { type: "spec", prev: card(), next: card() })).toBe(b);
+  });
+  it("click turns to the back (state, pressed, bars), Escape returns to the front", async () => {
+    const real = Element.prototype.animate;
+    // A turn whose animations finish at once.
+    Element.prototype.animate = function () {
+      const a: any = { cancel() {}, onfinish: null };
+      queueMicrotask(() => a.onfinish?.());
+      return a;
+    } as never;
+    const el = await make2();
+    expect(btn(el).getAttribute("aria-pressed")).toBe("false");
+    btn(el).click();
+    await frame();
+    expect(el.view.face).toBe("back");
+    expect(btn(el).getAttribute("aria-pressed")).toBe("true");
+    expect(el.shadowRoot!.querySelector("svg")!.getAttribute("data-horizontal") ?? "").toBe("");
+    expect(el.shadowRoot!.querySelectorAll("rect[data-maya=mark]").length).toBeGreaterThan(0);
+    btn(el).dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+    await frame();
+    expect(el.view.face).toBeUndefined();
+    expect(btn(el).getAttribute("aria-pressed")).toBe("false");
+    Element.prototype.animate = real;
   });
 });

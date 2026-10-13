@@ -324,7 +324,10 @@ export function tooltip(
             : y
           : "";
     // Stacked: rows top-down like the stack, then the total.
-    const stk = sp?.stack && /^(bar|area)$/.test(sp.type) && g.length > 1;
+    const stk =
+      m.closest("svg")?.hasAttribute("data-stack") &&
+      /^(bar|area)$/.test(sp?.type ?? "") &&
+      g.length > 1; // data-stack is the active mode; spec.stack may be a modes array
     const all = stk ? [...g].reverse() : g;
     // ponytail: 12 rows at most (a tooltip must fit the viewport), from 6 before the hovered row; "+N" counts the rest.
     const rows = all.slice(Math.max(0, all.indexOf(m) - 6)).slice(0, 12);

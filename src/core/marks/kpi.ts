@@ -81,13 +81,14 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
     signDisplay: "exceptZero",
   });
   const prev = live[live.length - 2];
-  const wasV = !spec.was
+  const wf = spec.wasOf.get(f) ?? null;
+  const wasV = !wf
     ? null
     : spec.x
       ? last
-        ? colorVals(spec, spec.was)(cats[last.ci]!, "")
+        ? colorVals(spec, wf)(cats[last.ci]!, "")
         : null
-      : sum(spec.was);
+      : sum(wf);
   const e: unknown = spec.format.get(f);
   const isPct =
     e === "percent" ||
@@ -121,10 +122,12 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
       tone: tone === undefined ? (d * dir > 0 ? "good" : d * dir < 0 ? "bad" : null) : tone,
     });
   };
-  if (last && prev) compare(prev.value, ctx.fmt(spec.x, cats[prev.ci]));
-  if (spec.was) compare(wasV, spec.titles.get(spec.was) ?? spec.was);
-  if (target !== null)
-    compare(target, `${ctx.t("target")} ${ctx.fmt(f, target)}`, status, ctx.t("target"));
+  for (const c of spec.compare) {
+    if (c === "previous") last && prev && compare(prev.value, ctx.fmt(spec.x, cats[prev.ci]));
+    else if (c === "was") wf && compare(wasV, spec.titles.get(wf) ?? wf);
+    else if (target !== null)
+      compare(target, `${ctx.t("target")} ${ctx.fmt(f, target)}`, status, ctx.t("target"));
+  }
 
   // A small box drops comparisons from the bottom, then shrinks the headline to what is left,
   // then drops the status word (18 px) rather than let the headline fall under 16 px. Never overlap.
@@ -176,8 +179,9 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
   const hasSpark = cats.length >= 3 && bottom - (target === null ? 0 : 38) - top >= 28;
   let lim = bottom; // the caption of a sparkline-less tile must end above this
   if (target !== null) {
-    const [lo, hi] = spec.yDomain
-      ? [Math.min(...spec.yDomain), Math.max(...spec.yDomain)]
+    const dom = spec.domains.get(f);
+    const [lo, hi] = dom
+      ? [Math.min(...dom), Math.max(...dom)]
       : [0, Math.max(target, goal!.warn ?? 0, value) * 1.2]; // the dial holds a lower-is-better warn line and any value
     // `|| 0`: a span past Number.MAX_VALUE divides Infinity by Infinity.
     const pos = (v: number) => Math.min(Math.max((v - lo) / (hi - lo || 1) || 0, 0), 1);
@@ -349,7 +353,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
 /** Headline, changes against the previous period, `was` and target, sparkline, target bullet. A `y` array lays one tile per measure side by side. No axes: everything from width/height. */
 function draw(ctx: MarkCtx) {
   const { spec, width: W, height: H } = ctx;
-  const ms = spec.measures;
+  const ms = spec.toggle ? [spec.y] : spec.measures;
   // Balanced grid: as many columns as fit (MIN_TILE each), then no more than the rows need.
   const cols0 = Math.max(1, Math.min(ms.length, Math.floor(W / MIN_TILE)));
   const rows = Math.ceil(ms.length / cols0);

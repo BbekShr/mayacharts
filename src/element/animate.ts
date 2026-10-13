@@ -17,7 +17,11 @@ export interface PatchOptions {
   /** Drill: zoom `in` to, or `out` of, the branch with this raw value: the marks whose key
    * ends in it (old marks going in, new ones coming out). Rect marks scale with the view. */
   zoom?: { in: string } | { out: string } | undefined;
+  /** kpi numberMotion "roll": the headline rolls digit columns instead of counting. */
+  roll?: boolean | undefined;
 }
+
+let rolling = false;
 
 let instant = false;
 let lag = 0; // ms per category step of the current patch's stagger
@@ -379,6 +383,67 @@ function count(e: Element, from: string, o: KeyframeAnimationOptions): void {
   requestAnimationFrame(step);
 }
 
+const rolls = new WeakMap<Element, Element>(); // the live digit columns of a headline
+/*
+ * numberMotion "roll" (kpi headline, key v): the text is hidden and a nested <svg data-roll> window of
+ * per-character <text> stands in. A changed digit is a column: the old one and the new one a
+ * line apart, translateY by one line, the units digit first. Transform and opacity only.
+ */
+function roll(e: Element, from: string, o: KeyframeAnimationOptions): void {
+  const to = e.textContent ?? "";
+  if (instant || to === from || !to || !(e as SVGTextElement).getStartPositionOfChar)
+    return count(e, from, o);
+  const bb = (e as SVGGraphicsElement).getBBox();
+  // A nested <svg> is the window (overflow hidden, theme.ts); its viewBox keeps absolute coordinates. 2 px of air.
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  g.setAttribute("data-roll", "");
+  const win = [bb.x - 2, bb.y - 2, bb.width + 4, bb.height + 4];
+  for (const [k, v] of Object.entries({ x: win[0], y: win[1], width: win[2], height: win[3] }))
+    g.setAttribute(k, String(v));
+  g.setAttribute("viewBox", win.join(" "));
+  const y = n(e, "y");
+  const put = (p: Element, c: string, x: number, dy = 0) => {
+    const t = e.cloneNode(false) as Element;
+    for (const k of ["data-key", "data-maya", "id", "transform"]) t.removeAttribute(k);
+    t.setAttribute("x", String(x));
+    t.setAttribute("text-anchor", "start");
+    if (dy) t.setAttribute("y", String(y + dy));
+    t.textContent = c;
+    p.append(t);
+  };
+  const L = to.length;
+  [...to].forEach((c, j) => {
+    const x = (e as SVGTextElement).getStartPositionOfChar(j).x;
+    const old = from[from.length - (L - j)] ?? "";
+    if (!/\d/.test(c) || c === old) return put(g, c, x);
+    const col = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    put(col, old, x);
+    put(col, c, x, bb.height);
+    g.append(col);
+    run(col, [{ transform: "none" }, { transform: `translateY(${-bb.height}px)` }], {
+      ...o,
+      delay: Number(o.delay ?? 0) + (L - 1 - j) * 50,
+      fill: "forwards",
+    });
+  });
+  if (!from) run(g, [{ opacity: 0 }, { opacity: 1 }], { ...o, duration: 240 });
+  rolls.get(e)?.remove();
+  rolls.set(e, g);
+  e.setAttribute("visibility", "hidden");
+  e.after(g);
+  const ms = Number(o.duration) + Number(o.delay ?? 0) + L * 50;
+  hold(e, performance.now() + ms);
+  setTimeout(() => {
+    if (rolls.get(e) !== g) return;
+    rolls.delete(e);
+    g.remove();
+    e.removeAttribute("visibility");
+  }, ms);
+}
+/** Headline numbers: count up, or roll when the patch asks for it. */
+const numeric = (e: Element, from: string, o: KeyframeAnimationOptions) =>
+  (rolling && /^v(~|$)/.test(e.getAttribute("data-key") ?? "") ? roll : count)(e, from, o);
+
 function marks(o: Element, w: Element, origin?: Box): void {
   const old = new Map<string, Element>();
   for (const e of o.children)
@@ -537,7 +602,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
         });
     } else if (shaped && !morphed && !m.matches("[data-maya=area]"))
       fade(m, false, undefined, { ...DATA, delay: delay(m) / 2 });
-    if (m.localName === "text" && m.textContent !== was) count(m, was, DATA);
+    if (m.localName === "text" && m.textContent !== was) numeric(m, was, DATA);
     const tg = pick();
     if (tg && !instant && sig(tg) !== s0)
       fade(tg, false, undefined, { ...UI, delay: glided || tg === m ? 120 : 0 });
@@ -772,7 +837,7 @@ function intro(svg: Element, kind: Intro): void {
         run(e, [{ transform: tf(g, p) }, { transform: "none" }], { ...INTRO, delay: delay(e) });
       else enter(e, undefined, INTRO);
     }
-  for (const t of m.querySelectorAll("text[data-maya=mark]")) count(t, "", INTRO);
+  for (const t of m.querySelectorAll("text[data-maya=mark]")) numeric(t, "", INTRO);
   // WebKit starts each clock at animate(), and a page of charts draws in one task: begin every
   // entrance at its first painted frame instead (the orbit's CSS rotation keeps its clock).
   requestAnimationFrame(() =>
@@ -802,6 +867,7 @@ export function patch(
   animate: boolean,
   opts: PatchOptions = {},
 ): void {
+  rolling = !!opts.roll;
   const t = document.createElement("template");
   t.innerHTML = html(markup);
   const w = t.content.firstElementChild!;
@@ -852,6 +918,37 @@ export function patch(
     drill = false;
   }
   opts.after?.(box.firstElementChild!);
+}
+
+/**
+ * The card turn (kpi back): the old face rotates edge-on (0 to 90deg, 160 ms ease-in), `swap`
+ * replaces it, the new one comes round (-90 to 0deg, 280 ms ease-out). Transform only; with
+ * `fade` (reduced motion) the same two beats are an opacity crossfade (100 + 140 ms). Returns a canceller.
+ */
+export function turn(box: Element, swap: () => void, fade: boolean): () => void {
+  const face = (a: number, b: number) =>
+    fade
+      ? [{ opacity: 1 - a }, { opacity: 1 - b }]
+      : [
+          { transform: `perspective(900px) rotateY(${a}deg)` },
+          { transform: `perspective(900px) rotateY(${b}deg)` },
+        ];
+  const out = box.firstElementChild?.animate?.(face(0, fade ? 1 : 90), {
+    duration: fade ? 100 : 160,
+    easing: "ease-in",
+    fill: "forwards",
+  });
+  let back: Animation | undefined;
+  const go = () => {
+    swap();
+    back = box.firstElementChild?.animate?.(face(fade ? 1 : -90, 0), {
+      duration: fade ? 140 : 280,
+      easing: EASE,
+    });
+  };
+  if (out) out.onfinish = go;
+  else go();
+  return () => (out && (out.onfinish = null), out?.cancel(), back?.cancel());
 }
 
 const live = (root: ShadowRoot) =>

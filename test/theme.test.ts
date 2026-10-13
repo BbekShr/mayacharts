@@ -1,7 +1,6 @@
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { css } from "../src/styles/theme.ts";
-import { wipB } from "../src/styles/wip-b.ts";
 
 const lum = (hex: string) => {
   const c: number[] = [1, 3, 5].map((i) => {
@@ -298,7 +297,14 @@ describe("M2 tokens", () => {
     expect(css).toContain("fill:var(--maya-label-ink,#12161c)");
     expect(css).toContain("fill:var(--maya-label-ink-on,var(--maya-bg))");
   });
-  it("designer B's CSS is appended last", () => {
-    expect(css.endsWith(wipB)).toBe(true);
+  it("brush and peers CSS ends the stylesheet", () => {
+    expect(css).toContain("[data-off]{opacity:.12}");
+    expect(css.endsWith("font-weight:600;pointer-events:none}")).toBe(true);
+  });
+  it("styles the flip button, the stack control row, the card turn and the roll clip", () => {
+    expect(css).toContain(".maya-flip[aria-pressed=true]");
+    expect(css).toContain(".maya-ctls{display:flex");
+    expect(css).toContain("backface-visibility:hidden");
+    expect(css).toContain("svg[data-roll]{overflow:hidden}");
   });
 });

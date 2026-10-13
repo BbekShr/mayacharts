@@ -1,5 +1,3 @@
-import { wipB } from "./wip-b.ts";
-
 const L =
   ":host,.maya-root{--maya-font:system-ui,sans-serif;--maya-font-size:12px;--maya-fg:light-dark(#1f2328,#e6edf3);--maya-fg-muted:light-dark(#656d76,#9198a1);--maya-grid:color-mix(in oklab,var(--maya-fg) 10%,transparent);--maya-bg:light-dark(#fff,#0d1117);--maya-accent:oklch(.6 .17 255);--maya-radius:3px;--maya-ease:cubic-bezier(.22,1,.36,1);--maya-tooltip-bg:color-mix(in oklab,var(--maya-bg) 92%,transparent);--maya-tooltip-fg:var(--maya-fg);--maya-focus:var(--maya-accent);--maya-good:light-dark(#0b7a75,#4fb3a9);--maya-bad:light-dark(#b5471b,#f08a5d);--maya-series-1:var(--maya-accent);--maya-series-2:oklch(.66 .16 50);--maya-series-3:oklch(.62 .15 160);--maya-series-4:oklch(.66 .17 330);--maya-series-5:oklch(.62 .14 90);--maya-series-6:oklch(.62 .12 205);--maya-series-7:oklch(.64 .19 22);--maya-series-8:oklch(.62 .16 295)}";
 const D = "--maya-fg:#1f2328;--maya-fg-muted:#656d76;--maya-bg:#fff";
@@ -123,7 +121,9 @@ const ORBIT =
   // Weave threads and halos: dim with legend hover, selection and the lit thread.
   "[data-w]{opacity:var(--h,var(--d,var(--o)));transition:opacity .25s}[data-maya=marks][data-hot] [data-w]:not([data-lit]){opacity:.18}" +
   // Memory ghost (bar `was`): the previous value, behind its bar.
-  "[data-past]{fill:var(--maya-ghost,var(--maya-fg));fill-opacity:.12;stroke:var(--maya-ghost,var(--maya-fg));stroke-opacity:.55;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}";
+  "[data-past]{fill:var(--maya-ghost,var(--maya-fg));fill-opacity:.12;stroke:var(--maya-ghost,var(--maya-fg));stroke-opacity:.55;stroke-dasharray:3 2;rx:var(--maya-radius);transform-box:fill-box;transform-origin:0 0;pointer-events:none}" +
+  // A was tick (grouped bars): solid ink across the bar, no box.
+  "[data-past][data-tick]{fill-opacity:.7;stroke:none}";
 
 export const css =
   L +
@@ -141,7 +141,7 @@ export const css =
   ".maya-crumbs{min-height:1.25em;line-height:1.25}" +
   // The current crumb is where you are, not a link: ink, bold, no hover.
   ".maya-crumbs [aria-current]{padding:2px 6px;color:var(--maya-fg);font-weight:600}" +
-  `.maya-legend :is(button,span),:is(.maya-crumbs,.maya-tip) button,.maya-reset,.maya-play{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
+  `.maya-legend :is(button,span),:is(.maya-crumbs,.maya-tip) button,.maya-reset,.maya-play,.maya-flip{display:inline-flex;align-items:center;gap:6px;${B};border-radius:6px;padding:2px 6px;transition:background .15s,opacity .2s,color .15s}` +
   ":is(.maya-legend,.maya-crumbs,.maya-tip) button:hover{background:var(--maya-grid);color:var(--maya-fg)}" +
   ".maya-legend [aria-pressed=false]{opacity:.5}.maya-legend [aria-pressed=false] i{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}" +
   ":is(button,a):focus-visible,.maya-ctl :focus-visible{outline:2px solid var(--maya-focus);outline-offset:2px}" +
@@ -155,12 +155,19 @@ export const css =
   // Declared once where the theme overrides live, not on every ramp mark (speed).
   // Ramp stops: tokens rampLow, rampMid, rampHigh; unset, the accent from 35% (--fl) over --b, the 50% mix of the two ends.
   ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)));--rl:var(--maya-ramp-low,color-mix(in oklab,var(--maya-accent) var(--fl,35%),var(--b)));--rh:var(--maya-ramp-high,var(--maya-accent));--rm:var(--maya-ramp-mid,color-mix(in oklab,var(--rh),var(--rl)))}" +
-  ".maya-reset,.maya-play{border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-reset{position:absolute;top:4px;right:4px}" +
-  ".maya-ctl,.maya-play{margin:0 0 8px;align-self:flex-start}.maya-play{min-height:24px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
+  ".maya-reset,.maya-play,.maya-flip{border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-reset{position:absolute;top:4px;right:4px}" +
+  ".maya-ctl,.maya-play,.maya-flip{margin:0 0 8px;align-self:flex-start}.maya-play,.maya-flip{min-height:24px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
   ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a;transition:transform .3s var(--maya-ease)}" +
   C +
   `.maya-ctl [role=radio]{${B};position:relative;padding:4px 12px;border-radius:6px;transition:color .2s}` +
   ".maya-ctl [aria-checked=true]{color:var(--maya-fg);font-weight:600}" +
+  // The kpi Details button is a toggle: pressed (the back face shows) it is ink on the control track.
+  ".maya-flip[aria-pressed=true]{background:var(--maya-grid);color:var(--maya-fg);font-weight:600}" +
+  // Controls share a row (a wrapper), the measure and stack controls side by side; a small tile tightens them and scrolls what still overflows.
+  ".maya-ctls{display:flex;flex-wrap:wrap;gap:0 8px;align-items:flex-start}.maya-ctls>.maya-ctl{margin-bottom:8px}" +
+  ":host([data-compact]) :is(.maya-ctl,.maya-flip,.maya-play){margin-bottom:4px;max-width:100%;overflow-x:auto;scrollbar-width:none}:host([data-compact]) .maya-ctl [role=radio]{padding:2px 8px;font-size:11px}" +
+  // The card turn (kpi back): the box holds the perspective, the face hides its back; a rolled digit shows through its own clip.
+  ".maya-box{perspective:900px}.maya-svg{backface-visibility:hidden}.maya-box svg[data-roll]{overflow:hidden}[data-roll] text{fill:var(--maya-fg);font-variant-numeric:var(--maya-numeric,tabular-nums)}" +
   ".maya-err{margin:0;padding:8px;color:var(--maya-bad);white-space:pre-wrap;font:12px monospace}" +
   ".maya-box{flex:1;min-height:0;position:relative}" +
   ".maya-box svg{display:block;width:100%;height:100%;overflow:visible}" +
@@ -285,4 +292,14 @@ export const css =
   // WebKit paints each per-element opacity as its own group: dense dumbbell connectors dim through the stroke.
   "[data-still] [data-hot] line[data-maya=link]{opacity:1;stroke-opacity:.08}" +
   "[data-still] *{transition:none!important}@media (prefers-reduced-motion:reduce){*{transition:none!important}}" +
-  wipB;
+  // Parallel brush and beeswarm peers (M2).
+  // Parallel brush: lines outside every range fade; the range is a band on its axis (the cross group is hidden by default).
+  "[data-off]{opacity:.12}" +
+  "[data-maya=cross]:has([data-range]){opacity:1}" +
+  "rect[data-range]{fill:var(--maya-accent);fill-opacity:.2;stroke:var(--maya-accent);pointer-events:none}" +
+  "rect[data-maya=axis]{cursor:ns-resize;touch-action:none}" +
+  // Beeswarm select { peers }: the peers keep their ink, the rest step back; their mean is a dashed rule with a label.
+  "[data-maya=marks]:has([data-peer-on]) [data-peer]:not([data-peer-on]){opacity:.3}" +
+  "[data-peer-on]{stroke:var(--maya-fg);stroke-width:1.5}" +
+  "[data-maya=grid] line[data-peer-mean]{stroke:var(--maya-fg);stroke-width:1.25;stroke-dasharray:4 3;pointer-events:none}" +
+  "[data-maya=labels] text[data-peer-mean]{fill:var(--maya-fg);font-weight:600;pointer-events:none}";

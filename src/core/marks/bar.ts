@@ -225,16 +225,20 @@ export const bar: Mark = {
         const [g0, g1] = [clip(val.of(0)), clip(val.of(wv))];
         const gl = Math.min(g0, g1);
         const gn = Math.abs(g0 - g1);
+        // Grouped bars (series): a tick across the bar at the old value, not a box beside its neighbours.
+        const tick = spec.series !== null && !spec.stack;
+        const [ga, gb] = tick ? [g1 - 1, 2] : [gl, gn];
         ghosts += el("rect", {
           "data-key": key("\u0000was", ser, cname),
           "data-past": true,
+          "data-tick": tick,
           "data-c": c.ci,
           "data-s": c.s,
           "data-neg": wv < 0,
           fill: "none", // until the theme's [data-past] rule paints it
           ...(hz
-            ? { x: r(gl), y: r(pos), width: r(gn), height: r(th) }
-            : { x: r(pos), y: r(gl), width: r(th), height: r(gn) }),
+            ? { x: r(tick ? ga! : gl), y: r(pos), width: r(tick ? gb! : gn), height: r(th) }
+            : { x: r(pos), y: r(tick ? ga! : gl), width: r(th), height: r(tick ? gb! : gn) }),
         });
         if (wv)
           moves.push([ctx.fmt(spec.x, cname) + (ser && " " + ser), (c.v - wv) / Math.abs(wv)]);

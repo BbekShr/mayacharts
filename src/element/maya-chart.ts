@@ -14,7 +14,8 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Intro, idle, patch, type PatchOptions, ZOOM } from "./animate.ts";
+import { type Intro, idle, patch, type PatchOptions, turn, ZOOM } from "./animate.ts";
+import * as flip from "./flip.ts";
 import * as drill from "./drill.ts";
 import { html } from "./html.ts";
 import { listen } from "./listen.ts";
@@ -37,7 +38,7 @@ export class MayaChart extends HTMLElement {
   #state: State = { view: {}, selected: [] };
   #seen: ChartSpec | undefined;
   #ix:
-    | (Record<"measure" | "drill" | "select" | "brush" | "sort" | "play", Handlers> & {
+    | (Record<"measure" | "drill" | "select" | "brush" | "sort" | "play" | "flip", Handlers> & {
         zoom: ReturnType<typeof zoom.mount>;
       })
     | undefined;
@@ -57,6 +58,17 @@ export class MayaChart extends HTMLElement {
   #drawn = false;
   #intro = 0; // performance.now() of the animated first draw
   #idle: (() => void) | undefined; // cancels the queued data-table insert
+  #face = "front"; // the face last drawn
+  #turn: (() => void) | undefined; // cancels a card turn in flight
+  #bk: [ChartSpec, ChartSpec] | undefined; // [front, back with the front's rows]
+
+  /** What the interaction modules read: the back's options while the back shows (same rows). */
+  #act(): ChartSpec | undefined {
+    const s = this.spec;
+    if (!s?.back || this.#state.view.face !== "back") return s;
+    return (this.#bk =
+      this.#bk?.[0] === s ? this.#bk : [s, { ...s.back, data: s.data } as ChartSpec])[1];
+  }
 
   #gen = 0; // the latest paint; an older one's settle is dropped
   #end: ((e: Error | null) => void) | undefined; // settles #sp; undefined once settled
@@ -171,7 +183,7 @@ export class MayaChart extends HTMLElement {
     const host: Host = {
       root,
       el: this,
-      spec: () => this.spec,
+      spec: () => this.#act(),
       state: () => this.#state,
       commit: (next, target) => this.#commit(next, target ?? null),
       announce: (text) => this.#announce(text),
@@ -185,13 +197,14 @@ export class MayaChart extends HTMLElement {
       zoom: zoom.mount(host),
       sort: sort.mount(host),
       play: play.mount(host),
+      flip: flip.mount(host),
     };
     const box = root.querySelector(".maya-box")!;
     this.#tip = tooltip(
       root,
       () => this.spec?.tooltip !== false,
       (t) => this.#announce(t),
-      () => this.spec,
+      () => this.#act(),
     );
     this.#unlisten.push(this.#tip.off);
     this.#ro = new ResizeObserver(() => {
@@ -294,7 +307,7 @@ export class MayaChart extends HTMLElement {
 
   /*
    * One keydown dispatcher. Escape priority: pinned tooltip (tooltip.ts, T2) -> brush in
-   * progress -> selection -> brush ranges -> zoom window -> drill pop. Enter: select, else drill (drill first without
+   * progress -> card back face -> selection -> brush ranges -> zoom window -> drill pop. Enter: select, else drill (drill first without
    * select; Shift+Enter drills), on the keyboard-active mark. + or = halves the zoom window about the active mark, - doubles it. T2 routes the tooltip's own Escape/Enter/Space through here.
    */
   #key = (e: Event) => {
@@ -307,6 +320,7 @@ export class MayaChart extends HTMLElement {
       done =
         ix.zoom.cancel?.() ||
         ix.brush.cancel?.() ||
+        ix.flip.escape?.() ||
         ix.select.escape?.() ||
         ix.brush.escape?.() ||
         ix.zoom.escape?.() ||
@@ -393,7 +407,10 @@ export class MayaChart extends HTMLElement {
       this.#state = select.reduce(
         brush.reduce(
           zoom.reduce(
-            sort.reduce(play.reduce(drill.reduce(measure.reduce(this.#state, ev), ev), ev), ev),
+            sort.reduce(
+              play.reduce(drill.reduce(flip.reduce(measure.reduce(this.#state, ev), ev), ev), ev),
+              ev,
+            ),
             ev,
           ),
           ev,
@@ -496,12 +513,24 @@ export class MayaChart extends HTMLElement {
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
     // A drill zoom moves marks under the pointer: no hover mark (its stroke would scale with the zoom) until it lands.
     if (this.#zoom) this.#tip?.hide(still ? 0 : 640);
-    patch(box, parts.svg, (this.#drawn || !!intro) && !still, {
-      intro,
-      zoom: this.#zoom,
-      after: () => this.#tip?.refresh(),
-      instant: resized,
-    });
+    const face = this.#state.view.face ?? "front";
+    const flipped = this.#drawn && face !== this.#face && spec.animate !== false;
+    this.#face = face;
+    this.#turn?.();
+    this.#turn = undefined;
+    const go = (anim: boolean) =>
+      patch(box, parts.svg, anim, {
+        intro,
+        zoom: this.#zoom,
+        after: () => this.#tip?.refresh(),
+        instant: resized,
+        roll: spec.numberMotion === "roll",
+      });
+    // A new face shares no keys with the old one: turn the card instead of diffing.
+    if (flipped && box.firstElementChild) {
+      this.#tip?.hide();
+      this.#turn = turn(box, () => go(false), still);
+    } else go((this.#drawn || !!intro) && !still);
     this.#zoom = undefined;
     const dy = top0 - box.getBoundingClientRect().top; // NaN: not measured
     if (dy && !still) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
@@ -567,7 +596,7 @@ const legend = (e: Event) => {
 
 const SLOTS: [keyof Parts, string][] = [
   ["title", ".maya-title,.maya-sub"],
-  ["controls", ".maya-ctl,.maya-play"],
+  ["controls", ".maya-ctls,.maya-ctl,.maya-play,.maya-flip"],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],
 ];
@@ -588,6 +617,7 @@ const FOCUS: [string, string][] = [
   ["svg", ".maya-svg"],
   ["legend", "[data-maya=legend] button"],
   ["measure", ".maya-ctl [role=radio]"],
+  ["flip", ".maya-flip"],
   ["crumb", ".maya-crumbs :is(button,a)"],
   ["reset", ".maya-reset"],
   ["play", ".maya-play"],

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { MayaChart } from "../src/element/maya-chart.ts";
-import { reduce } from "../src/element/select.ts";
+import { reduce, selOf } from "../src/element/select.ts";
 import type { ChartSpec, State } from "../src/core/types.ts";
 
 const rows = [
@@ -120,6 +120,17 @@ describe("<maya-chart select>", () => {
     expect(on(el)).toEqual(["Feb"]);
   });
 
+  it("kpi: a sparkline dot (key ~Feb) picks its category; the headline (key v) picks nothing", () => {
+    const m = (k: string) => {
+      const e = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      e.setAttribute("data-key", k);
+      return e;
+    };
+    expect(selOf(m("~Feb"), "kpi")).toEqual({ x: "Feb" });
+    expect(selOf(m("v"), "kpi")).toBeUndefined();
+    expect(selOf(m("b"), "kpi")).toBeUndefined();
+  });
+
   it("empty chart space, a click elsewhere and the same mark again all deselect", async () => {
     const el = await mount(spec({ select: true }));
     let n = 0;
@@ -164,5 +175,13 @@ describe("<maya-chart select>", () => {
         .map((m) => m.getAttribute("data-series")),
     ).toEqual(["S"]);
     expect(mk(el).length).toBe(3);
+  });
+});
+
+describe("kpi select", () => {
+  it("a sparkline dot selects by its category", () => {
+    expect(reduce(st(), { type: "toggle", sel: { x: "b" }, multi: false }).selected).toEqual([
+      { x: "b" },
+    ]);
   });
 });

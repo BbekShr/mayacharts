@@ -418,8 +418,14 @@
  *   marks group, and legend hover through `--d` and `--h<slot>` on `.maya`.
  *
  * Keyboard (one keydown dispatcher in maya-chart.ts; handlers return "handled"):
- *   Escape priority: pinned tooltip -> brush in progress -> selection -> zoom window -> drill
- *   pop. Enter activates drill, else select, on the tooltip's active mark; Space pins. On a focused
+ *   Escape priority: pinned tooltip -> brush in progress (zoom or parallel axis drag) -> card back
+ *   face (flip.ts) -> selection (and view.peers) -> parallel brush ranges -> zoom window -> drill
+ *   pop. While view.face is "back", the element's host.spec() is { ...spec.back, data }, so select,
+ *   tooltip, drill and play read the back's options; a face change skips the key diff and turns the
+ *   card (old svg rotateY 0 to 90deg 160 ms, swap, new -90 to 0 280 ms; reduced motion crossfades).
+ *   numberMotion "roll" hides the kpi headline text (visibility attribute) under a nested
+ *   <svg data-roll> window of per-character <text> clones; a changed digit is a <g> column that
+ *   translates one line, staggered 50 ms from the units digit, then the text is restored. Enter activates drill, else select, on the tooltip's active mark; Space pins. On a focused
  *   table header (tabindex 0) Enter or Space sorts by that column (element/sort.ts). With zoom, + or =
  *   halves the window about the active mark (else the middle) and - doubles it, reset once it covers
  *   the range (element/zoom.ts step); Ctrl, Meta and Alt combinations are left to the browser.
@@ -1235,31 +1241,36 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
     // Nothing to draw: the empty state stands alone (#64).
     legend: empty ? "" : legend,
     controls:
-      (s.measures.length > 1 && (!ALL_Y.includes(s.type) || s.toggle)
-        ? radios(
-            "",
-            t(s, "measures"),
-            s.measures.map((m) => s.titles.get(m) ?? m),
-            s.measure,
-          )
-        : "") +
-      (s.forms.length > 1
-        ? radios(
-            ' data-maya="form"',
-            t(s, "forms"),
-            s.forms.map((f) => t(s, f)),
-            s.form,
-          )
-        : "") +
-      (s.stacks.length > 1
-        ? radios(
-            ' data-maya="stack"',
-            t(s, "stacks"),
-            // "percent" and "stream" are their own text keys.
-            s.stacks.map((m) => t(s, m === true ? "stacked" : m === false ? "unstacked" : m)),
-            s.stacks.indexOf(s.stack),
-          )
-        : "") +
+      // Two or more radiogroups share a row (.maya-ctls); one stands alone.
+      ((g) => (g.length > 1 ? `<div class="maya-ctls">${g.join("")}</div>` : g.join("")))(
+        [
+          s.measures.length > 1 && (!ALL_Y.includes(s.type) || s.toggle)
+            ? radios(
+                "",
+                t(s, "measures"),
+                s.measures.map((m) => s.titles.get(m) ?? m),
+                s.measure,
+              )
+            : "",
+          s.forms.length > 1
+            ? radios(
+                ' data-maya="form"',
+                t(s, "forms"),
+                s.forms.map((f) => t(s, f)),
+                s.form,
+              )
+            : "",
+          s.stacks.length > 1
+            ? radios(
+                ' data-maya="stack"',
+                t(s, "stacks"),
+                // "percent" and "stream" are their own text keys.
+                s.stacks.map((m) => t(s, m === true ? "stacked" : m === false ? "unstacked" : m)),
+                s.stacks.indexOf(s.stack),
+              )
+            : "",
+        ].filter(Boolean),
+      ) +
       (fr && fr[1].length > 1
         ? `<button type="button" class="maya-play" data-maya="play">${esc(t(s, "play"))}</button>`
         : "") +
