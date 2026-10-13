@@ -464,8 +464,11 @@ describe("CSS allowlist", () => {
     expect(code({ ...base, theme: { font: "url(x)" } })[0]).toBe("unsafe-css-value");
     expect(code({ ...base, theme: { font: '"a"; x' } })[0]).toBe("unsafe-css-value");
   });
-  it("colors: max 8, object form", () => {
-    expect(code({ ...base, colors: Array(9).fill("red") })).toEqual(["invalid-option", "colors"]);
+  it("colors: max 8 distinct in an array, a map is not capped (#89.2), object form", () => {
+    const nine = [...Array(9)].map((_, i) => `#00000${i}`);
+    expect(code({ ...base, colors: nine })).toEqual(["invalid-option", "colors"]);
+    ok({ ...base, colors: Array(9).fill("red") });
+    ok({ ...base, colors: Object.fromEntries(nine.concat(nine).map((c, i) => [`k${i}`, c])) });
     ok({ ...base, colors: { N: "red", S: "#00f" } });
     expect(code({ ...base, colors: { N: "url(x)" } })).toEqual(["unsafe-css-value", "colors.N"]);
     expect(code({ ...base, colors: [1] })).toEqual(["invalid-option", "colors"]);

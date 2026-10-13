@@ -444,7 +444,8 @@ export const chord: Mark = {
     }
     // ponytail: labels are clipped to 20 characters; one that would overlap its neighbour on the
     // same side is dropped, after trying it on one line.
-    const room = [0, 1].map(() => slots(plot.y, plot.y + plot.h));
+    // A pole label is centred over both halves, so poles share one set (a left and a right pole label would otherwise overprint).
+    const room = [0, 1, 2].map(() => slots(plot.y, plot.y + plot.h));
     let labels = "";
     for (const n of [...nodes].sort((a, b) => b.v - a.v)) {
       const m = n.a + (n.v * k) / 2;
@@ -455,7 +456,16 @@ export const chord: Mark = {
       // Top and bottom labels grow away from the ring; side labels centre on the arc.
       const cyy = pole ? ly + (cs > 0 ? -14 : 14) : ly;
       const anchor = pole ? "middle" : sn > 0 ? "start" : "end";
-      labels += lines(lx, cyy, anchor, nodeKey(n, 0), n.name, val(n), maxCh, room[sn > 0 ? 1 : 0]!);
+      labels += lines(
+        lx,
+        cyy,
+        anchor,
+        nodeKey(n, 0),
+        n.name,
+        val(n),
+        maxCh,
+        room[pole ? 2 : sn > 0 ? 1 : 0]!,
+      );
     }
     return { marks, hits: "", labels };
   },

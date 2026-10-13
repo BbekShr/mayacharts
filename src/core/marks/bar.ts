@@ -75,15 +75,15 @@ export function marked<T>(
   }
 }
 
-/** Ink for a label over the bar's own fill, picked for 4.5:1 (theme.ts: b = page background on grey, good and bad fills; dark on full-strength and the ramp's top steps). */
-const inkOf = (d: Record<string, any>) =>
-  d["data-q"] === null
-    ? d["data-other"] || d["data-total"] || d["data-tone"]
-      ? "b"
-      : ""
-    : d["data-q"] >= 6
-      ? ""
-      : null;
+/** A label over the mark's own fill: theme.ts reads the fill from the same attributes and picks the ink (data-ink="a"). */
+export const inkOf = (d: Record<string, any>) => ({
+  "data-ink": "a",
+  "data-s": d["data-s"],
+  "data-tone": d["data-tone"],
+  "data-other": d["data-other"],
+  "data-total": d["data-total"],
+  "data-q": d["data-q"],
+});
 
 interface Item {
   ci: number;
@@ -106,7 +106,11 @@ function steps(shaped: Shaped): Item[] {
   shaped.categories.forEach((_, ci) => {
     const c = by[ci];
     if (!c) return;
-    if (shaped.totals[ci]) return void out.push({ ci, si, y0: 0, y1: run, v: run, s: 2 });
+    if (shaped.totals[ci]) {
+      // A total before any step opens at its own value (last year's figure); later ones are the running sum.
+      if (!out.length && c.value !== null) run = c.value;
+      return void out.push({ ci, si, y0: 0, y1: run, v: run, s: 2 });
+    }
     if (c.value === null) return;
     out.push({ ci, si, y0: run, y1: (run += c.value), v: c.value, s: c.value < 0 ? 1 : 0 });
   });
@@ -132,6 +136,14 @@ export const bar: Mark = {
     if (spec.type === "waterfall" || (rows.length && rows.length < all.length)) {
       lo = hi = 0;
       for (const i of rows) ((lo = Math.min(lo, i.y0, i.y1)), (hi = Math.max(hi, i.y0, i.y1)));
+    }
+    // A ghost is part of the data: the previous values widen the domain so none is clipped.
+    if (spec.was !== null) {
+      const w = colorVals(spec, spec.was);
+      for (const i of rows) {
+        const v = w(shaped.categories[i.ci]!, shaped.series[i.si]!);
+        if (v !== null) ((lo = Math.min(lo, v)), (hi = Math.max(hi, v)));
+      }
     }
     const cat: Axis = shaped.time
       ? { kind: "time", field: spec.x, domain: shaped.categories, t: shaped.time }
@@ -282,7 +294,7 @@ export const bar: Mark = {
         hz ? y + h / 2 : neg ? y + h - 9 : y + 9,
         text,
         {
-          "data-ink": inkOf(d),
+          ...inkOf(d),
           "data-key": k,
           "data-ann": a,
           "text-anchor": hz ? (neg ? "start" : "end") : "middle",
@@ -307,7 +319,7 @@ export const bar: Mark = {
     if (spec.labels && tags.length) {
       // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
       // step label must fit inside its own column or it is dropped.
-      // ponytail: no thinning to a subset of steps: a label wider than its column is dropped.
+      // ponytail: no thinning to a subset of steps: a label wider than its column (the first and the Total too) is dropped.
       const first = tags[0]!;
       const last = tags.at(-1)!;
       // Horizontal bars label inside only when every label fits, else all outside (one rule per chart, not per bar).
@@ -315,14 +327,21 @@ export const bar: Mark = {
         hz &&
         !spec.stack &&
         tags.every(([c, , , w, h]) => tw(ctx.fmt(spec.y, c.v)) <= w && h >= 14);
+      // Grouped columns: a series keeps all its labels or none; one wider than the bar pitch would sit on its neighbour.
+      // ponytail: no thinning to some of a series' bars; widen the chart or label fewer series.
+      const off = new Set<number>();
+      if (!hz && !spec.stack && !wf && shaped.visible.length > 1)
+        for (const si of shaped.visible)
+          if (tags.some(([c]) => c.si === si && tw(ctx.fmt(spec.y, c.v)) > inner.step - 2))
+            off.add(si);
       for (const t of wf ? new Set([first, last, ...tags]) : tags) {
         const [c, x, y, w, h, d] = t;
         const dk = d["data-key"];
-        if (noted.has(dk)) continue;
+        if (noted.has(dk) || off.has(c.si)) continue;
         // Inside when it fits, else outside the bar end (collisions are dropped by ctx.label).
         const text = ctx.fmt(spec.y, c.v);
         const est = tw(text);
-        if (wf && est > cat.step && t !== first && t !== last) continue;
+        if (wf && est > cat.step) continue;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;
         if (hz && !spec.stack ? all : est <= w && h >= (hz ? 14 : 16)) {
@@ -336,7 +355,7 @@ export const bar: Mark = {
             pin && !hz ? (neg ? y + h - 10 : y + 10) : cy,
             text,
             {
-              "data-ink": inkOf(d),
+              ...inkOf(d),
               "data-key": dk,
               "text-anchor": pin && hz ? (neg ? "start" : "end") : "middle",
             },

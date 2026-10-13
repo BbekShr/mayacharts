@@ -285,13 +285,16 @@
             <tr>
               <td>Series colours in order</td>
               <td>
-                <a href="#colors"><code>colors</code></a> as an array (8 at most)
+                <a href="#colors"><code>colors</code></a> as an array (8 distinct colours at most)
               </td>
               <td><code>"colors": ["#2563eb", "#f59e0b"]</code></td>
             </tr>
             <tr>
               <td>A colour for a named series</td>
-              <td><code>colors</code> as a map. It follows the series when the data reorders</td>
+              <td>
+                <code>colors</code> as a map, with any number of names. It follows the series when
+                the data reorders, and wins over <code>theme.series1</code> to <code>series8</code>
+              </td>
               <td><code>"colors": { "North": "#2563eb" }</code></td>
             </tr>
             <tr>
@@ -593,6 +596,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
 
       <section id="data-fields">
         <h2>Data fields</h2>
+        <p>
+          An option set to <code>null</code> is treated as unset, as JSON hosts often write it;
+          <code>type</code> and <code>data</code> still need real values.
+        </p>
         <table>
           <thead>
             <tr>
@@ -739,10 +746,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 <code>format[by]</code>. <code>current</code> and <code>previous</code> pick
                 periods, matched as strings. kpi: a second comparison, such as the same period last
                 year. gauge: a marker at the old value. Each bar gets a dashed ghost bar at its old
-                value drawn over it, keyed in the legend by the field's title, the tooltip says
-                "was" and the value, the data table gains a column, and the description names the 2
-                largest relative moves (text.since, "Since Last week: North +12%, West -10%."). Not
-                with stack or a y array
+                value drawn over it (the value axis spans the ghosts), keyed in the legend by the
+                field's title, the tooltip says "was" and the value, the data table gains a column,
+                and the description names the 2 largest relative moves (text.since, "Since Last
+                week: North +12%, West -10%."). Not with stack or a y array
               </td>
             </tr>
             <tr>
@@ -831,7 +838,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><a class="spec-anchor" id="totals"></a><code>totals</code></td>
               <td>string[]</td>
               <td>waterfall</td>
-              <td>x values drawn as running-total bars</td>
+              <td>
+                x values drawn as running-total bars; one before any step opens at its own y, so a
+                bridge can start at last year's figure
+              </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="stack"></a><code>stack</code></td>
@@ -842,7 +852,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 shares of its total: the axis runs 0 to 100%, hidden series renormalise, and y is
                 formatted as percent unless format sets it. Labels, tooltips and the table show the
                 share, not the raw value. Negative values are shares of the summed magnitudes and
-                stack below 0
+                stack below 0. A radial always stacks, so <code>stack: false</code> on it is
+                option-unsupported
               </td>
             </tr>
             <tr>
@@ -899,13 +910,14 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>{[key]: string}</td>
               <td>English</td>
               <td>
-                Localised UI strings with {0} placeholders: noData other blank back reset showing
-                drilledInto drillInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf
-                measures crumbs positive negative above below near onTrack atRisk offTrack vs change
-                pts target offBelow offAbove total shareOf sortedBy ascending descending fromTo
-                reduced points point range density perCell mean perX rule log play pause frameOf
-                frame was since forms waffle bars swarm perDot count rank speedBy gross alike
-                nearest max q3 median q1 min rows ofPrevious ofFirst first last labelled
+                Localised UI strings; <a href="#text-keys">Text keys</a> says what each controls.
+                Keys, with {0} placeholders: noData other blank back reset showing drilledInto
+                drillInto zoomedTo selected selectionCleared chartOf chartOfAll firstOf measures
+                crumbs positive negative above below near onTrack atRisk offTrack vs change pts
+                target offBelow offAbove total shareOf sortedBy ascending descending fromTo reduced
+                points point range density perCell mean perX rule log play pause frameOf frame was
+                since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
+                median q1 min rows ofPrevious ofFirst first last labelled
               </td>
             </tr>
             <tr>
@@ -957,7 +969,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>-</td>
               <td>
                 Fixed value-axis domain. Pass [hi, lo] to reverse it (ranks with 1 on top). kpi: the
-                bullet scale. gauge: the dial range. Not allowed with y array
+                bullet scale. gauge: the dial range. An end that is off the tick step gets its own
+                tick unless that label would touch its neighbour. Not allowed with y array
               </td>
             </tr>
             <tr>
@@ -984,8 +997,10 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 only: <code>{ slope, intercept }</code> draws y = slope * x + intercept (intercept 0
                 by default), slope "mean" = sum of y / sum of x; its label shows the slope as y per
                 x ("Average price $38 per unit"; set <code>text.perX</code> to "{0} per unit" for a
-                singular unit) and sits clear of the points. <code>[]</code> is the same as unset.
-                bar line area scatter dumbbell
+                singular unit) and sits clear of the points. A rule label takes the first free spot
+                along its line inside the plot, after value labels and annotations, and is dropped
+                when none is free (the description still names it). <code>[]</code> is the same as
+                unset. bar line area scatter dumbbell
               </td>
             </tr>
             <tr>
@@ -1012,8 +1027,441 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 Label those points of each visible series with their formatted value (scatter: max
                 and min by y, first and last by x). <code>{ x, text }</code> labels the mark at that
                 x with the text, at most 40 characters. They collide like value labels, and win over
-                them. <code>[]</code> is the same as unset. bar line area scatter
+                them. The plot keeps a label row of headroom so a point at the top keeps its label.
+                <code>[]</code> is the same as unset. bar line area scatter
               </td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 id="text-keys">Text keys</h3>
+        <p>
+          Each <a href="#text"><code>text</code></a> key and the string it controls. Placeholders
+          <code>{0}</code>, <code>{1}</code> are filled in order.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Default</th>
+              <th>Controls</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>noData</code></td>
+              <td>"No data"</td>
+              <td>
+                Empty-state text in the plot when no row holds a number; "\n" breaks a line, long
+                text wraps.
+              </td>
+            </tr>
+            <tr>
+              <td><code>other</code></td>
+              <td>"Other"</td>
+              <td>Category name of the spec.limit roll-up, and the sunburst fold "Other (n)".</td>
+            </tr>
+            <tr>
+              <td><code>blank</code></td>
+              <td>"(blank)"</td>
+              <td>Category label for a row whose x (or path level) is null or missing.</td>
+            </tr>
+            <tr>
+              <td><code>back</code></td>
+              <td>"Back"</td>
+              <td>Root breadcrumb button, and the live region after drilling back to the top.</td>
+            </tr>
+            <tr>
+              <td><code>reset</code></td>
+              <td>"Reset zoom"</td>
+              <td>Button that resets a zoom window.</td>
+            </tr>
+            <tr>
+              <td><code>showing</code></td>
+              <td>"Showing {0}"</td>
+              <td>Live region after a measure toggle: {0} = measure title.</td>
+            </tr>
+            <tr>
+              <td><code>drilledInto</code></td>
+              <td>"Drilled into {0}"</td>
+              <td>Live region after drill: {0} = branch path joined with " / ".</td>
+            </tr>
+            <tr>
+              <td><code>drillInto</code></td>
+              <td>"Drill into {0}"</td>
+              <td>
+                Pinned tooltip action when drill and select are both on: {0} = the mark's name.
+              </td>
+            </tr>
+            <tr>
+              <td><code>zoomedTo</code></td>
+              <td>"Zoomed to {0} – {1}"</td>
+              <td>Live region after zoom: {0}, {1} = first and last category (or range ends).</td>
+            </tr>
+            <tr>
+              <td><code>selected</code></td>
+              <td>"{0} selected"</td>
+              <td>Live region after selection: {0} = count.</td>
+            </tr>
+            <tr>
+              <td><code>selectionCleared</code></td>
+              <td>"Selection cleared"</td>
+              <td>Live region after the selection is cleared.</td>
+            </tr>
+            <tr>
+              <td><code>chartOf</code></td>
+              <td>"{0} chart of {1} by {2}"</td>
+              <td>Auto description: {0} = noun, {1} = y title, {2} = x title.</td>
+            </tr>
+            <tr>
+              <td><code>chartOfAll</code></td>
+              <td>"{0} chart of {1}"</td>
+              <td>Auto description without a category field: {0} = noun, {1} = y title.</td>
+            </tr>
+            <tr>
+              <td><code>firstOf</code></td>
+              <td>"First {0} of {1} rows"</td>
+              <td>Table caption when rows are capped: {0} = shown, {1} = total.</td>
+            </tr>
+            <tr>
+              <td><code>measures</code></td>
+              <td>"Measure"</td>
+              <td>aria-label of the measure radiogroup.</td>
+            </tr>
+            <tr>
+              <td><code>crumbs</code></td>
+              <td>"Drill path"</td>
+              <td>aria-label of the breadcrumb nav.</td>
+            </tr>
+            <tr>
+              <td><code>positive</code></td>
+              <td>"Positive"</td>
+              <td>
+                Tone word of a positive value with colorBy "sign" (tooltip, table, tone legend; not
+                kpi).
+              </td>
+            </tr>
+            <tr>
+              <td><code>negative</code></td>
+              <td>"Negative"</td>
+              <td>Tone word of a negative value with colorBy "sign" (not kpi).</td>
+            </tr>
+            <tr>
+              <td><code>above</code></td>
+              <td>"above target"</td>
+              <td>
+                Tone word of a value on the good side of colorBy.target (tooltip, table, tone
+                legend; the bad side when lower is better; not kpi, whose tile and tooltip say
+                onTrack).
+              </td>
+            </tr>
+            <tr>
+              <td><code>below</code></td>
+              <td>"below target"</td>
+              <td>
+                Tone word of a value on the bad side of colorBy.target (the good side when lower is
+                better; not kpi).
+              </td>
+            </tr>
+            <tr>
+              <td><code>near</code></td>
+              <td>"at risk"</td>
+              <td>
+                Tone word for the warn band, colorBy { target, warn } (tooltip, table, tone legend;
+                not kpi, whose tile and tooltip say atRisk).
+              </td>
+            </tr>
+            <tr>
+              <td><code>onTrack</code></td>
+              <td>"On track"</td>
+              <td>kpi and gauge status word for the good tone (the kpi tooltip too).</td>
+            </tr>
+            <tr>
+              <td><code>atRisk</code></td>
+              <td>"At risk"</td>
+              <td>kpi and gauge status word for the warn tone (the kpi tooltip too).</td>
+            </tr>
+            <tr>
+              <td><code>offTrack</code></td>
+              <td>"Off track"</td>
+              <td>kpi and gauge status word for the bad tone (the kpi tooltip too).</td>
+            </tr>
+            <tr>
+              <td><code>vs</code></td>
+              <td>"{0} vs {1}"</td>
+              <td>kpi delta: {0} = signed change, {1} = previous period.</td>
+            </tr>
+            <tr>
+              <td><code>change</code></td>
+              <td>"{0} {1} ({2}) vs {3}"</td>
+              <td>
+                kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what
+                it is compared with.
+              </td>
+            </tr>
+            <tr>
+              <td><code>pts</code></td>
+              <td>"{0} pts"</td>
+              <td>kpi and gauge change on a percent measure: {0} = signed difference in points.</td>
+            </tr>
+            <tr>
+              <td><code>target</code></td>
+              <td>"target"</td>
+              <td>
+                kpi and gauge label of colorBy.target (the {3} of change, the gauge's target label)
+                and the description's target.
+              </td>
+            </tr>
+            <tr>
+              <td><code>sortedBy</code></td>
+              <td>"Sorted by {0}, {1}"</td>
+              <td>
+                Live region after a table header click: {0} = column title, {1} =
+                ascending/descending.
+              </td>
+            </tr>
+            <tr>
+              <td><code>ascending</code></td>
+              <td>"ascending"</td>
+              <td>The {1} of sortedBy for an ascending sort.</td>
+            </tr>
+            <tr>
+              <td><code>descending</code></td>
+              <td>"descending"</td>
+              <td>The {1} of sortedBy for a descending sort.</td>
+            </tr>
+            <tr>
+              <td><code>offBelow</code></td>
+              <td>"off track below {0}"</td>
+              <td>
+                Chart description of a warn threshold when higher is better: {0} = the warn value.
+              </td>
+            </tr>
+            <tr>
+              <td><code>offAbove</code></td>
+              <td>"off track above {0}"</td>
+              <td>
+                Chart description of a warn threshold when lower is better: {0} = the warn value.
+              </td>
+            </tr>
+            <tr>
+              <td><code>total</code></td>
+              <td>"Total"</td>
+              <td>Sunburst centre at the root.</td>
+            </tr>
+            <tr>
+              <td><code>shareOf</code></td>
+              <td>"{0} of {1}"</td>
+              <td>Sunburst tooltip share: {0} = percent, {1} = parent name.</td>
+            </tr>
+            <tr>
+              <td><code>fromTo</code></td>
+              <td>"from {0} to {1}"</td>
+              <td>Auto description on a time axis: {0} = first date, {1} = last date.</td>
+            </tr>
+            <tr>
+              <td><code>reduced</code></td>
+              <td>"Showing {0} of {1} points"</td>
+              <td>
+                Description when a time axis was downsampled: {0} = points drawn, {1} = points in
+                the data.
+              </td>
+            </tr>
+            <tr>
+              <td><code>points</code></td>
+              <td>"{0} points"</td>
+              <td>Scatter density cell tooltip (too many points to draw): {0} = point count.</td>
+            </tr>
+            <tr>
+              <td><code>point</code></td>
+              <td>"{0} point"</td>
+              <td>One scatter density cell holding a single point: {0} = 1.</td>
+            </tr>
+            <tr>
+              <td><code>range</code></td>
+              <td>"{0} to {1}"</td>
+              <td>A span of values: {0} = from, {1} = to.</td>
+            </tr>
+            <tr>
+              <td><code>density</code></td>
+              <td>"Shown as {0} density cells, {1} to {2} points each"</td>
+              <td>
+                Description of a density scatter: {0} = cells drawn, {1} = fewest points in a cell,
+                {2} = most.
+              </td>
+            </tr>
+            <tr>
+              <td><code>perCell</code></td>
+              <td>"Points per cell"</td>
+              <td>Title of the density colour legend.</td>
+            </tr>
+            <tr>
+              <td><code>mean</code></td>
+              <td>"Average"</td>
+              <td>Label of an unlabelled rules: ["mean"] line.</td>
+            </tr>
+            <tr>
+              <td><code>perX</code></td>
+              <td>"{0} per {1}"</td>
+              <td>
+                Scatter slope rule value after its label: {0} = slope formatted by format[y], {1} =
+                x title.
+              </td>
+            </tr>
+            <tr>
+              <td><code>rule</code></td>
+              <td>"Reference line"</td>
+              <td>Description name of an unlabelled numeric rule ("Reference line: 100.").</td>
+            </tr>
+            <tr>
+              <td><code>log</code></td>
+              <td>"{0} on a log scale"</td>
+              <td>Description with spec.xScale or spec.yScale "log": {0} = the axis title.</td>
+            </tr>
+            <tr>
+              <td><code>play</code></td>
+              <td>"Play"</td>
+              <td>Frame playback button (spec.frame).</td>
+            </tr>
+            <tr>
+              <td><code>pause</code></td>
+              <td>"Pause"</td>
+              <td>Frame playback button while playing.</td>
+            </tr>
+            <tr>
+              <td><code>frameOf</code></td>
+              <td>"{0}, {1}"</td>
+              <td>Title with spec.frame: {0} = title, {1} = formatted frame value.</td>
+            </tr>
+            <tr>
+              <td><code>frame</code></td>
+              <td>"Frame {0} of {1}"</td>
+              <td>Auto description with spec.frame: {0} = frame number, {1} = frame count.</td>
+            </tr>
+            <tr>
+              <td><code>was</code></td>
+              <td>"was {0}"</td>
+              <td>Tooltip line of a bar with spec.was: {0} = previous value.</td>
+            </tr>
+            <tr>
+              <td><code>since</code></td>
+              <td>"Since {0}: {1}"</td>
+              <td>
+                Description with spec.was: {0} = was title, {1} = the 2 largest moves ("North +12%,
+                West -10%").
+              </td>
+            </tr>
+            <tr>
+              <td><code>forms</code></td>
+              <td>"Form"</td>
+              <td>aria-label of the units form radiogroup.</td>
+            </tr>
+            <tr>
+              <td><code>waffle</code></td>
+              <td>"Waffle"</td>
+              <td>Units form option: waffle.</td>
+            </tr>
+            <tr>
+              <td><code>bars</code></td>
+              <td>"Bars"</td>
+              <td>Units form option: bars.</td>
+            </tr>
+            <tr>
+              <td><code>swarm</code></td>
+              <td>"Swarm"</td>
+              <td>Units form option: swarm.</td>
+            </tr>
+            <tr>
+              <td><code>perDot</code></td>
+              <td>"Each dot is one {0}"</td>
+              <td>Units description: {0} = the name (or x) title.</td>
+            </tr>
+            <tr>
+              <td><code>count</code></td>
+              <td>"Count"</td>
+              <td>Units data table: header of the rows-per-group column.</td>
+            </tr>
+            <tr>
+              <td><code>rank</code></td>
+              <td>"Rank {0}"</td>
+              <td>Weave tooltip and description: {0} = rank (1 is the highest value).</td>
+            </tr>
+            <tr>
+              <td><code>speedBy</code></td>
+              <td>"Orbit speed shows {0}"</td>
+              <td>Orbit description: {0} = y2 title.</td>
+            </tr>
+            <tr>
+              <td><code>gross</code></td>
+              <td>"Gross {0}"</td>
+              <td>
+                Orbit sun title when a value is negative (the total is the sum of magnitudes): {0} =
+                y title.
+              </td>
+            </tr>
+            <tr>
+              <td><code>alike</code></td>
+              <td>"Closer points are more alike across {0}"</td>
+              <td>Constellation description: {0} = measure titles joined with ", ".</td>
+            </tr>
+            <tr>
+              <td><code>nearest</code></td>
+              <td>"Closest: {0}"</td>
+              <td>Constellation tooltip: {0} = the nearest names joined with ", ".</td>
+            </tr>
+            <tr>
+              <td><code>max</code></td>
+              <td>"Max"</td>
+              <td>Boxplot maximum label (tooltip, table); annotate "max" in the description.</td>
+            </tr>
+            <tr>
+              <td><code>q3</code></td>
+              <td>"Upper quartile"</td>
+              <td>Boxplot upper quartile label.</td>
+            </tr>
+            <tr>
+              <td><code>median</code></td>
+              <td>"Median"</td>
+              <td>Boxplot median label.</td>
+            </tr>
+            <tr>
+              <td><code>q1</code></td>
+              <td>"Lower quartile"</td>
+              <td>Boxplot lower quartile label.</td>
+            </tr>
+            <tr>
+              <td><code>min</code></td>
+              <td>"Min"</td>
+              <td>Boxplot minimum label (tooltip, table); annotate "min" in the description.</td>
+            </tr>
+            <tr>
+              <td><code>rows</code></td>
+              <td>"Rows"</td>
+              <td>Boxplot row count label.</td>
+            </tr>
+            <tr>
+              <td><code>ofPrevious</code></td>
+              <td>"% of previous"</td>
+              <td>Funnel tooltip and table label: conversion from the previous step.</td>
+            </tr>
+            <tr>
+              <td><code>ofFirst</code></td>
+              <td>"% of first"</td>
+              <td>Funnel tooltip and table label: conversion from the first step.</td>
+            </tr>
+            <tr>
+              <td><code>first</code></td>
+              <td>"First"</td>
+              <td>Annotate "first" in the description.</td>
+            </tr>
+            <tr>
+              <td><code>last</code></td>
+              <td>"Last"</td>
+              <td>Annotate "last" in the description.</td>
+            </tr>
+            <tr>
+              <td><code>labelled</code></td>
+              <td>"Labelled points: {0}"</td>
+              <td>Description of annotate: {0} = the kinds joined with ", ".</td>
             </tr>
           </tbody>
         </table>
@@ -1166,12 +1614,16 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><a class="spec-anchor" id="colors"></a><code>colors</code></td>
               <td>string[] or {[name]: color}</td>
               <td>
-                Max 8; 9+ slots wrap. A map is keyed by series value; treemap and sunburst by
-                <code>path[0]</code> value; sankey and chord by node name, with links and inner
-                levels inheriting (a sankey root missing from the map stays neutral at every drill
-                level); waffle by category. Keys that match nothing are ignored. Path types give
-                every name a slot from all rows, so a colour holds through drill; a host filter that
-                drops names can move array slots, a map never moves
+                An array holds at most 8 distinct colours; a map takes any number of names (past 8
+                series they share slots). A map key wins over <code>theme.series1</code> to
+                <code>series8</code>, which win over the array, which wins over
+                <code>theme.accent</code>; colorBy tones and ramps paint over all of them. A map is
+                keyed by series value; treemap and sunburst by <code>path[0]</code> value; sankey
+                and chord by node name, with links and inner levels inheriting (a sankey root
+                missing from the map stays neutral at every drill level); waffle by category. Keys
+                that match nothing are ignored. Path types give every name a slot from all rows, so
+                a colour holds through drill; a host filter that drops names can move array slots, a
+                map never moves
               </td>
             </tr>
             <tr>
@@ -1202,8 +1654,9 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><a class="spec-anchor" id="theme"></a><code>theme</code></td>
               <td>{[token]: css}</td>
               <td>
-                Theme token overrides (CSS values, allowlisted). Ready-made sets: import { themes }
-                from "mayacharts/themes"
+                Theme token overrides (CSS values, allowlisted). <code>series1</code> to
+                <code>series8</code> colour the palette slots; a <code>colors</code> map key wins
+                over them. Ready-made sets: import { themes } from "mayacharts/themes"
               </td>
             </tr>
             <tr>

@@ -5,6 +5,7 @@ import { MayaChart } from "../src/element/maya-chart.ts";
 import { renderParts } from "../src/core/render.ts";
 import "../src/flow.ts";
 import "../src/stats.ts";
+import "../src/radial.ts";
 import { TEXT } from "../src/core/strings.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
@@ -718,7 +719,7 @@ describe("review fixes", () => {
     expect(n).toBe(0);
   });
 
-  it("tooltip tone words follow core: warn is near, lower-is-better swaps above and below", async () => {
+  it("kpi tooltip tone words are the tile status words, lower-is-better included", async () => {
     const words = async (better: "higher" | "lower", v: number) => {
       const el = await mount((e) => {
         e.spec = {
@@ -739,12 +740,13 @@ describe("review fixes", () => {
       );
       return el.shadowRoot!.querySelector(".maya-tip")!.textContent;
     };
-    expect(await words("higher", 5)).toContain("below target");
-    expect(await words("higher", 12)).toContain(TEXT.near);
-    expect(await words("higher", 20)).toContain("above target");
-    expect(await words("lower", 12)).toContain("below target");
-    expect(await words("lower", 18)).toContain(TEXT.near);
-    expect(await words("lower", 25)).toContain("above target");
+    // The kpi tooltip speaks the tile's status words (#93.5), so lower-is-better needs no swap.
+    expect(await words("higher", 5)).toContain(TEXT.offTrack);
+    expect(await words("higher", 12)).toContain(TEXT.atRisk);
+    expect(await words("higher", 20)).toContain(TEXT.onTrack);
+    expect(await words("lower", 12)).toContain(TEXT.onTrack);
+    expect(await words("lower", 18)).toContain(TEXT.atRisk);
+    expect(await words("lower", 25)).toContain(TEXT.offTrack);
   });
 
   it("kpi tooltip prints data-label and anchors around every headline number", async () => {
@@ -859,5 +861,67 @@ describe("maya-settled", () => {
     await expect(p).rejects.toMatchObject({ code: "unknown-field" });
     expect(log.slice(-2)).toEqual(["maya-error", "maya-settled!"]);
     vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+});
+
+describe("tooltip rows (issues #90.2, #93.3, #93.4, #93.5)", () => {
+  const tipOf = async (s: object, i = 0) => {
+    const el = await mount((e) => {
+      e.spec = s as ChartSpec;
+    });
+    const m = marks(el)[i]!;
+    m.dispatchEvent(new Event("pointerover", { bubbles: true }) as never);
+    m.dispatchEvent(
+      Object.assign(new Event("pointermove", { bubbles: true }), { pointerType: "mouse" }),
+    );
+    return el.shadowRoot!.querySelector(".maya-tip")!.textContent!;
+  };
+  it("a bar with was lists the was row, field and long forms", async () => {
+    const d = [{ M: "Jan", S: 13, P: 24 }];
+    expect(await tipOf({ type: "bar", x: "M", y: "S", was: "P", data: d })).toContain("was 24");
+    const long = [
+      { M: "Jan", Y: 2025, S: 24 },
+      { M: "Jan", Y: 2026, S: 13 },
+    ];
+    expect(await tipOf({ type: "bar", x: "M", y: "S", was: { by: "Y" }, data: long })).toContain(
+      "was 24",
+    );
+  });
+  it("a field already shown appears once", async () => {
+    const data = [{ U: 1, P: 2, S: 3, N: "a" }];
+    const t = await tipOf({
+      type: "scatter",
+      x: "U",
+      y: "P",
+      size: "S",
+      name: "N",
+      tooltip: { fields: ["S"] },
+      data,
+    });
+    expect(t.split("S").length - 1).toBe(1);
+  });
+  it("radial lists only the series present at the category", async () => {
+    const data = [
+      { it: "Jackets", fam: "Outerwear", v: 189 },
+      { it: "Shirts", fam: "Tops", v: 68 },
+    ];
+    const t = await tipOf({ type: "radial", x: "it", y: "v", series: "fam", data });
+    expect(t).toContain("Outerwear");
+    expect(t).not.toContain("Tops");
+  });
+  it("kpi tooltip uses the tile's status keys", async () => {
+    const data = [
+      { m: "a", v: 1 },
+      { m: "b", v: 2 },
+    ];
+    const t = await tipOf({
+      type: "kpi",
+      x: "m",
+      y: "v",
+      colorBy: { target: 5 },
+      text: { offTrack: "Way off" },
+      data,
+    });
+    expect(t).toContain("Way off");
   });
 });

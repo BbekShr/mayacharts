@@ -6,7 +6,8 @@
  * =====================================================================================
  *
  * Pipeline: validateSpec -> resolve(spec, view) -> shape -> niceTicks -> format -> layout
- *           -> scales -> Mark.draw(ctx) -> assemble. Pure, synchronous, deterministic (same
+ *           -> scales -> Mark.draw(ctx) -> assemble. A top-level option set to null is unset
+ *           (validate.ts unset(), applied by build, validateSpec and resolve; not type or data). Pure, synchronous, deterministic (same
  *           input, same bytes). `src/core/**` never imports `src/element/**` and never
  *           touches window/document (a test deletes globalThis.window and imports it).
  *
@@ -115,7 +116,8 @@
  *   target good, v >= warn warn, else bad; "lower" mirrors it. Tone words: good is text.above
  *   (text.below when lower is better), bad the other, warn text.near. The tone legend lists
  *   good, warn (only with a warn threshold) and bad; none for kpi or a goal without a target.
- *   kpi and gauge status words: text.onTrack (good), atRisk (warn), offTrack (bad).
+ *   kpi and gauge status words: text.onTrack (good), atRisk (warn), offTrack (bad); the kpi
+ *   tooltip uses them too.
  *
  * kpi with a `y` array (ALL_Y, never a measure toggle): one tile per measure. shape() makes each
  *   measure a series (Shaped.series = measures, cell.si = measure index) and thins them together
@@ -237,9 +239,12 @@
  *                              the mark keys, so a rank swap moves names with bars. Value ticks: none.
  *     <g data-maya="marks">    only [data-key] children, one tag per key
  *     <g data-maya="rules">    only with spec.rules, after marks: bands (<rect data-band>) first, then per drawn rule a <line>
- *                              across the value axis, then its <text text-anchor=end> (label and value, or the
- *                              value alone) above the line at the plot end (vertical line: beside it at the top). Labels dodge nothing, not
- *                              value labels either. "mean" averages the visible plotted values
+ *                              across the value axis; then every label <text> (label and value, or the value alone),
+ *                              after the marks' labels, at the first spot inside the plot's width
+ *                              whose box is free in the label collision boxes: above the line at its
+ *                              end, at its start, below at the end, below at the start (vertical
+ *                              line: beside it at the top, left then right, stepping down); none
+ *                              free, the label is dropped (#91.2). Labels avoid labels, not marks. "mean" averages the visible plotted values
  *                              (stacked: the category totals; Other left out). Numeric rules widen
  *                              the value domain; a yDomain wins and hides rules outside it. No
  *                              data-key: animate.ts diffs only marks, so the group crossfades with
@@ -260,7 +265,8 @@
  *     <g data-maya="cross">    crosshair (line/area), moved via CSSOM transform
  *     <g data-maya="hits">     invisible enlarged targets (see below)
  *   Empty: no row holds a number in any measure or y2. Grid/axes/groups
- *   omitted, `<text data-maya="empty">` (text.noData) centered. Judged on the data, not on what
+ *   omitted, `<text data-maya="empty">` (text.noData) centered; a "\n" or a line wider than the
+ *   svg (estimated) breaks it into <tspan x dy> lines, one line stays plain text. Judged on the data, not on what
  *   drew: a hidden series or a zoom window over nothing keeps its axes and legend.
  *   Marks group attributes are synced on patch.
  *
@@ -353,7 +359,9 @@
  *
  * Colors: never inline. CSS rules `[data-s="0"]..[data-s="7"]` map to --maya-series-1..8;
  *   --maya-series-1 defaults to var(--maya-accent) so single-series charts use the
- *   accent. spec.colors / spec.theme become custom properties in `Parts.vars` (applied
+ *   accent. Later wins: a colors array, then theme tokens (series1..8), then a colors map
+ *   key (#89), so a named series keeps its colour under a theme. spec.colors / spec.theme
+ *   become custom properties in `Parts.vars` (applied
  *   with style.setProperty by the element) and `Parts.style` (the standalone svg's style attribute in
  *   render(); a `.maya{...}` rule in the shell's <style> in renderShell(), never an attribute). Every value passes the CSS allowlist in validate.ts.
  *
@@ -402,7 +410,12 @@
  * Layout (layout.ts frame()): no text measurement exists in Node, so axis label widths are
  *   estimated as 0.6 em per code point (1 em for East-Asian-wide) * 12 + 8, value labels
  *   (ctx.label) as chars * 7.2 + 4. Axis labels are never rotated. Band axes draw every nth label
- *   (bottom: by width, left: 14 px per step); left band labels are cut at 40% of the width.
+ *   (bottom: by width, left: 14 px per step) unless there are 8 or fewer or each slot is 60 px or
+ *   more (then each is cut to its slot); left band labels are cut at 40% of the width. Linear
+ *   ticks pick the nice step nearest the target count, but a step whose domain leaves over 40% of
+ *   the axis empty loses (ticks.ts); an off-step domain end whose label would touch the previous
+ *   tick label is not labelled. With annotate (vertical value axis) the plot top drops 14 px so a
+ *   label above a point at the top fits. A bar's value axis spans its was values.
  *   Coordinates are rounded to 2 decimals (`r()` in svg.ts).
  *   Direct end labels: a mark with `ends(spec, shaped, fmt)` returning [name, last value] pairs
  *   (line and area: 2 to 8 series, all visible, no value labels, no y2) gets a right gutter of
@@ -430,7 +443,7 @@ import { area, line } from "./marks/line.ts";
 import { points, scatter } from "./marks/scatter.ts";
 import { table } from "./marks/table.ts";
 import { MODULES } from "./registry.ts";
-import { agg, feed, shape } from "./shape.ts";
+import { agg, colorVals, feed, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
 import { el, esc, OTHER, r, tw } from "./svg.ts";
@@ -443,6 +456,7 @@ import {
   ratios,
   resolve,
   validateOptions,
+  unset,
   validateSpec,
 } from "./validate.ts";
 import type {
@@ -478,11 +492,19 @@ const CORE: Readonly<Record<string, Mark>> = {
   table,
 };
 
-/** Numeric rules widen the value axis (a target above the data stays visible); a yDomain still wins. */
-function withRules(s: ResolvedSpec, axes: [Axis, Axis, Axis?]): [Axis, Axis, Axis?] {
-  const n = [...s.rules.map((u) => u.y), ...s.bands.flatMap((b) => [b.lo, b.hi])].filter(
-    (v) => v !== "mean",
-  );
+/** Numeric rules and a bar's was values widen the value axis (a target or ghost above the data
+ * stays visible); a yDomain still wins. */
+function withRules(
+  s: ResolvedSpec,
+  shaped: Shaped,
+  axes: [Axis, Axis, Axis?],
+): [Axis, Axis, Axis?] {
+  const was = s.type === "bar" && s.was !== null ? colorVals(s, s.was) : null;
+  const n = [
+    ...s.rules.map((u) => u.y),
+    ...s.bands.flatMap((b) => [b.lo, b.hi]),
+    ...(was ? shaped.cells.map((c) => was(shaped.categories[c.ci]!, shaped.series[c.si]!)) : []),
+  ].filter((v): v is number => typeof v === "number");
   if (!n.length) return axes;
   return axes.map((a) =>
     a?.kind === "linear" && a.field === s.y
@@ -530,6 +552,7 @@ const radios = (tag: string, label: string, names: string[], i: number) =>
 const kebab = (s: string) => s.replace(/[A-Z]|\d+/g, (c) => "-" + c.toLowerCase());
 
 function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string | null): Parts {
+  spec = unset(spec);
   validateSpec(spec);
   if (opts !== undefined) validateOptions(opts);
   // validateSpec guarantees the type is core or registered.
@@ -711,7 +734,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
           b.domain = [Math.min(a.domain[0], b.domain[0]), Math.max(a.domain[1], b.domain[1])];
       });
     });
-  const f = ax ? frame(s0, withRules(s, ax), { width: W, height: H, gutter }, fmt) : null;
+  const f = ax ? frame(s0, withRules(s, shaped, ax), { width: W, height: H, gutter }, fmt) : null;
   const plot = f?.plot ?? { x: 0, y: 0, w: W, h: H };
   const ctx: MarkCtx = {
     spec: s,
@@ -755,6 +778,26 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   let said = fv === null ? "" : ` ${t(s, "frame", fr![2] + 1, fr![1].length)}.`;
   let body = "";
   if (empty) {
+    // Wrapped to the box (#91.9): "\n" breaks, then words fill lines of n estimated characters;
+    // a longer word is cut into n-character pieces. One line keeps the plain <text>.
+    const n = Math.max(4, Math.floor((W - 16) / 7.2));
+    const lines = t(s, "noData")
+      .split("\n")
+      .flatMap((p) =>
+        p
+          .split(" ")
+          .flatMap((w) => w.match(new RegExp(`.{1,${n}}`, "gu")) ?? [])
+          .reduce(
+            (a: string[], w) => {
+              const l = a.at(-1)!;
+              if (l && [...l].length + 1 + [...w].length <= n) a[a.length - 1] = `${l} ${w}`;
+              else if (l) a.push(w);
+              else a[a.length - 1] = w;
+              return a;
+            },
+            [""],
+          ),
+      );
     body = el(
       "text",
       {
@@ -764,28 +807,43 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         "text-anchor": "middle",
         "dominant-baseline": "middle",
       },
-      esc(t(s, "noData")),
+      lines.length < 2
+        ? esc(lines[0] ?? "")
+        : lines
+            .map((l, i) =>
+              el("tspan", { x: W / 2, dy: i ? "1.2em" : `${-0.6 * (lines.length - 1)}em` }, esc(l)),
+            )
+            .join(""),
     );
   } else {
     const g = (name: string, c: string) => el("g", { "data-maya": name }, c);
     // Reference lines, drawn over the marks.
-    // ponytail: at most 4, labels dodge nothing (NON-FEATURES). Bands first (under the lines), then
-    // value lines, then category (x) lines.
+    // ponytail: at most 4. Bands first (under the lines), then value lines, then category (x) lines.
     let rules = "";
-    // Band and x-rule labels claim their box after the marks' labels, and step down a row when it is taken.
+    // Rule labels claim their box after the marks' labels (annotations, value labels): the first
+    // free spot [x, top, end-anchored] inside the plot's width wins, else the label is dropped (#91.2).
+    // ponytail: they dodge labels, not marks (a bubble under a rule label keeps the label's halo).
     const late: (() => string)[] = [];
-    const tag = (text: string, ax: number, tp: number, end: boolean) =>
+    const spots = (text: string, at: [number, number, boolean][]) =>
       late.push(() => {
         const w = tw(text);
-        for (let k = 0; k < 4; k++)
-          if (fits(end ? ax - w : ax, tp + 14 * k, w))
+        for (const [ax, tp, end] of at) {
+          const l = end ? ax - w : ax;
+          if (l >= plot.x - 1 && l + w <= plot.x + plot.w + 1 && fits(l, tp, w))
             return el(
               "text",
-              { x: r(ax), y: r(tp + 14 * k + 10), "text-anchor": end ? "end" : "start" },
+              { x: r(ax), y: r(tp + 10), "text-anchor": end ? "end" : "start" },
               esc(text),
             );
+        }
         return "";
       });
+    // Band and x-rule labels step down a row when their spot is taken.
+    const tag = (text: string, ax: number, tp: number, end: boolean) =>
+      spots(
+        text,
+        [0, 1, 2, 3].map((k) => [ax, tp + 14 * k, end]),
+      );
     const v = s.horizontal ? f?.x : f?.y;
     const cat = s.horizontal ? f?.y : f?.x;
     const [x0, y0] = [r(plot.x + plot.w), r(plot.y)];
@@ -818,18 +876,24 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         const name = u.label ?? (u.y === "mean" ? t(s, "mean") : null);
         const val = fmt(s.y, at);
         say(name, val);
-        rules +=
-          el("line", seg(p, s.horizontal)) +
-          // above the line at its end; beside the line at the top for a vertical one
-          el(
-            "text",
-            {
-              x: s.horizontal ? p - 4 : x0,
-              y: s.horizontal ? y0 + 10 : p - 4,
-              "text-anchor": "end",
-            },
-            esc(name ? `${name} ${val}` : val),
-          );
+        rules += el("line", seg(p, s.horizontal));
+        // Above the line at its end, else at its start, else below; a vertical line: beside it at
+        // the top (either side), stepping down along it.
+        const text = name ? `${name} ${val}` : val;
+        spots(
+          text,
+          s.horizontal
+            ? [0, 1, 2, 3].flatMap((k): [number, number, boolean][] => [
+                [p - 4, y0 + 14 * k, true],
+                [p + 4, y0 + 14 * k, false],
+              ])
+            : [
+                [x0, p - 14, true],
+                [plot.x, p - 14, false],
+                [x0, p + 2, true],
+                [plot.x, p + 2, false],
+              ],
+        );
       });
     }
     // x rules: a band's centre (or a time or number's place) on the category axis.
@@ -915,10 +979,11 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
   }
 
   // :host resolves --maya-series-1: var(--maya-accent) above these vars, so an accent override
-  // sets slot 1 itself unless colors does; theme.series1, later in the list, still wins.
+  // sets slot 1 itself unless colors does. Later wins: colors array < theme < colors map (#89).
   const vars: [string, string][] = [];
   const list = Array.isArray(s.colors) ? (s.colors as readonly string[]) : [s.theme.accent];
   list.forEach((c, i) => c && vars.push([`--maya-series-${i + 1}`, c]));
+  for (const k in s.theme) vars.push([`--maya-${kebab(k)}`, s.theme[k as keyof typeof s.theme]!]);
   if (s.colors && !Array.isArray(s.colors))
     // ponytail: slot = the series' first-appearance index, so reordered rows move colours.
     // Waffle slots follow categories (data-s = category index), so its keys map against those.
@@ -929,7 +994,6 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
         : (s.type === "waffle" ? shaped.categories : shaped.series).indexOf(k);
       if (j >= 0) vars.push([`--maya-series-${(j % 8) + 1}`, c]);
     }
-  for (const k in s.theme) vars.push([`--maya-${kebab(k)}`, s.theme[k as keyof typeof s.theme]!]);
   const style = vars.map(([k, v]) => `${k}:${v};`).join("");
 
   const svg = el(

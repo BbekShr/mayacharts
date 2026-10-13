@@ -208,8 +208,9 @@ export function shape(
     // waterfall spans use running totals over every category, before the window.
     if (wf) {
       let run = 0;
-      for (const c of cats) {
-        if (s.totals.includes(c.label)) spans.set(c, [0, run]);
+      // A total before any step opens at its own value (last year's figure), as bar.ts draws it.
+      for (const [i, c] of cats.entries()) {
+        if (s.totals.includes(c.label)) spans.set(c, [0, i ? run : (run = total(c))]);
         else spans.set(c, [run, (run += total(c))]);
       }
     }

@@ -425,6 +425,15 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ],
 ];
 
+/** An option set to null is unset (#89): hosts write `colorBy: cfg.colorBy ?? null`. type and
+ * data keep null so their own errors name it. Copies only when a null is present. */
+export const unset = <T extends object>(spec: T): T =>
+  Object.values(spec).includes(null)
+    ? (Object.fromEntries(
+        Object.entries(spec).filter(([k, v]) => v !== null || k === "type" || k === "data"),
+      ) as T)
+    : spec;
+
 export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   if (!isObj(spec))
     fail(
@@ -433,7 +442,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       `spec must be a plain object, received ${ty(spec)}.`,
       `Received: ${show(spec)}`,
     );
-  const s = spec as Record<string, unknown>;
+  const s = unset(spec as Record<string, unknown>);
   for (const k of Object.keys(s))
     if (!KEYS.includes(k))
       F(
@@ -642,8 +651,9 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         : null;
     if (!entries || !entries.every(([, c]) => typeof c === "string"))
       bad("colors", colors, "an array of colours, or an object of colours by series value");
-    if (entries!.length > 8)
-      F("invalid-option", "colors", `has ${entries!.length} colours; the palette has 8 slots.`);
+    // A map may name any number of series (they share hues); an array fills at most 8 slots.
+    const n = Array.isArray(colors) ? new Set(colors).size : 0;
+    if (n > 8) F("invalid-option", "colors", `has ${n} colours; the palette has 8 slots.`);
     for (const [p, c] of entries!) css(`colors${p}`, c as string, false);
   }
   if (theme !== undefined) {
@@ -715,6 +725,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     ],
     [strs(s.dash, 1) && s.series === undefined, "dash", "needs spec.series."],
     [s.y2 != null && s.horizontal === true, "y2", `${CB} spec.horizontal.`],
+    // false is unset elsewhere, but a radial always stacks its series: say so (#93.1).
+    [s.stack === false && t === "radial", "stack", NS, "A radial always stacks its series."],
     [
       s.xType === "time" && (s.sort != null || s.limit != null || s.horizontal === true),
       "xType",
@@ -963,6 +975,7 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
  * types keep the remaining levels.
  */
 export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
+  spec = unset(spec);
   const measures = typeof spec.y === "string" ? [spec.y] : [...spec.y];
   const measure = Math.min(view.measure ?? 0, measures.length - 1);
   const full = [...(spec.path ?? [])];

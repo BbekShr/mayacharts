@@ -41,7 +41,7 @@ const RADIAL =
 
 // marimekko
 const MEKKO =
-  "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}[data-maya=labels] [data-ink=b]{fill:var(--maya-bg)}[data-maya=labels] [data-ink=t]{fill:light-dark(#12161c,#fff)}" +
+  "[data-maya=labels] [data-ink]{fill:#12161c;font-weight:600}[data-maya=labels] [data-ink=n]{font-weight:500}" +
   "[data-maya=labels] [data-ax]{stroke:none;font-size:11px}[data-maya=labels] [data-col]{stroke:none;font-weight:500}" +
   "[data-maya=marks][data-hot] [data-mm]:not([data-active],[data-lit]){opacity:.62}";
 
@@ -64,7 +64,7 @@ const FLOW =
 // Hexes: stronger ramp (36% floor), same-colour round-join stroke for soft corners, ring on hover.
 const HEX = 'path[data-key^="g~"]';
 const HEXMAP =
-  `${HEX}{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b));stroke:var(--maya-accent);stroke-width:1.5;stroke-linejoin:round}` +
+  `${HEX},text[data-hx]{--c:color-mix(in oklab,var(--maya-accent) calc(var(--q)*.8 + 20%),var(--b))}${HEX}{stroke:var(--maya-accent);stroke-width:1.5;stroke-linejoin:round}` +
   `${HEX}:is([data-active],[data-selected]){stroke:var(--maya-fg);stroke-width:2.5}` +
   "[data-maya=grid] [data-none]{stroke-opacity:.7;shape-rendering:auto}" +
   "[data-hex] i{width:120px;height:10px}";
@@ -247,9 +247,10 @@ export const css =
     .join("") +
   // Nested treemap parent: a quiet frame of its branch colour behind its children.
   "rect[data-par]{fill:color-mix(in oklab,var(--c) 14%,var(--maya-bg))}" +
-  // Hexmap label ink by ramp step (4.5:1 each): black on steps 8 and 9, white on dark steps 6 and 7.
-  "[data-maya=labels] text[data-q][data-dark]{fill:light-dark(#12161c,#000)}" +
-  '[data-maya=labels] :is([data-q="6"],[data-q="7"]){fill:light-dark(var(--maya-fg),#fff)}' +
+  // Label ink from the mark's own fill (the label repeats the mark's colour attributes, so --c is the fill): the relative colour keeps its lightness only as a switch,
+  // dark ink (--maya-label-ink, an OKLab lightness) above L .565 and light ink (--maya-label-ink-on) below, where both reach 4.5:1 on greys.
+  // Where relative colours are missing the plain dark [data-ink] rule stands.
+  "@supports (color:oklch(from red l c h)){[data-maya=labels] [data-ink=a]{fill:oklch(from var(--c,var(--maya-series-1)) clamp(var(--maya-label-ink,.12),calc(var(--maya-label-ink,.12) + (.565 - l)*1000),var(--maya-label-ink-on,1)) 0 0)}}" +
   HEXMAP +
   SCATTER +
   ORBIT +

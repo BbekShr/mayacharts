@@ -18,11 +18,13 @@ export function niceTicks(min: number, max: number, target = 5): Ticks {
     const s = base * m;
     const lo = Math.floor(min / s + 1e-9);
     const n = Math.ceil(max / s - 1e-9) - lo + 1;
+    // A step whose domain leaves over 40% of the axis empty (0/50M/100M for 51.6M on a short axis)
+    // loses to any step that keeps the top tick near the data (#92.1).
     const score = cross
       ? n > target + 3
         ? Infinity
         : (n - 1 + Math.abs(n - target) / 1e3) * s
-      : Math.abs(n - target);
+      : Math.abs(n - target) + ((max - min) / ((n - 1) * s) < 0.6 ? 1.5 : 0);
     if (score < best - 1e-9 * Math.abs(score)) {
       best = score;
       step = s;

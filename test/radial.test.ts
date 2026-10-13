@@ -140,4 +140,82 @@ describe("radial", () => {
     expect(svg(plain(d, { aggregate: "mean" }))).not.toContain('data-total=""');
     expect(svg(plain(d, { aggregate: "max" }))).not.toContain('data-total=""');
   });
+  it("a series with no row at a category has no sector (so no empty tooltip row) (#93.4)", () => {
+    const rows = [
+      { it: "Jackets", fam: "Outerwear", v: 189 },
+      { it: "Shirts", fam: "Tops", v: 68 },
+    ];
+    const m = marks(svg({ type: "radial", x: "it", y: "v", series: "fam", data: rows }));
+    expect(m).toHaveLength(2);
+    expect(m.some((t) => t.includes('data-x="Jackets"') && t.includes('data-series="Tops"'))).toBe(
+      false,
+    );
+  });
+  it("a value beyond its bar never overprints a category label, over 200 small tiles (#91.4)", () => {
+    const names = [
+      "Bags",
+      "Jackets",
+      "Shirts",
+      "Pants",
+      "Shoes",
+      "Hats",
+      "Socks",
+      "Swim",
+      "Belts",
+      "Ties",
+      "Gloves",
+      "Coats",
+    ];
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let t = 0; t < 200; t++) {
+      const [n, w, h] = [
+        3 + Math.floor(rnd() * 10),
+        180 + Math.floor(rnd() * 200),
+        200 + Math.floor(rnd() * 150),
+      ];
+      const ser = rnd() < 0.5;
+      const rows = names
+        .slice(0, n)
+        .flatMap((it) =>
+          (ser ? ["A", "B"] : [""]).map((f) => ({ it, f, v: Math.round((5 + rnd() * 100) * 1e6) })),
+        );
+      const s = renderParts(
+        {
+          type: "radial",
+          x: "it",
+          y: "v",
+          ...(ser ? { series: "f" } : {}),
+          format: { v: "compact" },
+          data: rows,
+        },
+        { width: w, height: h },
+      ).svg;
+      const cat = [
+        ...s.matchAll(
+          /<text x="([\d.]+)" y="([\d.]+)" text-anchor="(\w+)"[^>]*data-cat=""[^>]*>([^<]*)</g,
+        ),
+      ].map((m) => {
+        const len = m[4]!.length * 7.2;
+        const x = +m[1]!;
+        const l = m[3] === "middle" ? x - len / 2 : m[3] === "end" ? x - len : x;
+        return [l, +m[2]! - 7, l + len, +m[2]! + 7];
+      });
+      for (const m of s.matchAll(
+        /<text x="([\d.]+)" y="([\d.]+)" transform="rotate\(([-\d.]+)[^>]*data-tip=""[^>]*>([^<]*)</g,
+      )) {
+        const [x, y, a] = [+m[1]!, +m[2]!, (+m[3]! * Math.PI) / 180];
+        const len = m[4]!.length * 6.4;
+        const dir = /text-anchor="end"/.test(m[0]) ? -1 : 1;
+        const [x1, y1] = [x + dir * len * Math.cos(a), y + dir * len * Math.sin(a)];
+        for (const b of cat)
+          expect(
+            Math.min(x, x1) - 5 < b[2]! &&
+              Math.max(x, x1) + 5 > b[0]! &&
+              Math.min(y, y1) - 5 < b[3]! &&
+              Math.max(y, y1) + 5 > b[1]!,
+          ).toBe(false);
+      }
+    }
+  });
 });

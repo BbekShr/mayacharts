@@ -145,4 +145,21 @@ describe("dumbbell yDomain narrower than the data", () => {
       }
       expect(s).toContain('data-y="30"');
     });
+  it("series + colorBy sign tones the connector good when the second value is higher, bad when lower (#93.2)", () => {
+    const rows = [
+      { Store: "A", Year: "2025", Sales: 10 },
+      { Store: "A", Year: "2026", Sales: 15 },
+      { Store: "B", Year: "2025", Sales: 12 },
+      { Store: "B", Year: "2026", Sales: 7 },
+    ];
+    const s = svg({
+      type: "dumbbell",
+      x: "Store",
+      series: "Year",
+      y: "Sales",
+      colorBy: "sign",
+      data: rows,
+    });
+    expect(links(s).map((l) => l.match(/data-tone="(\w+)"/)![1])).toEqual(["good", "bad"]);
+  });
 });

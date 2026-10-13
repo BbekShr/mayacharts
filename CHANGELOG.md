@@ -6,7 +6,7 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
-Fixes #76.
+Fixes #76, #89, #90, #91, #92, #93.
 
 ### Added
 
@@ -14,6 +14,7 @@ Fixes #76.
 - A series selector in data tokens: `{max.y:2025}`, `{last.y:2025}`, `{first.x:2025}`, `{total:2025}`, `{mean:2025}` read only that series. Without one, max, min, first and last read one point and `{total}` sums every series, as documented (#76).
 - Data tokens on scatter: max and min by y, first and last by x, `.x` the x value or `name` (#76).
 - Text key `perX` ("{0} per {1}") for the value of a slope rule (#76).
+- Each `text` key now says which string it controls: on hover in TypeScript, under TEXT KEYS in llms.txt and in the Text keys table of the docs. Fixes #93.
 
 ### Fixed
 
@@ -21,6 +22,18 @@ Fixes #76.
 - With no rows, a title or subtitle holding a data token is dropped instead of printing the raw token; the empty state is unchanged (#76).
 - `annotate: []`, `dash: []` and any other empty array option are accepted as unset, also on types the option does not apply to (#76).
 - In an element under 200 px tall the title is one line with an ellipsis (full text on hover) and the subtitle is hidden (#76).
+- A `colors` map key beats the theme's `series1` to `series8` slot tokens, so a named series keeps its colour under a theme; slots colour only the series the map does not name. Fixes #89.
+- A `colors` map is not capped at 8 keys (series past 8 share slots); an array is capped at 8 distinct colours, not 8 entries. Fixes #89.
+- An option set to `null`, such as `colorBy: null`, is treated as unset instead of throwing (`type` and `data` still need values). Fixes #89.
+- A bar's value axis spans its `was` values, so a ghost above every bar is no longer clipped at the plot top. Fixes #90.
+- Rule labels join the label collision pass: each takes the first free spot along its line inside the plot (after value labels and annotations) or is dropped, so it no longer overprints an annotation or a category label. Fixes #91.
+- An annotation on a point at the plot top draws: the plot keeps a label row of headroom when `annotate` is set. Fixes #91.
+- `text.noData` wraps to the box and breaks at `\n` instead of being clipped on a narrow tile. Fixes #91.
+- A short value axis no longer doubles its domain (51.6M gave 0, 50M, 100M at 300 x 260; now 0 to 60M): a tick step that leaves over 40% of the axis empty loses to one that keeps the top tick near the data. Fixes #92.
+- An off-step `yDomain` or `xDomain` end tick is not labelled when its label would touch the previous one ("+4%+5%"). Fixes #92.
+- Category axes with slots of 60 px or more cut each label to its slot instead of thinning to every 2nd to 5th label. Fixes #92.
+- A waterfall total before any step opens at its own y (shape and the value axis now match the bar), so a bridge can start at last year's figure. Fixes #92.
+- `stack: false` on radial throws `option-unsupported` instead of being ignored (a radial always stacks). Fixes #93.
 - A scatter slope rule label shows its value as y per x ("Average price $38 per unit"), placed at an end or the middle of the line clear of the points; the description says the same (#76).
 
 ## 0.16.0 - 2026-10-12

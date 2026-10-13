@@ -279,6 +279,9 @@ export function tooltip(
       s = spec();
     if (!v || v == "zero") return "";
     if (typeof s?.colorBy !== "object") return str(s ?? {}, v === "good" ? "positive" : "negative");
+    // The kpi and gauge status words (text.onTrack, atRisk, offTrack), so renaming them renames both.
+    if (s.type == "kpi" || s.type == "gauge")
+      return str(s, ({ good: "onTrack", warn: "atRisk" } as const)[v as "good"] ?? "offTrack");
     // Same words as core's toneWord: warn is "near", lower-is-better swaps above/below. A multi-measure kpi row names its measure in data-series.
     const g = resolve(s, (host as { view?: View }).view).goals,
       lower = (g.get(a(k, "data-series")) ?? [...g.values()][0])?.better === "lower";
@@ -340,7 +343,14 @@ export function tooltip(
         if (!tab) row.append(h("span", f, { "data-v": "" }));
         const tn = tone(k);
         if (tn) row.append(h("span", tn));
-        const more = [tab ? f : "", a(k, "data-more")].filter(Boolean).flatMap((t) =>
+        // A field already shown (the y title, a scatter's own lines) is not listed again; was is a note line.
+        const own = new Set(tab ? f.split("\n").map((p) => p.split("\t")[0]) : [label]);
+        const extra = a(k, "data-more")
+          .split("\n")
+          .filter((p) => !own.has(p.split("\t")[0]) || p[0] === "\t")
+          .join("\n");
+        const was = a(k, "data-was");
+        const more = [tab ? f : "", extra, was && "\t" + was].filter(Boolean).flatMap((t) =>
           t.split("\n").map((p) => {
             // "label\tvalue[\tz]": z draws a bar either side of the average (constellation);
             // an empty label is a note line under the rows.

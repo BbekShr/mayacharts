@@ -19,8 +19,10 @@ export const radial: Mark = {
     const n = shaped.categories.length;
     if (!n || !shaped.cells.length) return { marks: "", hits: "" };
 
-    // Stack outward per category; negatives and nulls draw nothing.
-    const segs = shaped.cells.map((c) => ({ c, v: Math.max(0, c.value ?? 0), y0: 0, y1: 0 }));
+    // Stack outward per category; a null value has no segment (so no zero-width mark, no tooltip row), a negative draws nothing.
+    const segs = shaped.cells
+      .filter((c) => c.value !== null)
+      .map((c) => ({ c, v: Math.max(0, c.value!), y0: 0, y1: 0 }));
     const totals = new Array<number>(n).fill(0);
     const last = new Array<number>(n).fill(-1);
     const topV = new Array<number>(n).fill(0);
@@ -155,6 +157,7 @@ export const radial: Mark = {
 
     // Stack total at each tip, beyond it when there is room, else inside it (names as above).
     const named = new Set<number>();
+    const outs: [string, number, number][] = [];
     totals.forEach((t, ci) => {
       const a = G / 2 + (ci + 0.5) * step;
       const [rt, f] = [rad(t), fv(t)];
@@ -168,7 +171,7 @@ export const radial: Mark = {
         named.add(ci);
         tipText += spoke(nm, R0 + 7, a, { "data-in": true, "data-dark": true, "data-name": "" });
       }
-      if (out) tipText += spoke(f, rt + 6, a, { "data-tip": "" });
+      if (out) outs.push([f, rt + 6, a]);
       else if (len >= w + (both ? nm.length * 6.6 + 8 : 0))
         tipText += spoke(
           f,
@@ -272,6 +275,21 @@ export const radial: Mark = {
         esc(name),
       );
     });
+    // A value beyond its bar tip yields to a category label it would overprint (the spoke's box, 6 px each side).
+    for (const [f, rr, a] of outs) {
+      const [x0, y0] = [cx + rr * Math.sin(a), cy - rr * Math.cos(a)];
+      const [x1, y1] = [x0 + f.length * 6.2 * Math.sin(a), y0 - f.length * 6.2 * Math.cos(a)];
+      if (
+        !boxes.some(
+          (b) =>
+            Math.min(x0, x1) - 6 < b[2]! &&
+            Math.max(x0, x1) + 6 > b[0]! &&
+            Math.min(y0, y1) - 6 < b[3]! &&
+            Math.max(y0, y1) + 6 > b[1]!,
+        )
+      )
+        labels += spoke(f, rr, a, { "data-tip": "" });
+    }
     return { marks, hits, labels, grid };
   },
 };

@@ -1,5 +1,5 @@
 import { agg, feed } from "../shape.ts";
-import { clip, el, esc, hit, key, memo, r } from "../svg.ts";
+import { clip, el, esc, hit, key, memo, r, tw } from "../svg.ts";
 import type { Mark } from "../types.ts";
 
 const HEAD = 30;
@@ -65,7 +65,19 @@ export const table: Mark = {
     }
 
     const lw = Math.max(80, Math.min(W * 0.34, 180));
-    const cw = Math.max(0, W - lw) / ms.length;
+    // ponytail: a narrow table drops its rightmost measure columns (no horizontal scroll); a column needs its widest value plus 2 * PAD.
+    const fit = Math.max(0, Math.floor((H - HEAD) / ROW));
+    const shown = rows.slice(0, fit);
+    let nc = 0;
+    for (let room = W - lw, i = 0; i < ms.length; i++) {
+      room -= Math.max(
+        ...shown.map((rw) => tw(rw.vals[i] === null ? "–" : ctx.fmt(ms[i]!, rw.vals[i]!), 2 * PAD)),
+        2 * PAD,
+      );
+      if (room < 0 && nc) break;
+      nc++;
+    }
+    const cw = Math.max(0, W - lw) / (nc || 1);
     const colX = (i: number) => lw + i * cw; // left edge of measure column i
     const max = ms.map((_, i) => {
       let m = 0; // a loop: Math.max(...rows) overflows the stack on a long table
@@ -77,7 +89,7 @@ export const table: Mark = {
     let labels = "";
     let grid = "";
     let hits = "";
-    const heads = [spec.x, ...ms];
+    const heads = [spec.x, ...ms.slice(0, nc)];
     heads.forEach((f, i) => {
       const x0 = i ? colX(i - 1) : 0;
       const w = i ? cw : lw;
@@ -113,9 +125,8 @@ export const table: Mark = {
     grid += el("line", { x1: 0, x2: W, y1: HEAD, y2: HEAD });
 
     // ponytail: rows that do not fit the height are not drawn (the tile shows the top rows); no scroll.
-    const fit = Math.max(0, Math.floor((H - HEAD) / ROW));
     let marks = "";
-    rows.slice(0, fit).forEach((rw, ri) => {
+    shown.forEach((rw, ri) => {
       const top = HEAD + ri * ROW;
       const name = ctx.fmt(spec.x, rw.name);
       // Row texts sit in the marks group, keyed by row, so a re-sort slides them with their bars.
@@ -130,7 +141,7 @@ export const table: Mark = {
         },
         esc(cut(name, lw)),
       );
-      ms.forEach((m, mi) => {
+      ms.slice(0, nc).forEach((m, mi) => {
         const v = rw.vals[mi]!;
         const right = colX(mi) + cw - PAD;
         const text = v === null ? "–" : ctx.fmt(m, v);

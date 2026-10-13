@@ -655,19 +655,17 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 8,
-          "description": "Palette in series order (max 8)."
+          "description": "Palette in series order (at most 8 distinct colours)."
         },
         {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Colours by series value (treemap, sunburst: by path[0] value; sankey, chord: by node name; waffle: by category).",
-          "maxProperties": 8
+          "description": "Colours by series value (treemap, sunburst: by path[0] value; sankey, chord: by node name; waffle: by category), any number of keys."
         }
       ],
-      "description": "Palette in series order, or colours by name: series value; treemap and sunburst path[0] value; sankey and chord node name (links and inner levels inherit); waffle category. Unmatched keys are ignored. Path types keep each name colour through drill. A sankey root missing from a map stays neutral at every drill level."
+      "description": "Palette in series order, or colours by name (a name beats theme series1..8, which beat the array): series value; treemap and sunburst path[0] value; sankey and chord node name (links and inner levels inherit); waffle category. Unmatched keys are ignored. Path types keep each name colour through drill. A sankey root missing from a map stays neutral at every drill level."
     },
     "colorBy": {
       "anyOf": [

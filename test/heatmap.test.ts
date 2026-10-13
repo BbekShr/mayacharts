@@ -76,18 +76,15 @@ describe("heatmap", () => {
       ]
     `);
   });
-  it("inks labels by ramp step: dark ink on steps 7 to 9, the tint ink on the paler ones", () => {
+  it("labels repeat their cell's ramp step so the ink follows the fill (data-ink a)", () => {
     const svg = render(spec, { width: 800, height: 400 });
     const t = svg.match(/<text [^>]*data-in[^>]*>/g) ?? [];
-    const q = marks(svg).map((m) => Number(/data-q="(\d)"/.exec(m)![1]));
+    const q = marks(svg).map((m) => /data-q="(\d)"/.exec(m)![1]);
     expect(t.length).toBe(11);
-    expect(t.filter((x) => x.includes("data-dark"))).toHaveLength(q.filter((n) => n > 7).length);
-    expect(t.filter((x) => x.includes('data-ink="t"'))).toHaveLength(q.filter((n) => n < 8).length);
-    expect(t.filter((x) => x.includes("data-dark") && x.includes("data-q"))).toHaveLength(
-      q.filter((n) => n > 7).length,
-    );
+    expect(t.every((x) => x.includes('data-ink="a"'))).toBe(true);
+    expect(t.map((x) => /data-q="(\d)"/.exec(x)![1]).sort()).toEqual([...q].sort());
   });
-  it("small cells are squares, large ones fill the band; the legend names the field", () => {
+  it("cells fill their band (not forced square); a cell under 8 px drops its 1 px outline", () => {
     const wh = (svg: string) => {
       const t = marks(svg)[0]!;
       return [/ width="([\d.]+)"/, / height="([\d.]+)"/].map((re) => Number(re.exec(t)![1]));
@@ -95,7 +92,10 @@ describe("heatmap", () => {
     const [w, h] = wh(render(spec, { width: 400, height: 400 }));
     expect(w).not.toBe(h);
     const small = wh(render(spec, { width: 160, height: 400 }));
-    expect(small[0]).toBe(small[1]);
+    expect(small[0]).toBeLessThan(small[1]!);
     expect(renderParts(spec).legend).toContain("<b>v</b>");
+    const tiny = render(spec, { width: 70, height: 400 });
+    expect(marks(tiny)[0]).toContain('stroke-width="0"');
+    expect(marks(render(spec, { width: 800, height: 400 }))[0]).not.toContain("stroke-width");
   });
 });

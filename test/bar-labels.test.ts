@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "../src/index.ts";
+import { css } from "../src/styles/theme.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
 const labels = (s: ChartSpec) =>
@@ -17,20 +18,16 @@ describe("bar value labels over the bar", () => {
       { k: "b", v: 80 },
     ],
   };
-  it("carry the dark ink on a full-strength bar", () => {
+  it("take the ink from their own fill: the label repeats the mark's colour attributes", () => {
     const l = labels(base);
     expect(l).toHaveLength(2);
-    expect(l.every((t) => t.includes('data-ink=""'))).toBe(true);
-  });
-  it("use the page background ink on the grey roll-up bar and on tone fills", () => {
+    expect(l.every((t) => t.includes('data-ink="a"') && t.includes('data-s="0"'))).toBe(true);
     const other = labels({ ...base, limit: 1, sort: "desc" });
-    expect(other.some((t) => t.includes('data-ink="b"'))).toBe(true);
-    expect(labels({ ...base, colorBy: "sign" }).every((t) => t.includes('data-ink="b"'))).toBe(
+    expect(other.some((t) => t.includes("data-other"))).toBe(true);
+    expect(labels({ ...base, colorBy: "sign" }).every((t) => t.includes('data-tone="good"'))).toBe(
       true,
     );
-  });
-  it("follow the ramp's dark-step rule when coloured by a field", () => {
-    const l = labels({
+    const q = labels({
       ...base,
       colorBy: "v",
       data: [
@@ -38,8 +35,13 @@ describe("bar value labels over the bar", () => {
         { k: "b", v: 60 },
       ],
     });
-    expect(l.some((t) => t.includes('data-ink=""'))).toBe(true);
-    expect(l.some((t) => !t.includes("data-ink"))).toBe(true);
+    expect(q.every((t) => /data-q="\d"/.test(t))).toBe(true);
+  });
+  it("ink rule: light ink below L .565 of the fill, dark above, tokens for the pair (theme.series1 #1E1E24)", () => {
+    expect(css).toContain("oklch(from var(--c,var(--maya-series-1))");
+    expect(css).toContain("--maya-label-ink-on");
+    const svg = render({ ...base, theme: { series1: "#1E1E24" } }, { width: 600, height: 300 });
+    expect(svg).toContain('data-ink="a"');
   });
 });
 

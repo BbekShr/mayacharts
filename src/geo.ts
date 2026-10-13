@@ -144,9 +144,8 @@ export const hexmap: Mark = {
         "data-q": q,
         d: hex(st),
       });
-      // Drawn here (not ctx.label) so labels on the dark ramp steps can carry data-dark.
-      // data-q picks the ink per ramp step (wip-flow.ts); data-dark marks the black steps.
-      const o = { "data-in": true, "data-dark": q >= 8, "data-q": q };
+      // Drawn here (not ctx.label): no halo; data-hx + data-q give the label its hex's fill, data-ink="a" picks the ink from it (theme.ts).
+      const o = { "data-in": true, "data-ink": "a", "data-hx": true, "data-q": q };
       if (showC)
         labels += text(cx, cy - dy, st.code, { ...o, "font-size": r(fc), "font-weight": 600 });
       if (showV) labels += text(cx, cy + fc * 0.62, f.get(st)!, { ...o, "font-size": r(fv) });

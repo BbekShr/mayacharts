@@ -42,7 +42,7 @@ describe("bar", () => {
     expect(num(other, /data-y="([\d.]+)"/)).toBe(150); // the real value stays on the mark
   });
 
-  it("waterfall labels the first bar and the Total, and drops a step label wider than its column", () => {
+  it("waterfall labels the first bar and the Total when they fit their column, and drops any wider than it", () => {
     const data = Array.from({ length: 14 }, (_, i) => ({
       s: `s${i}`,
       d: i ? (i % 2 ? 123456 : -98765) : 500000,
@@ -55,9 +55,70 @@ describe("bar", () => {
       labels: true,
       data,
     };
-    const l = labels(renderParts(spec).svg);
+    const l = labels(renderParts(spec, { width: 1000, height: 300 }).svg);
     expect(l.length).toBeGreaterThan(1);
-    expect(l.length).toBeLessThan(data.length);
+    // Narrow: the Total's label wider than its column drops instead of running over the neighbouring step (#91.5).
+    expect(labels(renderParts(spec, { width: 260, height: 300 }).svg)).toHaveLength(0);
+  });
+
+  it("a waterfall opens at a leading total's own value; later totals keep the running sum (#92.4)", () => {
+    const rows = [
+      { k: "2025", v: 100 },
+      { k: "a", v: 20 },
+      { k: "b", v: -10 },
+      { k: "2026", v: 0 },
+    ];
+    const svg = renderParts(
+      { type: "waterfall", x: "k", y: "v", totals: ["2025", "2026"], data: rows },
+      { width: 400, height: 300 },
+    ).svg;
+    const ys = [...svg.matchAll(/<rect data-maya="mark"[^>]*data-y="(-?[\d.]+)"/g)].map(
+      (m) => +m[1]!,
+    );
+    expect(ys).toEqual([100, 20, -10, 110]);
+  });
+
+  it("the value axis includes `was` values so a ghost is never clipped (#90.1)", () => {
+    const rows = [
+      { Month: "2026-01", Sales: 13e6, "A year earlier": 24.7e6 },
+      { Month: "2026-02", Sales: 14e6, "A year earlier": 15e6 },
+    ];
+    const svg = renderParts(
+      { type: "bar", x: "Month", y: "Sales", was: "A year earlier", data: rows },
+      { width: 400, height: 300 },
+    ).svg;
+    const ticks = [...svg.matchAll(/text-anchor="end"[^>]*>([\d,.]+)([MK]?)</g)].map(
+      (m) => +m[1]!.replace(/,/g, "") * (m[2] === "M" ? 1e6 : 1),
+    );
+    expect(Math.max(...ticks)).toBeGreaterThanOrEqual(24.7e6);
+    const ghost = svg.match(/<rect[^>]*data-past[^>]*>/)![0];
+    expect(+/ y="([\d.-]+)"/.exec(ghost)![1]!).toBeGreaterThanOrEqual(0);
+  });
+
+  it("grouped labels: every bar of a series is labelled on its own bar, or the series is dropped whole (#91.6)", () => {
+    const rows = ["Q1", "Q2", "Q3", "Q4"].flatMap((Quarter, i) =>
+      ["2025", "2026"].map((Year, j) => ({ Quarter, Year, Sales: (12 + i * 2 + j * 5) * 1e6 })),
+    );
+    const g = (width: number) =>
+      renderParts(
+        {
+          type: "bar",
+          x: "Quarter",
+          series: "Year",
+          y: "Sales",
+          labels: true,
+          format: { Sales: "compact" },
+          data: rows,
+        },
+        { width, height: 260 },
+      ).svg;
+    const wide = g(700);
+    expect(wide.match(/data-in=""[^>]*data-key="2025~/g)).toHaveLength(4);
+    expect(wide.match(/data-in=""[^>]*data-key="2026~/g)).toHaveLength(4);
+    const narrow = g(260);
+    const n = (y: string) =>
+      narrow.match(new RegExp(`<text[^>]*data-key="${y}~[^>]*>[^<]*<`, "g"))?.length ?? 0;
+    for (const y of ["2025", "2026"]) expect([0, 4]).toContain(n(y));
   });
 
   it("axis-break slashes sit inside the plot when values fall below the domain", () => {

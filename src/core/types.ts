@@ -1,4 +1,4 @@
-import type { TextKey } from "./strings.ts";
+import type { TEXT, TextKey } from "./strings.ts";
 
 export type { TextKey };
 
@@ -126,6 +126,7 @@ export type Field<R> = Extract<keyof R, string>;
  * The whole public API surface. Plain JSON on purpose: it must stay serializable,
  * LLM-generatable, diffable and hashable. Never add function-valued options.
  * Rule: `x` is always the category and `y` always the value, whatever the orientation.
+ * An option set to `null` (other than `type` and `data`) is treated as unset, as JSON hosts write it.
  */
 export interface ChartSpec<R extends object = Row> {
   /** Ignored; lets editors and LLMs find the JSON schema.
@@ -175,7 +176,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Point identity and tooltip title (units: one dot per row, keyed by it). scatter, beeswarm, boxplot (outliers and dots) and units.
    * @example name: "country" */
   name?: Field<R>;
-  /** x values drawn as running-total bars. waterfall only.
+  /** x values drawn as running-total bars; one before any step opens at its own y (last year's figure). waterfall only.
    * @example totals: ["Q1", "FY"] */
   totals?: readonly string[];
   /** Stack series instead of grouping them; "percent" shows each category's visible values as shares of its total, axis 0 to 100% (with negatives: shares of the summed magnitudes, below 0). bar and area only.
@@ -212,9 +213,9 @@ export interface ChartSpec<R extends object = Row> {
   /** Formatted values on marks. Default false (heatmap: true when cells are ≥ 24 px; treemap and sunburst: names, marimekko: shares, true).
    * @example labels: true */
   labels?: boolean;
-  /** Localised UI strings with `{0}` placeholders (see strings.ts for keys).
+  /** Localised UI strings with `{0}` placeholders; each key's own doc (hover, or "Text keys" in llms.txt) says which string it controls.
    * @example text: { noData: "Keine Daten", back: "Zurück" } */
-  text?: Readonly<Partial<Record<TextKey, string>>>;
+  text?: Readonly<{ [K in keyof typeof TEXT]?: string }>;
   /** BCP 47 locale for formatting. Default "en-US" (deterministic SSR).
    * @example locale: "de-DE" */
   locale?: string;
@@ -277,13 +278,13 @@ export interface ChartSpec<R extends object = Row> {
    * @example animate: false */
   animate?: boolean;
 
-  /** Palette in series order (max 8), or colours by series value. treemap and sunburst: by `path[0]` value; sankey and chord: by node name (links and inner levels inherit); waffle: by category. Keys that match nothing are ignored. Path types keep each name's colour through drill; a sankey root missing from the map stays neutral.
+  /** Palette in series order (at most 8 distinct colours), or colours by series value (any number of keys; series beyond 8 share slots). Precedence: a key by value beats theme `series1..8`, which beat the array, which beats `accent`; colorBy tones and ramps paint over all of them. treemap and sunburst: by `path[0]` value; sankey and chord: by node name (links and inner levels inherit); waffle: by category. Keys that match nothing are ignored. Path types keep each name's colour through drill; a sankey root missing from the map stays neutral.
    * @example colors: { North: "#0b6", South: "oklch(.6 .17 30)" } */
   colors?: readonly string[] | Readonly<Record<string, string>>;
   /** Tone by sign of y, by a target (good at or past it; `better: "lower"` flips it), or a ramp by a numeric field. Not with `series` (dumbbell: "sign" of to minus from; kpi and gauge: thresholds only, any of target, warn and better, warn needs target and sits on the bad side; kpi with a `y` array: also keyed by y field). bar line area waterfall scatter dumbbell kpi gauge treemap sunburst hexmap units orbit constellation.
    * @example colorBy: { target: 100, warn: 80 } or colorBy: { revenue: { target: 1.8e6 }, churn: { better: "lower" } } */
   colorBy?: "sign" | Goal | Readonly<Partial<Record<Field<R>, Goal>>> | Field<R>;
-  /** Theme token overrides (CSS values, allowlisted). `line` is the line width, `gridDash` a grid dash array. Ready-made sets: mayacharts/themes.
+  /** Theme token overrides (CSS values, allowlisted). `line` is the line width, `gridDash` a grid dash array. `series1..8` colour palette slots: a `colors` key by series value beats them, they beat a `colors` array. Ready-made sets: mayacharts/themes.
    * @example theme: { accent: "#0b6", font: "'Inter', sans-serif", gridDash: "3 3" } */
   theme?: Readonly<Partial<Record<ThemeToken, string>>>;
   /** Grid lines perpendicular to the value axis. Default true.
