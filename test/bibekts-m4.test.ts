@@ -264,7 +264,7 @@ describe("#81 drill on more types", () => {
     expect(p.crumbs).toContain('aria-current="page">2025<');
     expect(parts(spec, { drill: ["2024"] }).svg).not.toContain("data-past");
     expect(err({ ...spec, series: undefined }).path).toBe("drillTo");
-    expect(err({ ...spec, drillTo: { type: "line", y: "monthly", was: "previous" } }).path).toBe(
+    expect(err({ ...spec, drillTo: { type: "scatter", y: "monthly", was: "previous" } }).path).toBe(
       "drillTo.was",
     );
   });

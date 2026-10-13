@@ -50,15 +50,34 @@ export interface AnnotateAt {
   readonly text: string;
 }
 
+/** A number taken from a spec.params slider: `{ param: "id" }` (colorBy target and warn, rules y, y2, x and band ends). */
+export interface ParamRef {
+  readonly param: string;
+}
+/** A number, or a param reference where the field says so. */
+export type Num = number | ParamRef;
+
+/** One spec.params slider. `value` is the start (and Reset) value; `format` and `suffix` label it. */
+export interface Param {
+  readonly id: string;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly value: number;
+  readonly suffix?: string;
+  readonly format?: FieldFormat;
+}
+
 /** One spec.rules item. */
 export type Rule =
-  | number
+  | Num
   | "mean"
-  | { readonly y: number | "mean"; readonly label?: string }
-  | { readonly y2: number; readonly label?: string }
+  | { readonly y: Num | "mean"; readonly label?: string }
+  | { readonly y2: Num; readonly label?: string }
   | { readonly slope: number | "mean"; readonly intercept?: number; readonly label?: string }
-  | { readonly x: string | number; readonly label?: string }
-  | { readonly band: readonly [number, number]; readonly label?: string };
+  | { readonly x: string | Num; readonly label?: string }
+  | { readonly band: readonly [Num, Num]; readonly label?: string };
 
 export type NumberPreset = "auto" | "integer" | "decimal" | "compact" | "percent" | "currency";
 export type DatePreset = "date" | "month" | "year" | "time" | "datetime";
@@ -149,8 +168,8 @@ export type TipField<F extends string = string> =
  * side of `target` and marks the near band. Types other than kpi and gauge need `target` and take no `warn`.
  */
 export interface Goal {
-  readonly target?: number;
-  readonly warn?: number;
+  readonly target?: Num;
+  readonly warn?: Num;
   readonly better?: "higher" | "lower";
 }
 
@@ -188,10 +207,13 @@ export interface ChartSpec<R extends object = Row> {
    * @example aggregate: "mean" or aggregate: { ratio: ["sales", "units"] } or y: ["gap", "price"], aggregate: { price: { ratio: ["sales", "units"] } } */
   aggregate?:
     Aggregate | Ratio<Field<R>> | Readonly<Partial<Record<Field<R>, Aggregate | Ratio<Field<R>>>>>;
-  /** Order categories by total across all series (hidden ones too). Default: data order. "change" (dumbbell only) orders by to minus from, largest gain first. bar line area heatmap dumbbell table radial waffle orbit.
+  /** Order categories by total across all series (hidden ones too). Default: data order. "change" (dumbbell only) orders by to minus from, largest gain first. With `facet` it orders the panels instead. bar line area heatmap dumbbell table radial waffle orbit.
    * @example sort: "desc" or sort: "change" */
   sort?: "asc" | "desc" | "change";
-  /** Keep the top N categories by total; the rest roll up into a final "Other". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`. bar line area heatmap dumbbell table radial waffle orbit.
+  /** With `limit`: false drops the rest instead of rolling it into "Other" (a race keeps each frame's own top N). Default true. Every type that takes `limit`.
+   * @example other: false */
+  other?: boolean;
+  /** Keep the top N categories by total; the rest roll up into a final "Other". A bar with more categories than fit (past 10000 marks) does this on its own when limit is unset, and says so in `warnings`. With `facet` it keeps the top N panels instead (no Other panel). bar line area heatmap dumbbell table radial waffle orbit.
    * @example limit: 10 */
   limit?: number;
 
@@ -247,10 +269,35 @@ export interface ChartSpec<R extends object = Row> {
   /** Playback: one frame per distinct value (data order); the chart shows one frame at a time, the last by default, and the element adds a Play button. Value axes span every frame. Values match as strings (1 and "1" are one frame); null rows belong to none; at most 200 frames. bar line area scatter dumbbell kpi (a scope such as YTD or All); not with `drill` or `zoom`.
    * @example frame: "year" */
   frame?: Field<R>;
+  /** How the viewer moves between frames: "play" (a Play button, the default), "slider" (a range input), "both" (Play beside the slider), "tabs" (the frame values as a segmented control, for scopes; a select when they do not fit or the chart is under 300 px wide) or "select". Each sets view.frame. Needs `frame`.
+   * @example frameControl: "both" */
+  frameControl?: "play" | "slider" | "both" | "tabs" | "select";
+  /** Milliseconds per frame while playing, 100 to 10000. Default 900. Needs `frame`.
+   * @example frameSpeed: 600 */
+  frameSpeed?: number;
+  /** Each `name` draws its previous n frames as fading dots joined by a line; a selected name shows its path over every frame. Dropped under 300 px wide. scatter only, with `frame` and `name`.
+   * @example trail: 4 */
+  trail?: number;
+  /** Small multiples: one panel per distinct value of this field (data order, or by total with `sort`; `limit` keeps the top n), each titled with the value and its total, in a grid that fits the width and scrolls past the tile height. Small panels draw as sparklines without axes. With `drill`, a click opens one panel full size (view.drill); Back and Escape return. bar line area; not with `path`, `seriesPath`, `drillTo`, `frame` or `zoom`.
+   * @example facet: "store" */
+  facet?: Field<R>;
+  /** Panels share one value axis ("shared", the default) or fit their own ("own"). An array of both adds a control that switches them, first one shown (view.facetScale). Needs `facet`.
+   * @example facetScale: ["shared", "own"] */
+  facetScale?: "shared" | "own" | readonly ("shared" | "own")[];
   /** Second value field, drawn as a line on a right axis over the bars (vertical bar only); orbit: growth, which sets each planet's speed and direction.
    * @example y2: "units" */
   y2?: Field<R>;
-  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a "was" tooltip row and table column). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). With a `y` array, key it by y field (`{ sales: "salesLY" }`): the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have none; an object with a string `by` is the long form. With `series` (bar): one ghost per grouped bar. bar kpi gauge heatmap; not with `stack`.
+  /** Sliders the viewer sets (at most 4): each a range input from `min` to `max` in `step`s, starting at `value`, labelled by `label` and the value (formatted by `format`, then `suffix`), plus a Reset button (view.params). `{ param: "id" }` stands in for a number in colorBy `target` and `warn` and in rules `y`, `y2`, `x` and band ends; `scale` multiplies values by them. Any type.
+   * @example params: [{ id: "price", label: "Price per unit", min: -20, max: 20, step: 1, value: 0, suffix: "%" }] */
+  params?: readonly Param[];
+  /** What-if: on rows matching every `where` field (values matched as strings; every row without `where`), each `y` field is multiplied by (1 + p / 100) for each param p named in `by`. Needs `params`; not with a ratio aggregate. Title token {total.base} is the total without it.
+   * @example scale: { where: { Kind: "Projected" }, by: ["price", "units"], mode: "percent" } */
+  scale?: {
+    readonly where?: Readonly<Partial<Record<Field<R>, string | number | boolean>>>;
+    readonly by: readonly string[];
+    readonly mode?: "percent";
+  };
+  /** Previous value field: a ghost bar at the old value over each bar (dashed, keyed in the legend), "was" in the tooltip, a table column and a sentence naming the 2 largest relative moves (kpi: a second comparison, e.g. same period last year; gauge: a marker at the old value; heatmap: a "was" tooltip row and table column). Long data: `{ by }` names the period field; the latest distinct value is current, the one before it previous (ISO dates and epoch ms sort as time, else data order), other periods are dropped, and the ghosts are titled by the previous period. `current`/`previous` pick periods (matched as strings). With a `y` array, key it by y field (`{ sales: "salesLY" }`): the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have none; an object with a string `by` is the long form. With `series` (bar): one ghost per grouped bar. line and area: a dashed ghost line of the old values per series. bar line area kpi gauge heatmap; not with `stack`.
    * @example was: "lastYear" or was: { by: "year" } or was: { sales: "salesLY", units: "unitsLY" } */
   was?:
     | Field<R>
@@ -327,7 +374,7 @@ export interface ChartSpec<R extends object = Row> {
   /** ISO 4217 code for the "currency" preset. Default "USD".
    * @example currency: "EUR" */
   currency?: string;
-  /** Visible heading, also the accessible name. Data tokens fill in from the chart: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by `format`. Without a selector max, min, first and last read one drawn point (stacked: category totals) and total sums every series; a series selector reads one series (`{last.y:2025}`). Scatter: max and min by y, first and last by x, `.x` the x value or `name`. With no rows a title holding a token is dropped. Only these exact names are replaced; any other brace text stays as written. One line with an ellipsis in an element under 200 px tall.
+  /** Visible heading, also the accessible name. Data tokens fill in from the chart: {max.x} {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}, formatted by `format`; {total.base} is {total} without `scale`, {count.below} and {count.above} count the drawn values below and at or above the colorBy target. Without a selector max, min, first and last read one drawn point (stacked: category totals) and total sums every series; a series selector reads one series (`{last.y:2025}`). Scatter: max and min by y, first and last by x, `.x` the x value or `name`. With no rows a title holding a token is dropped. Only these exact names are replaced; any other brace text stays as written. One line with an ellipsis in an element under 200 px tall.
    * @example title: "{max.x} leads with {max.y}, 2025 total {total:2025}" */
   title?: string;
   /** Second line under the title, smaller and muted; takes the same data tokens. Hidden in an element under 200 px tall; not in the bare render() SVG.
@@ -383,7 +430,7 @@ export interface ChartSpec<R extends object = Row> {
   /** Line and area: name each series at its right end and drop the legend (keep it with `legend: true`). Default true.
    * @example endLabels: false */
   endLabels?: boolean;
-  /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With `select` too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires `maya-drill-leaf`. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap radial waffle hexmap waterfall marimekko with `path`; bar line area with `seriesPath`; heatmap with `xPath`.
+  /** Click/Enter zooms into a branch of `path`; breadcrumb, Back and Escape pop. With `select` too, click/Enter selects and double-click/Shift+Enter drills. At the last level the drill gesture fires `maya-drill-leaf`. Sankey: any node but the last column. treemap sunburst sankey chord; bar line area dumbbell table heatmap radial waffle hexmap waterfall marimekko with `path`; bar line area with `seriesPath` or `facet` (opens one panel); heatmap with `xPath`.
    * @example drill: true */
   drill?: boolean;
   /** With `drill`: a click on empty chart space goes back up one level. Default true.
@@ -461,6 +508,10 @@ export interface View {
   page?: number;
   /** table `filter`: the search text. */
   filter?: string;
+  /** `facet` with a `facetScale` array: the scale shown. Default: the array's first. */
+  facetScale?: "shared" | "own";
+  /** `params` values by id (clamped to min and max; unknown ids ignored). Default: each param's `value`. */
+  params?: Readonly<Record<string, number>>;
 }
 
 export interface RenderOptions {
@@ -591,8 +642,26 @@ export interface ResolvedSpec {
   path: string[];
   /** Applied drill values, outer first ([] at the root). seriesPath: series values; a chord with 3 levels: the target only. */
   drilled: string[];
-  /** What the drill gesture pushes now: "x" (the category or branch), "series" (seriesPath, drillTo: the mark's data-series), or null (nothing deeper, or drill off). */
-  drillOn: "x" | "series" | null;
+  /** What the drill gesture pushes now: "x" (the category or branch), "series" (seriesPath, drillTo: the mark's data-series), "facet" (the panel's data-facet), or null (nothing deeper, or drill off). */
+  drillOn: "x" | "series" | "facet" | null;
+  /** spec.facet: the field, the scale shown (view.facetScale or the first of an array), the scales the control lists ([] without an array), and the panel order (sort) and cap (limit), which are not applied to categories. null without facet. */
+  facet: {
+    field: string;
+    scale: "shared" | "own";
+    scales: readonly ("shared" | "own")[];
+    sort: "asc" | "desc" | null;
+    limit: number | null;
+  } | null;
+  /** spec.frameControl (default "play"). */
+  frameControl: "play" | "slider" | "both" | "tabs" | "select";
+  /** spec.other (default true): false drops the rows past limit instead of an Other category. */
+  other: boolean;
+  /** scatter trail: spec.trail (0 when unset). */
+  trail: number;
+  /** scatter with trail: each name's position per frame index (the first row of that name in the frame; null where absent), params applied. null otherwise. */
+  paths: ReadonlyMap<string, readonly ({ x: number; y: number } | null)[]> | null;
+  /** spec.params with `value` the current one (view.params, clamped). [] when unset. */
+  params: readonly Param[];
   /** heatmap: xPath levels below view.xDrill ([] without xPath); x is its first. */
   xPath: string[];
   /** heatmap: applied column drill values, outer first. */
@@ -844,6 +913,8 @@ export interface MarkCtx {
   sizeMax: number | null;
   /** The [name, last value] pairs those end labels show (empty when there is no gutter). */
   ends: readonly [string, string][];
+  /** scatter trail: per name (raw, as a string) the positions to draw in frame order, the current frame left out: the previous `trail` frames, or every frame for a selected name. Empty without trail and under 300 px wide (a selected name's path stays). */
+  trails: ReadonlyMap<string, readonly { x: number; y: number; frame: number }[]>;
   /** Scale of the bottom (horizontal) axis; null when the mark has none. */
   x: Scale | null;
   /** Scale of the left (vertical) axis; null when the mark has none. */

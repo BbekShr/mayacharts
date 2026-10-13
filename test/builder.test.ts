@@ -307,7 +307,7 @@ describe("guidance", () => {
       hint: 'Choose a column for "Split by" under Fields.',
     });
     expect(at({ ...sample("bar"), drill: true }).headline).toBe(
-      '"Drill" on "bar" needs "Levels" or "Series path".',
+      '"Drill" on "bar" needs "Levels", "Series path" or "Facet".',
     );
     expect(at({ ...sample("line"), stack: true }).headline).toBe(
       '"Stack" is not supported with a Line chart.',

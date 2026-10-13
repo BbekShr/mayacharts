@@ -12,7 +12,7 @@
  *           touches window/document (a test deletes globalThis.window and imports it).
  *
  * State: interaction state is not in the spec. RenderOptions.view = { measure, drill, window,
- *   hidden, sortBy, frame, form, stack, face, brush, peers, xDrill, expanded, page, filter } and RenderOptions.selected = Sel[] (raw values). view.form
+ *   hidden, sortBy, frame, form, stack, face, brush, peers, xDrill, expanded, page, filter, facetScale, params } and RenderOptions.selected = Sel[] (raw values). view.form
  *   indexes the units spec.forms (ResolvedSpec.forms/form, clamped); for units without colorBy
  *   resolve() also makes x the series, so the legend and view.hidden toggle groups. It applies
  *   measure (active y, measures[] kept for the control), frame (keep the rows of one distinct
@@ -304,6 +304,66 @@
  *   evidence. format.ts formatAs(s, field, rowFormat value, v) formats one row. Keys: move m~X,
  *   evidence e~X~NAME. maya-select on a move: { x: raw move }.
  *
+ * Contract #78 #80 #85 (M5; where it differs, this paragraph wins over the older text):
+ *   View adds facetScale ("shared" | "own") and params ({ id: value }); both ride in maya-view,
+ *   and maya-view also reports frame when the viewer picks one (slider, tabs, select).
+ *   params: resolve() first runs validate.ts applyParams(spec, view): each value is view.params
+ *   [id] (unknown ids ignored) clamped to [min, max], else the spec value; every { param } ref
+ *   (colorBy target and warn, keyed too; rules y, y2, x, band ends) becomes that number, and
+ *   scale multiplies each y field of the rows matching every `where` field by the product of
+ *   (1 + p / 100) over `by` (the rows stay the same array when it is 1). So everything
+ *   downstream, marks included, sees plain numbers and scaled rows; ResolvedSpec.params holds
+ *   the current values. validateSpec checks refs at the spec values. Tokens: {total.base} is
+ *   {total} of the spec without scale (resolved and shaped once, on first use); {count.below}
+ *   and {count.above} count drawn values below / at or above the active colorBy target (Other
+ *   left out; no target: as written). Controls slot, first: <div class="maya-params"
+ *   data-maya="params" role="group" aria-label=text.params> holding per param <label
+ *   class="maya-param"><span>label</span><input type="range" data-maya="param" data-id min max
+ *   step value aria-label aria-valuetext><output>value</output></label> (value formatted by the
+ *   param's format, then suffix), then <button class="maya-params-reset"
+ *   data-maya="params-reset">text.resetParams</button>. Under 300 px wide the div is
+ *   popover="auto" id="maya-params", opened by a preceding <button class="maya-params-btn"
+ *   popovertarget="maya-params">text.params</button> (native, no script).
+ *   frame: ResolvedSpec.frameControl picks the control in the Play button's place: "play" (as
+ *   before), "slider" (<input type="range" class="maya-frame" data-maya="frame" min="0" max
+ *   step="1" value aria-label=text.frames aria-valuetext=formatted frame>), "both" (Play, then
+ *   the slider), "tabs" (a .maya-ctl radiogroup with data-maya="frame", one radio per formatted
+ *   frame; a select when the chart is under 300 px wide or the tabs' estimated width passes it)
+ *   or "select" (<select class="maya-frame" data-maya="frame"> of <option value=index>).
+ *   frameSpeed is element-only (read from the spec, like numberMotion). other: false (any type
+ *   with limit; shape.ts) keeps the top `limit` categories and drops the rest; an auto roll-up
+ *   keeps its Other. scatter trail: ResolvedSpec.paths maps each name to its [x, y] per frame
+ *   index (its first row in that frame, params applied); build() hands the mark
+ *   MarkCtx.trails: per name the positions in frame order without the current frame, the
+ *   previous `trail` frames, or every frame for a name in opts.selected; under 300 px wide only
+ *   the selected names'. The mark draws them (fading dots and a line, no data-maya).
+ *   facet (bar line area): resolve() keeps sort and limit in ResolvedSpec.facet (panel order and
+ *   cap; Shaped categories are neither sorted nor limited) with the scale (view.facetScale over
+ *   the first of a facetScale array, else the string, default "shared") and the scales the
+ *   control lists. build() lays out n panels in cols = min(n, floor(W / 160), ceil(sqrt(n * W
+ *   / H))) columns, each W / cols wide and max(110, H / rows) tall; the svg is rows * that tall
+ *   and carries data-scroll when it passes H. A panel under 240 x 150 is a sparkline (xAxis,
+ *   yAxis, grid, labels off). Each panel is build() of the spec without facet, facetScale, sort,
+ *   limit, other, drill, drillOut, params, scale, title, subtitle and description (refs and
+ *   scale already applied) plus legend, table and endLabels false and title text.panelOf(value
+ *   formatted by format[facet], total by aggregate), over its rows led by pad rows (every x
+ *   value and every series value, y unset), so every panel has the same categories and series
+ *   in the same order and data-c / data-s line up. shared: every panel's value axis (withRules
+ *   included) is unioned, made nice and passed as yDomain (a spec yDomain wins). A panel is a
+ *   nested <svg data-maya="panel" data-facet=value x y role="img" aria-label=its title
+ *   tabindex="0"> after the root's hits group; every data-key inside it is prefixed with
+ *   key(value) + "~". The root svg (role="figure") keeps its groups, all empty but labels,
+ *   which holds one <text data-facet=value> title per panel; the description adds text.facets.
+ *   Legend, data table and title tokens are the whole chart's (rows of every panel). drill:
+ *   drillDepth 1; ResolvedSpec.drillOn "facet", written as svg data-drill="facet" (the gesture
+ *   on a panel pushes its data-facet); view.drill = [value] renders that panel's spec full size
+ *   (axes, legend and was as the spec says, title text.panelOf(value, "{total}")) with the
+ *   crumbs and the params controls. Controls: a facetScale array adds a .maya-ctl radiogroup
+ *   data-maya="facetScale" (aria-label text.facetScales, options text.shared / text.own) after
+ *   the stack radiogroup. was on line and area: like bar it widens the value axis and adds the
+ *   legend swatch; the mark draws a dashed <path data-past> per series keyed \u0000was~S (no
+ *   data-maya).
+ *
  * Outputs
  *   render(spec, opts)     standalone `<svg class="maya-root">` with an embedded <style>.
  *                           Works as a file, in <img>, or rasterized by the hosted API.
@@ -466,6 +526,8 @@
  *   svg[data-sign]  svg[data-mapped~="n"]  [data-ann] (annotate labels)  line[data-slope]
  *   [data-maya=rules] line|text  svg[data-drill]  svg[data-xdrill]  svg[data-scroll]
  *   svg[data-expand]  svg[data-maya=expand] (a table row's sub-chart)  .maya-filter
+ *   svg[data-maya=panel] (a facet panel)  text[data-facet] (its title)  .maya-frame  .maya-params
+ *   .maya-param  .maya-params-btn  .maya-params-reset
  *   .maya-crumbs[data-axis=x]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   Theme-only hooks (set by a mark or module, styled in theme.ts, never read by the element):
  *   data-ink data-hm data-nm data-ring data-arc data-disc data-ridge data-kpi data-polar data-radar
@@ -586,10 +648,11 @@ import { MODULES } from "./registry.ts";
 import { agg, colorVals, feed, shape } from "./shape.ts";
 import { t } from "./strings.ts";
 import { css } from "../styles/theme.ts";
-import { el, esc, OTHER, r, tw } from "./svg.ts";
-import { toTime } from "./ticks.ts";
+import { clip, el, esc, key, memo, OTHER, r, tw } from "./svg.ts";
+import { niceTicks, toTime } from "./ticks.ts";
 import {
   ALL_Y,
+  applyParams,
   fail,
   MAX_FRAMES,
   MAX_MARKS,
@@ -615,9 +678,11 @@ import type {
   RenderOptions,
   ResolvedSpec,
   Row,
+  Sel,
   Shaped,
   TimeScale,
   Tone,
+  View,
 } from "./types.ts";
 
 const CORE: Readonly<Record<string, Mark>> = {
@@ -643,7 +708,8 @@ function withRules(
   shaped: Shaped,
   axes: [Axis, Axis, Axis?],
 ): [Axis, Axis, Axis?] {
-  const was = s.type === "bar" && s.was !== null ? colorVals(s, s.was) : null;
+  const was =
+    s.was !== null && ["bar", "line", "area"].includes(s.type) ? colorVals(s, s.was) : null;
   const n = [
     ...s.rules.map((u) => u.y),
     ...s.bands.flatMap((b) => [b.lo, b.hi]),
@@ -690,6 +756,100 @@ function average(s: ResolvedSpec, shaped: Shaped): number {
         add(s.stack === true ? c.ci : i, c.value);
     });
   return [...by.values()].reduce((a, b) => a + b, 0) / by.size;
+}
+
+/** scatter trail points (MarkCtx.trails): the previous `trail` frames, every frame for a selected
+ * name; under 300 px wide only a selected name's. */
+function trailsOf(s: ResolvedSpec, sel: readonly Sel[] | undefined, W: number) {
+  const out = new Map<string, { x: number; y: number; frame: number }[]>();
+  if (!s.paths || !s.frame) return out;
+  const fi = s.frame[2];
+  const on = new Set((sel ?? []).flatMap((e) => (e.name == null ? [] : [String(e.name)])));
+  for (const [n, p] of s.paths) {
+    const all = on.has(n);
+    if (!all && W < 300) continue;
+    const pts = p.flatMap((q, i) =>
+      q && i !== fi && (all || (i < fi && i >= fi - s.trail)) ? [{ ...q, frame: i }] : [],
+    );
+    if (pts.length) out.set(n, pts);
+  }
+  return out;
+}
+
+/** spec.params: a labelled range input per param, then Reset. Under 300 px wide they sit in a
+ * native popover behind a button (popovertarget: no script, shadow-scoped id). */
+function paramCtl(s: ResolvedSpec, W: number): string {
+  if (!s.params.length) return "";
+  const small = W < 300;
+  const body =
+    s.params
+      .map((p) => {
+        const f = new Map(p.format === undefined ? [] : [[p.id, p.format] as const]);
+        const v = formatter({ ...s, format: f }, p.id)(p.value) + (p.suffix ?? "");
+        return (
+          `<label class="maya-param"><span>${esc(p.label)}</span>` +
+          el("input", {
+            type: "range",
+            "data-maya": "param",
+            "data-id": p.id,
+            min: p.min,
+            max: p.max,
+            step: p.step,
+            value: p.value,
+            "aria-label": p.label,
+            "aria-valuetext": v,
+          }) +
+          `<output>${esc(v)}</output></label>`
+        );
+      })
+      .join("") +
+    `<button type="button" class="maya-params-reset" data-maya="params-reset">${esc(t(s, "resetParams"))}</button>`;
+  return (
+    (small
+      ? `<button type="button" class="maya-params-btn" popovertarget="maya-params">${esc(t(s, "params"))}</button>`
+      : "") +
+    el(
+      "div",
+      {
+        class: "maya-params",
+        "data-maya": "params",
+        role: "group",
+        "aria-label": t(s, "params"),
+        id: small ? "maya-params" : null,
+        popover: small ? "auto" : null,
+      },
+      body,
+    )
+  );
+}
+
+/** The frame control (spec.frameControl): Play, a range input, both, tabs (a select when the
+ * tabs would not fit or the chart is under 300 px wide) or a select; each sets view.frame. */
+function frameCtl(s: ResolvedSpec, labels: readonly string[], W: number): string {
+  const i = s.frame![2];
+  const name = t(s, "frames");
+  const play = `<button type="button" class="maya-play" data-maya="play">${esc(t(s, "play"))}</button>`;
+  const slider = el("input", {
+    type: "range",
+    class: "maya-frame",
+    "data-maya": "frame",
+    min: 0,
+    max: labels.length - 1,
+    step: 1,
+    value: i,
+    "aria-label": name,
+    "aria-valuetext": labels[i],
+  });
+  const c = s.frameControl;
+  if (c === "play" || c === "slider" || c === "both")
+    return (c === "slider" ? "" : play) + (c === "play" ? "" : slider);
+  return c === "tabs" && W >= 300 && labels.reduce((a, l) => a + tw(l, 24), 0) <= W
+    ? radios(' data-maya="frame"', name, [...labels], i)
+    : el(
+        "select",
+        { class: "maya-frame", "data-maya": "frame", "aria-label": name },
+        labels.map((l, j) => el("option", { value: j, selected: j === i }, esc(l))).join(""),
+      );
 }
 
 /** A `.maya-ctl` radiogroup (the measure toggle, the units form control). */
@@ -748,16 +908,50 @@ function drillSub(spec: ChartSpec, s: ResolvedSpec, value: string): ChartSpec {
   } as ChartSpec;
 }
 
+/** A facet panel's spec: the chart over `rows` without what belongs to the whole (facet, panel
+ * order, drill, title, params; their refs and scale are already applied), plus `extra`. */
+function panelSpec(spec: ChartSpec, view: View | undefined, rows: readonly Row[], extra: object) {
+  const [{ facet, facetScale, sort, limit, other, drill, drillOut, params, scale, ...rest }] =
+    applyParams(spec, view);
+  const { title, subtitle, description, ...keep } = rest;
+  return { ...keep, ...extra, data: rows } as ChartSpec;
+}
+
+/** The value total of `rows` combined by the chart's aggregate (a facet panel's title). */
+const totalOf = (s: ResolvedSpec, rows: readonly Row[]) => {
+  const a = agg(s.aggregate, !!s.ratio);
+  for (const row of rows) feed(a, row, s.y, s.ratio);
+  return a.value();
+};
+
 function build(
   spec: ChartSpec,
   opts: RenderOptions | undefined,
   sheet: string | null,
-  at?: Box,
+  at?: Box & { facet?: string },
 ): Parts {
   spec = unset(spec);
   validateSpec(spec);
   if (opts !== undefined) validateOptions(opts);
   const s0 = resolve(spec, opts?.view);
+  const W = opts?.width ?? 640;
+  const H = opts?.height ?? 320;
+  // facet drill: the drilled panel, full size with its axes, is the whole chart; the params
+  // controls stay the chart's.
+  if (s0.facet && s0.drilled.length) {
+    const { drill: _, ...view } = opts!.view!;
+    const v = s0.drilled[0]!;
+    const p = build(
+      panelSpec(spec, opts?.view, s0.data, { title: t(s0, "panelOf", v, "{total}") }),
+      { ...opts, view },
+      sheet,
+    );
+    return {
+      ...p,
+      controls: paramCtl(s0, W) + p.controls,
+      crumbs: trail(t(s0, "crumbs"), t(s0, "back"), [v]),
+    };
+  }
   // validateSpec guarantees the type is core or registered; a drilled hexmap resolves to bar.
   const mark = (Object.hasOwn(CORE, s0.type) ? CORE[s0.type] : MODULES.get(s0.type))!;
   // line drillTo: the drilled series' sub-chart is the whole chart, under its breadcrumb.
@@ -774,8 +968,6 @@ function build(
     const p = build({ ...spec.back, data: s0.data } as ChartSpec, { ...opts, view }, sheet);
     return { ...p, controls: p.controls + flip(s0, true) };
   }
-  const W = opts?.width ?? 640;
-  const H = opts?.height ?? 320;
   // ponytail: plot width is only known after shape (tick labels set the margins); W - 56 is the
   // usual plot of a 4-digit y axis, and the point budget needs no more than that.
   const shaped = shape(s0, { ...opts?.view, plotWidth: W - 56, height: H });
@@ -830,12 +1022,22 @@ function build(
   );
   // Data tokens in the title and subtitle (a11y.ts resolveTokens), so the accessible name matches.
   // With no rows a text holding a token is dropped rather than shown raw.
+  // {total.base}: {total} of the chart without `scale` (resolved and shaped once, on first use).
+  let base: [ResolvedSpec, Shaped] | undefined;
+  const BASE = /\{total\.base((?::[^{}]*)?)\}/g;
   const tok = (v: string | null) =>
     v &&
-    (empty && v.search(TOKEN) >= 0
+    (empty && (v.search(TOKEN) >= 0 || v.search(BASE) >= 0)
       ? null
       : resolveTokens(
-          v,
+          v.replace(BASE, (m, q: string) => {
+            const { scale: _, ...plain } = spec;
+            base ??= ((b) => [b, shape(b, { ...opts?.view, plotWidth: W - 56, height: H })])(
+              resolve(plain as ChartSpec, opts?.view),
+            );
+            const r = resolveTokens(`{total${q}}`, base[0], base[1], fmt, () => NaN);
+            return r === `{total${q}}` ? m : r;
+          }),
           s,
           shaped,
           fmt,
@@ -930,14 +1132,15 @@ function build(
 
   // No rows, no axes: the svg is the "no data" text (and the element's slots-only first pass).
   const ends =
-    spec.endLabels === false || typeof spec.legend === "string"
+    spec.endLabels === false || typeof spec.legend === "string" || s.facet
       ? null
       : mark.ends?.(s, shaped, fmt);
   const gutter = ends?.length
     ? endGutter(ends, W) ||
       (mark.ends === line.ends ? Math.max(...ends.map((e) => tw(e[1]))) + 14 : 0)
     : 0;
-  const ax = mark.axes && !empty ? mark.axes(s, shaped) : null;
+  // facet: the root has no axes; each panel draws its own.
+  const ax = mark.axes && !empty && !s.facet ? mark.axes(s, shaped) : null;
   // frame: each value axis spans every frame, so it holds still during playback.
   // ponytail: shapes every frame on every render (frames x rows); cache per spec if it shows.
   if (ax)
@@ -970,6 +1173,7 @@ function build(
           }, 0)
         : null,
     ends: gutter ? ends! : [],
+    trails: trailsOf(s, opts?.selected, W),
     x: f?.x ?? null,
     y: f?.y ?? null,
     y2: f?.y2 ?? null,
@@ -985,6 +1189,107 @@ function build(
     },
     fail,
     t: (k, ...a) => t(s, k, ...a),
+  };
+
+  // facet: one panel per value in a grid, each a nested build in its own box; the root draws the
+  // panel titles. Returns the root's MarkOut and the panels' svgs.
+  const facets = (): [MarkOut, string] => {
+    const { field: ff, scale, sort, limit } = s.facet!;
+    const [x, ser] = [s.x, s.series];
+    // Rows per value, each led by pad rows (every category, every series, y unset) so every panel
+    // has the same categories and series in the same order: data-c and data-s line up.
+    const by = memo(s.data, `facet${ff}\0${x}\0${ser}`, () => {
+      const cx = new Map<string, Row[string]>();
+      const cs = new Map<string, Row[string]>();
+      for (const row of s.data)
+        if (row[ff] != null) {
+          if (!cx.has(String(row[x]))) cx.set(String(row[x]), row[x]);
+          if (ser && !cs.has(String(row[ser]))) cs.set(String(row[ser]), row[ser]);
+        }
+      const [x0] = cx.values();
+      const [s0] = cs.values();
+      const pads: Row[] = [
+        ...[...cs.values()].map((v) => ({ [x]: x0, [ser!]: v })),
+        ...[...cx.values()].map((v) => (ser ? { [x]: v, [ser]: s0 } : { [x]: v })),
+      ];
+      const m = new Map<string, Row[]>();
+      for (const row of s.data) {
+        if (row[ff] == null) continue;
+        const k = String(row[ff]);
+        let a = m.get(k);
+        if (!a) m.set(k, (a = [...pads]));
+        a.push(row);
+      }
+      return m;
+    });
+    const tot = new Map([...by].map(([k, rs]) => [k, totalOf(s, rs)]));
+    const desc = (a: string, b: string) => (tot.get(b) ?? 0) - (tot.get(a) ?? 0);
+    let vals = [...by.keys()];
+    if (sort) vals.sort((a, b) => (sort === "asc" ? -1 : 1) * desc(a, b));
+    if (limit !== null) {
+      const top = new Set([...vals].sort(desc).slice(0, limit));
+      vals = vals.filter((v) => top.has(v));
+    }
+    const n = vals.length;
+    // ponytail: fixed panel minimums (160 px wide, 110 tall); past them the grid scrolls, and
+    // under 240 x 150 a panel is a sparkline (no axes, grid or labels).
+    // Columns: about the tile's aspect per panel, at most one per 160 px.
+    const cols = Math.max(1, Math.min(n, Math.floor(W / 160), Math.ceil(Math.sqrt((n * W) / H))));
+    const pw = W / cols;
+    const ph = Math.max(110, H / Math.ceil(n / cols));
+    const spark = pw < 240 || ph < 150;
+    const { measure, hidden, stack } = opts?.view ?? {};
+    const pv: View = {
+      ...(measure !== undefined && { measure }),
+      ...(hidden && { hidden }),
+      ...(stack !== undefined && { stack }),
+    };
+    const extra = {
+      legend: false,
+      table: false,
+      endLabels: false,
+      ...(spark && { xAxis: false, yAxis: false, grid: false, labels: false, annotate: [] }),
+    };
+    const specs = vals.map((v) =>
+      panelSpec(spec, opts?.view, by.get(v)!, {
+        ...extra,
+        title: t(s, "panelOf", fmt(ff, v), fmt(s.y, tot.get(v))),
+      }),
+    );
+    // shared: one value domain over every panel (rules and was values included), made nice.
+    let dom: readonly [number, number] | null = null;
+    if (scale === "shared" && !s.yDomain && mark.axes) {
+      let [lo, hi] = [Infinity, -Infinity];
+      for (const p of specs) {
+        const rs = resolve(p, pv);
+        const sh = shape(rs, { ...pv, plotWidth: pw - 56, height: ph });
+        for (const a of withRules(rs, sh, mark.axes(rs, sh)))
+          if (a?.kind === "linear" && a.field === rs.y)
+            [lo, hi] = [Math.min(lo, a.domain[0]), Math.max(hi, a.domain[1])];
+      }
+      if (lo < hi) dom = s.yScale === "log" ? [lo, hi] : niceTicks(lo, hi).domain;
+    }
+    let titles = "";
+    let svgs = "";
+    specs.forEach((p, i) => {
+      const v = vals[i]!;
+      const [bx, bt] = [(i % cols) * pw, Math.floor(i / cols) * ph];
+      titles += el(
+        "text",
+        { "data-facet": v, x: r(bx + 4), y: r(bt + 13) },
+        esc(clip(p.title!, Math.floor((pw - 8) / 7.2))),
+      );
+      const box = { x: bx, y: bt + 18, w: pw - 8, h: ph - 26, facet: v };
+      // Keys gain the panel's value as a first part, so they are unique across panels.
+      svgs += build(
+        dom ? { ...p, yDomain: dom } : p,
+        { width: box.w, height: box.h, view: pv },
+        null,
+        box,
+      ).svg.replaceAll(' data-key="', ` data-key="${key(v)}~`);
+    });
+    const note = t(s, "facets", s.titles.get(ff) ?? ff, n);
+    return [{ marks: "", hits: "", labels: titles, note, height: Math.ceil(n / cols) * ph }, svgs];
   };
 
   let svgH = H;
@@ -1184,7 +1489,9 @@ function build(
     if (s.annotate.length)
       said += ` ${t(s, "labelled", s.annotate.map((k) => t(s, k)).join(", "))}.`;
     for (const n of s.notes) said += ` ${n.text}: ${fmt(s.x, n.x)}.`;
-    const m = mark.draw(ctx);
+    // facet: the panels are nested svgs after the hits group; the root draws their titles.
+    const fc = s.facet ? facets() : null;
+    const m = fc ? fc[0] : mark.draw(ctx);
     rules += late.map((f) => f()).join("");
     // Scatter and modules draw per row/node. Counted in place: a split would copy every mark.
     let nm = 0;
@@ -1196,7 +1503,7 @@ function build(
     svgH = m.height ?? H;
     // table expand: the open row's sub-chart, over that row's rows, in the box the table left.
     const ex = spec.expand;
-    let sub = "";
+    let sub = fc?.[1] ?? "";
     if (m.expand && s.expanded[0] !== undefined && typeof ex === "object")
       try {
         const rows = s.data.filter((r) => String(r[s.x]) === s.expanded[0]);
@@ -1269,20 +1576,21 @@ function build(
     {
       class: at ? null : sheet === null ? "maya-svg" : "maya-root maya-svg",
       // A table row's sub-chart: a nested svg placed in the table's svg.
-      "data-maya": at ? "expand" : null,
+      "data-maya": at ? (at.facet === undefined ? "expand" : "panel") : null,
+      "data-facet": at?.facet,
       x: at ? r(at.x) : null,
       y: at ? r(at.y) : null,
       viewBox: `0 0 ${W} ${svgH}`,
       width: W,
       height: svgH,
       // A table has focusable sort headers, which an img role would hide (children presentational).
-      role: s.type === "table" ? "figure" : "img",
+      role: s.type === "table" || (s.facet && !empty) ? "figure" : "img",
       // Standalone SVGs may share a page, so they can't use fixed ids; shadow roots scope them.
       // aria-label, not a <title>, in the element path: a root <title> pops the browser's own
       // tooltip over every hover. A standalone svg keeps the <title> too, for file viewers.
       "aria-label": titleText(s),
       "aria-describedby": sheet === null && !at ? "maya-d" : null,
-      tabindex: sheet === null && !at ? "0" : null,
+      tabindex: (sheet === null && !at) || at?.facet !== undefined ? "0" : null,
       style: sheet === null ? null : style || null,
       "data-plot": `${r(plot.x)} ${r(plot.y)} ${r(plot.w)} ${r(plot.h)}`,
       ...f?.attrs,
@@ -1299,11 +1607,11 @@ function build(
       "data-still": body.split('data-maya="mark"').length > 501 || null,
       // A click can drill further (pointer cursor on marks): "series" when the gesture pushes the
       // mark's series (seriesPath, drillTo), else empty (its category or branch).
-      "data-drill": s.drillOn === "series" ? "series" : s.drillOn === "x" || null,
+      "data-drill": s.drillOn === "x" || s.drillOn,
       // heatmap xPath: a column header click drills the columns.
       "data-xdrill": (s.drill && s.xPath.length > 1) || null,
       // table page or scroll: the svg is as tall as its rows and the box scrolls.
-      "data-scroll": s.scroll || null,
+      "data-scroll": s.scroll || svgH > H || null,
       // table expand, list: rows open on click or Enter.
       "data-expand": s.expand || null,
     },
@@ -1380,13 +1688,15 @@ function build(
   if (markLegend !== null && spec.legend !== false)
     legend = s.type === "scatter" ? legend + markLegend : markLegend;
   // spec.was: a dashed swatch named by the was title says what the ghosts are.
-  if (s.was !== null && s.type === "bar" && spec.legend !== false)
+  if (s.was !== null && ["bar", "line", "area"].includes(s.type) && spec.legend !== false)
     legend += `<div class="maya-legend"><span data-past><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
   return {
     svg,
     // Nothing to draw: the empty state stands alone (#64).
     legend: empty ? "" : legend,
+    // params first: the levers sit above the other controls.
     controls:
+      paramCtl(s, W) +
       // Two or more radiogroups share a row (.maya-ctls); one stands alone.
       ((g) => (g.length > 1 ? `<div class="maya-ctls">${g.join("")}</div>` : g.join("")))(
         [
@@ -1415,6 +1725,14 @@ function build(
                 s.stacks.indexOf(s.stack),
               )
             : "",
+          s.facet && s.facet.scales.length > 1
+            ? radios(
+                ' data-maya="facetScale"',
+                t(s, "facetScales"),
+                s.facet.scales.map((m) => t(s, m)),
+                s.facet.scales.indexOf(s.facet.scale),
+              )
+            : "",
         ].filter(Boolean),
       ) +
       (s.filter !== null
@@ -1428,7 +1746,11 @@ function build(
           })
         : "") +
       (fr && fr[1].length > 1
-        ? `<button type="button" class="maya-play" data-maya="play">${esc(t(s, "play"))}</button>`
+        ? frameCtl(
+            s,
+            fr[1].map((v) => fmt(fr[0], v)),
+            W,
+          )
         : "") +
       (spec.back ? flip(s, false) : ""),
     // root: nothing reserved (#66.3). heatmap xPath columns get their own nav (data-axis="x"),
@@ -1522,6 +1844,8 @@ function used(spec: Omit<ChartSpec, "data">): Set<unknown> {
       : []),
     typeof spec.select === "object" ? spec.select.peers : undefined,
     spec.frame,
+    spec.facet,
+    ...keep(spec.scale?.where),
     spec.size,
     spec.name,
     ...(spec.path ?? []),

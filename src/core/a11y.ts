@@ -12,9 +12,10 @@ export const titleText = (spec: ResolvedSpec): string =>
       ? ` by ${spec.titles.get(spec.x) ?? (spec.x || spec.path.join(" / "))}`
       : "");
 
-/** A data token: {max.x} ... {last.y}, {total}, {mean}, each with an optional series selector {max.y:2025}.
+/** A data token: {max.x} ... {last.y}, {total}, {mean}, {count.below}, {count.above}, each with an optional series selector {max.y:2025}.
  * Global flag: use only with replace and search, which reset lastIndex (test and exec keep it). */
-export const TOKEN = /\{(?:(max|min|first|last)\.([xy])|(total|mean))(?::([^{}]*))?\}/g;
+export const TOKEN =
+  /\{(?:(max|min|first|last)\.([xy])|(total|mean|count\.below|count\.above))(?::([^{}]*))?\}/g;
 
 /**
  * Fill the exact data tokens in a title or subtitle, formatted by the field's format. Anything
@@ -46,6 +47,16 @@ export function resolveTokens(
     let es = q === undefined ? all : qi < 0 ? [] : all.filter((e) => e[2] === qi);
     if (!es.length) return m;
     const sum = es.reduce((t, e) => t + e[1], 0);
+    if (o?.startsWith("count")) {
+      // Drawn values below / at or above the colorBy target (Other left out); no target: as written.
+      const g = s.colorBy;
+      const tg = typeof g === "object" && g !== null ? g.target : null;
+      if (tg === null) return m;
+      const below = o === "count.below";
+      return es
+        .filter((e) => e[0] !== OTHER && e[1] < tg === below)
+        .length.toLocaleString(s.locale);
+    }
     if (o) {
       const v = o === "total" ? sum : q === undefined ? mean() : sum / es.length;
       return Number.isFinite(v) ? fmt(s.y, v) : m;

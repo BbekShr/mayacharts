@@ -154,7 +154,7 @@ describe("one snapshot per error code", () => {
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.stacked is not a known option.
         Did you mean "stack"?
-        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, was, tooltip, xScale, yScale, annotate, dash, depth, minAngle, legend, form, emphasis, colorScale, colors, colorBy, theme, compare, numberMotion, back, arc, seriesPath, xPath, expand, drillTo, page, bars, columns, cells, $schema, x, y2, series, size, name, title, subtitle, description, locale, currency, frame, start, body, rowFormat, horizontal, labels, endLabels, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate, tint, brush, zero, toggle, scroll, filter.
+        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, was, tooltip, xScale, yScale, annotate, dash, depth, minAngle, legend, form, emphasis, colorScale, colors, colorBy, theme, compare, numberMotion, back, arc, seriesPath, xPath, expand, drillTo, page, bars, columns, cells, facetScale, frameControl, frameSpeed, trail, params, scale, $schema, x, y2, series, size, name, title, subtitle, description, locale, currency, frame, start, body, rowFormat, facet, horizontal, labels, endLabels, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate, tint, brush, zero, toggle, scroll, filter, other.
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-option"
     `);
   });
@@ -698,7 +698,7 @@ describe("0.9 contracts: weave, units, orbit, constellation, was", () => {
 
   it("was: bar only, numeric, a real field, not with stack or a y array", () => {
     ok(at("bar", { was: "last" }));
-    expect(code(at("line", { was: "last" }))).toEqual(["option-unsupported", "was"]);
+    expect(code(at("waterfall", { was: "last" }))).toEqual(["option-unsupported", "was"]);
     expect(code(at("bar", { was: "nope" }))).toEqual(["unknown-field", "was"]);
     expect(code(at("bar", { was: "id" }))).toEqual(["non-numeric-field", "data[0].id"]);
     expect(code(at("bar", { was: "last", series: "s", stack: true }))).toEqual([
@@ -777,7 +777,7 @@ describe("colorBy thresholds and gauge", () => {
     [{ ...two, colorBy: { target: 1, revenue: { target: 1 } } }, "invalid-option", "colorBy"],
     [{ ...two, yDomain: [0, 1] }, "option-unsupported", "yDomain"],
     [{ ...two, was: "units" }, "option-unsupported", "was"],
-    [{ ...base, type: "line", was: "units" }, "option-unsupported", "was"],
+    [{ ...base, type: "waterfall", was: "units" }, "option-unsupported", "was"],
     [{ ...gauge, y: ["revenue", "units"] }, "invalid-option", "y"],
     [{ ...gauge, x: "month" }, "option-unsupported", "x"],
     [{ ...gauge, series: "region" }, "option-unsupported", "series"],
@@ -843,7 +843,7 @@ describe("#59-#68 contracts: was long form, log scales, slope rules, dash, toolt
     ]);
     expect(code({ ...long, was: { by: "year", extra: 1 } })).toEqual(["invalid-option", "was"]);
     expect(code({ ...long, was: { by: "item" } })).toEqual(["option-unsupported", "was"]);
-    expect(code({ ...long, type: "line", was: { by: "year" } })).toEqual([
+    expect(code({ ...long, type: "waterfall", was: { by: "year" } })).toEqual([
       "option-unsupported",
       "was",
     ]);
