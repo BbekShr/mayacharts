@@ -108,4 +108,67 @@ describe("M5 core leftovers", () => {
     cyc.a = cyc;
     expect(() => P({ ...base, format: cyc })).toThrow(MayaSpecError);
   });
+
+  const reg = ["North", "South", "East", "West"];
+  const fdata = reg.flatMap((region) =>
+    ["a", "b", "c"].map((m, i) => ({ region, m, v: 5 + i, w: 4 })),
+  );
+  it("facet at desktop keeps axes: panels of 240 px or more, fewer columns", () => {
+    const spec = { type: "bar", x: "m", y: "v", facet: "region", data: fdata };
+    const svg = P(spec, undefined).svg;
+    // width 520: two 260 px columns (not three sparklines of 173 px)
+    expect(svg).toContain('data-maya="axis-x"');
+  });
+  it("facet titles cut the name, never the total", () => {
+    const long = fdata.map((r) => ({
+      ...r,
+      region: r.region + " region of the far northern territories beyond",
+    }));
+    const svg = P({ type: "bar", x: "m", y: "v", facet: "region", data: long }).svg;
+    const t = [...svg.matchAll(/<text data-facet[^>]*>([^<]*)</g)].map((m) => m[1]!);
+    expect(t.length).toBe(4);
+    for (const x of t) expect(x).toMatch(/…, 18$/);
+  });
+  it("line was legend key carries data-line, bar does not", () => {
+    const d = [
+      { m: "a", v: 1, w: 2 },
+      { m: "b", v: 2, w: 1 },
+    ];
+    expect(P({ type: "line", x: "m", y: "v", was: "w", data: d }).legend).toContain(
+      "data-past data-line",
+    );
+    expect(P({ type: "bar", x: "m", y: "v", was: "w", data: d }).legend).not.toContain("data-line");
+  });
+  it("frameControl both puts Play, the slider and the frame in one row", () => {
+    const d = ["a", "b"].flatMap((f) => [{ f, m: "x", v: 1 }]);
+    const c = P({
+      type: "bar",
+      x: "m",
+      y: "v",
+      frame: "f",
+      frameControl: "both",
+      data: d,
+    }).controls;
+    expect(c).toMatch(
+      /<div class="maya-ctls"><button[^>]*maya-play.*<input.*<output[^>]*>b<\/output><\/div>/,
+    );
+  });
+  it("table +n strip lists the hidden columns in a title", () => {
+    const data = [{ n: "alpha", a: 100000, b: 200000, c: 300000, d: 400000 }];
+    const svg = P({ type: "table", x: "n", y: ["a", "b", "c", "d"], data }, undefined).svg;
+    expect(svg).not.toContain("<title>");
+    const narrow = renderParts({ type: "table", x: "n", y: ["a", "b", "c", "d"], data } as never, {
+      width: 260,
+      height: 200,
+    }).svg;
+    expect(narrow).toMatch(/\+\d<title>[^<]*d[^<]*<\/title>/);
+  });
+  it("a category label is not cut for a saving of two characters", () => {
+    const data = [1, 2, 3].map((i) => ({ c: `Region ${i}0`, v: i }));
+    const svg = renderParts({ type: "bar", x: "c", y: "v", data } as never, {
+      width: 200,
+      height: 200,
+    }).svg;
+    expect(svg).not.toContain("…");
+  });
 });

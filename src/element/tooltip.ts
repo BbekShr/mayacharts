@@ -208,7 +208,8 @@ export function tooltip(
       ? (hi - lo) / 0.8
       : (hz ? ph! : pw!) / Math.max(1, +a(svg, "data-n") || 1);
     const c = (lo + hi) / 2 - step / 2;
-    const fresh = !band?.isConnected;
+    const fresh = !band?.isConnected || band.ownerSVGElement !== svg;
+    if (fresh) band?.remove(); // a facet chart: one band, in the hovered panel
     if (fresh) {
       band = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       band.setAttribute("data-maya", "band");

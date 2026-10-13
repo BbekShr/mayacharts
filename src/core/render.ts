@@ -338,8 +338,9 @@
  *   popovertarget="maya-params">text.params</button> (native, no script).
  *   frame: ResolvedSpec.frameControl picks the control in the Play button's place: "play" (as
  *   before), "slider" (<input type="range" class="maya-frame" data-maya="frame" min="0" max
- *   step="1" value aria-label=text.frames aria-valuetext=formatted frame>), "both" (Play, then
- *   the slider), "tabs" (a .maya-ctl radiogroup with data-maya="frame", one radio per formatted
+ *   step="1" value aria-label=text.frames aria-valuetext=formatted frame>, then an aria-hidden
+ *   <output data-maya="frame-value"> with the formatted frame), "both" (Play and the slider with its
+ *   output in one <div class="maya-ctls">), "tabs" (a .maya-ctl radiogroup with data-maya="frame", one radio per formatted
  *   frame; a select when the chart is under 300 px wide or the tabs' estimated width passes it)
  *   or "select" (<select class="maya-frame" data-maya="frame"> of <option value=index>).
  *   frameSpeed is element-only (read from the spec, like numberMotion). other: false (any type
@@ -353,7 +354,7 @@
  *   cap; Shaped categories are neither sorted nor limited) with the scale (view.facetScale over
  *   the first of a facetScale array, else the string, default "shared") and the scales the
  *   control lists. build() lays out n panels in cols = min(n, floor(W / 160), ceil(sqrt(n * W
- *   / H))) columns, each W / cols wide and max(110, H / rows) tall; the svg is rows * that tall
+ *   / H))) columns (fewer when floor(W / 240) columns still leave each row 150 px: panels keep axes), each W / cols wide and max(110, H / rows) tall; the svg is rows * that tall
  *   and carries data-scroll when it passes H. A panel under 240 x 150 is a sparkline (xAxis,
  *   yAxis, grid, labels off). Each panel is build() of the spec without facet, facetScale, sort,
  *   limit, other, drill, drillOut, params, scale, title, subtitle and description (refs and
@@ -518,7 +519,8 @@
  *                       Ramp/tone legends are non-button <div data-maya="ramp|tone">.
  *                       spec.was on bar (unless legend:false) appends <div class="maya-legend">
  *                       <span data-past><i></i>WAS TITLE</span></div>, the ghosts' key (data-tick on the
- *                       span for grouped bars, whose ghosts are ticks).
+ *                       span for grouped bars, whose ghosts are ticks; data-line on line and area, whose
+ *                       ghosts are dashed lines).
  *                       A spec.dash series' button (and its end label) carries data-dash.
  *                       No legend at all (series, was key, tone, ramp) when the chart is empty.
  *                       Nor for a drilled marimekko (tinted segments). Heatmap xPath column labels that can drill
@@ -868,8 +870,11 @@ function frameCtl(s: ResolvedSpec, labels: readonly string[], W: number): string
     "aria-valuetext": labels[i],
   });
   const c = s.frameControl;
-  if (c === "play" || c === "slider" || c === "both")
-    return (c === "slider" ? "" : play) + (c === "play" ? "" : slider);
+  // Play and the slider sit in one row, the slider followed by its current frame (aria-valuetext says it already).
+  const now = `<output class="maya-frame-value" data-maya="frame-value" aria-hidden="true">${esc(labels[i]!)}</output>`;
+  if (c === "play") return play;
+  if (c === "slider") return slider + now;
+  if (c === "both") return `<div class="maya-ctls">${play}${slider}${now}</div>`;
   return c === "tabs" && W >= 300 && labels.reduce((a, l) => a + tw(l, 24), 0) <= W
     ? radios(' data-maya="frame"', name, [...labels], i)
     : el(
@@ -1268,7 +1273,10 @@ function build(
     // ponytail: fixed panel minimums (160 px wide, 110 tall); past them the grid scrolls, and
     // under 240 x 150 a panel is a sparkline (no axes, grid or labels).
     // Columns: about the tile's aspect per panel, at most one per 160 px.
-    const cols = Math.max(1, Math.min(n, Math.floor(W / 160), Math.ceil(Math.sqrt((n * W) / H))));
+    let cols = Math.max(1, Math.min(n, Math.floor(W / 160), Math.ceil(Math.sqrt((n * W) / H))));
+    // Panels of 240 px keep their axes: fewer columns, when the rows still get 150 px each.
+    const wide = Math.floor(W / 240);
+    if (wide >= 1 && wide < cols && H / Math.ceil(n / wide) >= 150) cols = wide;
     const pw = W / cols;
     const ph = Math.max(110, H / Math.ceil(n / cols));
     const spark = pw < 240 || ph < 150;
@@ -1284,11 +1292,16 @@ function build(
       endLabels: false,
       ...(spark && { xAxis: false, yAxis: false, grid: false, labels: false, annotate: [] }),
     };
+    // The title is "name, total" in about 6.6 px a character; a long name is cut, never the total.
+    const cw = 6.6;
+    const room = Math.floor((pw - 8) / cw);
+    const panelTitle = (v: string) => {
+      const [name, tot1] = [fmt(ff, v), fmt(s.y, tot.get(v))];
+      const over = [...t(s, "panelOf", name, tot1)].length - room;
+      return t(s, "panelOf", over > 0 ? clip(name, [...name].length - over) : name, tot1);
+    };
     const specs = vals.map((v) =>
-      panelSpec(spec, opts?.view, by.get(v)!, {
-        ...extra,
-        title: t(s, "panelOf", fmt(ff, v), fmt(s.y, tot.get(v))),
-      }),
+      panelSpec(spec, opts?.view, by.get(v)!, { ...extra, title: panelTitle(v) }),
     );
     // shared: one value domain over every panel (rules and was values included), made nice.
     let dom: readonly [number, number] | null = null;
@@ -1311,7 +1324,7 @@ function build(
       titles += el(
         "text",
         { "data-facet": v, x: r(bx + 4), y: r(bt + 13) },
-        esc(clip(p.title!, Math.floor((pw - 8) / 7.2))),
+        esc(clip(p.title!, room)),
       );
       const box = { x: bx, y: bt + 18, w: pw - 8, h: ph - 26, facet: v };
       // Keys gain the panel's value as a first part, so they are unique across panels.
@@ -1731,7 +1744,7 @@ function build(
     legend = s.type === "scatter" ? legend + markLegend : markLegend;
   // spec.was: a dashed swatch named by the was title says what the ghosts are.
   if (s.was !== null && ["bar", "line", "area"].includes(s.type) && spec.legend !== false)
-    legend += `<div class="maya-legend"><span data-past${s.type === "bar" && s.series && !s.stack ? " data-tick" : ""}><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
+    legend += `<div class="maya-legend"><span data-past${s.type === "bar" ? (s.series && !s.stack ? " data-tick" : "") : " data-line"}><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
   return {
     svg,
     // Nothing to draw: the empty state stands alone (#64).

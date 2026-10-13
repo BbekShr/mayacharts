@@ -1217,4 +1217,31 @@ describe("M5 controls (#78 #80 #85)", () => {
     await frame();
     expect(el.view.drill).toEqual(["S"]);
   });
+
+  it("frame output follows view.frame without replacing the focused slider", async () => {
+    const el = await mount((e) => (e.spec = fr({ frameControl: "both" })));
+    const sl = qs(el, "input[data-maya=frame]");
+    sl.focus();
+    el.view = { frame: 0 };
+    await frame();
+    expect(qs(el, "input[data-maya=frame]")).toBe(sl);
+    expect(qs(el, "[data-maya=frame-value]").textContent).toBe("2021");
+  });
+
+  it("a list headline keeps its tspans after the entrance and an update", async () => {
+    const ls = (n: number) =>
+      ({
+        type: "list",
+        x: "m",
+        y: "v",
+        data: ["A", "B"].map((m, i) => ({ m, v: n + i })),
+      }) as ChartSpec;
+    const el = await mount((e) => (e.spec = ls(10)));
+    const n = () => el.shadowRoot!.querySelectorAll("text[data-maya=mark] tspan[data-num]").length;
+    expect(n()).toBe(2);
+    el.spec = ls(20);
+    await frame();
+    expect(n()).toBe(2);
+    expect(el.shadowRoot!.querySelectorAll("text[data-maya=mark] tspan[data-hd]")).toHaveLength(2);
+  });
 });

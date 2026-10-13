@@ -312,6 +312,10 @@ export class MayaChart extends HTMLElement {
     if (/^(sankey|table)$/.test(this.spec?.type ?? "")) this.#fl && this.#tip?.hide();
     else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
     else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
+    else if ((next.view.xDrill?.length ?? 0) > (prev.view.xDrill?.length ?? 0))
+      this.#zoom = { in: next.view.xDrill![prev.view.xDrill?.length ?? 0]! };
+    else if ((next.view.xDrill?.length ?? 0) < (prev.view.xDrill?.length ?? 0))
+      this.#zoom = { out: prev.view.xDrill![next.view.xDrill?.length ?? 0]! };
     this.#state = next;
     this.#schedule();
     if (JSON.stringify(prev.view) !== JSON.stringify(next.view)) this.#emit("maya-view", next.view);
@@ -650,7 +654,7 @@ const SLOTS: [keyof Parts, string][] = [
   ["title", ".maya-title,.maya-sub"],
   [
     "controls",
-    ".maya-ctls,.maya-ctl,.maya-play,.maya-flip,.maya-filter,.maya-frame,.maya-params,.maya-params-btn",
+    ".maya-ctls,.maya-ctl,.maya-play,.maya-flip,.maya-filter,.maya-frame,.maya-params,.maya-params-btn,.maya-frame-value",
   ],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],

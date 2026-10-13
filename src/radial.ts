@@ -507,15 +507,25 @@ export const gauge: Mark = {
     const below = wide ? (open ? 16 : 0) : 18 + (wasV !== null || status ? 16 : 0);
     const dn = SW === 180 ? 0 : SW === 270 ? Math.SQRT1_2 : 1; // how far the dial hangs below its centre, in radii
     const top = target === null ? 6 : 18;
-    // The target text stands 9 px beyond the band ring (the tag offset), so 12 + ex of reach and then its width.
-    const side =
-      (target === null ? 6 : 12) +
-      ex +
-      (target === null ? 0 : Math.min(plot.w * 0.2, tl.length * 6.2));
-    const R = Math.max(14, Math.min(plot.w / 2 - side, (plot.h - below - top - ex) / (1 + dn)));
+    // The target text stands 9 px beyond the band ring (the tag offset): 12 + ex of reach and then its width,
+    // reserved only on the side its tick points to (a label near the poles centres over the dial).
+    // The warn text of a band ring does the same, on its own side.
+    const sin = (v: number | null) => (v === null ? 0 : Math.sin(((A0 + fr(v) * SW) * PI) / 180));
+    const [sn, wn] = [sin(target), bands ? sin(warn) : 0];
+    const [lab, wl] = [
+      12 + ex + Math.min(plot.w * 0.2, tl.length * 6.2),
+      12 + ex + (warn === null ? 0 : fv(warn).length * 6.2),
+    ];
+    const [sl, sr] = [-1, 1].map(
+      (d) => 6 + ex + Math.max(sn * d > 0.25 ? lab : 0, wn * d > 0.25 ? wl : 0),
+    ) as [number, number];
+    const R = Math.max(
+      14,
+      Math.min((plot.w - sl - sr) / 2, (plot.h - below - top - ex) / (1 + dn)),
+    );
     const t = Math.min(26, Math.max(6, R * 0.2));
     const [cx, cy] = [
-      plot.x + plot.w / 2,
+      plot.x + sl + (plot.w - sl - sr) / 2,
       plot.y + Math.max(0, (plot.h - R * (1 + dn) - ex - top - below) / 2) + top + ex + R,
     ];
     const ri = R - t;
@@ -721,6 +731,8 @@ export const gauge: Mark = {
       if (!touch && wt.x0 >= 0 && wt.x0 + wt.w <= ctx.width) labels += wt.text;
     }
     if (lo * hi < 0) labels += tick(0, ri, R, { stroke: "var(--maya-fg-muted)" }); // where the fill starts
+    // The old value: a pale tick across the track (CSS: line[data-past]).
+    if (wasV !== null) labels += tick(wasV, ri - 3, R + 3, { "data-past": true });
     const dv = wasV === null ? 0 : value - wasV;
     const pct = new Intl.NumberFormat(spec.locale, {
       maximumFractionDigits: 1,

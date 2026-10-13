@@ -81,9 +81,9 @@ describe("gauge", () => {
       ">On track</tspan>",
     );
   });
-  it("the auto range reaches negatives and has no last-year tick", () => {
+  it("the auto range reaches negatives and a was value is a tick", () => {
     expect(labels(svg(base({}, -30)))).toContain(">-30<");
-    expect(svg(base({ was: "w" }))).not.toContain("<line");
+    expect(svg(base({ was: "w" }))).toMatch(/<line[^>]*data-past/);
   });
   it("prints the warn value beside its tick, dropped when it would touch the target label", () => {
     const warnText = (c: object) =>
@@ -94,7 +94,8 @@ describe("gauge", () => {
     // warn near an end of a narrow dial would leave the svg
     const c = { colorBy: { target: 70, warn: 1 }, format: "currency" } as const;
     expect(labels(svg(base(c, 40), { width: 360 }))).toContain(">$1.00<");
-    expect(labels(svg(base(c, 40), { width: 110, height: 100 }))).not.toContain(">$1.00<");
+    // the dial leaves room for the text, so a small tile still shows it
+    expect(labels(svg(base(c, 40), { width: 110, height: 100 }))).toContain(">$1.00<");
   });
   it("a value of zero draws no round cap", () => {
     expect(arc(svg(base({}, 0)))).toContain('stroke-linecap="butt"');

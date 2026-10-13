@@ -143,9 +143,9 @@ export const table: Mark = {
       }
       return nc;
     };
-    // Columns that did not fit leave an 18 px strip at the right edge holding "+n" (their count).
+    // Columns that did not fit leave a strip at the right edge holding "+n" (their count; a title lists them).
     let nc = fit(W);
-    const spare = nc < cols.length ? 18 : 0;
+    const spare = nc < cols.length ? tw(`+${cols.length - nc}`, 6) : 0;
     if (spare) nc = fit(W - spare);
     const kept = cols.slice(0, nc);
     const nm = kept.filter((c) => c.k === "m").length;
@@ -213,7 +213,17 @@ export const table: Mark = {
             "text-anchor": "end",
             "dominant-baseline": "middle",
           },
-          `+${cols.length - nc}`,
+          `+${cols.length - nc}` +
+            el(
+              "title",
+              {},
+              esc(
+                cols
+                  .slice(nc)
+                  .map((c) => title(c.f))
+                  .join(", "),
+              ),
+            ),
         ),
       );
     // The header holds its own rule and page-coloured ground: the element can pin it over scrolled rows.

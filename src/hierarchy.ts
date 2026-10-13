@@ -505,9 +505,16 @@ export const marimekko: Mark = {
       const full = `${name} · ${gs}`;
       const room = Math.floor((w + gap - 4) / 7.2); // chars that fit; a name is cut, never swapped for a bare share
       const fit =
-        full.length <= room ? full : name.length <= room ? name : room >= 4 ? clip(name, room) : "";
+        full.length <= room ? full : name.length <= room ? name : room >= 2 ? clip(name, room) : ""; // a thin column keeps its first letter and an ellipsis
       // Too narrow for one line: the name over its share, both kept.
       const two = fit !== full && gs.length <= room && fit.length > 3;
+      // ponytail: a column too thin for any name gets six characters beside it (the last column ends its label
+      // at its edge, the others start theirs there); a neighbour's label can touch it.
+      if (on && !fit && w < 12 && w > 0)
+        labels += txt(ci === categories.length - 1 ? x + w : x, bot + 17, clip(name, 6), {
+          "data-col": "",
+          "text-anchor": ci === categories.length - 1 ? "end" : "start",
+        });
       if (on && fit) {
         labels += txt(x + w / 2, bot + (two ? 10 : 17), fit, { "data-col": "" });
         if (two) labels += txt(x + w / 2, bot + 22, gs, { "data-col": "" });

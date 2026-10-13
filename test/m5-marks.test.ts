@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderParts } from "../src/index.ts";
 import "../src/hierarchy.ts";
+import "../src/radial.ts";
 import { css } from "../src/styles/theme.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
@@ -39,7 +40,7 @@ describe("M5 marks: was ghosts and trails", () => {
     const spec = { type: "scatter", x: "a", y: "b", name: "n", frame: "t", trail: 2, data };
     const { svg } = parts(spec, { view: { frame: 3 } });
     const t = svg.match(/<[^>]*data-trail[^>]*>/g)!;
-    expect(t.filter((e) => e.startsWith("<path"))).toHaveLength(2);
+    expect(t.filter((e) => e.includes('data-trail="seg"'))).toHaveLength(4); // 2 segments a name, fading
     expect(t.filter((e) => e.includes('data-trail="dot"'))).toHaveLength(4);
     expect(t.every((e) => !e.includes("data-maya") && e.includes('data-key="%00trail~'))).toBe(
       true,
@@ -107,6 +108,43 @@ describe("M5 marks: designer fixes", () => {
   });
 });
 
+describe("M5 marks: critic round", () => {
+  it("a gauge draws a tick at the old value", () => {
+    const g = (o: object) =>
+      parts({ type: "gauge", y: "v", was: "w", data: [{ v: 62, w: 50 }], ...o }).svg;
+    expect(g({})).toMatch(/<line[^>]*data-past/);
+    expect(g({ was: undefined })).not.toContain("data-past");
+  });
+  it("a 360 gauge reserves room on its target's side only", () => {
+    const at = (t: number) =>
+      parts(
+        {
+          type: "gauge",
+          arc: 360,
+          y: "v",
+          yDomain: [0, 100],
+          colorBy: { target: t },
+          data: [{ v: 50 }],
+        },
+        { width: 360, height: 300 },
+      ).svg.match(/data-maya="mark"[^>]*cx="([\d.]+)"/)![1]!;
+    expect(+at(80)).toBeGreaterThan(180 + 20); // label on the left: the dial moves right
+    expect(+at(25)).toBeLessThan(180 - 20);
+    expect(Math.abs(+at(100) - 180)).toBeLessThan(2); // at the pole nothing is reserved
+  });
+  it("a thin drilled marimekko column keeps its name (six characters) beside it", () => {
+    const data = [
+      ...["a", "b", "c"].map((item, i) => ({ r: "W", f: "Tops", item, v: 100 + i })),
+      ...["a", "b"].map((item) => ({ r: "W", f: "Shoes", item, v: 1 })),
+    ];
+    const svg = parts(
+      { type: "marimekko", path: ["r", "f", "item"], y: "v", drill: true, data },
+      { width: 360, view: { drill: ["W"] } },
+    ).svg;
+    expect(svg).toMatch(/data-col=""[^>]*>Shoes</);
+  });
+});
+
 describe("M5 theme", () => {
   it("styles the controls, panels, ghosts and trails, and keeps the contrast fixes", () => {
     for (const hook of [
@@ -118,6 +156,9 @@ describe("M5 theme", () => {
       ".maya-params-btn",
       "svg[data-maya=panel]:focus-visible",
       "text[data-facet]",
+      "::-webkit-slider-runnable-track",
+      "overflow-wrap:anywhere",
+      "[data-past][data-line] i",
     ])
       expect(css).toContain(hook);
     expect(css).toContain("--maya-fg) 55%,transparent"); // filter border, 3:1

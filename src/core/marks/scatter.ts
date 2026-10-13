@@ -261,15 +261,22 @@ export const scatter: Mark = {
     for (const [n, tr] of ctx.trails) {
       const now = pts.find((p) => String(p.name) === n);
       if (!now) continue;
-      const q = [...tr.map((t) => t), { x: now.x, y: now.y, frame: -1 }];
+      const q = [...tr, { x: now.x, y: now.y, frame: -1 }];
       const sd = spec.series === null ? null : now.si % 8;
       trails +=
-        el("path", {
-          "data-key": key("\u0000trail", n),
-          "data-trail": true,
-          "data-s": sd,
-          d: q.map((t, i) => `${i ? "L" : "M"}${r(sx.of(t.x))} ${r(sy.of(t.y))}`).join(""),
-        }) +
+        q
+          .slice(0, -1)
+          .map((t, i) =>
+            el("path", {
+              // Keyed by age (0 = newest), so a roll of the frames morphs each segment (same M L) instead of re-entering.
+              "data-key": key("\u0000trail", n, "s", q.length - 2 - i),
+              "data-trail": "seg",
+              "data-s": sd,
+              "stroke-opacity": r(0.15 + (0.45 * (i + 1)) / (q.length - 1)),
+              d: `M${r(sx.of(t.x))} ${r(sy.of(t.y))}L${r(sx.of(q[i + 1]!.x))} ${r(sy.of(q[i + 1]!.y))}`,
+            }),
+          )
+          .join("") +
         tr
           .map((t, i) =>
             el("circle", {
