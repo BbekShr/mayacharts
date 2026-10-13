@@ -26,8 +26,14 @@ const unit = (svg: Element, s: DOMRect) => {
 const PANEL = "svg[data-maya=panel]";
 /** The facet panel a node sits in. */
 const panelOf = (e: Element) => e.closest(PANEL);
-/** data-c scoped to its panel: panels repeat the same categories. */
-const pk = (m: Element) => (panelOf(m)?.getAttribute("data-facet") ?? "") + "\0" + a(m, "data-c");
+/** Panels and a table row's sub-chart repeat the same categories; each is its own scope. */
+const scope = (m: Element) => m.closest(PANEL + ",svg[data-maya=expand]");
+const pk = (m: Element) => {
+  const s = scope(m);
+  return (
+    (s?.getAttribute("data-facet") ?? s?.getAttribute("data-row") ?? "") + "\0" + a(m, "data-c")
+  );
+};
 export const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export interface Tooltip {
@@ -100,7 +106,7 @@ export function tooltip(
           ...box.querySelectorAll(
             `[data-maya=line][data-key][data-c="${CSS.escape(a(m, "data-c"))}"]`,
           ),
-        ]
+        ].filter((l) => scope(l) === scope(m))
       : [];
     peers = m ? [...group(m)] : [];
     // Hierarchy keys (h~a~b) light their ancestors, so the hovered path reads root to leaf.

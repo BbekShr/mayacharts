@@ -1197,6 +1197,21 @@ test.describe("M4 drills, table paging and expand", () => {
     await expect.poll(async () => (await view(page, "t")).expanded).toBe("");
   });
 
+  test("table: hovering the open row leaves its sub-chart out of the tooltip", async ({ page }) => {
+    const data = ["Jan", "Feb", "Mar"].map((m, j) => ({ s: "Store 0", ytd: 100, m, v: 7 + j }));
+    await mount(page, "t", { ...table, data, expand: { type: "bar", x: "m", y: "v" } });
+    const hit = page.locator("#t [data-maya=hit][aria-expanded]").first();
+    await clickMark(page, hit);
+    await expect(page.locator("#t svg[data-maya=expand]")).toHaveCount(1);
+    await settle(page);
+    await hit.hover();
+    await expect(page.locator("#t .maya-tip.maya-open")).toBeVisible();
+    await expect(page.locator("#t .maya-tip")).not.toContainText("Jan");
+    await expect(
+      page.locator("#t svg[data-maya=expand] :is([data-active],[data-lit])"),
+    ).toHaveCount(0);
+  });
+
   test("list: the first move starts open and a click moves the opening", async ({ page }) => {
     const data = ["A", "B", "C"].flatMap((m, i) => [
       { m, v: i + 1 },

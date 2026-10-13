@@ -31,6 +31,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 **Motion**
 
+- Key a rolling window (trails, sparkline tails) by the time each piece covers, never by its age or slot, or history moves on every step.
 - Keys are identity: a key that changes between views re-enters instead of morphing. Keep keys absolute across drills (sankey level in the whole path, hierarchy keys hold the full path).
 - Omit opacity in an end keyframe so it lands on the CSS value; animating to 1 flashes translucent marks.
 - A coherent zoom has no stagger, clips to the plot, and fades value labels in only after the marks land; axes swap at once.
@@ -40,6 +41,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 - `data-depth` is shared by sunburst rings and sankey nodes; scope sunburst rules and checks with `circle[data-depth]` or `spec.type`.
 - A click handler that treats "not a mark" as empty space must list every interactive part (`BUSY` in `drill.ts`).
+- A chart nested in a mark (facet panel, table expand) repeats data-c and keys: scope every lookup and every animation container id by each nesting level (data-facet, data-row).
 
 **Fan-out**
 
@@ -55,6 +57,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Repeat a timing-sensitive e2e 15 times with 6 workers on the branch and on main before calling a failure a flake: the clamped-tooltip fix failed 3 of 30 there and 0 of 60 on main.
 - A fade that ends early on one side of a crossfade needs the other side on the same clock, or the frame washes out (zoomed exits at 0.35, 2026-10-09).
 - `isolation: "worktree"` branches from `main`, not the run branch: tell a worktree editor to `git reset --hard <run branch>` as its first step when the run branch has commits.
+- Fetch and rebase the run branch on origin/main before reading an e2e baseline: a fix merged mid-run showed as a 4 in 10 failure on the stale base (2026-10-13).
 - Before any e2e run, free port 4173 (`lsof -i :4173`): Playwright reuses a running preview server, so a stale one silently tests an old build.
 
 **Process**

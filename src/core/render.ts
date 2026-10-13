@@ -296,7 +296,8 @@
  *   the kept by labels and per row label the values) are the mark's to draw. expand (a spec):
  *   the mark returns MarkOut.expand, the box under the open row; build() renders
  *   { ...subSpec(expand), data: rows whose x is the open row } at that size as a nested
- *   <svg data-maya="expand" x y> appended after the hits group (no class, no ids, no tabindex);
+ *   <svg data-maya="expand" data-row x y> appended after the hits group (no class, no ids, no
+ *   tabindex; data-row is the open row's x, so a switch to another row crossfades the box);
  *   a sub-chart error leaves the row shut and lands in Parts.warnings. The svg carries
  *   data-expand when rows can open (table expand, list with an evidence level).
  *   line drillTo: with view.drill = [series value], build() renders the sub-spec over that
@@ -962,7 +963,7 @@ function build(
   spec: ChartSpec,
   opts: RenderOptions | undefined,
   sheet: string | null,
-  at?: Box & { facet?: string },
+  at?: Box & { facet?: string; row?: string },
 ): Parts {
   spec = unset(spec);
   validateSpec(spec);
@@ -1565,7 +1566,7 @@ function build(
           { ...subSpec(spec, ex), data: rows } as ChartSpec,
           { width: b.w, height: b.h },
           null,
-          b,
+          { ...b, row: s.expanded[0] },
         ).svg;
       } catch (e) {
         // One row's rows can miss a field the whole table has: the row stays shut, the host is told.
@@ -1631,6 +1632,7 @@ function build(
       // A table row's sub-chart: a nested svg placed in the table's svg.
       "data-maya": at ? (at.facet === undefined ? "expand" : "panel") : null,
       "data-facet": at?.facet,
+      "data-row": at?.row,
       x: at ? r(at.x) : null,
       y: at ? r(at.y) : null,
       viewBox: `0 0 ${W} ${svgH}`,

@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Browser, type Page } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 
 const G = "dist/maya.global.js";
@@ -287,6 +287,43 @@ test("the HTML snippet runs on its own page for every type", async ({ page, brow
   await other.close();
 });
 
+// Runs the builder's ThoughtSpot files as ThoughtSpot runs a tile, on a fresh page.
+const runTile = async (page: Page, browser: Browser) => {
+  const [html, css, js] = await page.locator("#panel code").allTextContents();
+  // Muze Studio hands the search as a DataModel: getData() is { schema, data: row arrays }.
+  const { data } = (await spec(page)) as { data: Record<string, unknown>[] };
+  const names = [...new Set(data.flatMap((r) => Object.keys(r)))]; // a column the first row lacks (list evidence) still exists
+  const search = {
+    schema: names.map((name) => ({ name })),
+    data: data.map((r) => names.map((n) => ({ v: r[n] }))),
+  };
+  const tile = await browser.newPage(); // a fresh page per tile, as ThoughtSpot runs them
+  await tile.route("https://cdn.jsdelivr.net/npm/mayacharts@*/dist/maya.global.js", (r) =>
+    r.fulfill({ body: readFileSync(G, "utf8"), contentType: "text/javascript" }),
+  );
+  await tile.setContent(`<!doctype html><style>${css}</style><body></body>`);
+  // As ThoughtSpot runs a tile: the HTML tab arrives after the page has loaded, its scripts
+  // re-created (so the library loads async), and chart.js runs at once with viz in scope.
+  await tile.evaluate(
+    ([html, js, search]) => {
+      (window as any).completed = 0;
+      const viz = {
+        getDataFromSearchQuery: () => ({ getData: () => search }),
+        events: { emitRenderCompletedEvent: () => (window as any).completed++ },
+      };
+      document.body.innerHTML = html;
+      for (const old of document.body.querySelectorAll("script")) {
+        const s = document.createElement("script");
+        s.src = old.src;
+        old.replaceWith(s);
+      }
+      new Function("viz", js)(viz);
+    },
+    [html!, js!, search] as const,
+  );
+  return tile;
+};
+
 test("the ThoughtSpot files run against a stub viz for every type", async ({ page, browser }) => {
   test.skip(!existsSync(G), "dist/maya.global.js missing: run `npm run build` first");
   test.setTimeout(120_000); // each tile now waits for maya-settled (the entrance animation)
@@ -294,38 +331,7 @@ test("the ThoughtSpot files run against a stub viz for every type", async ({ pag
   for (const t of await types(page)) {
     await pick(page, t);
     await expect.poll(async () => ((await spec(page)) as { type: string }).type).toBe(t);
-    const [html, css, js] = await page.locator("#panel code").allTextContents();
-    // Muze Studio hands the search as a DataModel: getData() is { schema, data: row arrays }.
-    const { data } = (await spec(page)) as { data: Record<string, unknown>[] };
-    const names = [...new Set(data.flatMap((r) => Object.keys(r)))]; // a column the first row lacks (list evidence) still exists
-    const search = {
-      schema: names.map((name) => ({ name })),
-      data: data.map((r) => names.map((n) => ({ v: r[n] }))),
-    };
-    const tile = await browser.newPage(); // a fresh page per tile, as ThoughtSpot runs them
-    await tile.route("https://cdn.jsdelivr.net/npm/mayacharts@*/dist/maya.global.js", (r) =>
-      r.fulfill({ body: readFileSync(G, "utf8"), contentType: "text/javascript" }),
-    );
-    await tile.setContent(`<!doctype html><style>${css}</style><body></body>`);
-    // As ThoughtSpot runs a tile: the HTML tab arrives after the page has loaded, its scripts
-    // re-created (so the library loads async), and chart.js runs at once with viz in scope.
-    await tile.evaluate(
-      ([html, js, search]) => {
-        (window as any).completed = 0;
-        const viz = {
-          getDataFromSearchQuery: () => ({ getData: () => search }),
-          events: { emitRenderCompletedEvent: () => (window as any).completed++ },
-        };
-        document.body.innerHTML = html;
-        for (const old of document.body.querySelectorAll("script")) {
-          const s = document.createElement("script");
-          s.src = old.src;
-          old.replaceWith(s);
-        }
-        new Function("viz", js)(viz);
-      },
-      [html!, js!, search] as const,
-    );
+    const tile = await runTile(page, browser);
     await expect.poll(() => tile.evaluate(() => (window as any).completed), { message: t }).toBe(1);
     await expect
       .poll(
@@ -346,6 +352,27 @@ test("the ThoughtSpot files run against a stub viz for every type", async ({ pag
     ).toBe(false);
     await tile.close();
   }
+});
+
+test("a ThoughtSpot tile takes the theme from chart.css", async ({ page, browser }) => {
+  test.skip(!existsSync(G), "dist/maya.global.js missing: run `npm run build` first");
+  await pick(page, "bar");
+  await page.locator("input[name=chart-theme][value=ocean]").check({ force: true });
+  await page.locator("#accent").fill("#ff0000");
+  await page.getByRole("tab", { name: "ThoughtSpot" }).click();
+  const [, css, js] = await page.locator("#panel code").allTextContents();
+  expect(css).toContain("--maya-accent: #ff0000;");
+  expect(js).not.toContain("theme");
+  const tile = await runTile(page, browser);
+  await expect
+    .poll(() =>
+      tile.evaluate(() => {
+        const m = document.getElementById("chart")!.shadowRoot?.querySelector("[data-maya=mark]");
+        return m && getComputedStyle(m).fill;
+      }),
+    )
+    .toBe("rgb(255, 0, 0)");
+  await tile.close();
 });
 
 test("Copy puts the file on the clipboard", async ({ page, context, browserName }) => {

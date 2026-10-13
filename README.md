@@ -1024,6 +1024,7 @@ Host adapters turn a columnar result into rows, unwrap `{ value() }` cells, matc
 // chart.html: <script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"></script>
 //             <maya-chart id="chart"></maya-chart>
 // chart.css:  #chart { --maya-accent: ...; --maya-series-2: ...; }
+//             (theme tokens go on #chart itself; on :root, html or body they never reach the chart)
 // chart.js:   const draw = () => maya.host.thoughtspot(viz, { type: "bar", x: "item", y: "sales" });
 //             window.maya ? draw() : document.querySelector("script[src*=mayacharts]")
 //               .addEventListener("load", draw);
@@ -1062,7 +1063,7 @@ Height: a chart takes the height its container gives it. Only with no definite h
 
 ## Theming
 
-Every colour and font is a CSS custom property. Set them on the element or host:
+Every colour and font is a CSS custom property. Set them on the `maya-chart` element itself, by tag, class or id. A value on `:root`, `html`, `body` or another ancestor does nothing: the chart sets its own defaults on the element, and those beat anything it would inherit. `spec.theme` beats the CSS. In CSS, `numeric` is written as its font value (`--maya-numeric: tabular-nums`). `axisSize`, `labelSize`, `heroSize` and `cellGap` also size the layout, and `rampMid` makes a ramp diverging, so set those in `spec.theme`.
 
 ```css
 maya-chart {
@@ -1270,15 +1271,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 20,850 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 21,066 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,968,904,828 total, 3,546,165 output
-- claude-sonnet-5-5: 980,210,642 total, 151,436 output
+- claude-opus-5-5: 1,988,085,914 total, 3,593,340 output
+- claude-sonnet-5-5: 981,175,550 total, 151,915 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
-- claude-haiku-4-5-20251001: 36,437,992 total, 10,535 output
+- claude-haiku-4-5-20251001: 36,667,024 total, 10,548 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 3,182,446,705 total, 4,143,364 output
+- all: 3,202,821,731 total, 4,191,031 output
 
 <!-- tokens:end -->
 

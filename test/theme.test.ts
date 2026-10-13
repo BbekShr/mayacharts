@@ -320,7 +320,8 @@ describe("M2 tokens", () => {
   });
   it("labelInk and labelInkOnFill reach the inks that have no relative colours", () => {
     expect(css).toContain("fill:var(--maya-label-ink,#12161c)");
-    expect(css).toContain("fill:var(--maya-label-ink-on,var(--maya-bg))");
+    // The name render.ts writes for theme.labelInkOnFill.
+    expect(css).toContain("fill:var(--maya-label-ink-on-fill,var(--maya-bg))");
   });
   it("brush and peers CSS ends the stylesheet", () => {
     expect(css).toContain("[data-off]{opacity:.12}");

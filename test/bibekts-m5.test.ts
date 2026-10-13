@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { renderParts, renderShell } from "../src/index.ts";
+import { render, renderParts, renderShell } from "../src/index.ts";
 import { scatter } from "../src/core/marks/scatter.ts";
 import { drillDepth, MayaSpecError, resolve, validateOptions } from "../src/core/validate.ts";
 import type { ChartSpec, MarkCtx, RenderOptions, View } from "../src/core/types.ts";
@@ -315,5 +315,49 @@ describe("was on line and area", () => {
       data: stores.slice(0, 3),
     });
     expect(p.legend).toContain("data-past");
+  });
+});
+
+describe("table expand data-row, scatter trail keys", () => {
+  const tbl = (x: string, open: string) =>
+    render(
+      {
+        type: "table",
+        x: "k",
+        y: "v",
+        expand: { type: "bar", x: "m", y: "v" },
+        data: [
+          { k: x, v: 1, m: "a" },
+          { k: "other", v: 2, m: "b" },
+        ],
+      } as unknown as ChartSpec,
+      { view: { expanded: open } },
+    );
+  it("the open row's sub-chart carries data-row, escaped", () => {
+    expect(tbl("Idaho", "Idaho")).toContain('data-maya="expand" data-row="Idaho"');
+    expect(tbl("Idaho", "other")).toContain('data-row="other"');
+    expect(tbl('<x>"&', '<x>"&')).toContain('data-row="&lt;x&gt;&quot;&amp;"');
+  });
+  it("trail segments are keyed by start frame and stable between adjacent frames", () => {
+    const spec = {
+      type: "scatter",
+      x: "units",
+      y: "sales",
+      name: "item",
+      frame: "q",
+      trail: 5,
+      data: race,
+    } as ChartSpec;
+    const segs = (f: number) =>
+      new Map(
+        [...render(spec, { view: { frame: f } }).matchAll(/<path[^>]*data-trail="seg"[^>]*>/g)].map(
+          (m) => [/data-key="([^"]*)"/.exec(m[0])![1]!, /d="([^"]*)"/.exec(m[0])![1]!] as const,
+        ),
+      );
+    const a = segs(1);
+    const b = segs(2);
+    expect(a.size).toBeGreaterThan(0);
+    for (const [k, d] of a) expect(b.get(k)).toBe(d);
+    expect(b.size).toBeGreaterThan(a.size);
   });
 });

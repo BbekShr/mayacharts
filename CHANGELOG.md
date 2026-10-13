@@ -4,6 +4,20 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Changed
+
+- The builder's ThoughtSpot tab puts the chart theme and accent in chart.css as `--maya-*` on `#chart`, so chart.js holds only the spec. Tokens that also size the layout (`axisSize`, `labelSize`, `heroSize`, `cellGap`) or make a ramp diverging (`rampMid`, `rampMidValue`) stay in `spec.theme`.
+
+### Fixed
+
+- `theme.labelInkOnFill` now reaches labels on dark fills in browsers without relative colours; the stylesheet read `--maya-label-ink-on` instead of `--maya-label-ink-on-fill`.
+
+### Docs
+
+- Theme tokens in CSS go on `maya-chart` itself. A value on `:root`, `html`, `body` or another ancestor is ignored, because the chart sets its own defaults on the element. The README, docs and llms.txt said an ancestor worked.
+
 ## 0.17.1 - 2026-10-13
 
 ### Fixed
