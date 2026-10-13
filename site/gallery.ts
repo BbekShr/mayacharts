@@ -23,6 +23,7 @@ import {
   type Dataset,
 } from "./data.ts";
 import { show } from "./show.ts";
+import { decide } from "./decide.ts";
 import { signature } from "./signature.ts";
 import { theme, themed, themePicker } from "./theme.ts";
 
@@ -854,7 +855,7 @@ function specs({ FACTS, DAILY }: Dataset): Record<string, ChartSpec> {
   }));
   tile("feed", feedWindows[0]!);
 
-  Object.assign(out, signature({ FACTS }));
+  Object.assign(out, signature({ FACTS }), decide({ FACTS }));
   return out;
 }
 

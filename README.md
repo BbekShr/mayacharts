@@ -4,7 +4,7 @@
 
 **The browser is the chart engine.**
 
-Twenty-eight chart types from one JSON spec. About 56 KB, zero dependencies,<br>accessible and server-rendered by default.
+Twenty-eight chart types from one JSON spec. About 87 KB, zero dependencies,<br>accessible and server-rendered by default.
 
 [![npm](https://img.shields.io/npm/v/mayacharts?color=1d4ed8&label=npm)](https://www.npmjs.com/package/mayacharts) [![gzip](https://img.shields.io/bundlejs/size/mayacharts?color=1d4ed8)](https://bundlejs.com/?q=mayacharts) [![dependencies](https://img.shields.io/badge/dependencies-0-1d4ed8)](package.json) [![license](https://img.shields.io/npm/l/mayacharts?color=1d4ed8)](LICENSE) [![support](https://img.shields.io/badge/support-mayaCharts-635bff?logo=githubsponsors&logoColor=ff6b81)](https://bbekshr.github.io/mayacharts/support/)
 
@@ -42,7 +42,7 @@ One dot per customer, and the same dots fly between a waffle, bars and a spend s
 
 ## Why mayaCharts
 
-- **Small.** Thirteen chart types with tooltips, drill, zoom, selection and animation in about 56 KB gzip, with no runtime dependencies. Fifteen more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, gauge, hexmap, boxplot, funnel, weave, units, orbit, constellation) are optional modules of 2 to 4.4 KB each.
+- **Small.** Thirteen chart types with tooltips, drill, zoom, selection and animation in about 87 KB gzip, with no runtime dependencies. Fifteen more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, gauge, hexmap, boxplot, funnel, weave, units, orbit, constellation) are optional modules of 2.5 to 6.1 KB each.
 - **Passes the enterprise checklist.** Works under a strict CSP with Trusted Types, meets WCAG 2.2 AA (axe-clean in light and dark), supports RTL, and every user-visible string is localisable.
 - **Renders on the server.** `render(spec)` is a pure function that returns an SVG string in Node or any runtime without a DOM. `renderShell` returns a full chart that works before any JavaScript loads.
 - **One JSON spec.** No callbacks in the config, so a spec can be stored in a database, sent over the wire, or written by an LLM. A [JSON Schema](schema.json) and [llms.txt](llms.txt) ship with the package.
@@ -161,27 +161,27 @@ The thirteen core types ship with `mayacharts` and `mayacharts/element`. Each ot
 | `parallel`      | Many measures per row on parallel axes, to spot patterns across them.                                   | `mayacharts`                        | in core |
 | `table`         | Rows and columns with inline bars, for when people need the exact numbers.                              | `mayacharts`                        | in core |
 | `list`          | Numbered moves, each with its own number format, a sentence of evidence and bars that open on click.    | `mayacharts`                        | in core |
-| `treemap`       | Part of a whole as nested rectangles.                                                                   | `import "mayacharts/hierarchy"`     | 4.32 KB |
-| `sunburst`      | Part of a whole as rings, with drill-down.                                                              | `import "mayacharts/hierarchy"`     | 4.32 KB |
-| `marimekko`     | Column width is the column total, segments are shares within it.                                        | `import "mayacharts/hierarchy"`     | 4.32 KB |
-| `waffle`        | A share as a grid of squares that people can count.                                                     | `import "mayacharts/hierarchy"`     | 4.32 KB |
-| `sankey`        | Flow between stages, with drill into a node.                                                            | `import "mayacharts/flow"`          | 3.77 KB |
-| `chord`         | Flow between every pair in a group.                                                                     | `import "mayacharts/flow"`          | 3.77 KB |
-| `radial`        | Bars around a circle, for cyclical categories such as months.                                           | `import "mayacharts/radial"`        | 4.35 KB |
-| `gauge`         | One value on a dial with a fixed range, toned by target and warn thresholds.                            | `import "mayacharts/radial"`        | 4.35 KB |
-| `hexmap`        | US states as equal hexagons, so small states stay visible.                                              | `import "mayacharts/geo"`           | 2.47 KB |
-| `boxplot`       | Median, quartiles and outliers per group.                                                               | `import "mayacharts/stats"`         | 3.89 KB |
-| `funnel`        | Drop-off through ordered stages.                                                                        | `import "mayacharts/stats"`         | 3.89 KB |
-| `weave`         | A ranking over time, with threads that pass over and under at crossings.                                | `import "mayacharts/weave"`         | 2.35 KB |
-| `units`         | One dot per row that changes form between waffle, bars and swarm.                                       | `import "mayacharts/units"`         | 2.47 KB |
-| `orbit`         | Categories as planets around their total, with motion from growth.                                      | `import "mayacharts/orbit"`         | 2.51 KB |
-| `constellation` | Accounts placed by how alike their measures are, not by one axis.                                       | `import "mayacharts/constellation"` | 2.99 KB |
+| `treemap`       | Part of a whole as nested rectangles.                                                                   | `import "mayacharts/hierarchy"`     | 4.90 KB |
+| `sunburst`      | Part of a whole as rings, with drill-down.                                                              | `import "mayacharts/hierarchy"`     | 4.90 KB |
+| `marimekko`     | Column width is the column total, segments are shares within it.                                        | `import "mayacharts/hierarchy"`     | 4.90 KB |
+| `waffle`        | A share as a grid of squares that people can count.                                                     | `import "mayacharts/hierarchy"`     | 4.90 KB |
+| `sankey`        | Flow between stages, with drill into a node.                                                            | `import "mayacharts/flow"`          | 4.13 KB |
+| `chord`         | Flow between every pair in a group.                                                                     | `import "mayacharts/flow"`          | 4.13 KB |
+| `radial`        | Bars around a circle, for cyclical categories such as months.                                           | `import "mayacharts/radial"`        | 6.12 KB |
+| `gauge`         | One value on a dial with a fixed range, toned by target and warn thresholds.                            | `import "mayacharts/radial"`        | 6.12 KB |
+| `hexmap`        | US states as equal hexagons, so small states stay visible.                                              | `import "mayacharts/geo"`           | 2.98 KB |
+| `boxplot`       | Median, quartiles and outliers per group.                                                               | `import "mayacharts/stats"`         | 3.91 KB |
+| `funnel`        | Drop-off through ordered stages.                                                                        | `import "mayacharts/stats"`         | 3.91 KB |
+| `weave`         | A ranking over time, with threads that pass over and under at crossings.                                | `import "mayacharts/weave"`         | 2.65 KB |
+| `units`         | One dot per row that changes form between waffle, bars and swarm.                                       | `import "mayacharts/units"`         | 2.52 KB |
+| `orbit`         | Categories as planets around their total, with motion from growth.                                      | `import "mayacharts/orbit"`         | 2.53 KB |
+| `constellation` | Accounts placed by how alike their measures are, not by one axis.                                       | `import "mayacharts/constellation"` | 3.01 KB |
 
 </details>
 
 ## Signature charts
 
-Five of the types above were designed for mayaCharts. None of them ships in Chart.js, ECharts, Recharts or Plotly. Each is a spec like any other and costs under 3 KB gzip (`was` is part of the core bar).
+Five of the types above were designed for mayaCharts. None of them ships in Chart.js, ECharts, Recharts or Plotly. Each is a spec like any other and costs about 3 KB gzip or less (`was` is part of the core bar).
 
 **Shapeshifter (`units`).** One dot per row, and the dots change form: a waffle, bars, or a swarm along the value axis. Every dot keeps the same key in every form, so switching form flies each dot to its new place instead of redrawing. Maya means illusion, and this is the one that earns the name. Other libraries make you pick a chart; here the control is part of the chart.
 
@@ -788,12 +788,12 @@ Each module extends the core with chart types and shares the same spec, theme, t
 
 | Module                     | Types                                                     | Size (gzip) | Classic script                 |
 | -------------------------- | --------------------------------------------------------- | ----------- | ------------------------------ |
-| `mayacharts/hierarchy`     | treemap, sunburst, marimekko, waffle                      | 4.3 KB      | `maya.hierarchy.global.js`     |
-| `mayacharts/flow`          | sankey, chord                                             | 3.8 KB      | `maya.flow.global.js`          |
-| `mayacharts/radial`        | radial, gauge                                             | 4.4 KB      | `maya.radial.global.js`        |
-| `mayacharts/geo`           | hexmap (50 US states + DC + PR)                           | 2.5 KB      | `maya.geo.global.js`           |
+| `mayacharts/hierarchy`     | treemap, sunburst, marimekko, waffle                      | 4.9 KB      | `maya.hierarchy.global.js`     |
+| `mayacharts/flow`          | sankey, chord                                             | 4.1 KB      | `maya.flow.global.js`          |
+| `mayacharts/radial`        | radial, gauge                                             | 6.1 KB      | `maya.radial.global.js`        |
+| `mayacharts/geo`           | hexmap (50 US states + DC + PR)                           | 3.0 KB      | `maya.geo.global.js`           |
 | `mayacharts/stats`         | boxplot, funnel                                           | 3.9 KB      | `maya.stats.global.js`         |
-| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.3 KB      | `maya.weave.global.js`         |
+| `mayacharts/weave`         | weave (ranks that cross over and under)                   | 2.6 KB      | `maya.weave.global.js`         |
 | `mayacharts/units`         | units (one dot per row: waffle, bars, swarm)              | 2.5 KB      | `maya.units.global.js`         |
 | `mayacharts/orbit`         | orbit (planets sized by value, speed by growth)           | 2.5 KB      | `maya.orbit.global.js`         |
 | `mayacharts/constellation` | constellation (rows placed by similarity across measures) | 3.0 KB      | `maya.constellation.global.js` |
@@ -1270,15 +1270,15 @@ git config core.hooksPath "$PWD/.githooks"   # refresh the token count below on 
 
 <!-- tokens:start -->
 
-Tokens spent with Claude Code since the first commit, across 20,759 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
+Tokens spent with Claude Code since the first commit, across 20,820 API calls. Most are cached context re-read on each turn. Updated on every commit by `npm run tokens -- --readme`.
 
-- claude-opus-5-5: 1,958,619,921 total, 3,521,116 output
-- claude-sonnet-5-5: 976,457,438 total, 150,977 output
+- claude-opus-5-5: 1,964,743,862 total, 3,532,962 output
+- claude-sonnet-5-5: 980,210,642 total, 151,436 output
 - claude-fable-5-1: 189,095,384 total, 391,915 output
 - claude-haiku-4-5-20251001: 36,437,992 total, 10,535 output
 - claude-sonnet-5: 7,674,739 total, 43,301 output
 - claude-opus-5: 123,120 total, 12 output
-- all: 3,168,408,594 total, 4,117,856 output
+- all: 3,178,285,739 total, 4,130,161 output
 
 <!-- tokens:end -->
 

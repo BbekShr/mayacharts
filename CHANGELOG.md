@@ -4,6 +4,17 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## 0.17.1 - Unreleased
+
+### Fixed
+
+- A table's diverging-bar centre line no longer runs through an open row's sub-chart.
+
+### Docs
+
+- Size figures in the README and on the site match the 0.17 bundles (element about 87 KB gzip, optional modules 2.5 to 6.1 KB); the site hero counts twenty-eight types.
+- Gallery tiles for the 0.17 features, so the accessibility checks cover them.
+
 ## 0.17.0 - 2026-10-12
 
 Fixes #76, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #88, #89, #90, #91, #92, #93.

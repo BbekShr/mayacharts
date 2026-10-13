@@ -1,11 +1,20 @@
 ---
 name: maya-deploy
-description: Merge the current branch's PR into main, confirm the GitHub Pages deploy, then publish the next version to npm through maya-release. Use when the owner says "deploy", "merge and deploy", "ship it" or "/maya-deploy". In this repo "deploy" always includes the npm publish.
+description: Bring docs, gallery and size figures in line with what ships, merge the current branch's PR into main, confirm the GitHub Pages deploy, then publish the next version to npm through maya-release. Use when the owner says "deploy", "merge and deploy", "ship it" or "/maya-deploy". In this repo "deploy" always includes the npm publish.
 ---
 
 # mayaCharts deploy
 
-"Deploy" means three things, in order: the PR is merged, the site is live on Pages, and the package is on npm. Asking for a deploy is the explicit release request that `maya-release` requires.
+"Deploy" means four things, in order: the docs and site describe what ships, the PR is merged, the site is live on Pages, and the package is on npm. Asking for a deploy is the explicit release request that `maya-release` requires.
+
+## 0. Docs and site
+
+Before merging, check the branch against what it ships (`git diff main...HEAD`, and the unreleased CHANGELOG section). Fix gaps on the branch, commit and push, then merge. The npm README is frozen per version, so a gap found after the publish costs a patch release.
+
+- **Spec docs**: every new or changed field is in `types.ts` JSDoc, README spec tables, `schema.json`, `llms.txt`, `site/docs.html` and CHANGELOG. `test/schema.test.ts` catches most drift; read the CHANGELOG lines against `site/docs.html` for the rest.
+- **Gallery**: every new chart type and every new user-visible variation (a new `form`, `stack`, `arc`, control, drill or table feature) has a tile in `site/gallery.html` / `site/gallery.ts` on synthetic data. `e2e/a11y.spec.ts` runs axe on the gallery, so an untiled feature is also an unscanned one. Missing tiles go to the chart designer.
+- **Counts and sizes**: run `npm run build && npm run size` and compare every KB figure and type count in `README.md` (headline, "Small" bullet, type table, module table, signature-types line) and `site/index.html` (meta description, hero, stat list) with the measured gzip. A figure off by more than 0.2 KB, or a stale count, is a gap.
+- **Builder**: a new type has a sample in `site/builder-kit.ts` and a place in its groups.
 
 ## 1. Merge
 
@@ -27,4 +36,4 @@ The push to main starts `Deploy site`, `CI` and `E2E (all browsers)`. Watch all 
 
 ## Report
 
-One short block: PR and merge commit, Pages URL (`https://bbekshr.github.io/mayacharts/`) and deploy result, then the maya-release report (version, tag, workflow URL, `npm view` output). Name anything skipped and why.
+One short block: docs and site gaps found and fixed (or "none"), PR and merge commit, Pages URL (`https://bbekshr.github.io/mayacharts/`) and deploy result, then the maya-release report (version, tag, workflow URL, `npm view` output). Name anything skipped and why.
