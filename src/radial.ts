@@ -10,6 +10,7 @@ import { clip, el, esc, key, OTHER, px, r } from "./core/svg.ts";
 import { niceTicks } from "./core/ticks.ts";
 import type { Mark, MarkCtx, MarkOut } from "./core/types.ts";
 
+const INK = { "data-in": true, "data-dark": true, "data-name": "" };
 const W = 7.2; // estimated glyph width at 12px, the same estimate core layout uses
 
 /** The disc and its rings (the outermost always, then every other one, at most 3) with their values; `put` places a label at ring radius rr. */
@@ -25,14 +26,27 @@ const rings = (
   vals.forEach((v, i) => {
     if (vals.length > 3 && (vals.length - 1 - i) % 2) return;
     grid += el("circle", { cx: r(cx!), cy: r(cy!), r: r(rad(v)), fill: "none" });
-    const t = el(
+    labels += el(
       "text",
       { ...put(rad(v)), "dominant-baseline": "middle", "data-ring": "" },
       esc(ctx.fmt(ctx.spec.y, v)),
     );
-    labels += t;
   });
   return { grid, labels };
+};
+
+/** A level category name at (x, y) on a spoke of sine s, anchored by angle; "" when it would overlap a placed one (boxes grows). */
+const catLabel = (boxes: number[][], x: number, y: number, s: number, name: string) => {
+  const anchor = Math.abs(s) < 0.2 ? "middle" : s > 0 ? "start" : "end";
+  const w = name.length * W;
+  const l = anchor === "middle" ? x - w / 2 : anchor === "start" ? x : x - w;
+  if (boxes.some((b) => l < b[2]! && l + w > b[0]! && y - 7 < b[3]! && y + 7 > b[1]!)) return "";
+  boxes.push([l, y - 7, l + w, y + 7]);
+  return el(
+    "text",
+    { x: r(x), y: r(y), "text-anchor": anchor, "dominant-baseline": "middle", "data-cat": "" },
+    esc(name),
+  );
 };
 
 /**
@@ -82,6 +96,7 @@ const radar = (ctx: MarkCtx): MarkOut => {
       const cname = sh.categories[k]!;
       const key_ = key(ser, cname);
       first.has(k) || first.set(k, key_);
+      const cell = sh.cells.find((c) => c.si === si && c.ci === k)!;
       dots += el("circle", {
         "data-maya": "mark",
         "data-key": key_,
@@ -89,8 +104,8 @@ const radar = (ctx: MarkCtx): MarkOut => {
         "data-s": si % 8,
         "data-x": ctx.fmt(spec.x, cname),
         "data-series": ser,
-        "data-y": sh.cells.find((c) => c.si === si && c.ci === k)!.value,
-        "data-f": ctx.fmt(spec.y, sh.cells.find((c) => c.si === si && c.ci === k)!.value),
+        "data-y": cell.value,
+        "data-f": ctx.fmt(spec.y, cell.value),
         "data-tone": ctx.tone(v),
         "data-dash": spec.dash.has(ser),
         "data-em": spec.emphasis.has(ser),
@@ -152,17 +167,7 @@ const radar = (ctx: MarkCtx): MarkOut => {
   names.forEach((name, k) => {
     const a = ang(k);
     const [x, y] = at(R + 8 + 4 * Math.abs(Math.cos(a)), a);
-    const s = Math.sin(a);
-    const anchor = Math.abs(s) < 0.2 ? "middle" : s > 0 ? "start" : "end";
-    const w = name.length * W;
-    const l = anchor === "middle" ? x - w / 2 : anchor === "start" ? x : x - w;
-    if (boxes.some((b) => l < b[2]! && l + w > b[0]! && y - 7 < b[3]! && y + 7 > b[1]!)) return;
-    boxes.push([l, y - 7, l + w, y + 7]);
-    labels += el(
-      "text",
-      { x: r(x), y: r(y), "text-anchor": anchor, "dominant-baseline": "middle", "data-cat": "" },
-      esc(name),
-    );
+    labels += catLabel(boxes, x, y, Math.sin(a), name);
   });
   return { marks: marks + dots, hits, labels, grid };
 };
@@ -325,10 +330,9 @@ export const radial: Mark = {
       const both = on && (out || len >= w + nm.length * 6.6 + 8);
       if (on) {
         named.add(ci);
-        tipText += spoke(nm, R0 + 7, a, { "data-in": true, "data-dark": true, "data-name": "" });
+        tipText += spoke(nm, R0 + 7, a, INK);
       }
-      const inside = () =>
-        spoke(f, rt - 6, a, { "data-in": true, "data-dark": true, "data-name": "" }, true);
+      const inside = () => spoke(f, rt - 6, a, INK, true);
       if (out) outs.push([f, rt + 6, a, len >= w]);
       else if (len >= w + (both ? nm.length * 6.6 + 8 : 0)) tipText += inside();
     });
@@ -401,23 +405,12 @@ export const radial: Mark = {
       if (i % every || named.has(i)) return;
       const a = G / 2 + (i + 0.5) * step;
       if (along) return void (labels += spoke(name, R + 6, a, { "data-cat": "" }));
-      const [x, y] = [cx + (R + 6) * Math.sin(a), cy - (R + 6) * Math.cos(a)];
-      const sx = Math.sin(a);
-      const anchor = Math.abs(sx) < 0.2 ? "middle" : sx > 0 ? "start" : "end";
-      const w = name.length * W;
-      const l = anchor === "middle" ? x - w / 2 : anchor === "start" ? x : x - w;
-      if (boxes.some((b) => l < b[2]! && l + w > b[0]! && y - 7 < b[3]! && y + 7 > b[1]!)) return;
-      boxes.push([l, y - 7, l + w, y + 7]);
-      labels += el(
-        "text",
-        {
-          x: r(x),
-          y: r(y),
-          "text-anchor": anchor,
-          "dominant-baseline": "middle",
-          "data-cat": "",
-        },
-        esc(name),
+      labels += catLabel(
+        boxes,
+        cx + (R + 6) * Math.sin(a),
+        cy - (R + 6) * Math.cos(a),
+        Math.sin(a),
+        name,
       );
     });
     // A value beyond its bar tip yields to a category label it would overprint (the spoke's box, 6 px each side).
@@ -435,14 +428,7 @@ export const radial: Mark = {
         )
       )
         labels += spoke(f, rr, a, { "data-tip": "" });
-      else if (room)
-        labels += spoke(
-          f,
-          rr - 12,
-          a,
-          { "data-in": true, "data-dark": true, "data-name": "" },
-          true,
-        );
+      else if (room) labels += spoke(f, rr - 12, a, INK, true);
     }
     return { marks, hits, labels, grid };
   },
@@ -663,23 +649,14 @@ export const gauge: Mark = {
         },
         esc(status),
       );
-    const end = (x: number, a: string, s: string) =>
-      el(
-        "text",
-        { "data-kpi": "of", x: r(x), y: r(cy + 14), "text-anchor": a, "font-size": 11 },
-        esc(s),
-      );
+    const end = (x: number, y: number, a: string, s: string) =>
+      el("text", { "data-kpi": "of", x: r(x), y: r(y), "text-anchor": a, "font-size": 11 }, esc(s));
     // A half dial prints its ends under the track's ends; a 270 one under its ends, further in; a ring has no ends.
-    if (SW === 180) labels += end(cx - R, "start", fv(lo)) + end(cx + R, "end", fv(hi));
+    if (SW === 180)
+      labels += end(cx - R, cy + 14, "start", fv(lo)) + end(cx + R, cy + 14, "end", fv(hi));
     else if (open) {
       const [ex2, ey] = [((ri + R) / 2) * Math.SQRT1_2, cy + R * Math.SQRT1_2 + 14];
-      const e2 = (x: number, s: string) =>
-        el(
-          "text",
-          { "data-kpi": "of", x: r(x), y: r(ey), "text-anchor": "middle", "font-size": 11 },
-          esc(s),
-        );
-      labels += e2(cx - ex2, fv(lo)) + e2(cx + ex2, fv(hi));
+      labels += end(cx - ex2, ey, "middle", fv(lo)) + end(cx + ex2, ey, "middle", fv(hi));
     }
     const tick = (v: number, r0: number, r1: number, a: Parameters<typeof el>[1]) => {
       const an = at(fr(v));

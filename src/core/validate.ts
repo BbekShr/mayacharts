@@ -456,18 +456,25 @@ const format = (path: string, v: unknown, locale: string) => {
 };
 
 /** Table-driven option checks: [key, expected shape, predicate]. Applied only when the key is set. */
-const CHECKS: [string, string, (v: any) => boolean][] = [
+type CHK = [string, string, (v: any) => boolean];
+const CHECKS: CHK[] = [
   [
     "y",
     "a field name or a non-empty array of field names",
     (v) => typeof v === "string" || strs(v, 1),
   ],
-  ["path", "a non-empty array of field names", (v) => strs(v, 1)],
-  ["seriesPath", "a non-empty array of field names", (v) => strs(v, 1)],
-  ["xPath", "a non-empty array of field names", (v) => strs(v, 1)],
+  ...w("path seriesPath xPath").map((k): CHK => [
+    k,
+    "a non-empty array of field names",
+    (v) => strs(v, 1),
+  ]),
   ["columns", "an array of field names", (v) => strs(v)],
   ["totals", "an array of x values (strings), or true (heatmap)", (v) => v === true || strs(v)],
-  ["page", "a positive integer", (v) => Number.isInteger(v) && v > 0],
+  ...w("page depth limit").map((k): CHK => [
+    k,
+    "a positive integer",
+    (v) => Number.isInteger(v) && v > 0,
+  ]),
   [
     "expand",
     'a chart spec without data (table), or "first", "none" or "all" (list)',
@@ -503,7 +510,6 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
     (v) => oneAgg(v) || (isObj(v) && Object.keys(v).length > 0 && Object.values(v).every(oneAgg)),
   ],
   ["legend", 'a boolean, "top", "bottom" or "right"', (v) => v === !!v || LEG.includes(v)],
-  ["depth", "a positive integer", (v) => Number.isInteger(v) && v > 0],
   ["minAngle", "whole degrees from 0 to 360", (v) => Number.isInteger(v) && v >= 0 && v <= 360],
   ["sort", '"asc", "desc" or "change"', (v) => v === "asc" || v === "desc" || v === "change"],
   [
@@ -511,7 +517,6 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
     '"auto", "category" or "time"',
     (v) => v === "auto" || v === "category" || v === "time",
   ],
-  ["limit", "a positive integer", (v) => Number.isInteger(v) && v > 0],
   [
     "select",
     'true, "multi" or { peers: field }',
@@ -537,7 +542,7 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ["back", "a chart spec without data (any type but kpi)", (v) => isObj(v)],
   ["form", '"bars" or "line"', (v) => v === "bars" || v === "line"],
   ["colorScale", `one of ${SCALES.join(", ")}`, (v) => SCALES.includes(v)],
-  ["emphasis", "an array of series values (strings)", (v) => strs(v)],
+  ...w("emphasis dash").map((k): CHK => [k, "an array of series values (strings)", (v) => strs(v)]),
   [
     "was",
     "a field name, { by: field, current?, previous? } for long data, or fields keyed by y field",
@@ -569,8 +574,7 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
               oneAgg({ ratio: f.ratio })),
         )),
   ],
-  ["xScale", '"log"', (v) => v === "log"],
-  ["yScale", '"log"', (v) => v === "log"],
+  ...w("xScale yScale").map((k): CHK => [k, '"log"', (v) => v === "log"]),
   [
     "annotate",
     `an array of distinct ${ANN.join(", ")} or { x, text (40 characters) }`,
@@ -587,7 +591,6 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
           : ANN.includes(a as string),
       ),
   ],
-  ["dash", "an array of series values (strings)", (v) => strs(v)],
   [
     "forms",
     `a non-empty array of distinct forms: ${FORMS.join(", ")}`,
@@ -1514,6 +1517,57 @@ export const drillDepth = (spec: ChartSpec): number => {
   return Math.max(0, p.length - (spec.type === "marimekko" && !spec.series ? 2 : 1));
 };
 
+/** Table-driven render-option checks for view keys: [key, expected shape, predicate], in error order. */
+const VIEW: CHK[] = [
+  ["xDrill", "an array of strings", (v) => strs(v)],
+  ["expanded", "a string", (v) => typeof v === "string"],
+  ["filter", "a string of at most 200 characters", (v) => typeof v === "string" && v.length <= 200],
+  ["face", '"front" or "back"', (v) => v === "front" || v === "back"],
+  ["facetScale", '"shared" or "own"', (v) => v === "shared" || v === "own"],
+  [
+    "params",
+    "an object of numbers keyed by param id",
+    (v) => isObj(v) && Object.values(v).every((n) => fin(n, 1e15)),
+  ],
+  [
+    "brush",
+    "an array of [field, lo, hi] with lo <= hi",
+    (v) =>
+      Array.isArray(v) &&
+      v.every(
+        (b) =>
+          Array.isArray(b) &&
+          b.length === 3 &&
+          typeof b[0] === "string" &&
+          fin(b[1], 1e300) &&
+          fin(b[2], 1e300) &&
+          b[1] <= b[2],
+      ),
+  ],
+  ["peers", "a string", (v) => typeof v === "string"],
+  [
+    "sortBy",
+    '[field, "asc" | "desc"]',
+    (v) =>
+      Array.isArray(v) &&
+      v.length === 2 &&
+      typeof v[0] === "string" &&
+      (v[1] === "asc" || v[1] === "desc"),
+  ],
+  ...w("measure frame form stack page").map((k): CHK => [
+    k,
+    "an index (integer >= 0)",
+    (n) => Number.isInteger(n) && n >= 0,
+  ]),
+  ["drill", "an array of strings", (v) => strs(v)],
+  ["hidden", "an array of strings", (v) => strs(v)],
+  [
+    "window",
+    "[i0, i1] or [x0, x1, y0, y1] of finite numbers",
+    (v) => Array.isArray(v) && (v.length === 2 || v.length === 4) && v.every(Number.isFinite),
+  ],
+];
+
 export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   if (opts === undefined) return;
   if (!isObj(opts))
@@ -1548,69 +1602,9 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
       "measure drill window hidden sortBy frame form brush peers stack face xDrill expanded page filter facetScale params",
     );
     for (const k of Object.keys(v as object)) if (!vk.includes(k)) unknown("options.view", k, vk);
-    const {
-      drill,
-      window: win,
-      hidden,
-      sortBy,
-      brush,
-      peers,
-      face,
-      xDrill,
-      expanded,
-      filter,
-    } = v as Record<string, unknown>;
-    if (xDrill !== undefined && !strs(xDrill)) inv("view.xDrill", xDrill, "an array of strings");
-    if (expanded !== undefined && typeof expanded !== "string")
-      inv("view.expanded", expanded, "a string");
-    if (filter !== undefined && !(typeof filter === "string" && filter.length <= 200))
-      inv("view.filter", filter, "a string of at most 200 characters");
-    if (face !== undefined && face !== "front" && face !== "back")
-      inv("view.face", face, '"front" or "back"');
-    const { facetScale: fs, params: pv } = v as Record<string, unknown>;
-    if (fs !== undefined && fs !== "shared" && fs !== "own")
-      inv("view.facetScale", fs, '"shared" or "own"');
-    if (pv !== undefined && !(isObj(pv) && Object.values(pv).every((n) => fin(n, 1e15))))
-      inv("view.params", pv, "an object of numbers keyed by param id");
-    if (
-      brush !== undefined &&
-      !(
-        Array.isArray(brush) &&
-        brush.every(
-          (b) =>
-            Array.isArray(b) &&
-            b.length === 3 &&
-            typeof b[0] === "string" &&
-            fin(b[1], 1e300) &&
-            fin(b[2], 1e300) &&
-            b[1] <= b[2],
-        )
-      )
-    )
-      inv("view.brush", brush, "an array of [field, lo, hi] with lo <= hi");
-    if (peers !== undefined && typeof peers !== "string") inv("view.peers", peers, "a string");
-    if (
-      sortBy !== undefined &&
-      !(
-        Array.isArray(sortBy) &&
-        sortBy.length === 2 &&
-        typeof sortBy[0] === "string" &&
-        (sortBy[1] === "asc" || sortBy[1] === "desc")
-      )
-    )
-      inv("view.sortBy", sortBy, '[field, "asc" | "desc"]');
-    for (const k of ["measure", "frame", "form", "stack", "page"]) {
-      const n = (v as Record<string, unknown>)[k];
-      if (n !== undefined && !(Number.isInteger(n) && (n as number) >= 0))
-        inv("view." + k, n, "an index (integer >= 0)");
-    }
-    if (drill !== undefined && !strs(drill)) inv("view.drill", drill, "an array of strings");
-    if (hidden !== undefined && !strs(hidden)) inv("view.hidden", hidden, "an array of strings");
-    if (
-      win !== undefined &&
-      !(Array.isArray(win) && (win.length === 2 || win.length === 4) && win.every(Number.isFinite))
-    )
-      inv("view.window", win, "[i0, i1] or [x0, x1, y0, y1] of finite numbers");
+    const vr = v as Record<string, unknown>;
+    for (const [k, want, ok] of VIEW)
+      if (vr[k] !== undefined && !ok(vr[k])) inv("view." + k, vr[k], want);
   }
   if (
     sel !== undefined &&

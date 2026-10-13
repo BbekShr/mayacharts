@@ -7,7 +7,7 @@
  */
 import { t } from "../core/strings.ts";
 import type { Handlers, Host, SpecEvent, State, View } from "../core/types.ts";
-import { listen } from "./listen.ts";
+import { listen, swallowClick } from "./listen.ts";
 
 type Win = NonNullable<View["window"]>;
 export type ZoomEvent =
@@ -196,12 +196,6 @@ export const mount = (host: Host): Handlers & { step(k: number, m?: Element): bo
     draw(down.svg, start, at(down.svg, e));
   };
 
-  const swallowClick = () => {
-    const eat = (c: Event) => c.stopPropagation();
-    root.addEventListener("click", eat, { capture: true, once: true });
-    setTimeout(() => root.removeEventListener("click", eat, { capture: true }), 0);
-  };
-
   const onUp = (ev: Event) => {
     const e = ev as PointerEvent;
     if (!down || e.pointerId !== down.id || !start) return;
@@ -218,7 +212,7 @@ export const mount = (host: Host): Handlers & { step(k: number, m?: Element): bo
     stopBrush();
     start = undefined;
     if (!began) return;
-    swallowClick();
+    swallowClick(root);
     const band = bandMode(svg);
     const spanX = Math.abs(a.x - b.x) / g.k,
       spanY = Math.abs(a.y - b.y) / g.ky;

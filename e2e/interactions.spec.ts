@@ -68,7 +68,8 @@ const selected = (page: Page, id: string) =>
 
 async function center(loc: Locator): Promise<{ x: number; y: number }> {
   await loc.scrollIntoViewIfNeeded();
-  const b = (await loc.boundingBox())!;
+  // WebKit's boundingBox() misplaces SVG text in a shadow root (x 0, y off); the DOM rect is right.
+  const b = await loc.evaluate((e) => e.getBoundingClientRect().toJSON());
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 }
 

@@ -304,18 +304,17 @@ export class MayaChart extends HTMLElement {
     const prev = this.#state;
     // Drilling zooms into the branch entered, or out of the branch left. Flows keep their
     // nodes in place across a drill (stable keys), so they morph instead.
-    const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
-    this.#fl =
-      d1.length !== d0.length ||
-      (prev.view.xDrill?.length ?? 0) !== (next.view.xDrill?.length ?? 0);
+    const z = (a: readonly string[] = [], b: readonly string[] = []): PatchOptions["zoom"] =>
+      b.length > a.length
+        ? { in: b[a.length]! }
+        : b.length < a.length
+          ? { out: a[b.length]! }
+          : undefined;
+    const zz = z(prev.view.drill, next.view.drill) ?? z(prev.view.xDrill, next.view.xDrill);
+    this.#fl = !!zz;
     // A table row is a thin bar, not a container: its rows swap by key instead of zooming.
     if (/^(sankey|table)$/.test(this.spec?.type ?? "")) this.#fl && this.#tip?.hide();
-    else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
-    else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
-    else if ((next.view.xDrill?.length ?? 0) > (prev.view.xDrill?.length ?? 0))
-      this.#zoom = { in: next.view.xDrill![prev.view.xDrill?.length ?? 0]! };
-    else if ((next.view.xDrill?.length ?? 0) < (prev.view.xDrill?.length ?? 0))
-      this.#zoom = { out: prev.view.xDrill![next.view.xDrill?.length ?? 0]! };
+    else this.#zoom = zz ?? this.#zoom;
     this.#state = next;
     this.#schedule();
     if (JSON.stringify(prev.view) !== JSON.stringify(next.view)) this.#emit("maya-view", next.view);
@@ -425,28 +424,8 @@ export class MayaChart extends HTMLElement {
     if (spec !== this.#seen) {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
-      this.#state = select.reduce(
-        brush.reduce(
-          zoom.reduce(
-            sort.reduce(
-              play.reduce(
-                drill.reduce(
-                  expand.reduce(
-                    flip.reduce(measure.reduce(ctl.reduce(this.#state, ev), ev), ev),
-                    ev,
-                  ),
-                  ev,
-                ),
-                ev,
-              ),
-              ev,
-            ),
-            ev,
-          ),
-          ev,
-        ),
-        ev,
-      );
+      for (const r of [ctl, measure, flip, expand, drill, play, sort, zoom, brush, select])
+        this.#state = (r.reduce as (s: State, e: SpecEvent) => State)(this.#state, ev);
       this.#seen = spec;
     }
     const draw = (s = spec) => {

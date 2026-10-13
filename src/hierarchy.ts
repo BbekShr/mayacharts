@@ -151,10 +151,9 @@ function setup(ctx: MarkCtx, levels = Infinity, hue: number | null = null) {
 const text = (s: string) => s.length * 7.2 + 4;
 
 /** spec.tint: step 1..7 (data-lt, step 0 is the parent's own colour) of sibling `i` of `n`, evenly spaced; only below the parent's own level (a drilled view's first level included). */
+const tintStep = (i: number, n: number) => 1 + Math.round((6 * i) / Math.max(1, n - 1));
 const spread = (ctx: MarkCtx, depth: number, i: number, n: number) =>
-  ctx.spec.tint && depth + ctx.spec.drilled.length > 1
-    ? 1 + Math.round((6 * i) / Math.max(1, n - 1))
-    : null;
+  ctx.spec.tint && depth + ctx.spec.drilled.length > 1 ? tintStep(i, n) : null;
 
 /** Sunburst depth shading: ring 2 is step 3, ring 3 and beyond step 6 (ring 1 is the branch colour). */
 const shade = (depth: number) => (depth > 1 ? 3 * Math.min(3, depth) - 3 : null);
@@ -547,10 +546,7 @@ export const waffle: Mark = {
     // A drilled waffle (spec.hue): the children are tints of the parent's hue, by position, like the treemap.
     const hue = (ci: number) => ({
       "data-s": (spec.hue ?? ci) % 8,
-      "data-lt":
-        spec.hue === null
-          ? null
-          : 1 + Math.round((6 * ci) / Math.max(1, shaped.categories.length - 1)),
+      "data-lt": spec.hue === null ? null : tintStep(ci, shaped.categories.length),
     });
     let marks = "";
     let hits = "";

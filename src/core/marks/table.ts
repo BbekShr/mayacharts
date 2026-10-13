@@ -101,8 +101,7 @@ export const table: Mark = {
       }
     }
     const left = rows.length - drawn.length;
-    const sets = strips(spec);
-    const cellDefs = [...sets];
+    const cellDefs = [...strips(spec)];
 
     const lw = Math.max(80, Math.min(W * 0.34, 180)) + (spec.expand ? 12 : 0);
     // ponytail: a narrow table drops its rightmost columns (no horizontal scroll); a column needs its widest value plus 2 * PAD.
@@ -165,23 +164,25 @@ export const table: Mark = {
     let grid = "";
     let hits = "";
     const thead: string[] = [];
+    const th = (x: number, anchor: string, body: string) =>
+      el(
+        "text",
+        {
+          "data-th": true,
+          x: r(x),
+          y: HEAD / 2,
+          "text-anchor": anchor,
+          "dominant-baseline": "middle",
+        },
+        body,
+      );
     [{ k: "t", f: spec.x, i: -1, min: lw }, ...kept].forEach((c, i) => {
       const x0 = i ? at[i - 1]! : 0;
       const w = i ? wd[i - 1]! : lw;
       const right = c.k === "m";
       const on = by?.[0] === c.f ? by[1] : null;
       const label = cut(title(c.f), w - (on ? 14 : 0)) + (on ? (on === "asc" ? " ▲" : " ▼") : "");
-      const text = el(
-        "text",
-        {
-          "data-th": true,
-          x: r(right ? x0 + w - PAD : x0 + PAD),
-          y: HEAD / 2,
-          "text-anchor": right ? "end" : "start",
-          "dominant-baseline": "middle",
-        },
-        esc(label),
-      );
+      const text = th(right ? x0 + w - PAD : x0 + PAD, right ? "end" : "start", esc(label));
       // Headers go in the hits group: the labels group ignores the pointer. A strip column is not sortable.
       thead.push(
         c.k === "s"
@@ -204,15 +205,9 @@ export const table: Mark = {
     });
     if (spare)
       thead.push(
-        el(
-          "text",
-          {
-            "data-th": true,
-            x: r(W - PAD),
-            y: HEAD / 2,
-            "text-anchor": "end",
-            "dominant-baseline": "middle",
-          },
+        th(
+          W - PAD,
+          "end",
           `+${cols.length - nc}` +
             el(
               "title",
