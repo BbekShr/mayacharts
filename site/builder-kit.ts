@@ -847,7 +847,8 @@ export const cutNote = (spec: ChartSpec): string =>
 
 /**
  * chart.js for ThoughtSpot: the spec without rows, and the host adapter. chart.html loads the
- * library, so chart.js stays light; it draws on window load when it runs before the library.
+ * library, so chart.js stays light. When it runs first it waits on that script's load: ThoughtSpot
+ * adds the HTML after the page has loaded, so window load never comes.
  * Rows, cell unwrapping and the settled signal come from maya.host.thoughtspot.
  */
 export function thoughtSpotJs(spec: ChartSpec): string {
@@ -855,7 +856,7 @@ export function thoughtSpotJs(spec: ChartSpec): string {
   return `// Column names match case-insensitively; a /regex/ works too (x: /item/i).
 const spec = ${flat(JSON.stringify(rest, null, 2)).replace(/</g, "\\u003c")};
 const draw = () => maya.host.thoughtspot(viz, spec);
-window.maya ? draw() : window.addEventListener("load", draw);
+window.maya ? draw() : document.querySelector("script[src*=mayacharts]").addEventListener("load", draw);
 `;
 }
 

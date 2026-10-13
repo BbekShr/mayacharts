@@ -306,15 +306,26 @@ test("the ThoughtSpot files run against a stub viz for every type", async ({ pag
     await tile.route("https://cdn.jsdelivr.net/npm/mayacharts@*/dist/maya.global.js", (r) =>
       r.fulfill({ body: readFileSync(G, "utf8"), contentType: "text/javascript" }),
     );
-    await tile.setContent(`<!doctype html><style>${css}</style><body>${html}</body>`);
-    await tile.evaluate((search) => {
-      (window as any).completed = 0;
-      (window as any).viz = {
-        getDataFromSearchQuery: () => ({ getData: () => search }),
-        events: { emitRenderCompletedEvent: () => (window as any).completed++ },
-      };
-    }, search);
-    await tile.addScriptTag({ content: js! });
+    await tile.setContent(`<!doctype html><style>${css}</style><body></body>`);
+    // As ThoughtSpot runs a tile: the HTML tab arrives after the page has loaded, its scripts
+    // re-created (so the library loads async), and chart.js runs at once with viz in scope.
+    await tile.evaluate(
+      ([html, js, search]) => {
+        (window as any).completed = 0;
+        const viz = {
+          getDataFromSearchQuery: () => ({ getData: () => search }),
+          events: { emitRenderCompletedEvent: () => (window as any).completed++ },
+        };
+        document.body.innerHTML = html;
+        for (const old of document.body.querySelectorAll("script")) {
+          const s = document.createElement("script");
+          s.src = old.src;
+          old.replaceWith(s);
+        }
+        new Function("viz", js)(viz);
+      },
+      [html!, js!, search] as const,
+    );
     await expect.poll(() => tile.evaluate(() => (window as any).completed), { message: t }).toBe(1);
     await expect
       .poll(
