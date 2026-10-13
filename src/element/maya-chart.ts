@@ -1,6 +1,6 @@
 import { VERSION } from "../core/registry.ts";
 import { renderParts, shellInner } from "../core/render.ts";
-import { MayaSpecError } from "../core/validate.ts";
+import { MayaSpecError, subSpec } from "../core/validate.ts";
 import type {
   ChartSpec,
   Handlers,
@@ -14,7 +14,8 @@ import type {
   View,
 } from "../core/types.ts";
 import { css } from "../styles/theme.ts";
-import { type Intro, idle, patch, type PatchOptions, turn, ZOOM } from "./animate.ts";
+import { type Intro, idle, mend, patch, sync, type PatchOptions, turn, ZOOM } from "./animate.ts";
+import * as ctl from "./ctl.ts";
 import * as flip from "./flip.ts";
 import * as drill from "./drill.ts";
 import * as expand from "./expand.ts";
@@ -40,7 +41,7 @@ export class MayaChart extends HTMLElement {
   #seen: ChartSpec | undefined;
   #ix:
     | (Record<
-        "measure" | "drill" | "expand" | "select" | "brush" | "sort" | "play" | "flip",
+        "measure" | "drill" | "expand" | "select" | "brush" | "sort" | "play" | "flip" | "ctl",
         Handlers
       > & {
         zoom: ReturnType<typeof zoom.mount>;
@@ -63,15 +64,23 @@ export class MayaChart extends HTMLElement {
   #intro = 0; // performance.now() of the animated first draw
   #idle: (() => void) | undefined; // cancels the queued data-table insert
   #face = "front"; // the face last drawn
-  #turn: (() => void) | undefined; // cancels a card turn in flight
-  #bk: [ChartSpec, ChartSpec] | undefined; // [front, back with the front's rows]
+  #turn: ((undo?: boolean) => void) | undefined; // cancels a card turn in flight
+  #bk: [ChartSpec, ChartSpec, object] | undefined; // [front, sub-spec with the front's rows, sub-spec]
 
   /** What the interaction modules read: the back's options while the back shows (same rows). */
   #act(): ChartSpec | undefined {
     const s = this.spec;
-    if (!s?.back || this.#state.view.face !== "back") return s;
+    const sub =
+      this.#state.view.face === "back" && s?.back
+        ? s.back
+        : s?.drillTo && this.#state.view.drill?.length // a drilled line is the sub-chart: its measure, its titles
+          ? subSpec(s, s.drillTo)
+          : undefined;
+    if (!s || !sub) return s;
     return (this.#bk =
-      this.#bk?.[0] === s ? this.#bk : [s, { ...s.back, data: s.data } as ChartSpec])[1];
+      this.#bk?.[0] === s && this.#bk[2] === sub
+        ? this.#bk
+        : [s, { ...sub, data: s.data } as ChartSpec, sub])[1];
   }
 
   #gen = 0; // the latest paint; an older one's settle is dropped
@@ -203,6 +212,7 @@ export class MayaChart extends HTMLElement {
       sort: sort.mount(host),
       play: play.mount(host),
       flip: flip.mount(host),
+      ctl: ctl.mount(host),
     };
     const box = root.querySelector(".maya-box")!;
     this.#tip = tooltip(
@@ -294,14 +304,17 @@ export class MayaChart extends HTMLElement {
     const prev = this.#state;
     // Drilling zooms into the branch entered, or out of the branch left. Flows keep their
     // nodes in place across a drill (stable keys), so they morph instead.
-    const [d0, d1] = [prev.view.drill ?? [], next.view.drill ?? []];
-    this.#fl =
-      d1.length !== d0.length ||
-      (prev.view.xDrill?.length ?? 0) !== (next.view.xDrill?.length ?? 0);
+    const z = (a: readonly string[] = [], b: readonly string[] = []): PatchOptions["zoom"] =>
+      b.length > a.length
+        ? { in: b[a.length]! }
+        : b.length < a.length
+          ? { out: a[b.length]! }
+          : undefined;
+    const zz = z(prev.view.drill, next.view.drill) ?? z(prev.view.xDrill, next.view.xDrill);
+    this.#fl = !!zz;
     // A table row is a thin bar, not a container: its rows swap by key instead of zooming.
     if (/^(sankey|table)$/.test(this.spec?.type ?? "")) this.#fl && this.#tip?.hide();
-    else if (d1.length > d0.length) this.#zoom = { in: d1[d0.length]! };
-    else if (d1.length < d0.length) this.#zoom = { out: d0[d1.length]! };
+    else this.#zoom = zz ?? this.#zoom;
     this.#state = next;
     this.#schedule();
     if (JSON.stringify(prev.view) !== JSON.stringify(next.view)) this.#emit("maya-view", next.view);
@@ -411,25 +424,8 @@ export class MayaChart extends HTMLElement {
     if (spec !== this.#seen) {
       // Persistence rules live in the reducers (measure, drill, zoom, select).
       const ev: SpecEvent = { type: "spec", prev: this.#seen, next: spec };
-      this.#state = select.reduce(
-        brush.reduce(
-          zoom.reduce(
-            sort.reduce(
-              play.reduce(
-                drill.reduce(
-                  expand.reduce(flip.reduce(measure.reduce(this.#state, ev), ev), ev),
-                  ev,
-                ),
-                ev,
-              ),
-              ev,
-            ),
-            ev,
-          ),
-          ev,
-        ),
-        ev,
-      );
+      for (const r of [ctl, measure, flip, expand, drill, play, sort, zoom, brush, select])
+        this.#state = (r.reduce as (s: State, e: SpecEvent) => State)(this.#state, ev);
       this.#seen = spec;
     }
     const draw = (s = spec) => {
@@ -528,8 +524,8 @@ export class MayaChart extends HTMLElement {
     if (this.#zoom) this.#tip?.hide(still ? 0 : 640);
     const face = this.#state.view.face ?? "front";
     const flipped = this.#drawn && face !== this.#face && spec.animate !== false;
-    this.#face = face;
-    this.#turn?.();
+    // Turned back before the swap: the card reverses out instead of snapping flat.
+    this.#turn?.(face === this.#face);
     this.#turn = undefined;
     const go = (anim: boolean) =>
       patch(box, parts.svg, anim, {
@@ -540,17 +536,20 @@ export class MayaChart extends HTMLElement {
         roll: spec.numberMotion === "roll",
       });
     // A new face shares no keys with the old one: turn the card instead of diffing.
-    if (flipped && box.firstElementChild) {
+    if (flipped && box.firstElementChild && !still) {
       this.#tip?.hide();
-      this.#turn = turn(box, () => go(false), still);
-    } else go((this.#drawn || !!intro) && !still);
+      this.#turn = turn(box, () => ((this.#face = face), go(false)));
+    } else {
+      this.#face = face;
+      go((this.#drawn || !!intro) && !still);
+    }
     this.#zoom = undefined;
     const dy = top0 - box.getBoundingClientRect().top; // NaN: not measured
     if (dy && !still) box.animate?.([{ translate: `0 ${dy}px` }, { translate: "none" }], ZOOM);
     if (intro && !still) this.#intro = performance.now();
     this.#drawn = true;
+    for (const h of Object.values(this.#ix ?? {})) h.painted?.(); // before restore: it makes axes focusable
     this.#restore(focus);
-    for (const h of Object.values(this.#ix ?? {})) h.painted?.();
     this.#emit("maya-render", {});
     this.#settle(null, idle(root));
   }
@@ -570,12 +569,34 @@ export class MayaChart extends HTMLElement {
       if (this.#last[k] === parts[k]) return;
       changed = true;
       this.#last[k] = parts[k] as string;
+      if (k === "controls" && this.#mend(root, sel, parts[k])) return;
       root.querySelectorAll(sel).forEach((e) => e.remove());
       const next = SLOTS.slice(i + 1).map(([, s]) => root.querySelector(s));
       (next.find(Boolean) ?? box).insertAdjacentHTML("beforebegin", html(parts[k] as string));
       if (!i) this.#clamp(root);
     });
     return changed;
+  }
+
+  /** Same controls, new values: patch them in place, so a slider mid-drag keeps its focus and an open popover stays open. False: the shape changed, replace. */
+  #mend(root: ShadowRoot, sel: string, markup: string): boolean {
+    const old = [...root.querySelectorAll(sel)].filter((e) => !e.parentElement?.matches(sel));
+    const t = document.createElement("template");
+    t.innerHTML = html(markup);
+    const wp = [...t.content.children];
+    const shape = (e: Element): string => e.localName + "(" + [...e.children].map(shape) + ")";
+    if (old.length !== wp.length || old.some((e, i) => shape(e) !== shape(wp[i]!))) return false;
+    old.forEach((e, i) => (sync(e, wp[i]!), mend(e, wp[i]!)));
+    // Attributes do not move a dirty control's value; a focused one is the user's.
+    const on = root.activeElement;
+    for (const e of old)
+      for (const c of e.matches("input,select") ? [e] : e.querySelectorAll("input,select"))
+        if (c !== on && !(c as HTMLInputElement).matches("[type=search]"))
+          (c as HTMLInputElement).value =
+            c.getAttribute("value") ??
+            c.querySelector("option[selected]")?.getAttribute("value") ??
+            "";
+    return true;
   }
 
   /** Stable id of the focused control: svg, legend:i, measure:i, crumb:i or reset. */
@@ -610,7 +631,10 @@ const legend = (e: Event) => {
 
 const SLOTS: [keyof Parts, string][] = [
   ["title", ".maya-title,.maya-sub"],
-  ["controls", ".maya-ctls,.maya-ctl,.maya-play,.maya-flip"],
+  [
+    "controls",
+    ".maya-ctls,.maya-ctl,.maya-play,.maya-flip,.maya-filter,.maya-frame,.maya-params,.maya-params-btn,.maya-frame-value",
+  ],
   ["legend", ".maya-legend"],
   ["crumbs", ".maya-crumbs"],
 ];
@@ -636,5 +660,6 @@ const FOCUS: [string, string][] = [
   ["crumb", ".maya-crumbs :is(button,a)"],
   ["filter", ".maya-filter"],
   ["reset", ".maya-reset"],
+  ["param", "[data-maya=param],[data-maya=params-reset],[data-maya=frame]"],
   ["play", ".maya-play"],
 ];

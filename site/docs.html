@@ -68,6 +68,7 @@
       <a href="#data-fields">Data fields</a>
       <a href="#encoding-fields">Encoding fields</a>
       <a href="#formatting-fields">Formatting fields</a>
+      <a href="#what-if-fields">Small multiples and what-if</a>
       <a href="#interaction-fields">Interaction fields</a>
       <a href="#time-axes">Time axes</a>
       <a href="#large-data">Large data</a>
@@ -668,8 +669,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>data order</td>
               <td>
                 Categories by total across all series (hidden ones too); "change" (dumbbell only) by
-                to minus from, largest gain first. bar line area heatmap dumbbell table radial
-                waffle orbit
+                to minus from, largest gain first. With facet it orders the panels instead. bar line
+                area heatmap dumbbell table radial waffle orbit
               </td>
             </tr>
             <tr>
@@ -679,8 +680,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>
                 Keep top N categories by signed total; rest roll up into "Other" with
                 re-aggregation. A bar with more categories than fit (past 10000 marks) does this on
-                its own when limit is unset, and says so in warnings. bar line area heatmap dumbbell
-                table radial waffle orbit
+                its own when limit is unset, and says so in warnings. With facet it keeps the top N
+                panels instead. bar line area heatmap dumbbell table radial waffle orbit
               </td>
             </tr>
           </tbody>
@@ -803,7 +804,9 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 A second face: a chart spec of any type but kpi over the kpi's rows (frame applied).
                 A Details button (text.flip, aria-pressed) turns the card over; view.face is "front"
                 or "back", so renderShell renders either; Escape returns. Its errors name
-                spec.back.&lt;path&gt;
+                spec.back.&lt;path&gt;. It takes the kpi's format, titles, locale, currency and
+                theme unless it sets them, and with limit it keeps just those rows (other defaults
+                to false): the example shows the top three months.
               </td>
             </tr>
             <tr>
@@ -851,7 +854,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 frame, the last by default (view.frame picks another), and its title becomes the
                 title plus the frame value (text.frameOf, formatted by the field's format). Value
                 axes span every frame, so they hold still while it plays. The element adds a Play
-                button. kpi: a scope such as YTD or All, one at a time
+                button (frameControl picks a slider, tabs or a select). kpi: a scope such as YTD or
+                All, one at a time
               </td>
             </tr>
             <tr>
@@ -1057,8 +1061,9 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 points point range density perCell mean perX rule log play pause frameOf frame was
                 since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
                 median q1 min rows ofPrevious ofFirst first last labelled peerMean brushed
-                brushCleared flip stacks unstacked stacked percent stream filter showMore crumbsX
-                before after
+                brushCleared flip stacks unstacked stacked percent stream filter showMore noMatch
+                moreMoves rowsOf crumbsX before after frames panelOf facets facetScales shared own
+                params resetParams
               </td>
             </tr>
             <tr>
@@ -1079,14 +1084,17 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>-</td>
               <td>
                 Visible heading and accessible name. Data tokens fill in from the chart: {max.x}
-                {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean} of the
-                active measure, formatted by <code>format</code>. Without a selector max, min, first
-                and last read one drawn point (stacked: the category totals) and total sums every
-                series. A series selector reads one series only, such as {last.y:2025} or
-                {total:2025}; an unknown series value stays as written. Scatter: max and min by y,
-                first and last by x, .x the x value or the name. With no rows a title holding a
-                token is dropped. Only these exact names are replaced; any other brace text stays as
-                written. In an element under 200 px tall it is one line with an ellipsis.
+                {max.y} {min.x} {min.y} {first.x} {first.y} {last.x} {last.y} {total} {mean}
+                {total.base} {count.below} {count.above} of the active measure, formatted by
+                <code>format</code>; {total.base} is {total} without <code>scale</code>, and the
+                counts are the drawn values below, and at or above, the colorBy target. Without a
+                selector max, min, first and last read one drawn point (stacked: the category
+                totals) and total sums every series. A series selector reads one series only, such
+                as {last.y:2025} or {total:2025}; an unknown series value stays as written. Scatter:
+                max and min by y, first and last by x, .x the x value or the name. With no rows a
+                title holding a token is dropped. Only these exact names are replaced; any other
+                brace text stays as written. In an element under 200 px tall it is one line with an
+                ellipsis.
               </td>
             </tr>
             <tr>
@@ -1670,6 +1678,23 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>Table row that shows the next page (spec.page): {0} = rows it adds.</td>
             </tr>
             <tr>
+              <td><code>noMatch</code></td>
+              <td>"No rows match \"{0}\""</td>
+              <td>Table whose filter matches no row: {0} = the search text.</td>
+            </tr>
+            <tr>
+              <td><code>moreMoves</code></td>
+              <td>"+{0} more"</td>
+              <td>Overflow row of a list: {0} = the moves not shown.</td>
+            </tr>
+            <tr>
+              <td><code>rowsOf</code></td>
+              <td>"{0} of {1}"</td>
+              <td>
+                Table row count when rows are paged or limited: {0} = rows shown, {1} = rows in all.
+              </td>
+            </tr>
+            <tr>
               <td><code>crumbsX</code></td>
               <td>"Column drill path"</td>
               <td>aria-label of the heatmap column breadcrumb (spec.xPath with drill).</td>
@@ -1683,6 +1708,140 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><code>after</code></td>
               <td>"After {0}"</td>
               <td>Drilled waterfall closing total: {0} = the drilled value.</td>
+            </tr>
+            <tr>
+              <td><code>frames</code></td>
+              <td>"Frame"</td>
+              <td>aria-label of the frame slider, tabs or select (spec.frameControl).</td>
+            </tr>
+            <tr>
+              <td><code>panelOf</code></td>
+              <td>"{0}, {1}"</td>
+              <td>
+                facet panel title and accessible name: {0} = the facet value, {1} = its formatted
+                total.
+              </td>
+            </tr>
+            <tr>
+              <td><code>facets</code></td>
+              <td>"One panel per {0}, {1} panels"</td>
+              <td>
+                Description of a facet chart: {0} = the facet field's title, {1} = panel count.
+              </td>
+            </tr>
+            <tr>
+              <td><code>facetScales</code></td>
+              <td>"Scale"</td>
+              <td>aria-label of the facetScale radiogroup.</td>
+            </tr>
+            <tr>
+              <td><code>shared</code></td>
+              <td>"Same scale"</td>
+              <td>facetScale option "shared".</td>
+            </tr>
+            <tr>
+              <td><code>own</code></td>
+              <td>"Own scale"</td>
+              <td>facetScale option "own".</td>
+            </tr>
+            <tr>
+              <td><code>params</code></td>
+              <td>"Adjust"</td>
+              <td>aria-label of the params group, and its button on a chart under 300 px wide.</td>
+            </tr>
+            <tr>
+              <td><code>resetParams</code></td>
+              <td>"Reset"</td>
+              <td>Button that puts every param back to its spec value.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="what-if-fields">
+        <h2>Small multiples, playback and what-if</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a class="spec-anchor" id="facet"></a><code>facet</code></td>
+              <td>field</td>
+              <td>
+                Small multiples: one panel per distinct value (data order, or by total with sort;
+                limit keeps the top n), each a chart titled with its value and total (text.panelOf),
+                in a grid with about the tile's aspect per panel and at most one column per 160 px;
+                past the tile height the grid scrolls. Panels under 240 x 150 px are sparklines
+                without axes. Every panel holds every category and series in the same order, so the
+                same x lights on every panel. With drill a click opens one panel full size with its
+                axes and was ghosts (view.drill); Back and Escape return. bar line area; not with
+                path, seriesPath, drillTo, frame or zoom
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="facetScale"></a><code>facetScale</code></td>
+              <td>"shared" / "own" / ["shared", "own"]</td>
+              <td>
+                Panels share one value axis (default) or fit their own; an array of both adds a
+                Scale control (text.facetScales, text.shared, text.own; view.facetScale). Needs
+                facet
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="frameControl"></a><code>frameControl</code></td>
+              <td>"play" / "slider" / "both" / "tabs" / "select"</td>
+              <td>
+                How the viewer moves between frames (default "play"; Play on the last frame starts
+                again): a range input (aria-label text.frames), Play beside it, the frame values as
+                tabs (a select when they do not fit or under 300 px wide) or a select. Each sets
+                view.frame. Needs frame
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="frameSpeed"></a><code>frameSpeed</code></td>
+              <td>ms</td>
+              <td>Milliseconds per frame while playing, 100 to 10000 (default 900). Needs frame</td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="trail"></a><code>trail</code></td>
+              <td>positive integer</td>
+              <td>
+                Each name draws its previous n frames as fading dots joined by a line; a selected
+                name shows its whole path. Dropped under 300 px wide. scatter with frame and name
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="other"></a><code>other</code></td>
+              <td>boolean</td>
+              <td>
+                With limit: false drops the rest instead of an "Other" category (a race keeps each
+                frame's own top N). Every type that takes limit
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="params"></a><code>params</code></td>
+              <td>[{id, label, min, max, step, value, suffix?, format?}]</td>
+              <td>
+                Up to 4 sliders the viewer sets (native range inputs) and a Reset button
+                (text.resetParams); under 300 px wide they sit in a popover behind a button
+                (text.params). view.params holds { id: value }.
+                <code>{ "param": "id" }</code> stands in for a number in colorBy target and warn and
+                in rules y, y2, x and band ends. Any type
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="scale"></a><code>scale</code></td>
+              <td>{where?, by: [param ids], mode?: "percent"}</td>
+              <td>
+                What-if: on rows matching every where field (all rows without it), each y field is
+                multiplied by (1 + p / 100) per param in by. Needs params; not with a ratio
+                aggregate
+              </td>
             </tr>
           </tbody>
         </table>
@@ -1743,8 +1902,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 first column, then continues one column at a time through any non-final node,
                 keeping the clicked node as its first column; a chord drills into one group's flows.
                 treemap sunburst sankey chord; bar line area dumbbell table heatmap radial waffle
-                hexmap waterfall marimekko with path; bar line area with seriesPath; heatmap with
-                xPath
+                hexmap waterfall marimekko with path; bar line area with seriesPath or facet (a
+                click opens one panel); heatmap with xPath
               </td>
             </tr>
             <tr>
@@ -2258,7 +2417,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>
                 <code
                   >{ measure, drill, window, hidden, form, stack, face, sortBy, frame, brush, peers,
-                  xDrill, expanded, page, filter }</code
+                  xDrill, expanded, page, filter, facetScale, params }</code
                 >; <code>{}</code> resets; no events on set
               </td>
             </tr>
@@ -2310,7 +2469,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>
                 <code
                   >{ measure, drill, window, hidden, form, stack, face, sortBy, brush, peers,
-                  xDrill, expanded, page, filter }</code
+                  xDrill, expanded, page, filter, frame, facetScale, params }</code
                 >
               </td>
               <td>
@@ -2318,7 +2477,9 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 picked, a kpi card turned over, a table sorted, a parallel axis brushed (brush:
                 [field, lo, hi] per axis), beeswarm peers selected, heatmap columns drilled
                 (xDrill), a table row or list move opened (expanded: its raw x, "" for none), more
-                table rows shown (page) or the table filtered (filter) (user actions only)
+                table rows shown (page), the table filtered (filter), a frame picked from a slider,
+                tabs or select (frame), a facet scale switched (facetScale) or a param slider moved
+                or reset (params: { id: value }) (user actions only)
               </td>
             </tr>
             <tr>
@@ -3175,6 +3336,24 @@ await chart.settled; // drawn and still</code></pre>
   "data": [{ "month": "Jan", "year": "2024", "sales": 10 },
            { "month": "Jan", "year": "2025", "sales": 12 }] }</code></pre>
         <p>Last year is dashed, and each line labels its highest and its last value.</p>
+        <h3>20. Small multiples</h3>
+        <pre><code>{ "type": "area", "x": "quarter", "y": "sales", "facet": "store",
+  "facetScale": ["shared", "own"], "sort": "desc", "drill": true, "was": "lastYear",
+  "data": [{ "store": "NV", "quarter": "2025-01-01", "sales": 2.1e6, "lastYear": 2.0e6 }] }</code></pre>
+        <p>One area per store, largest first; a click opens a store against last year.</p>
+        <h3>21. Bubble race with a scrubber and trails</h3>
+        <pre><code>{ "type": "scatter", "x": "units", "y": "price", "size": "sales", "name": "item",
+  "frame": "quarter", "frameControl": "both", "frameSpeed": 600, "trail": 4,
+  "data": [{ "item": "Jackets", "quarter": "Q1 2025", "units": 90000, "price": 80, "sales": 7.2e6 }] }</code></pre>
+        <p>Play or drag through the quarters; each item leaves its last four positions behind.</p>
+        <h3>22. What-if levers</h3>
+        <pre><code>{ "type": "bar", "x": "Month", "y": "Sales", "series": "Kind", "stack": true,
+  "params": [{ "id": "price", "label": "Price per unit", "min": -20, "max": 20,
+               "step": 1, "value": 0, "suffix": "%" }],
+  "scale": { "where": { "Kind": "Projected" }, "by": ["price"] },
+  "title": "Year-end {total}, {total.base} before the change",
+  "data": [{ "Month": "Oct", "Kind": "Projected", "Sales": 14.2 }] }</code></pre>
+        <p>The slider scales the projected months; the title follows.</p>
       </section>
     </main>
     <script type="module">

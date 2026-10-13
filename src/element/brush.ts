@@ -8,8 +8,9 @@
  * paint; Up/Down move the range a tenth of the axis, Shift+Up/Down grow/shrink it, Delete clears.
  */
 import { t } from "../core/strings.ts";
+import { key as enc } from "../core/svg.ts";
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
-import { listen } from "./listen.ts";
+import { listen, swallowClick } from "./listen.ts";
 
 export type BrushEvent =
   | { type: "brush"; field: string; lo: number; hi: number }
@@ -53,6 +54,17 @@ export const reduce = (s: State, e: BrushEvent): State => {
 const MIN = 4; // px of movement before a press is a drag
 const num = (s: string | null) => (s ?? "").trim().split(/\s+/).map(Number);
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
+/** The value `f` of the way down an axis rect (its `data-yd` is "lo hi", top = hi). */
+const val = (ax: Element, f: number) => {
+  const [lo = 0, hi = 1] = num(ax.getAttribute("data-yd"));
+  return hi - f * (hi - lo);
+};
+const rect = (svg: Element) => {
+  const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  r.setAttribute("data-maya", "brush");
+  svg.append(r);
+  return r;
+};
 
 export const mount = (host: Host): Handlers => {
   const { root } = host;
@@ -62,10 +74,31 @@ export const mount = (host: Host): Handlers => {
   const unpend = () => (pend?.el.remove(), (pend = undefined));
   let said = JSON.stringify(host.state().view.brush ?? []);
 
+  let want: (readonly [string, number, number])[] | undefined; // the ranges the lines should show right now
+  let frame = 0;
+  /** Fade lines in or out against `rs` now, without a render: the drag shows its filter live. */
+  const preview = (rs: readonly (readonly [string, number, number])[]) => {
+    const gone = new Map<string, boolean>();
+    for (const e of root.querySelectorAll("path[data-maya=line],circle[data-maya=mark]")) {
+      const c = e.getAttribute("data-c") ?? "";
+      if (!gone.has(c))
+        gone.set(
+          c,
+          rs.some(([f, lo, hi]) => {
+            const v = root
+              .querySelector(`circle[data-c="${c}"][data-key$="~${enc(f)}"]`)
+              ?.getAttribute("data-y");
+            return v == null || +v < lo || +v > hi;
+          }),
+        );
+      e.toggleAttribute("data-off", gone.get(c));
+    }
+  };
   const stop = () => {
     band?.remove();
-    band = down = undefined;
+    band = down = want = undefined;
   };
+  const undo = () => (band && preview(host.state().view.brush ?? []), stop());
   /** Pointer height on the axis rect: 0 at its top, 1 at its bottom. */
   const frac = (d: NonNullable<typeof down>, e: PointerEvent) => {
     const r = d.svg.getBoundingClientRect();
@@ -94,9 +127,7 @@ export const mount = (host: Host): Handlers => {
       } catch {
         /* capture is best-effort */
       }
-      band = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      band.setAttribute("data-maya", "brush");
-      svg.append(band);
+      band = rect(svg);
     }
     const y = +ax.getAttribute("y")!,
       h = +ax.getAttribute("height")!;
@@ -106,6 +137,13 @@ export const mount = (host: Host): Handlers => {
     band.setAttribute("width", ax.getAttribute("width")!);
     band.setAttribute("y", String(y + Math.min(a, b) * h));
     band.setAttribute("height", String(Math.abs(a - b) * h));
+    const f = ax.getAttribute("data-field")!,
+      [u, w] = [val(ax, a), val(ax, b)];
+    want = [
+      ...(host.state().view.brush ?? []).filter((r) => r[0] !== f),
+      [f, Math.min(u, w), Math.max(u, w)],
+    ];
+    frame ||= requestAnimationFrame(() => ((frame = 0), want && preview(want)));
   };
   const onUp = (ev: Event) => {
     const e = ev as PointerEvent;
@@ -123,46 +161,34 @@ export const mount = (host: Host): Handlers => {
     if (!dragged) {
       const f = frac(d, e),
         was = pend?.el.isConnected && pend.field === field ? pend.f : undefined;
-      const [lo = 0, hi = 1] = num(d.ax.getAttribute("data-yd"));
-      const v = (g: number) => hi - g * (hi - lo);
       const had = s.view.brush?.some((b) => b[0] === field);
       unpend();
       if (had || was !== undefined)
         return void host.commit(
           reduce(
             s,
-            had ? { type: "clear", field } : { type: "brush", field, lo: v(f), hi: v(was!) },
+            had
+              ? { type: "clear", field }
+              : { type: "brush", field, lo: val(d.ax, f), hi: val(d.ax, was!) },
           ),
           null,
         );
       // First end of a click-click range: the same rect as a drag, hairline thin.
-      const [x, y, w, h] = ["x", "y", "width", "height"].map((k) => d.ax.getAttribute(k)!) as [
-        string,
-        string,
-        string,
-        string,
-      ];
-      const el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      el.setAttribute("data-maya", "brush");
-      el.setAttribute("x", x);
-      el.setAttribute("width", w);
-      el.setAttribute("y", String(+y + f * +h));
+      const el = rect(d.svg);
+      el.setAttribute("x", d.ax.getAttribute("x")!);
+      el.setAttribute("width", d.ax.getAttribute("width")!);
+      el.setAttribute("y", String(+d.ax.getAttribute("y")! + f * +d.ax.getAttribute("height")!));
       el.setAttribute("height", "1");
-      d.svg.append(el);
       return void (pend = { f, field, el });
     }
     // The click that follows a drag would clear the selection: eat it.
-    const eat = (c: Event) => c.stopPropagation();
-    root.addEventListener("click", eat, { capture: true, once: true });
-    setTimeout(() => root.removeEventListener("click", eat, { capture: true }), 0);
-    const [lo = 0, hi = 1] = num(d.ax.getAttribute("data-yd"));
-    const v = (f: number) => hi - f * (hi - lo);
+    swallowClick(root);
     host.commit(
       reduce(s, {
         type: "brush",
         field,
-        lo: v(frac(d, e)),
-        hi: v(frac(d, { clientY: d.y } as PointerEvent)),
+        lo: val(d.ax, frac(d, e)),
+        hi: val(d.ax, frac(d, { clientY: d.y } as PointerEvent)),
       }),
       null,
     );
@@ -197,12 +223,12 @@ export const mount = (host: Host): Handlers => {
     ["pointerdown", onDown],
     ["pointermove", onMove],
     ["pointerup", onUp],
-    ["pointercancel", stop],
+    ["pointercancel", undo],
   );
   return {
     cancel() {
       if (!band && !pend) return false;
-      stop();
+      undo();
       unpend();
       return true;
     },

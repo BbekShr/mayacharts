@@ -17,7 +17,7 @@ export type MeasureEvent =
   | SpecEvent;
 
 const RADIO = ".maya-ctl [role=radio]";
-type Kind = "form" | "stack" | "measure";
+type Kind = "form" | "stack" | "measure" | "frame" | "facetScale";
 
 export const reduce = (s: State, e: MeasureEvent): State => {
   if (e.type === "spec") {
@@ -43,7 +43,14 @@ export const mount = (host: Host): Handlers => {
   ];
   const kind = (g: Element): Kind => {
     const d = g.getAttribute("data-maya");
-    return d === "form" || d === "stack" ? d : "measure";
+    return d === "form" || d === "stack" || d === "frame" || d === "facetScale" ? d : "measure";
+  };
+  /** The checked radio: the view's index, or for frame and facetScale (defaults live in core) what the core drew. */
+  const now = (g: HTMLElement): number => {
+    const k = kind(g);
+    return k === "frame" || k === "facetScale"
+      ? radios(g).findIndex((r) => r.getAttribute("aria-checked") === "true")
+      : (host.state().view[k] ?? 0);
   };
   let kbd: Kind | undefined; // the last change came from the keyboard: keep focus on that group's active radio
 
@@ -52,6 +59,16 @@ export const mount = (host: Host): Handlers => {
     const spec = host.spec();
     const ys = spec && Array.isArray(spec.y) ? (spec.y as string[]) : [];
     const s = host.state();
+    if (k === "frame" || k === "facetScale") {
+      const to = k === "frame" ? index : (spec?.facetScale as readonly string[])[index];
+      if (to === undefined || index === now(g)) return;
+      host.commit({ ...s, view: { ...s.view, [k]: to } });
+      return host.announce(
+        k === "frame"
+          ? t(spec ?? {}, "frame", index + 1, radios(g).length)
+          : t(spec ?? {}, "showing", radios(g)[index]?.textContent ?? ""),
+      );
+    }
     const next = reduce(s, {
       type: k,
       index,
@@ -96,7 +113,7 @@ export const mount = (host: Host): Handlers => {
     if (to < 0) return;
     e.preventDefault();
     kbd = kind(g);
-    if (to === (host.state().view[kind(g)] ?? 0))
+    if (to === now(g))
       painted(); // already active (e.g. Home on first)
     else pick(g, to);
     all[to]?.focus({ preventScroll: true });
@@ -104,12 +121,14 @@ export const mount = (host: Host): Handlers => {
 
   const painted = (): void => {
     for (const g of host.root.querySelectorAll<HTMLElement>(".maya-ctl")) {
-      const m = host.state().view[kind(g)] ?? 0;
+      const m = now(g);
       const all = radios(g);
-      all.forEach((r, i) => {
-        r.setAttribute("aria-checked", String(i === m));
-        r.setAttribute("tabindex", i === m ? "0" : "-1");
-      });
+      // frame and facetScale are drawn by core
+      if (!/^f[ra]/.test(kind(g)))
+        all.forEach((r, i) => {
+          r.setAttribute("aria-checked", String(i === m));
+          r.setAttribute("tabindex", i === m ? "0" : "-1");
+        });
       if (kbd === kind(g)) {
         kbd = undefined;
         all[m]?.focus({ preventScroll: true });

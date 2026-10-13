@@ -17,3 +17,5 @@ site/ssr.html
 # /brag launch-video output
 brag-output*/
 .vitest/
+.agent-*.mjs
+.lab.mjs

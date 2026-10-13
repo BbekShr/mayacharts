@@ -80,6 +80,7 @@ const TYPES = [
   "units",
   "orbit",
   "constellation",
+  "list",
   "__proto__",
   "toString",
   "pie",

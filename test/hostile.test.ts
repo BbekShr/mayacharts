@@ -86,6 +86,14 @@ const BASE: Record<string, (c: unknown, s: unknown, n: unknown) => S> = {
   weave: (c, s, n) => ({ type: "weave", x: "c", y: "v", series: "s", data: D(c, s, n) }),
   units: (c, s, n) => ({ type: "units", x: "c", y: "v", name: "n", data: D(c, s, n) }),
   orbit: (c, s, n) => ({ type: "orbit", x: "c", y: "v", y2: "v", data: D(c, s, n) }),
+  list: (c, s, n) => ({
+    type: "list",
+    x: "c",
+    y: "v",
+    path: ["c", "s"],
+    body: "n",
+    data: D(c, s, n),
+  }),
   constellation: (c, s, n) => ({
     type: "constellation",
     x: "c",
@@ -268,4 +276,73 @@ describe("unsafe CSS values are rejected", () => {
       render(base({ colors: ["oklch(.6 .17 30)"], theme: { accent: "#0b6" } }) as never),
     ).not.toThrow();
   });
+});
+
+// Option slots added with facet, params, filter, expand, back, drillTo and frames, and the NUL field.
+describe("hostile strings: M4/M5 option slots", () => {
+  const rows = (p: string) => D(p, p, p).map((r) => ({ ...r, k: p }));
+  const bar = (p: string, extra: S = {}): S => ({
+    type: "bar",
+    x: "c",
+    y: "v",
+    series: "s",
+    data: rows(p),
+    ...extra,
+  });
+  const cases: Record<string, (p: string) => [S, S?]> = {
+    facet: (p) => [bar(p, { facet: "k" })],
+    facetScale: (p) => [
+      bar(p, { facet: "k", facetScale: ["shared", "own"] }),
+      { facetScale: "own" },
+    ],
+    "params id __proto__": (p) => [
+      bar(p, { params: [{ id: "__proto__", label: p, min: 0, max: 9, step: 1, value: 2 }] }),
+      { params: { __proto__: 5, [p]: 3 } },
+    ],
+    "rules param": (p) => [
+      bar(p, {
+        params: [{ id: "a", label: p, min: 0, max: 9, step: 1, value: 2 }],
+        rules: [{ y: { param: "a" }, label: p }],
+      }),
+      { params: { a: 4, [p]: 4 } },
+    ],
+    filter: (p) => [
+      { type: "table", x: "c", y: ["v"], filter: true, data: rows(p) },
+      { filter: p },
+    ],
+    expand: (p) => [
+      { type: "table", x: "c", y: ["v"], expand: { type: "bar", x: "s", y: "v" }, data: rows(p) },
+      { expanded: p },
+    ],
+    back: (p) => [
+      {
+        type: "kpi",
+        x: "c",
+        y: "v",
+        back: { type: "bar", x: "c", y: "v", title: p },
+        data: rows(p),
+      },
+      { face: "back" },
+    ],
+    // the NUL-prefixed was field of drillTo "previous" carries the previous series name as its title
+    drillTo: (p) => [
+      bar(p, { type: "line", drillTo: { type: "bar", x: "c", y: "v", was: "previous" } }),
+      { drill: ["T"] },
+    ],
+    frameControl: (p) => [bar(p, { frame: "s", frameControl: "both" }), { frame: 1 }],
+  };
+  for (const [name, mk] of Object.entries(cases))
+    it(`${name} is inert`, () => {
+      let drawn = 0;
+      for (const p of PAYLOADS) {
+        const [spec, view] = mk(p);
+        for (const f of [render, renderShell] as const) {
+          const out = run(() => f(spec as never, view ? ({ view } as never) : undefined));
+          if (out === "skip" || out === "rejected") continue;
+          drawn++;
+          expect(problems(out), `${name} ${JSON.stringify(p)}`).toEqual([]);
+        }
+      }
+      expect(drawn, "fixture must render, not just be rejected").toBeGreaterThan(0);
+    });
 });

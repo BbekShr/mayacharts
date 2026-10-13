@@ -195,8 +195,8 @@ describe("theme css", () => {
       expect(css, h).toContain(h);
     expect(css).not.toContain("style=");
   });
-  it("gzips under 5300 bytes", () => {
-    expect(gzipSync(css).length).toBeLessThan(5300);
+  it("gzips under 7110 bytes", () => {
+    expect(gzipSync(css).length).toBeLessThan(7110);
   });
   it("narrow containers compact the legend, never hide it", () => {
     expect(css).toContain(

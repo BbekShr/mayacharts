@@ -1,7 +1,7 @@
 /*
  * Frame playback (spec.frame). Same contract as measure.ts. Markup: the `.maya-play` button the
  * core appends to the controls. The shown frame is view.frame (default the last); a timer steps
- * it and stops at the last. Playing is not state: the spec changing, or the element leaving the
+ * it (every spec.frameSpeed ms) and stops at the last or when a frame control moves it. Playing is not state: the spec changing, or the element leaving the
  * page, stops it. Persistence: view.frame resets when spec.frame changes.
  */
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
@@ -14,7 +14,7 @@ export const reduce = (s: State, e: SpecEvent): State => {
   return { ...s, view };
 };
 
-// ponytail: one fixed step interval, no speed control; add a spec field if hosts ask.
+// spec.frameSpeed: ms per step.
 const STEP = 900;
 
 export const mount = (host: Host): Handlers => {
@@ -41,10 +41,11 @@ export const mount = (host: Host): Handlers => {
     let i = Math.min(host.state().view.frame ?? n, n - 1);
     if (i >= n - 1) show((i = 0));
     timer = setInterval(() => {
-      if (host.spec() !== spec) return stop();
+      // The spec changed, or the viewer picked a frame with a control: stop.
+      if (host.spec() !== spec || host.state().view.frame !== i) return stop();
       show(++i);
       if (i >= n - 1) stop();
-    }, STEP);
+    }, spec.frameSpeed ?? STEP);
     painted();
   };
 

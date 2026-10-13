@@ -20,6 +20,14 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **List evidence format**: evidence values use the move's own format unless the evidence row sets one; the evidence scale is local to each move and never compares across moves.
 - **Table strips**: each strip square is a mark, so a row adds `last` keyboard stops.
 - **Table without a first bar**: with `bars` "none" on the first measure, a row's tooltip comes from the row label.
+- **Waterfall axis**: when every running total is positive and their spread is under half the highest, the value axis starts one spread below the lowest and the total bars break at the axis; the 2:1 trigger is fixed, `yDomain` overrides it.
+- **Narrow table**: columns that do not fit are dropped from the right, and an 18 px strip at the header's end says "+n".
+- **Drilled marimekko**: segments are tints of the column's colour (steps repeat after 8 siblings); the series legend still shows the plain slot colours.
+- **Line and area was**: the ghost is a dashed line per series, drawn under the line; a gap in `was` breaks it.
+- **Facet panels**: at least 160 x 110 px each (past that the grid scrolls) and sparklines under 240 x 150 px. Panels share the hidden data table of the whole chart, which sums over the facets. A line or area thinned past its point budget thins each panel on its own, so the kept x values may differ between panels. Sub-charts (`back`, `expand`, `drillTo`) and facet panels cannot reference `params`. Drilling into or out of a facet panel crossfades; the panel box does not zoom.
+- **Params**: at most 4 sliders, one `scale` entry, and percent mode only; `scale` multiplies every `y` field of the matching rows. `{ param }` refs work in colorBy `target` and `warn` and rules `y`, `y2`, `x` and band ends, not in `yDomain`, slopes or other numbers. The warn-below-target check uses the params' spec values.
+- **Trails**: one position per name and frame (the name's first row in that frame).
+
 - Theme `heroSize` and `labelSize` cap the fitted kpi, gauge and hexmap sizes in px only; `rem`, `em` and `calc()` values do not cap (the fit stands).
 - Tints (`tint`, `data-lt`) only mix toward the ink, so a step never loses contrast on the page; there is no lighter-than-the-series step in light mode.
 
@@ -186,3 +194,4 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Diverging bar chart**: use `colorBy: { target: 0 }` to tone positive and negative bars differently.
 - **Complex drill UI**: listen to `maya-select` and `maya-view` events and control `el.view` and `el.selected` from your app.
 - **Stacked negative bars**: supported (negatives stack below zero); for a running total use `waterfall`.
+- **Facet and expand motion**: in WebKit a surviving facet panel jumps to its new cell (WebKit ignores CSS transform on a nested svg). A line drillTo has no zoom box and pops in. An opened list move and its evidence rows overlap for about 120 ms. Two thin drilled marimekko columns side by side can overprint their short names.

@@ -169,8 +169,12 @@ export function frame(
   const edge = bt ?? tt; // tick labels centred on the plot's ends need half their width as margin
   const lt = ly && ly.kind === "linear" ? ticks(spec, ly, fmt, compact ? 3 : 5) : null;
   // Band labels go through the field's format (month presets on x); left ones are cut at 40%.
+  // heatmap xPath columns that drill further end in a chevron (MED18).
+  const cue = spec.type === "heatmap" && spec.drill && spec.xDrilled.length < spec.xPath.length - 1;
   const bLab =
-    bx && !bt && !tt ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c)) : [];
+    bx && !bt && !tt
+      ? (bx.domain as readonly string[]).map((c) => fmt(bx.field, c) + (cue ? " ›" : ""))
+      : [];
   const lFull = ly && !lt ? (ly.domain as readonly string[]).map((c) => fmt(ly.field, c)) : [];
   const lLab = lt ? lt.labels : lFull.map((c) => clip(c, W * 0.4 - 8));
   const rt = ry && ry.kind === "linear" ? ticks(spec, ry, fmt, compact ? 3 : 5) : null;
@@ -363,7 +367,12 @@ export function frame(
       const slot = plot.w / bLab.length - 8;
       // 3 characters and the ellipsis need about 27 px.
       // Labels a cut would make identical ("20…" x 8) are thinned and kept longer instead.
-      const cut = bLab.map((c) => clip(c, slot)).filter((t, i) => t !== bLab[i]);
+      // A cut that saves 2 characters or fewer is not worth an ellipsis: the label stays whole.
+      const soft = (c: string, max: number) => {
+        const t = clip(c, max);
+        return [...c].length - [...t].length <= 2 ? c : t;
+      };
+      const cut = bLab.map((c) => soft(c, slot)).filter((t, i) => t !== bLab[i]);
       const few =
         (bLab.length <= 8 || slot >= 60) &&
         (slot >= 27 || maxW(bLab) - 8 <= slot) &&
@@ -373,7 +382,7 @@ export function frame(
         if (i % every) return;
         // Each label owns `every` slots but must also stay inside the svg (first and last sit near the edges).
         const cx = b.at(i) + b.bandwidth / 2;
-        const t = clip(
+        const t = soft(
           c,
           Math.min((every * plot.w) / bLab.length - 8, 2 * Math.min(cx, W - cx) - 8),
         );

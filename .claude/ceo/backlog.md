@@ -20,6 +20,8 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 - **Trim decisions** (2026-10-12 light): HINTS text (about 520 B), the en-US fast format path (about 200 B) and the `light-dark()` fallback (about 100 B, sets the browser floor) are the only trims left above 50 B. Owner: human.
 
+- **Lazy validate error path** (2026-10-12, BibekTS #78-#93): `validate.ts` is about 18 KB gzip of index.js, mostly error and hint code that only runs on a bad spec. A lazily loaded chunk could save 8 to 12 KB on index and element; it changes the bundle layout. Owner: human, then core engineer.
+
 ## Open
 
 - **README gauge picture**: the README gallery grid has no gauge (needs `scripts/readme-shots.mjs`). Owner: chart designer.
@@ -61,3 +63,5 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 - **Select clears on any document click**, including a host's own button outside the chart; document it in the select docs. Owner: core engineer.
 - **Element trims with motion risk** (2026-10-12): `run()` in animate.ts via `a.finished.then(then, then)` plus the timeout (about 45 B), and the tooltip crosshair opacity left to `[data-on]` (about 35 B). Frame checks at 0, 120 and 270 ms in chromium and webkit first. Owner: element engineer.
 - **Security LOW** (2026-10-12): host `cell()` unwraps any object with `v` or `value` (document it in the host docs); the release SRI loop should `test -e "$f"`. Owner: core engineer, human (workflow file).
+- **M5 motion leftovers** (2026-10-12): WebKit facet panels jump (a `<g>` wrapper in core markup would let them slide), line drillTo has no zoom box, list expand overlap about 120 ms, kpi toggle e2e flaked once while builds ran. Owner: element engineer (core for the wrapper).
+- **axe has never seen the M5 surfaces**: the gallery has no facet, params, list, frame tabs or slider, table filter or paging. Add gallery tiles or an a11y e2e fixture. Owner: element engineer.

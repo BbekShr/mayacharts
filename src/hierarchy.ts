@@ -151,10 +151,9 @@ function setup(ctx: MarkCtx, levels = Infinity, hue: number | null = null) {
 const text = (s: string) => s.length * 7.2 + 4;
 
 /** spec.tint: step 1..7 (data-lt, step 0 is the parent's own colour) of sibling `i` of `n`, evenly spaced; only below the parent's own level (a drilled view's first level included). */
+const tintStep = (i: number, n: number) => 1 + Math.round((6 * i) / Math.max(1, n - 1));
 const spread = (ctx: MarkCtx, depth: number, i: number, n: number) =>
-  ctx.spec.tint && depth + ctx.spec.drilled.length > 1
-    ? 1 + Math.round((6 * i) / Math.max(1, n - 1))
-    : null;
+  ctx.spec.tint && depth + ctx.spec.drilled.length > 1 ? tintStep(i, n) : null;
 
 /** Sunburst depth shading: ring 2 is step 3, ring 3 and beyond step 6 (ring 1 is the branch colour). */
 const shade = (depth: number) => (depth > 1 ? 3 * Math.min(3, depth) - 3 : null);
@@ -435,6 +434,7 @@ export const marimekko: Mark = {
     let grid = "";
     let labels = "";
     const on = spec.labels !== false;
+    const drilled = spec.drilled.length > 0;
     const txt = (x: number, y: number, s: string, a: Record<string, string | number>) =>
       el("text", { x: r(x), y: r(y), "text-anchor": "middle", "data-in": true, ...a }, esc(s));
     // Scale: gridlines behind the columns show through the gaps; ticks stay inside the plot.
@@ -464,7 +464,11 @@ export const marimekko: Mark = {
           "data-maya": "mark",
           "data-key": key(series[si], cat),
           "data-c": ci,
-          "data-s": si % 8,
+          // ponytail: tint steps repeat after 8 siblings; the legend keeps the plain slots.
+          // Drilled: the column is the colour (its slot), the segments are tints of it, so more than 8
+          // children never repeat a slot and the hue keeps the parent's meaning.
+          "data-s": (drilled ? ci : si) % 8,
+          "data-lt": drilled ? si % 8 : null,
           "data-x": name,
           "data-series": series[si],
           "data-y": v,
@@ -480,14 +484,18 @@ export const marimekko: Mark = {
         // Share, plus the series name above it when the segment is tall and wide enough.
         if (on && h >= 18 && text(share) <= w) {
           const two = h >= 40 && text(series[si]!) <= w;
+          // A tinted segment's label carries its colour attributes: the ink follows the fill (data-ink=a).
+          const k = drilled ? { "data-s": a["data-s"], "data-lt": si % 8 } : {};
           if (two)
             labels += txt(cx, cy - 8, series[si]!, {
               "dominant-baseline": "middle",
-              "data-ink": "n",
+              "data-ink": drilled ? "a" : "n",
+              ...k,
             });
           labels += txt(cx, cy + (two ? 8 : 0), share, {
             "dominant-baseline": "middle",
-            "data-ink": "",
+            "data-ink": drilled ? "a" : "",
+            ...k,
           });
         }
       }
@@ -496,9 +504,16 @@ export const marimekko: Mark = {
       const full = `${name} · ${gs}`;
       const room = Math.floor((w + gap - 4) / 7.2); // chars that fit; a name is cut, never swapped for a bare share
       const fit =
-        full.length <= room ? full : name.length <= room ? name : room >= 4 ? clip(name, room) : "";
+        full.length <= room ? full : name.length <= room ? name : room >= 2 ? clip(name, room) : ""; // a thin column keeps its first letter and an ellipsis
       // Too narrow for one line: the name over its share, both kept.
       const two = fit !== full && gs.length <= room && fit.length > 3;
+      // ponytail: a column too thin for any name gets six characters beside it (the last column ends its label
+      // at its edge, the others start theirs there); a neighbour's label can touch it.
+      if (on && !fit && w < 12 && w > 0)
+        labels += txt(ci === categories.length - 1 ? x + w : x, bot + 17, clip(name, 6), {
+          "data-col": "",
+          "text-anchor": ci === categories.length - 1 ? "end" : "start",
+        });
       if (on && fit) {
         labels += txt(x + w / 2, bot + (two ? 10 : 17), fit, { "data-col": "" });
         if (two) labels += txt(x + w / 2, bot + 22, gs, { "data-col": "" });
@@ -531,10 +546,7 @@ export const waffle: Mark = {
     // A drilled waffle (spec.hue): the children are tints of the parent's hue, by position, like the treemap.
     const hue = (ci: number) => ({
       "data-s": (spec.hue ?? ci) % 8,
-      "data-lt":
-        spec.hue === null
-          ? null
-          : 1 + Math.round((6 * ci) / Math.max(1, shaped.categories.length - 1)),
+      "data-lt": spec.hue === null ? null : tintStep(ci, shaped.categories.length),
     });
     let marks = "";
     let hits = "";

@@ -48,7 +48,7 @@ import type {
   ResolvedGoal,
   ResolvedSpec,
   Row,
-  Rule,
+  Param,
   ThemeTokens,
   View,
 } from "./types.ts";
@@ -77,10 +77,10 @@ export const MAX_POINTS = 1000;
 const w = (s: string) => s.split(" ");
 const S: Record<string, "string" | "boolean"> = Object.fromEntries([
   ...w(
-    "$schema x y2 series size name title subtitle description locale currency frame start body rowFormat",
+    "$schema x y2 series size name title subtitle description locale currency frame start body rowFormat facet",
   ).map((k) => [k, "string"]),
   ...w(
-    "horizontal labels endLabels drill drillOut zoom grid xAxis yAxis table animate tint brush zero toggle scroll filter",
+    "horizontal labels endLabels drill drillOut zoom grid xAxis yAxis table animate tint brush zero toggle scroll filter other",
   ).map((k) => [k, "boolean"]),
 ]);
 /** Every spec key (schema.json is tested against this). */
@@ -91,6 +91,7 @@ export const KEYS = [
   ...w("was tooltip xScale yScale annotate dash depth minAngle legend form emphasis colorScale"),
   ...w("colors colorBy theme compare numberMotion back arc"),
   ...w("seriesPath xPath expand drillTo page bars columns cells"),
+  ...w("facetScale frameControl frameSpeed trail params scale"),
   ...Object.keys(S),
 ];
 const CART = ["bar", "line", "area"];
@@ -117,11 +118,13 @@ export const ALL_Y = ["parallel", "table", "funnel", "constellation", "kpi"];
 /** Option -> types that accept it (option-unsupported otherwise). */
 const CPA = "bar,line,area";
 const PTH = "treemap,sunburst,sankey,chord";
+const FRM = `${CPA},scatter,dumbbell,kpi`;
+const LIM = `${CPA},heatmap,dumbbell,table,waffle,radial,orbit`;
 const DRL = `${CPA},dumbbell,table,heatmap,marimekko,radial,waffle,hexmap,waterfall,${PTH}`;
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `seriesPath:${CPA} xPath:heatmap start:waterfall expand:table,list drillTo:line page:table scroll:table filter:table bars:table,list columns:table cells:table body:list rowFormat:list ` +
-      `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge,heatmap forms:units size:scatter,beeswarm,constellation name:scatter,beeswarm,boxplot,units path:${DRL},list totals:waterfall,heatmap series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation,weave xDomain:scatter drill:${DRL} drillOut:${DRL} depth:treemap minAngle:sunburst select:${CPA},waterfall,scatter,heatmap,kpi,dumbbell,ridgeline,beeswarm,parallel,table,list,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter,dumbbell,beeswarm frame:${CPA},scatter,dumbbell,kpi xScale:scatter yScale:line,scatter,beeswarm annotate:${CPA},scatter dash:line,area,radial emphasis:line form:radial colorScale:heatmap,hexmap tint:${PTH},waffle,weave brush:parallel zero:dumbbell toggle:kpi,gauge compare:kpi numberMotion:kpi back:kpi arc:gauge`,
+    `seriesPath:${CPA} facet:${CPA} facetScale:${CPA} frameControl:${FRM} frameSpeed:${FRM} trail:scatter other:${LIM} xPath:heatmap start:waterfall expand:table,list drillTo:line page:table scroll:table filter:table bars:table,list columns:table cells:table body:list rowFormat:list ` +
+      `horizontal:bar,dumbbell y2:bar,orbit was:bar,line,area,kpi,gauge,heatmap forms:units size:scatter,beeswarm,constellation name:scatter,beeswarm,boxplot,units path:${DRL},list totals:waterfall,heatmap series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${LIM} stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation,weave xDomain:scatter drill:${DRL} drillOut:${DRL} depth:treemap minAngle:sunburst select:${CPA},waterfall,scatter,heatmap,kpi,dumbbell,ridgeline,beeswarm,parallel,table,list,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter,dumbbell,beeswarm frame:${FRM} xScale:scatter yScale:line,scatter,beeswarm annotate:${CPA},scatter dash:line,area,radial emphasis:line form:radial colorScale:heatmap,hexmap tint:${PTH},waffle,weave brush:parallel zero:dumbbell toggle:kpi,gauge compare:kpi numberMotion:kpi back:kpi arc:gauge`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -183,7 +186,7 @@ const HINTS: Record<string, string> = {
   warn: "Use colorBy: { target: n, warn: n } (kpi, gauge).",
   min: DOM,
   max: DOM,
-  scale: LOG,
+  "scale:string": LOG,
   logScale: LOG,
   interaction: "Click selects; double-click or Shift+Enter drills.",
   styles: 'Use dash: ["<series value>"].',
@@ -205,6 +208,11 @@ const HINTS: Record<string, string> = {
   search: "Use filter: true (table).",
   dimensions: 'Use columns: ["<text field>"] (table).',
   sparkline: 'Use cells: { <title>: { type: "strip", field, by } } (table).',
+  smallMultiples: 'Use facet: "<field>" (bar, line, area).',
+  facetBy: 'Use facet: "<field>".',
+  sliders: "Use params: [{ id, label, min, max, step, value }].",
+  scrubber: 'Use frameControl: "slider" or "both".',
+  speed: "Use frameSpeed: <ms per frame>.",
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -260,7 +268,12 @@ export const ratios = (a: ChartSpec["aggregate"]): [string, readonly string[]][]
   );
 };
 const show = (v: unknown) => {
-  const t = typeof v === "string" || isObj(v) || Array.isArray(v) ? JSON.stringify(v) : String(v);
+  let t: string;
+  try {
+    t = typeof v === "string" || isObj(v) || Array.isArray(v) ? JSON.stringify(v) : String(v);
+  } catch {
+    t = "[too deep]"; // a RangeError on deep JSON, a TypeError on a cycle
+  }
   return t.length > 60 ? t.slice(0, 59) + "…" : t;
 };
 
@@ -344,7 +357,10 @@ const themeParts = (th: unknown): [string | null, unknown] =>
 /** spec.theme as tokens: a name (or [name, overrides]) resolved through the registry. */
 export const themeOf = (th: ChartSpec["theme"]): ThemeTokens => {
   const [n, over] = themeParts(th ?? {});
-  return { ...(n === null ? {} : THEMES.get(n)), ...(over as ThemeTokens) };
+  const named = n === null ? undefined : THEMES.get(n);
+  // The registry is shared by every bundle on the page: check what it hands back, not only what we put in.
+  if (named) tokens(named, `theme ${JSON.stringify(n)}: `);
+  return { ...named, ...(over as ThemeTokens) };
 };
 
 /**
@@ -440,18 +456,25 @@ const format = (path: string, v: unknown, locale: string) => {
 };
 
 /** Table-driven option checks: [key, expected shape, predicate]. Applied only when the key is set. */
-const CHECKS: [string, string, (v: any) => boolean][] = [
+type CHK = [string, string, (v: any) => boolean];
+const CHECKS: CHK[] = [
   [
     "y",
     "a field name or a non-empty array of field names",
     (v) => typeof v === "string" || strs(v, 1),
   ],
-  ["path", "a non-empty array of field names", (v) => strs(v, 1)],
-  ["seriesPath", "a non-empty array of field names", (v) => strs(v, 1)],
-  ["xPath", "a non-empty array of field names", (v) => strs(v, 1)],
+  ...w("path seriesPath xPath").map((k): CHK => [
+    k,
+    "a non-empty array of field names",
+    (v) => strs(v, 1),
+  ]),
   ["columns", "an array of field names", (v) => strs(v)],
   ["totals", "an array of x values (strings), or true (heatmap)", (v) => v === true || strs(v)],
-  ["page", "a positive integer", (v) => Number.isInteger(v) && v > 0],
+  ...w("page depth limit").map((k): CHK => [
+    k,
+    "a positive integer",
+    (v) => Number.isInteger(v) && v > 0,
+  ]),
   [
     "expand",
     'a chart spec without data (table), or "first", "none" or "all" (list)',
@@ -487,7 +510,6 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
     (v) => oneAgg(v) || (isObj(v) && Object.keys(v).length > 0 && Object.values(v).every(oneAgg)),
   ],
   ["legend", 'a boolean, "top", "bottom" or "right"', (v) => v === !!v || LEG.includes(v)],
-  ["depth", "a positive integer", (v) => Number.isInteger(v) && v > 0],
   ["minAngle", "whole degrees from 0 to 360", (v) => Number.isInteger(v) && v >= 0 && v <= 360],
   ["sort", '"asc", "desc" or "change"', (v) => v === "asc" || v === "desc" || v === "change"],
   [
@@ -495,7 +517,6 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
     '"auto", "category" or "time"',
     (v) => v === "auto" || v === "category" || v === "time",
   ],
-  ["limit", "a positive integer", (v) => Number.isInteger(v) && v > 0],
   [
     "select",
     'true, "multi" or { peers: field }',
@@ -521,7 +542,7 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ["back", "a chart spec without data (any type but kpi)", (v) => isObj(v)],
   ["form", '"bars" or "line"', (v) => v === "bars" || v === "line"],
   ["colorScale", `one of ${SCALES.join(", ")}`, (v) => SCALES.includes(v)],
-  ["emphasis", "an array of series values (strings)", (v) => strs(v)],
+  ...w("emphasis dash").map((k): CHK => [k, "an array of series values (strings)", (v) => strs(v)]),
   [
     "was",
     "a field name, { by: field, current?, previous? } for long data, or fields keyed by y field",
@@ -553,8 +574,7 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
               oneAgg({ ratio: f.ratio })),
         )),
   ],
-  ["xScale", '"log"', (v) => v === "log"],
-  ["yScale", '"log"', (v) => v === "log"],
+  ...w("xScale yScale").map((k): CHK => [k, '"log"', (v) => v === "log"]),
   [
     "annotate",
     `an array of distinct ${ANN.join(", ")} or { x, text (40 characters) }`,
@@ -571,7 +591,6 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
           : ANN.includes(a as string),
       ),
   ],
-  ["dash", "an array of series values (strings)", (v) => strs(v)],
   [
     "forms",
     `a non-empty array of distinct forms: ${FORMS.join(", ")}`,
@@ -588,7 +607,150 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
     "an object of strings keyed by field",
     (v) => isObj(v) && Object.values(v).every((x) => typeof x === "string"),
   ],
+  [
+    "facetScale",
+    '"shared", "own", or an array of both',
+    (v) =>
+      v === "shared" ||
+      v === "own" ||
+      (strs(v, 2) && v.length === 2 && v.includes("shared") && v.includes("own")),
+  ],
+  [
+    "frameControl",
+    '"play", "slider", "both", "tabs" or "select"',
+    (v) => w("play slider both tabs select").includes(v),
+  ],
+  [
+    "frameSpeed",
+    "whole milliseconds from 100 to 10000",
+    (v) => Number.isInteger(v) && v >= 100 && v <= 1e4,
+  ],
+  ["trail", "an integer from 1 to 200", (v) => Number.isInteger(v) && v > 0 && v <= 200],
+  // ponytail: 4 sliders, one scale entry, percent only; NON-FEATURES.
+  [
+    "params",
+    "an array of 1 to 4 { id, label, min, max, step, value, suffix?, format? } with distinct ids (letters, digits, _ and -), min < max, step > 0 and min <= value <= max",
+    (v) =>
+      Array.isArray(v) &&
+      v.length > 0 &&
+      v.length <= 4 &&
+      new Set(v.map((p) => p?.id)).size === v.length &&
+      v.every(
+        (p) =>
+          isObj(p) &&
+          only(p, w("id label min max step value suffix format")) &&
+          typeof p.id === "string" &&
+          /^[\w-]{1,40}$/.test(p.id) &&
+          typeof p.label === "string" &&
+          p.label.length <= 40 &&
+          [p.min, p.max, p.step, p.value].every((n) => fin(n, 1e15)) &&
+          (p.min as number) < (p.max as number) &&
+          (p.step as number) > 0 &&
+          (p.value as number) >= (p.min as number) &&
+          (p.value as number) <= (p.max as number) &&
+          (p.suffix === undefined || (typeof p.suffix === "string" && p.suffix.length <= 12)),
+      ),
+  ],
+  [
+    "scale",
+    '{ where?: { <field>: value }, by: [param ids], mode?: "percent" }',
+    (v) =>
+      isObj(v) &&
+      only(v, w("where by mode")) &&
+      strs(v.by, 1) &&
+      (v.mode === undefined || v.mode === "percent") &&
+      (v.where === undefined ||
+        (isObj(v.where) && Object.values(v.where).every((x) => /^(st|n|b)/.test(typeof x)))),
+  ],
 ];
+
+const isRef = (v: unknown): v is { param: string } => isObj(v) && Object.hasOwn(v, "param");
+/**
+ * The spec with each `{ param: "id" }` (colorBy target and warn, also keyed by measure; rules y,
+ * y2, x and band ends) replaced by that param's value. A ref naming no param fails here.
+ */
+const withParams = (s: Record<string, any>, vals: ReadonlyMap<string, number>) => {
+  const n = (v: unknown, p: string) =>
+    !isRef(v)
+      ? v
+      : vals.has(v.param)
+        ? vals.get(v.param)
+        : F(
+            "invalid-option",
+            p,
+            `= ${show(v)} names no spec.params id.`,
+            vals.size ? `Param ids: ${[...vals.keys()].join(", ")}.` : "Add spec.params.",
+          );
+  const goal = (g: unknown, p: string) =>
+    isObj(g)
+      ? {
+          ...g,
+          ...Object.fromEntries(
+            w("target warn")
+              .filter((k) => k in g)
+              .map((k) => [k, n(g[k], `${p}.${k}`)]),
+          ),
+        }
+      : g;
+  const cb = s.colorBy;
+  const rules = s.rules;
+  return {
+    ...s,
+    ...(isObj(cb) && {
+      colorBy: GOAL.some((k) => Object.hasOwn(cb, k))
+        ? goal(cb, "colorBy")
+        : Object.fromEntries(Object.entries(cb).map(([k, g]) => [k, goal(g, `colorBy.${k}`)])),
+    }),
+    ...(Array.isArray(rules) && {
+      rules: rules.map((e, i) =>
+        isRef(e) || !isObj(e)
+          ? n(e, `rules[${i}]`)
+          : Object.fromEntries(
+              Object.entries(e).map(([k, v]) => [
+                k,
+                k === "band" && Array.isArray(v)
+                  ? v.map((b, j) => n(b, `rules[${i}].band[${j}]`))
+                  : k === "label"
+                    ? v
+                    : n(v, `rules[${i}].${k}`),
+              ]),
+            ),
+      ),
+    }),
+  };
+};
+
+/**
+ * spec.params applied for `view`: each param's value (view.params, clamped to min and max), the
+ * spec with its `{ param }` refs replaced, and `scale` multiplied into the matching rows' y fields
+ * (the rows stay the same array when the factor is 1). Assumes a valid spec.
+ */
+export const applyParams = (spec: ChartSpec, view: View = {}): [ChartSpec, Param[]] => {
+  if (!spec.params) return [spec, []];
+  const vp = view.params;
+  const ps = spec.params.map((p) => ({
+    ...p,
+    value: Math.min(p.max, Math.max(p.min, vp && Object.hasOwn(vp, p.id) ? vp[p.id]! : p.value)),
+  }));
+  const vals = new Map(ps.map((p) => [p.id, p.value]));
+  const out = withParams(spec, vals) as unknown as ChartSpec;
+  const sc = spec.scale;
+  const k = sc ? sc.by.reduce((a, id) => a * (1 + (vals.get(id) ?? 0) / 100), 1) : 1;
+  if (k === 1) return [out, ps];
+  const ys = typeof spec.y === "string" ? [spec.y] : spec.y;
+  const where = Object.entries(sc!.where ?? {});
+  const data = spec.data.map((r) =>
+    where.every(([f, v]) => String(r[f]) === String(v))
+      ? {
+          ...r,
+          ...Object.fromEntries(
+            ys.flatMap((m) => (typeof r[m] === "number" ? [[m, (r[m] as number) * k]] : [])),
+          ),
+        }
+      : r,
+  );
+  return [{ ...out, data }, ps];
+};
 
 /** An option set to null is unset (#89): hosts write `colorBy: cfg.colorBy ?? null`. type and
  * data keep null so their own errors name it. Copies only when a null is present. */
@@ -607,7 +769,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       `spec must be a plain object, received ${ty(spec)}.`,
       `Received: ${show(spec)}`,
     );
-  const s = unset(spec as Record<string, unknown>);
+  let s = unset(spec as Record<string, unknown>);
   for (const k of Object.keys(s))
     if (!KEYS.includes(k))
       F(
@@ -617,6 +779,25 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         own(HINTS, k) ?? dym(k, KEYS),
         `Known options: ${KEYS.join(", ")}.`,
       );
+
+  // Hostile JSON: options nested deeper than any real spec (or cyclic, or huge) are refused here,
+  // before a recursive walk (JSON.stringify, sub-specs) would overflow the stack.
+  {
+    const todo: [unknown, number][] = Object.entries(s)
+      .filter(([k]) => k !== "data")
+      .map(([, v]) => [v, 1]);
+    for (let n = 0, t; (t = todo.pop()); n++) {
+      const [v, d] = t;
+      if (n > 1e5 || (d > 24 && typeof v === "object" && v !== null))
+        F(
+          "invalid-option",
+          "spec",
+          "is nested too deeply (or is cyclic): options hold at most 24 levels.",
+        );
+      if (typeof v === "object" && v !== null)
+        for (const c of Object.values(v)) todo.push([c, d + 1]);
+    }
+  }
 
   const type = s.type;
   if (type === undefined)
@@ -730,6 +911,22 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
 
   for (const k in S) if (s[k] !== undefined && typeof s[k] !== S[k]) bad(k, s[k], `a ${S[k]}`);
   for (const [k, want, ok] of CHECKS) if (s[k] !== undefined && !ok(s[k])) bad(k, s[k], want);
+  // params: every { param } ref is checked (and validated below) at the param's spec value.
+  const ps = (s.params ?? []) as Param[];
+  ps.forEach((p, i) => {
+    if (p.format !== undefined) format(`params[${i}].format`, p.format, "en-US");
+  });
+  if (ps.length)
+    (s.scale as ChartSpec["scale"])?.by.forEach((id, i) => {
+      if (!ps.some((p) => p.id === id))
+        F(
+          "invalid-option",
+          `scale.by[${i}]`,
+          `= ${show(id)} names no spec.params id.`,
+          ps.length ? `Param ids: ${ps.map((p) => p.id).join(", ")}.` : "Add spec.params.",
+        );
+    });
+  s = withParams(s, new Map(ps.map((p) => [p.id, p.value])));
   const { y, path, colors, colorBy, theme, text } = s;
   if (text !== undefined) {
     if (!isObj(text)) bad("text", text, "an object of strings");
@@ -995,9 +1192,14 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     [t === "funnel" && s.x != null && Array.isArray(y), "x", `${CB} a y array on "funnel".`],
     [t === "boxplot" && s.aggregate != null, "aggregate", NS],
     [
-      cart && s.drill === true && path === undefined && s.seriesPath == null && s.xPath == null,
+      cart &&
+        s.drill === true &&
+        path === undefined &&
+        s.seriesPath == null &&
+        s.xPath == null &&
+        s.facet == null,
       "drill",
-      `on "${t}" needs spec.path${CART.includes(t) ? " or spec.seriesPath" : t === "heatmap" ? " or spec.xPath" : ""}.`,
+      `on "${t}" needs spec.path${CART.includes(t) ? ", spec.seriesPath or spec.facet" : t === "heatmap" ? " or spec.xPath" : ""}.`,
     ],
     [
       s.seriesPath != null && (path != null || s.series != null),
@@ -1025,6 +1227,26 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       "bars",
       'on "table" must be { <y field>: "bar" | "diverging" | "none" }.',
     ],
+    [s.facetScale != null && s.facet == null, "facetScale", "needs spec.facet."],
+    ...w("path seriesPath drillTo frame zoom").map((k): [unknown, string, string] => [
+      s.facet != null && s[k] != null && s[k] !== false,
+      k,
+      `${CB} spec.facet.`,
+    ]),
+    [
+      s.facet != null && (s.facet === s.x || s.facet === s.series),
+      "facet",
+      "must differ from spec.x and spec.series.",
+    ],
+    ...w("frameControl frameSpeed trail").map((k): [unknown, string, string] => [
+      s[k] != null && s.frame == null,
+      k,
+      "needs spec.frame.",
+    ]),
+    [s.trail != null && s.name == null, "trail", "needs spec.name (each name draws its trail)."],
+    [s.other === false && s.limit == null, "other", "needs spec.limit."],
+    [s.scale != null && s.params == null, "scale", "needs spec.params."],
+    [ratio && s.scale != null, "scale", `${CB} a ratio aggregate.`],
     [s.drillTo != null && s.series == null, "drillTo", "needs spec.series (a series opens it)."],
     [s.drillTo != null && path != null, "drillTo", `${CB} spec.path.`],
   ];
@@ -1115,6 +1337,10 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         ["rowFormat", s.rowFormat],
         ["colorBy", colorBy === "sign" ? undefined : colorBy],
         ["frame", s.frame],
+        ["facet", s.facet],
+        ...Object.keys(((s.scale as ChartSpec["scale"])?.where ?? {}) as object).map(
+          (f): [string, string] => [`scale.where.${f}`, f],
+        ),
       ];
       for (const [p, f] of fields) if (typeof f === "string" && !has(f)) unk(p, `= ${show(f)} `, f);
       for (const opt of ["format", "titles"])
@@ -1238,15 +1464,13 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (k === "back" && b.type === "kpi")
       F("invalid-option", "back.type", 'must not be "kpi": the back face is another chart.');
     // A sub-chart has no state of its own: these would never respond.
-    if (k !== "back")
-      for (const o of w("drill zoom frame expand drillTo back page scroll filter"))
-        if (b[o] !== undefined)
-          F("invalid-option", `${k}.${o}`, "is not available in a sub-chart.");
+    for (const o of w("drill zoom frame expand drillTo back page scroll filter"))
+      if (b[o] !== undefined) F("invalid-option", `${k}.${o}`, "is not available in a sub-chart.");
     const prev = k === "drillTo" && b.was === "previous";
     if (prev && !ONLY.was!.includes(b.type as string))
       F("option-unsupported", "drillTo.was", `${NS.replace("spec.type", "spec.drillTo.type")}`);
     try {
-      const sub = k === "back" ? b : subSpec(s as unknown as ChartSpec, b);
+      const sub = subSpec(s as unknown as ChartSpec, b, k === "back");
       validateSpec({ ...sub, ...(prev && { was: undefined }), data: rows });
     } catch (e) {
       if (!(e instanceof MayaSpecError)) throw e;
@@ -1266,24 +1490,83 @@ const needsX = (b: { type?: unknown; y?: unknown }) =>
   !w("kpi gauge beeswarm").includes(b.type) &&
   !(b.type === "funnel" && Array.isArray(b.y));
 
-/** A table expand or line drillTo sub-spec, with the parent's x when it names neither x nor path. */
-export const subSpec = <T extends object>(parent: ChartSpec, b: T): T => {
-  const o = b as { x?: unknown; path?: unknown; type?: unknown; y?: unknown };
-  return o.x !== undefined || o.path !== undefined || !needsX(o) || !parent.x
-    ? b
-    : { ...b, x: parent.x };
+/** The parent's presentation keys a sub-spec (back, expand, drillTo) takes unless it sets them. */
+const INHERIT = w("format titles locale currency theme") as (keyof ChartSpec)[];
+
+/** A sub-spec with the parent's format, titles, locale, currency and theme; a back face with a limit
+ * drops the rest instead of an Other bar; an expand or drillTo without x or path takes the parent's x. */
+export const subSpec = <T extends object>(parent: ChartSpec, b: T, back = false): T => {
+  const o = b as Record<string, unknown>;
+  const inh = Object.fromEntries(
+    INHERIT.filter((k) => parent[k] !== undefined && o[k] === undefined).map((k) => [k, parent[k]]),
+  );
+  if (back) {
+    if (o.limit != null && o.other === undefined) inh.other = false;
+  } else if (o.x === undefined && o.path === undefined && needsX(o) && parent.x) inh.x = parent.x;
+  return { ...b, ...inh };
 };
 
-/** How many drill values view.drill may hold (0: no drill). drillTo: one series; seriesPath and
+/** How many drill values view.drill may hold (0: no drill). drillTo: one series; facet: one panel; seriesPath and
  * path: one per level but the last; a chord with 3 levels: the target only; a marimekko whose
  * series is the next path level: one per level but the last two. */
 export const drillDepth = (spec: ChartSpec): number => {
-  if (spec.drillTo) return 1;
+  if (spec.drillTo || (spec.facet && spec.drill)) return 1;
   if (!spec.drill) return 0;
   const p = spec.seriesPath ?? spec.path ?? [];
   if (spec.type === "chord" && p.length === 3) return 1;
   return Math.max(0, p.length - (spec.type === "marimekko" && !spec.series ? 2 : 1));
 };
+
+/** Table-driven render-option checks for view keys: [key, expected shape, predicate], in error order. */
+const VIEW: CHK[] = [
+  ["xDrill", "an array of strings", (v) => strs(v)],
+  ["expanded", "a string", (v) => typeof v === "string"],
+  ["filter", "a string of at most 200 characters", (v) => typeof v === "string" && v.length <= 200],
+  ["face", '"front" or "back"', (v) => v === "front" || v === "back"],
+  ["facetScale", '"shared" or "own"', (v) => v === "shared" || v === "own"],
+  [
+    "params",
+    "an object of numbers keyed by param id",
+    (v) => isObj(v) && Object.values(v).every((n) => fin(n, 1e15)),
+  ],
+  [
+    "brush",
+    "an array of [field, lo, hi] with lo <= hi",
+    (v) =>
+      Array.isArray(v) &&
+      v.every(
+        (b) =>
+          Array.isArray(b) &&
+          b.length === 3 &&
+          typeof b[0] === "string" &&
+          fin(b[1], 1e300) &&
+          fin(b[2], 1e300) &&
+          b[1] <= b[2],
+      ),
+  ],
+  ["peers", "a string", (v) => typeof v === "string"],
+  [
+    "sortBy",
+    '[field, "asc" | "desc"]',
+    (v) =>
+      Array.isArray(v) &&
+      v.length === 2 &&
+      typeof v[0] === "string" &&
+      (v[1] === "asc" || v[1] === "desc"),
+  ],
+  ...w("measure frame form stack page").map((k): CHK => [
+    k,
+    "an index (integer >= 0)",
+    (n) => Number.isInteger(n) && n >= 0,
+  ]),
+  ["drill", "an array of strings", (v) => strs(v)],
+  ["hidden", "an array of strings", (v) => strs(v)],
+  [
+    "window",
+    "[i0, i1] or [x0, x1, y0, y1] of finite numbers",
+    (v) => Array.isArray(v) && (v.length === 2 || v.length === 4) && v.every(Number.isFinite),
+  ],
+];
 
 export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   if (opts === undefined) return;
@@ -1316,67 +1599,12 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   if (v !== undefined) {
     if (!isObj(v)) inv("view", v, "an object");
     const vk = w(
-      "measure drill window hidden sortBy frame form brush peers stack face xDrill expanded page filter",
+      "measure drill window hidden sortBy frame form brush peers stack face xDrill expanded page filter facetScale params",
     );
     for (const k of Object.keys(v as object)) if (!vk.includes(k)) unknown("options.view", k, vk);
-    const {
-      drill,
-      window: win,
-      hidden,
-      sortBy,
-      brush,
-      peers,
-      face,
-      xDrill,
-      expanded,
-      filter,
-    } = v as Record<string, unknown>;
-    if (xDrill !== undefined && !strs(xDrill)) inv("view.xDrill", xDrill, "an array of strings");
-    if (expanded !== undefined && typeof expanded !== "string")
-      inv("view.expanded", expanded, "a string");
-    if (filter !== undefined && !(typeof filter === "string" && filter.length <= 200))
-      inv("view.filter", filter, "a string of at most 200 characters");
-    if (face !== undefined && face !== "front" && face !== "back")
-      inv("view.face", face, '"front" or "back"');
-    if (
-      brush !== undefined &&
-      !(
-        Array.isArray(brush) &&
-        brush.every(
-          (b) =>
-            Array.isArray(b) &&
-            b.length === 3 &&
-            typeof b[0] === "string" &&
-            fin(b[1], 1e300) &&
-            fin(b[2], 1e300) &&
-            b[1] <= b[2],
-        )
-      )
-    )
-      inv("view.brush", brush, "an array of [field, lo, hi] with lo <= hi");
-    if (peers !== undefined && typeof peers !== "string") inv("view.peers", peers, "a string");
-    if (
-      sortBy !== undefined &&
-      !(
-        Array.isArray(sortBy) &&
-        sortBy.length === 2 &&
-        typeof sortBy[0] === "string" &&
-        (sortBy[1] === "asc" || sortBy[1] === "desc")
-      )
-    )
-      inv("view.sortBy", sortBy, '[field, "asc" | "desc"]');
-    for (const k of ["measure", "frame", "form", "stack", "page"]) {
-      const n = (v as Record<string, unknown>)[k];
-      if (n !== undefined && !(Number.isInteger(n) && (n as number) >= 0))
-        inv("view." + k, n, "an index (integer >= 0)");
-    }
-    if (drill !== undefined && !strs(drill)) inv("view.drill", drill, "an array of strings");
-    if (hidden !== undefined && !strs(hidden)) inv("view.hidden", hidden, "an array of strings");
-    if (
-      win !== undefined &&
-      !(Array.isArray(win) && (win.length === 2 || win.length === 4) && win.every(Number.isFinite))
-    )
-      inv("view.window", win, "[i0, i1] or [x0, x1, y0, y1] of finite numbers");
+    const vr = v as Record<string, unknown>;
+    for (const [k, want, ok] of VIEW)
+      if (vr[k] !== undefined && !ok(vr[k])) inv("view." + k, vr[k], want);
   }
   if (
     sel !== undefined &&
@@ -1390,14 +1618,31 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
     inv("nonce", nonce, "a base64 nonce string");
 }
 
+/** scatter trail: each name's [x, y] per frame index (its first row in that frame), null where absent. */
+const trails = (spec: ChartSpec, F: string, fv: readonly string[], y: string) => {
+  const at = new Map(fv.map((v, i) => [v, i]));
+  const m = new Map<string, ({ x: number; y: number } | null)[]>();
+  for (const r of spec.data) {
+    const i = r[F] == null ? undefined : at.get(String(r[F]));
+    const [n, a, b] = [r[spec.name!], r[spec.x!], r[y]];
+    if (i === undefined || n == null || typeof a !== "number" || typeof b !== "number") continue;
+    let p = m.get(String(n));
+    if (!p) m.set(String(n), (p = Array<{ x: number; y: number } | null>(fv.length).fill(null)));
+    p[i] ??= { x: a, y: b };
+  }
+  return m;
+};
+
 /**
  * Apply defaults plus the view's measure, frame and drill. Assumes `spec` passed validateSpec.
  * Frame keeps the rows of one `frame` value (view.frame, default the last). Drill keeps rows
  * whose path[i] equals drill[i], then advances: bar/line/area take the next level as x; path
- * types keep the remaining levels.
+ * types keep the remaining levels. params apply first (applyParams), so every row and number
+ * downstream already holds the viewer's values. A facet drill keeps one panel's rows.
  */
 export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
-  spec = unset(spec);
+  let params: Param[];
+  [spec, params] = applyParams(unset(spec), view);
   const measures = typeof spec.y === "string" ? [spec.y] : [...spec.y];
   const measure = Math.min(view.measure ?? 0, measures.length - 1);
   const ym = measures[measure]!;
@@ -1426,7 +1671,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   // drillTo: build() renders the sub-chart; the line itself is never filtered.
   const depth = spec.drillTo ? 0 : drillDepth(spec);
   const drilled = (view.drill ?? []).slice(0, depth);
-  const levels = chord3 ? [full[1]!] : (sp ?? full);
+  const levels = chord3 ? [full[1]!] : spec.facet ? [spec.facet] : (sp ?? full);
   const path = sp
     ? sp.slice(drilled.length)
     : chord3
@@ -1472,9 +1717,14 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const bf =
     NOBLANK.includes(spec.type) || spec.xType === "time"
       ? []
-      : [x, spec.series, ...(DRILLP.includes(spec.type) ? full : []), ...(sp ?? []), ...xp].filter(
-          (k): k is string => !!k,
-        );
+      : [
+          x,
+          spec.series,
+          ...(DRILLP.includes(spec.type) ? full : []),
+          ...(sp ?? []),
+          ...xp,
+          spec.facet,
+        ].filter((k): k is string => !!k);
   const rows = bf.length
     ? memo(frameRows, `b${bf}\0${txt(spec, "blank")}`, () =>
         frameRows.some((r) => bf.some((k) => r[k] == null))
@@ -1524,8 +1774,8 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     Object.entries(o ?? {}).filter((e): e is [string, T] => e[1] !== undefined);
   const cb = spec.colorBy;
   const g = (o: Goal): ResolvedGoal => ({
-    target: o.target ?? null,
-    warn: o.warn ?? null,
+    target: (o.target as number | undefined) ?? null,
+    warn: (o.warn as number | undefined) ?? null,
     better: o.better ?? "higher",
   });
   // Threshold keys win; otherwise thresholds keyed by measure (kpi).
@@ -1543,12 +1793,20 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const theme = themeOf(spec.theme);
   const stream = stack === "stream";
   // spec.rules split by kind, in object form, each with its label.
-  const rule = <K extends string, T>(k: K, f: (e: Extract<Rule, Record<K, unknown>>) => T) =>
+  // applyParams left no { param }: every number is a number.
+  type One = {
+    y: number | "mean";
+    y2: number;
+    x: string | number;
+    band: [number, number];
+    slope: number | "mean";
+    intercept?: number;
+    label?: string;
+  };
+  const rule = <T>(k: keyof One, f: (e: One) => T) =>
     (spec.rules ?? []).flatMap((e) => {
-      const o = typeof e === "object" ? e : { y: e };
-      return k in o
-        ? [{ ...f(o as Extract<Rule, Record<K, unknown>>), label: o.label ?? null }]
-        : [];
+      const o = (typeof e === "object" && !("param" in e) ? e : { y: e }) as One;
+      return k in o ? [{ ...f(o), label: o.label ?? null }] : [];
     });
   const titles = new Map([
     // A scatter names its axes by field: two numeric axes say nothing otherwise.
@@ -1675,7 +1933,34 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     path,
     levels: full.length,
     drilled,
-    drillOn: spec.drillTo ? "series" : drilled.length < depth ? (sp ? "series" : "x") : null,
+    drillOn: spec.drillTo
+      ? "series"
+      : drilled.length < depth
+        ? sp
+          ? "series"
+          : spec.facet
+            ? "facet"
+            : "x"
+        : null,
+    facet: spec.facet
+      ? {
+          field: spec.facet,
+          scale:
+            typeof spec.facetScale === "string"
+              ? spec.facetScale
+              : spec.facetScale && view.facetScale
+                ? view.facetScale
+                : (spec.facetScale?.[0] ?? "shared"),
+          scales: Array.isArray(spec.facetScale) ? spec.facetScale : [],
+          sort: spec.sort === "asc" || spec.sort === "desc" ? spec.sort : null,
+          limit: spec.limit ?? null,
+        }
+      : null,
+    frameControl: spec.frameControl ?? "play",
+    other: spec.other ?? true,
+    trail: spec.trail ?? 0,
+    paths: spec.trail && F && spec.name && spec.x ? trails(spec, F, fv, ym) : null,
+    params,
     xPath: xp.slice(xDrilled.length),
     xDrilled,
     start,
@@ -1730,13 +2015,18 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     // A ratio sums both fields; long-form was has already counted its rows into y, so it sums those.
     aggregate: ratio || (pv && ag === "count") ? "sum" : ((ag as Aggregate | undefined) ?? "sum"),
     ratio: ratio ? [ratio[0], ratio[1]] : null,
-    sort: spec.sort ?? (hexBars ? "desc" : null),
+    // facet: sort and limit order and cap the panels, not the categories.
+    sort: spec.facet ? null : (spec.sort ?? (hexBars ? "desc" : null)),
     sortBy: view.sortBy ?? null,
-    limit: spec.limit ?? null,
-    // stack "percent" shows shares: percent unless the spec formats the measure.
+    limit: spec.facet ? null : (spec.limit ?? null),
+    // stack "percent" shows shares: percent unless the spec formats the measure, and a
+    // currency format (a unit that is not a share) gives way to percent.
     format: new Map<string, FieldFormat>([
       ...measures.flatMap((m) => (stack === "percent" ? [[m, "percent"] as const] : [])),
-      ...(typeof f === "string" ? measures.map((m) => [m, f] as const) : entries<FieldFormat>(f)),
+      ...(typeof f === "string"
+        ? measures.map((m) => [m, f] as const)
+        : entries<FieldFormat>(f)
+      ).filter(([k, v]) => !(stack === "percent" && v === "currency" && measures.includes(k))),
     ]),
     titles,
     labels: spec.labels ?? null,

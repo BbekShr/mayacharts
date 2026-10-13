@@ -174,14 +174,14 @@ const delay = (e: Element) =>
 
 /** Make `o`'s subtree match `w`'s in place where the shapes agree, so nested nodes (and the CSS
  * animations on them, an orbit's rotation) survive an update; else replace the children. */
-function mend(o: Element, w: Element): void {
+export function mend(o: Element, w: Element): void {
   const [a, b] = [[...o.children], [...w.children]];
   if (a.length && a.length === b.length && a.every((c, i) => c.localName === b[i]!.localName))
     a.forEach((c, i) => (sync(c, b[i]!), mend(c, b[i]!)));
   else o.replaceChildren(...w.childNodes);
 }
 
-function sync(o: Element, w: Element): void {
+export function sync(o: Element, w: Element): void {
   // `style` holds element-owned CSSOM writes (bloom origin), never markup: keep it.
   for (const a of [...o.attributes])
     if (!w.hasAttribute(a.name) && !/^(style|data-active|tabindex)$/.test(a.name))
@@ -294,12 +294,12 @@ const outline = (m: Element, d0: string) => {
   return c.startsWith("path(") ? c : `path("${d0}")`;
 };
 
-function morph(m: Element, from: string, d1: string): void {
+function morph(m: Element, from: string, d1: string, dl = delay(m) / 2): void {
   stop(m.getAnimations?.());
   if (instant) return;
   const a = m.animate?.([{ d: from }, { d: `path("${d1}")` }], {
     ...DATA,
-    delay: delay(m) / 2,
+    delay: dl,
     fill: "backwards",
   });
   if (a) morphs.set(m, a);
@@ -411,27 +411,42 @@ function roll(e: Element, from: string, o: KeyframeAnimationOptions): void {
     t.textContent = c;
     p.append(t);
   };
-  const L = to.length;
+  // Digits pair right-aligned, whatever sits between them; a column the old number lacks rolls in from blank.
+  // Different decimals or suffix (1.5 to 12.25, K to M) would pair the wrong places: count instead.
+  const fd = [...from].filter((c) => /\d/.test(c));
+  const nd = [...to].filter((c) => /\d/.test(c)).length;
+  const tail = (t: string) => {
+    const m = /(\d*)(\D*)$/.exec(t)!; // digits after the last separator, then the suffix
+    return m[1]!.length + m[2]!;
+  };
+  if (from && tail(from) !== tail(to)) return count(e, from, o);
+  const cols: Element[] = [];
+  let r = nd;
   [...to].forEach((c, j) => {
     const x = (e as SVGTextElement).getStartPositionOfChar(j).x;
-    const old = from[from.length - (L - j)] ?? "";
-    if (!/\d/.test(c) || c === old) return put(g, c, x);
+    const old = /\d/.test(c) ? (fd[fd.length - r--] ?? "") : c;
+    if (c === old) return put(g, c, x);
     const col = document.createElementNS("http://www.w3.org/2000/svg", "g");
     put(col, old, x);
     put(col, c, x, bb.height);
     g.append(col);
+    cols.push(col);
+  });
+  // Units first, 50 ms a column, the whole cascade capped at 150 ms.
+  const lag = Math.min(50, 150 / Math.max(1, cols.length - 1));
+  cols.forEach((col, i) =>
     run(col, [{ transform: "none" }, { transform: `translateY(${-bb.height}px)` }], {
       ...o,
-      delay: Number(o.delay ?? 0) + (L - 1 - j) * 50,
+      delay: Number(o.delay ?? 0) + (cols.length - 1 - i) * lag,
       fill: "forwards",
-    });
-  });
+    }),
+  );
   if (!from) run(g, [{ opacity: 0 }, { opacity: 1 }], { ...o, duration: 240 });
   rolls.get(e)?.remove();
   rolls.set(e, g);
   e.setAttribute("visibility", "hidden");
   e.after(g);
-  const ms = Number(o.duration) + Number(o.delay ?? 0) + L * 50;
+  const ms = Number(o.duration) + Number(o.delay ?? 0) + 150;
   hold(e, performance.now() + ms);
   setTimeout(() => {
     if (rolls.get(e) !== g) return;
@@ -442,6 +457,7 @@ function roll(e: Element, from: string, o: KeyframeAnimationOptions): void {
 }
 /** Headline numbers: count up, or roll when the patch asks for it. */
 const numeric = (e: Element, from: string, o: KeyframeAnimationOptions) =>
+  !e.childElementCount && // a text with tspans (a list headline) is not a bare number: writing its text would drop them
   (rolling && /^v(~|$)/.test(e.getAttribute("data-key") ?? "") ? roll : count)(e, from, o);
 
 function marks(o: Element, w: Element, origin?: Box): void {
@@ -513,6 +529,8 @@ function marks(o: Element, w: Element, origin?: Box): void {
     const v = pre.get(e);
     const t = nest(m);
     const [as, ta] = [live.get(m) ?? [], live.get(t) ?? []];
+    // Interrupting a running animation (a scrubbed slider) starts at once: no stagger.
+    const dl = as.length || ta.length ? 0 : delay(m) / 2;
     if (ring(m)) {
       const from = arcs.get(m)!;
       stop(as);
@@ -554,12 +572,14 @@ function marks(o: Element, w: Element, origin?: Box): void {
     if (shaped && !instant) moved = true;
     if (shaped && !morphed && !instant) crossfade(m); // the ghost keeps the old outline
     const [x0, y0] = [n(m, "x"), n(m, "y")];
+    rolls.get(m)?.remove(); // sync drops the hidden text's visibility: a stale roll window would double it
+    rolls.delete(m);
     sync(m, e);
     // Keyed text (table cells on a re-sort) glides from where it stood.
     const [dx, dy] = [x0 - n(m, "x"), y0 - n(m, "y")];
     if (m.localName === "text" && (dx || dy))
       run(m, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
-    if (morphed) morph(m, from, d1);
+    if (morphed) morph(m, from, d1, dl);
     mend(m, e);
     const t1 = nest(m);
     const g1 = geo(t1);
@@ -598,10 +618,10 @@ function marks(o: Element, w: Element, origin?: Box): void {
       } else
         run(t1, [{ transform: tf(g1, v) }, { transform: "none" }], {
           ...DATA,
-          delay: delay(m) / 2,
+          delay: dl,
         });
     } else if (shaped && !morphed && !m.matches("[data-maya=area]"))
-      fade(m, false, undefined, { ...DATA, delay: delay(m) / 2 });
+      fade(m, false, undefined, { ...DATA, delay: dl });
     if (m.localName === "text" && m.textContent !== was) numeric(m, was, DATA);
     const tg = pick();
     if (tg && !instant && sig(tg) !== s0)
@@ -681,7 +701,13 @@ function follow(p: Element, c: Element, late: KeyframeAnimationOptions, num: boo
   for (const m of old) {
     if (used.has(m)) continue;
     // Cross in place with the new text, never a gap; a keyed one (its mark left) goes with the mark.
-    fade(m, true, () => m.remove(), key(m) ? UI : late);
+    // A changed unkeyed label (a comparison line) leaves before its successor arrives: no two texts in one place.
+    fade(
+      m,
+      true,
+      () => m.remove(),
+      key(m) ? UI : num ? { ...late, delay: Number(late.delay) - 220 } : late,
+    );
     retire(m);
   }
 }
@@ -691,8 +717,14 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   const id = (c: Element) => c.getAttribute("data-maya") ?? c.localName;
   // Groups already fading out keep fading; they are neither pooled nor ghosted again.
   const out = [...o.children].filter((c) => c.hasAttribute("data-ghost"));
+  // Facet panels (nested svgs) are diffed one by one, by their value.
+  const isP = (c: Element) => c.matches("svg[data-maya=panel],svg[data-maya=expand]");
+  const pid = (c: Element) => c.getAttribute("data-maya")! + (c.getAttribute("data-facet") ?? "");
   const pool = new Map(
-    [...o.children].filter((c) => c !== om && !out.includes(c)).map((c) => [id(c), c]),
+    [...o.children].filter((c) => c !== om && !out.includes(c) && !isP(c)).map((c) => [id(c), c]),
+  );
+  const panels = new Map(
+    [...o.children].filter((c) => isP(c) && !out.includes(c)).map((c) => [pid(c), c]),
   );
   const fadeIn: Element[] = [];
   // Sunburst: labels ghost and fade in late (as on a drill), never follow rings that sweep in angle.
@@ -709,11 +741,23 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
       out.push(om);
       continue;
     }
+    if (isP(c)) {
+      const q = panels.get(pid(c));
+      panels.delete(pid(c));
+      if (q) (panel(q, c), out.push(q));
+      else (out.push(c), fadeIn.push(c));
+      continue;
+    }
     const p = pool.get(id(c));
     pool.delete(id(c));
     if (p && p.outerHTML === c.outerHTML) out.push(p);
-    else if (p && !zoom && !drill && !sun && /^(labels|axis-[xy])$/.test(id(c))) {
-      follow(p, c, id(c) === "labels" ? late : { ...UI, delay: 160 }, id(c) === "labels");
+    else if (p && !zoom && !drill && !sun && /^(labels|axis-[xy]|rules)$/.test(id(c))) {
+      follow(
+        p,
+        c,
+        id(c) === "labels" ? late : id(c) === "rules" ? UI : { ...UI, delay: 160 },
+        id(c) === "labels",
+      );
       out.push(p);
     } else {
       if (p && fadeable(p)) (ghosts.push(p), out.push(p));
@@ -722,6 +766,7 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     }
   }
   for (const p of pool.values()) if (fadeable(p)) (ghosts.push(p), out.push(p));
+  for (const p of panels.values()) (ghosts.push(p), out.push(p));
   // Reconcile in place: re-inserting the marks group would restart every CSS animation in it (the orbit).
   for (const c of [...o.children]) out.includes(c) || c.remove();
   let ref = o.firstChild;
@@ -744,6 +789,35 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
     );
 }
 
+/** A facet panel that stays: its marks diff by their (prefixed) keys, the rest crossfades. */
+function panel(o: Element, w: Element): void {
+  const [om, wm] = [o, w].map((e) => e.querySelector(":scope > [data-maya=marks]"));
+  lag = !wm || drill ? 0 : spread(wm);
+  const [x, y] = [n(o, "x"), n(o, "y")];
+  sync(o, w);
+  // The panel set changed: a panel slides from its old cell (transform on a nested svg).
+  const [dx, dy] = [x - n(o, "x"), y - n(o, "y")];
+  if ((dx || dy) && !instant)
+    run(o, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
+  if (!om || !wm) return mend(o, w);
+  sync(om, wm);
+  marks(om, wm);
+  ui(o, w, om, wm);
+}
+
+const FREEZE = [
+  "fill",
+  "stroke",
+  "stroke-width",
+  "stroke-dasharray",
+  "opacity",
+  "fill-opacity",
+  "stroke-opacity",
+  "font-size",
+  "font-weight",
+  "text-anchor",
+];
+
 /** An outgoing group: unaddressable while it fades, then removed. */
 function ghost(g: Element): void {
   g.querySelector("defs")?.remove(); // a ghost never carries ids: WebKit drops the gradient while two defs share one
@@ -760,8 +834,18 @@ function ghost(g: Element): void {
       )
         run(t, [{ opacity: 1 }, { opacity: 0 }], { ...UI, fill: "forwards" });
   }
+  // Unaddressable, but still painted as before: the theme rules key on data-maya, so freeze
+  // what they gave (a capped read pass, then the writes).
+  const ds = [...g.querySelectorAll("*")].slice(0, 600);
+  const frozen = ds.map((d) => {
+    const c = getComputedStyle(d);
+    return FREEZE.map((k) => c.getPropertyValue(k));
+  });
   g.removeAttribute("data-maya");
   for (const d of g.querySelectorAll("[data-maya]")) d.removeAttribute("data-maya");
+  ds.forEach((d, i) =>
+    FREEZE.forEach((k, j) => (d as SVGElement).style?.setProperty(k, frozen[i]![j]!)),
+  );
   g.setAttribute("data-ghost", "");
   stop(g.getAnimations?.());
   const d = hold ? Number(ZOOM.duration) * 0.75 : 0;
@@ -788,13 +872,31 @@ function intro(svg: Element, kind: Intro): void {
   const l = part("labels");
   // Memory (spec.was): each bar grows from its ghost's box (key "%00was~" + the bar's), its label with the bar's end.
   const past = new Map<string, Box>(),
-    bars = new Map<string, Element>();
+    bars = new Map<string, Element>(),
+    ticks = new Set<string>();
   for (const e of m.children) {
     const k = e.getAttribute("data-key")!;
     if (!e.hasAttribute("data-past")) bars.set(k, e);
-    else if (geo(e)) past.set(k.slice(7), geo(e)!);
+    else if (geo(e)) {
+      past.set(k.slice(7), geo(e)!);
+      if (e.hasAttribute("data-tick")) ticks.add(k.slice(7));
+    }
   }
   const hz = svg.getAttribute("data-dir") === "h";
+  // A grouped bar's ghost is a tick: grow the bar from its baseline to the tick, not from a 2 px sliver floating off the axis.
+  for (const k of ticks) {
+    const [p, b] = [past.get(k)!, bars.get(k)],
+      g = b && geo(b),
+      i = +!hz;
+    if (!g) continue;
+    const [c, base] = [p[i]! + 1, hz !== b!.hasAttribute("data-neg") ? g[i]! : g[i]! + g[i + 2]!];
+    past.set(
+      k,
+      hz
+        ? [Math.min(c, base), p[1], Math.abs(c - base), p[3]]
+        : [p[0], Math.min(c, base), p[2], Math.abs(c - base)],
+    );
+  }
   for (const t of l?.children ?? []) {
     const k = t.getAttribute("data-key") ?? "",
       [p, bar] = [past.get(k), bars.get(k)],
@@ -884,6 +986,10 @@ export function patch(
     if (animate && opts.intro && wm && (!many || opts.intro !== "marks")) {
       lag = spread(wm);
       intro(box.firstElementChild!, opts.intro);
+      for (const p of box.querySelectorAll("svg[data-maya=panel]")) {
+        lag = spread(p.querySelector(":scope > [data-maya=marks]") ?? p);
+        intro(p, opts.intro);
+      }
     }
   } else {
     instant = !!opts.instant;
@@ -897,11 +1003,23 @@ export function patch(
       // Union of the branch's marks (stacked segments, dumbbell ends).
       let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
       for (const e of from.children) {
-        const g = e.getAttribute("data-key")?.endsWith("~" + key(v)) && geo(e);
+        const g = e.getAttribute("data-key")?.split("~").includes(key(v)) && geo(e);
         if (!g) continue;
         [x0, y0] = [Math.min(x0, g[0]), Math.min(y0, g[1])];
         [x1, y1] = [Math.max(x1, g[0] + g[2]), Math.max(y1, g[1] + g[3])];
       }
+      // Facet: the branch is a panel, its plot box in root units.
+      const pn = ("in" in z ? o : w).querySelector(
+        `svg[data-maya=panel][data-facet="${CSS.escape(v)}"]`,
+      );
+      const pp = pn?.getAttribute("data-plot")?.split(" ").map(Number);
+      if (pn && pp)
+        [x0, y0, x1, y1] = [
+          n(pn, "x") + pp[0]!,
+          n(pn, "y") + pp[1]!,
+          n(pn, "x") + pp[0]! + pp[2]!,
+          n(pn, "y") + pp[1]! + pp[3]!,
+        ];
       const P: Box = [x0, y0, x1 - x0, y1 - y0];
       if (P[2] > 1 && P[3] > 1 && F.length === 4 && F[2]! > 0 && F[3]! > 0) {
         zm = { P, F, out: !("in" in z) };
@@ -925,33 +1043,35 @@ export function patch(
 
 /**
  * The card turn (kpi back): the old face rotates edge-on (0 to 90deg, 160 ms ease-in), `swap`
- * replaces it, the new one comes round (-90 to 0deg, 280 ms ease-out). Transform only; with
- * `fade` (reduced motion) the same two beats are an opacity crossfade (100 + 140 ms). Returns a canceller.
+ * replaces it, the new one comes round (-90 to 0deg, 280 ms ease-out). Transform only. Holds
+ * `settled` for the whole 440 ms. Returns a canceller; `undo` (turned back before the swap) plays
+ * the first half in reverse instead of snapping flat.
  */
-export function turn(box: Element, swap: () => void, fade: boolean): () => void {
-  const face = (a: number, b: number) =>
-    fade
-      ? [{ opacity: 1 - a }, { opacity: 1 - b }]
-      : [
-          { transform: `perspective(900px) rotateY(${a}deg)` },
-          { transform: `perspective(900px) rotateY(${b}deg)` },
-        ];
-  const out = box.firstElementChild?.animate?.(face(0, fade ? 1 : 90), {
-    duration: fade ? 100 : 160,
+export function turn(box: Element, swap: () => void): (undo?: boolean) => void {
+  const face = (a: number, b: number) => [
+    { transform: `perspective(900px) rotateY(${a}deg)` },
+    { transform: `perspective(900px) rotateY(${b}deg)` },
+  ];
+  hold(box, performance.now() + 440);
+  const out = box.firstElementChild?.animate?.(face(0, 90), {
+    duration: 160,
     easing: "ease-in",
     fill: "forwards",
   });
   let back: Animation | undefined;
+  let swapped = false;
   const go = () => {
+    swapped = true;
     swap();
-    back = box.firstElementChild?.animate?.(face(fade ? 1 : -90, 0), {
-      duration: fade ? 140 : 280,
-      easing: EASE,
-    });
+    back = box.firstElementChild?.animate?.(face(-90, 0), { duration: 280, easing: EASE });
   };
   if (out) out.onfinish = go;
   else go();
-  return () => (out && (out.onfinish = null), out?.cancel(), back?.cancel());
+  return (undo) => {
+    if (out) out.onfinish = null;
+    if (undo && out && !swapped) ((out.onfinish = () => out.cancel()), out.reverse());
+    else (out?.cancel(), back?.cancel());
+  };
 }
 
 const live = (root: ShadowRoot) =>

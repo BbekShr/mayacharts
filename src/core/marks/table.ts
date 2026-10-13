@@ -101,8 +101,7 @@ export const table: Mark = {
       }
     }
     const left = rows.length - drawn.length;
-    const sets = strips(spec);
-    const cellDefs = [...sets];
+    const cellDefs = [...strips(spec)];
 
     const lw = Math.max(80, Math.min(W * 0.34, 180)) + (spec.expand ? 12 : 0);
     // ponytail: a narrow table drops its rightmost columns (no horizontal scroll); a column needs its widest value plus 2 * PAD.
@@ -135,15 +134,22 @@ export const table: Mark = {
         min: c.labels.length * (SQ + GAP) - GAP + 2 * PAD,
       })),
     ];
-    let nc = 0;
-    for (let room = W - lw; nc < cols.length; nc++) {
-      room -= cols[nc]!.min;
-      if (room < 0 && nc) break;
-    }
+    const fit = (W2: number) => {
+      let nc = 0;
+      for (let room = W2 - lw; nc < cols.length; nc++) {
+        room -= cols[nc]!.min;
+        if (room < 0 && nc) break;
+      }
+      return nc;
+    };
+    // Columns that did not fit leave a strip at the right edge holding "+n" (their count; a title lists them).
+    let nc = fit(W);
+    const spare = nc < cols.length ? tw(`+${cols.length - nc}`, 6) : 0;
+    if (spare) nc = fit(W - spare);
     const kept = cols.slice(0, nc);
     const nm = kept.filter((c) => c.k === "m").length;
     const fixed = kept.reduce((a, c) => a + (c.k === "m" ? 0 : c.min), 0);
-    const mw = Math.max(0, W - lw - fixed) / (nm || 1);
+    const mw = Math.max(0, W - spare - lw - fixed) / (nm || 1);
     const wd = kept.map((c) => (c.k === "m" ? mw : c.min));
     const at = wd.map((_, i) => lw + wd.slice(0, i).reduce((a, w) => a + w, 0));
     const max = ms.map((_, i) => {
@@ -158,23 +164,25 @@ export const table: Mark = {
     let grid = "";
     let hits = "";
     const thead: string[] = [];
+    const th = (x: number, anchor: string, body: string) =>
+      el(
+        "text",
+        {
+          "data-th": true,
+          x: r(x),
+          y: HEAD / 2,
+          "text-anchor": anchor,
+          "dominant-baseline": "middle",
+        },
+        body,
+      );
     [{ k: "t", f: spec.x, i: -1, min: lw }, ...kept].forEach((c, i) => {
       const x0 = i ? at[i - 1]! : 0;
       const w = i ? wd[i - 1]! : lw;
       const right = c.k === "m";
       const on = by?.[0] === c.f ? by[1] : null;
       const label = cut(title(c.f), w - (on ? 14 : 0)) + (on ? (on === "asc" ? " ▲" : " ▼") : "");
-      const text = el(
-        "text",
-        {
-          "data-th": true,
-          x: r(right ? x0 + w - PAD : x0 + PAD),
-          y: HEAD / 2,
-          "text-anchor": right ? "end" : "start",
-          "dominant-baseline": "middle",
-        },
-        esc(label),
-      );
+      const text = th(right ? x0 + w - PAD : x0 + PAD, right ? "end" : "start", esc(label));
       // Headers go in the hits group: the labels group ignores the pointer. A strip column is not sortable.
       thead.push(
         c.k === "s"
@@ -195,6 +203,24 @@ export const table: Mark = {
             ),
       );
     });
+    if (spare)
+      thead.push(
+        th(
+          W - PAD,
+          "end",
+          `+${cols.length - nc}` +
+            el(
+              "title",
+              {},
+              esc(
+                cols
+                  .slice(nc)
+                  .map((c) => title(c.f))
+                  .join(", "),
+              ),
+            ),
+        ),
+      );
     // The header holds its own rule and page-coloured ground: the element can pin it over scrolled rows.
     const rule = el("line", { x1: 0, x2: W, y1: HEAD, y2: HEAD });
     hits += el(
@@ -361,7 +387,7 @@ export const table: Mark = {
           el(
             "text",
             { x: PAD, y: r(y + (ROW + 6) / 2), "dominant-baseline": "middle" },
-            esc(ctx.t("showMore", step)),
+            esc(`${ctx.t("showMore", step)} · ${ctx.t("rowsOf", drawn.length, rows.length)}`),
           ),
       );
     }

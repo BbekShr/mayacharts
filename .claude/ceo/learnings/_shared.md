@@ -81,3 +81,9 @@ Durable lessons every specialist applies without relearning them. `## Active` is
   - Price a new spec field with a scratch build before promising it: `rules` was estimated at 250 B and measured 950 B.
   - A theme `transform-origin` on a mark breaks the FLIP's 0 0 contract; set any other origin inside the WAAPI keyframes instead.
   - Before matching unkeyed text by position in an update, match by content: axis titles and ticks swap otherwise (2026-10-07).
+  - Agents must never `git stash` or `reset` in a shared tree; a foreign stash or merge mid-run swept editors' work away (2026-10-12). Commit after every fan-out lands and check `git reflog` before trusting the tree.
+  - Agent scratch scripts get swept into `git add -A` commits; they are now gitignored as `.agent-*.mjs` and `.lab.mjs`. Name throwaway files by that pattern.
+  - A feature-preserving trim of compact code saves almost nothing under gzip (0.45 KB on an 18 KB growth); price features before building, not after.
+  - Playwright `boundingBox()` is wrong for SVG text inside a shadow root in WebKit; click by `getBoundingClientRect()`.
+  - Stripping a style-hook attribute (`data-maya`) from a leaving node also strips its paint: freeze computed paint first.
+  - Keep a critic pass after every milestone: each round found real defects.

@@ -4,11 +4,17 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
-## Unreleased
+## 0.17.0 - Unreleased
 
-Fixes #76, #79, #81, #82, #83, #84, #86, #87, #88, #89, #90, #91, #92, #93.
+Fixes #76, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #88, #89, #90, #91, #92, #93.
 
 ### Added
+
+- `facet` on bar, line and area: small multiples, one panel per value in a grid that fits the width and scrolls past the tile height, each titled with its value and total (text key `panelOf`), ordered by data or by total with `sort`, capped by `limit`. Panels under 240 x 150 px are sparklines. Every panel holds every category in the same order, so one x lines up across panels. `facetScale: "shared" | "own"`, or both as an array for a Scale control (`view.facetScale`; text keys `facetScales`, `shared`, `own`). With `drill`, a click opens one panel full size with its axes (`view.drill`). Fixes #85.
+- `was` on line and area: a dashed ghost line of the previous values per series, keyed in the legend. Fixes #85.
+- `frameControl: "play" | "slider" | "both" | "tabs" | "select"` and `frameSpeed` (ms per frame) for `frame` playback; the slider, tabs and select set `view.frame` (text key `frames`). `trail: n` on a scatter with `frame` and `name` draws each name's previous positions; a selected name shows its whole path. `other: false` with `limit` drops the rest instead of an Other bar, so a race keeps each frame's own top N. Fixes #80.
+- `params`: up to 4 sliders and a Reset button (text keys `params`, `resetParams`), `view.params` in `el.view` and `maya-view`. `{ param: "id" }` stands in for a number in colorBy `target` and `warn` and in rules. `scale: { where, by, mode: "percent" }` multiplies the matching rows' values by the params. Title tokens `{total.base}`, `{count.below}` and `{count.above}`. Fixes #78.
+- `maya-view` reports `frame` when the viewer picks a frame, and `facetScale` and `params`.
 
 - New core type `list`, an insight list: numbered moves in data order, each with its headline value in its own format (`rowFormat` names a field holding a preset or template per row), a sentence under it (`body`) and evidence rows (`path: [headline, evidence]`) that open on click or Enter, drawn as bars on a scale local to the move with `bars: true`. Rows are not aggregated: a move's value is its own row's. `expand: "first" | "none" | "all"` picks what starts open and `view.expanded` holds the open move; `select` fires `maya-select` on a move. Fixes #79.
 - Drill on more types: `path` with `drill` on radial, waffle (with `tint`), hexmap (a drilled state draws its children as horizontal bars) and waterfall; chord takes three path levels and splits the clicked target into its children while the sources stay; a marimekko without `series` takes it from the next path level, so drilling a region makes its families the columns. Fixes #81.
@@ -45,6 +51,9 @@ Fixes #76, #79, #81, #82, #83, #84, #86, #87, #88, #89, #90, #91, #92, #93.
 - `rules: [{ y2, label }]` runs a rule across the right axis of a bar with `y2`. Fixes #87.
 - Tooltip fields take `{ field, ratio: [numerator, denominator] }`, shown as sum(numerator) / sum(denominator) wherever rows combine. Fixes #87.
 - Text keys `peerMean`, `brushed` and `brushCleared`.
+- A table whose `filter` matches no row says "No rows match \"{0}\"" (text key `noMatch`) and keeps the search box. Text key `moreMoves` ("+{0} more") for the insight list's dropped rows. Fixes #84.
+- Text key `rowsOf` ("{0} of {1}") for a table's row count when rows are paged or limited. A drilled marimekko drops its slot legend (its segments are tints). Heatmap column labels that drill further end in a chevron, and the row crumb root is named by the first path level.
+- Hardening: `back` refuses the options `expand` and `drillTo` refuse (drill, zoom, frame, expand, drillTo, back, page, scroll, filter). Options nested more than 24 levels, or cyclic, are `invalid-option` instead of a stack overflow. A registered theme is checked again when a chart reads it. A `drillTo` with `was: "previous"` whose previous series shares no x draws without the comparison.
 
 - `aggregate` keyed by y field with a `y` array that toggles the measure, such as `aggregate: { price: { ratio: ["sales", "units"] } }`; the active measure uses its rule and unlisted fields sum (#76).
 - A series selector in data tokens: `{max.y:2025}`, `{last.y:2025}`, `{first.x:2025}`, `{total:2025}`, `{mean:2025}` read only that series. Without one, max, min, first and last read one point and `{total}` sums every series, as documented (#76).

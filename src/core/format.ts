@@ -42,8 +42,10 @@ const intl = (C: new (l: string, o: object) => F, locale: string, raw: object) =
           const r = (BigInt(i + d.slice(0, k)) + BigInt(d[k]! > "4") + "").padStart(k + 1, "0");
           [i, d] = [r.slice(0, r.length - k), r.slice(r.length - k).replace(/0+$/, "")];
         }
+        // Decide the sign before the commas: +"21,002" is NaN.
+        const sign = 1 / +v < 0 && (!n[2] || +i || d) ? "-" : "";
         if (i.length > 3) i = i.replace(/\B(?=(\d{3})+$)/g, ",");
-        return (1 / +v < 0 && (!n[2] || +i || d) ? "-" : "") + i + (d && "." + d);
+        return sign + i + (d && "." + d);
       },
     };
   } else if (g) {

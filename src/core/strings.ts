@@ -173,12 +173,34 @@ export const TEXT = {
   filter: "Filter",
   /** Table row that shows the next page (spec.page): {0} = rows it adds. */
   showMore: "Show {0} more",
+  /** Table whose filter matches no row: {0} = the search text. */
+  noMatch: 'No rows match "{0}"',
+  /** Overflow row of a list: {0} = the moves not shown. */
+  moreMoves: "+{0} more",
+  /** Table row count when rows are paged or limited: {0} = rows shown, {1} = rows in all. */
+  rowsOf: "{0} of {1}",
   /** aria-label of the heatmap column breadcrumb (spec.xPath with drill). */
   crumbsX: "Column drill path",
   /** Drilled waterfall opening total: {0} = the drilled value. */
   before: "Before {0}",
   /** Drilled waterfall closing total: {0} = the drilled value. */
   after: "After {0}",
+  /** aria-label of the frame slider, tabs or select (spec.frameControl). */
+  frames: "Frame",
+  /** facet panel title and accessible name: {0} = the facet value, {1} = its formatted total. */
+  panelOf: "{0}, {1}",
+  /** Description of a facet chart: {0} = the facet field's title, {1} = panel count. */
+  facets: "One panel per {0}, {1} panels",
+  /** aria-label of the facetScale radiogroup. */
+  facetScales: "Scale",
+  /** facetScale option "shared". */
+  shared: "Same scale",
+  /** facetScale option "own". */
+  own: "Own scale",
+  /** aria-label of the params group, and its button on a chart under 300 px wide. */
+  params: "Adjust",
+  /** Button that puts every param back to its spec value. */
+  resetParams: "Reset",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

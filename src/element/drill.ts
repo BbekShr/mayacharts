@@ -52,6 +52,7 @@ export const reduce = (s: State, e: DrillEvent): State => {
       (prev.type !== next.type ||
         prev.x !== next.x ||
         !same(prev.path, next.path) ||
+        prev.facet !== next.facet ||
         !same(prev.seriesPath, next.seriesPath)))
   )
     return put(s, "drill", []);
@@ -60,9 +61,11 @@ export const reduce = (s: State, e: DrillEvent): State => {
     next.seriesPath ??
     (next.drillTo
       ? [next.series ?? ""]
-      : next.type === "chord" && path.length === 3
-        ? [path[1]!]
-        : path);
+      : next.facet
+        ? [next.facet]
+        : next.type === "chord" && path.length === 3
+          ? [path[1]!]
+          : path);
   let rows = next.data;
   const keep: string[] = [];
   for (let i = 0; i < cur.length && i < depth; i++) {
@@ -104,6 +107,7 @@ export const branchOf = (key: string, depth: number, type = "", levels = 0): str
 export const BUSY =
   "[data-maya=mark],[data-maya=hit],[data-maya=link],[data-maya=legend],button,a,input,select,.maya-ctl,.maya-tip,.maya-table";
 
+const PANEL = "svg[data-maya=panel]";
 const TICK = "[data-maya=axis-x] text[data-key]";
 
 export const mount = (host: Host): Handlers => {
@@ -132,8 +136,15 @@ export const mount = (host: Host): Handlers => {
   const valOf = (m: Element, depth: number) =>
     mode() === "series"
       ? (m.getAttribute("data-series") ?? undefined)
-      : (m.getAttribute("data-raw") ??
-        branchOf(m.getAttribute("data-key")!, depth, host.spec()?.type, host.spec()?.path?.length));
+      : mode() === "facet"
+        ? (m.closest(PANEL)?.getAttribute("data-facet") ?? undefined)
+        : (m.getAttribute("data-raw") ??
+          branchOf(
+            m.getAttribute("data-key")!,
+            depth,
+            host.spec()?.type,
+            host.spec()?.path?.length,
+          ));
 
   const say = (next: State, x?: boolean) => {
     const spec = host.spec();
@@ -210,6 +221,18 @@ export const mount = (host: Host): Handlers => {
     return true;
   };
 
+  /** Facet: a panel (or its title) opens full size. */
+  const pushF = (value: string): boolean => {
+    const spec = host.spec();
+    const s = host.state();
+    const next = reduce(s, { type: "drill", value, ...(spec && { spec }) });
+    if (next === s) return false;
+    want = ptr ? { svg: true } : { first: true };
+    host.commit(next);
+    say(next);
+    return true;
+  };
+
   const click = (e: Event) => {
     const el = e.target as Element | null;
     const crumb = el?.closest(".maya-crumbs [data-depth]");
@@ -221,11 +244,22 @@ export const mount = (host: Host): Handlers => {
     const tk = el?.closest(".maya-tip [data-drill]")?.getAttribute("data-drill");
     const m = tk ? marks().find((x) => x.getAttribute("data-key") === tk) : host.mark(e);
     const tick = ticks() && el?.closest(TICK);
+    // An empty panel area is not a hit target (nested svgs only hit their painted content): the click lands on the root svg, so find the panel by its box.
+    const { clientX: cx, clientY: cy } = e as MouseEvent;
+    const fc =
+      mode() === "facet" &&
+      !el?.closest(BUSY) &&
+      (el?.closest("[data-facet]") ??
+        [...host.root.querySelectorAll(PANEL)].find((p) => {
+          const r = p.getBoundingClientRect();
+          return cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+        }));
     if (crumb)
       pop(Number(crumb.getAttribute("data-depth")), crumb.parentElement?.dataset.axis === "x");
     else if (tick) detail < 2 && pushX(tick);
     // A link never drills (sankey and chord links are not keyboard-reachable).
     else if (m && m.getAttribute("data-maya") !== "link") (tk || !both || detail > 1) && push(m);
+    else if (fc) (!both || detail > 1) && pushF(fc.getAttribute("data-facet")!);
     else if (el && !el.closest(BUSY) && host.spec()?.drillOut !== false)
       pop((host.state().view.drill ?? []).length - 1);
     ptr = false;
@@ -235,6 +269,14 @@ export const mount = (host: Host): Handlers => {
   const key = (e: Event) => {
     const k = (e as KeyboardEvent).key;
     const tick = ticks() && (e.target as Element).closest?.(TICK);
+    const pn = k === "Enter" && mode() === "facet" && (e.target as Element).matches?.(PANEL);
+    if (pn && (e.target as Element).hasAttribute("data-facet")) {
+      e.preventDefault();
+      e.stopPropagation();
+      ptr = false;
+      pushF((e.target as Element).getAttribute("data-facet")!);
+      return;
+    }
     if (!tick || (k !== "Enter" && k !== " ")) return;
     e.preventDefault();
     e.stopPropagation();
