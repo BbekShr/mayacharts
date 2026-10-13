@@ -6,9 +6,27 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ## Unreleased
 
-Fixes #76, #89, #90, #91, #92, #93.
+Fixes #76, #86, #87, #88, #89, #90, #91, #92, #93.
 
 ### Added
+
+- `theme` takes a registered name or `[name, overrides]`. `registerTheme(name, tokens)` (`maya.registerTheme` in the global builds) defines a house theme once for every chart; importing `mayacharts/themes` registers its 18 names, and `maya.global.js` ships them as `maya.themes`. An unknown name throws `invalid-theme` listing the registered names. Fixes #88.
+- Theme tokens `rampLow`, `rampHigh`, `rampMid` and `rampMidValue` (a value ramp independent of `accent`; `rampMid` makes it diverging), `up`, `down` and `total` (direction colours, separate from the series slots), `neutral` (Other, unmapped names, folded slices), `subtitleSize`, `labelSize`, `legendSize`, `heroSize`, `heroWeight`, `emptySize`, `numeric` ("tabular" or "proportional"), `cellGap`, `cellRadius`, `labelInk`, `labelInkOnFill`, `lineEmphasis` and `ghost`. Fixes #88.
+- `tint: true`: children of a drilled `path` and weave threads under a group `colorBy` take evenly spaced tints of their parent's colour. Fixes #88.
+- Colour precedence is written down: a `colors` map key beats a `colorBy` tone, which beats theme `series1` to `series8`, which beat a `colors` array, which beats `accent`. Fixes #88.
+- `form: "line"` on radial draws a radar, one closed line per series, with `dash`. Fixes #86.
+- `stack: "stream"` on area draws a streamgraph (wiggle baseline, value axis and grid off by default). Fixes #86.
+- Weave takes a group `colorBy` (one colour per group from `colors`) and up to 20 threads with it. Fixes #86.
+- `colorScale: "linear" | "rank" | "quantile" | "log"` on heatmap and hexmap. Fixes #86.
+- `brush: true` on parallel: drag a range on an axis to keep the lines inside it; the ranges are `view.brush` and reported by `maya-view`. Fixes #86.
+- `emphasis: [series values]` on line draws those series heavier. Fixes #86.
+- Beeswarm takes `yScale: "log"`, `size`, `tooltip.fields`, `rules` and `select: { peers: field }` (the selected mark's peers light up with their average; `view.peers`). Fixes #87.
+- Heatmap takes `tooltip.fields` and `was` (field and `{ by }` forms). Fixes #87.
+- Dumbbell takes `zero: false` (the value axis fits the values at every drill level), `sort: "change"` and `tooltip.fields`. Fixes #87.
+- Ridgeline takes `select`. Fixes #87.
+- `rules: [{ y2, label }]` runs a rule across the right axis of a bar with `y2`. Fixes #87.
+- Tooltip fields take `{ field, ratio: [numerator, denominator] }`, shown as sum(numerator) / sum(denominator) wherever rows combine. Fixes #87.
+- Text keys `peerMean`, `brushed` and `brushCleared`.
 
 - `aggregate` keyed by y field with a `y` array that toggles the measure, such as `aggregate: { price: { ratio: ["sales", "units"] } }`; the active measure uses its rule and unlisted fields sum (#76).
 - A series selector in data tokens: `{max.y:2025}`, `{last.y:2025}`, `{first.x:2025}`, `{total:2025}`, `{mean:2025}` read only that series. Without one, max, min, first and last read one point and `{total}` sums every series, as documented (#76).

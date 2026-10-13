@@ -19,7 +19,7 @@
  *   stack-unsupported   stack (true or "percent") with type "line"
  *   invalid-domain      yDomain/xDomain not [lo, hi] with lo < hi, |bounds| <= 1e300, span >= 1e-300
  *   invalid-format      unknown preset, bad Intl options, unsupported locale, bad currency
- *   invalid-theme       unknown theme token
+ *   invalid-theme       unknown theme token or theme name (registerTheme, mayacharts/themes)
  *   unsafe-css-value    colors/theme value outside the CSS allowlist
  *   invalid-size        RenderOptions width/height not finite > 0
  *   unknown-state       hexmap x names no US state (geo's Mark.check)
@@ -29,7 +29,7 @@
  * "Did you mean": smallest score (|len diff| + chars not shared; ties to longest prefix), only if <= 3.
  * Lookups keyed by user input go through Object.hasOwn or Array#includes.
  */
-import { CORE_TYPES, MODULE_OF, MODULES, types } from "./registry.ts";
+import { addThemes, CORE_TYPES, MODULE_OF, MODULES, THEMES, types } from "./registry.ts";
 import { t as txt, TEXT } from "./strings.ts";
 import { formatter } from "./format.ts";
 import { pivotWas } from "./shape.ts";
@@ -48,6 +48,7 @@ import type {
   ResolvedGoal,
   ResolvedSpec,
   Rule,
+  ThemeTokens,
   View,
 } from "./types.ts";
 
@@ -77,16 +78,16 @@ const S: Record<string, "string" | "boolean"> = Object.fromEntries([
   ...w("$schema x y2 series size name title subtitle description locale currency frame").map(
     (k) => [k, "string"],
   ),
-  ...w("horizontal labels endLabels drill drillOut zoom grid xAxis yAxis table animate").map(
-    (k) => [k, "boolean"],
-  ),
+  ...w(
+    "horizontal labels endLabels drill drillOut zoom grid xAxis yAxis table animate tint brush zero",
+  ).map((k) => [k, "boolean"]),
 ]);
 /** Every spec key (schema.json is tested against this). */
 export const KEYS = [
   ...w(
     "type data y path totals aggregate sort limit format titles text yDomain xDomain rules select xType stack forms",
   ),
-  ...w("was tooltip xScale yScale annotate dash depth minAngle legend"),
+  ...w("was tooltip xScale yScale annotate dash depth minAngle legend form emphasis colorScale"),
   ...w("colors colorBy theme"),
   ...Object.keys(S),
 ];
@@ -108,7 +109,7 @@ const PTH = "treemap,sunburst,sankey,chord";
 const DRL = `${CPA},dumbbell,table,heatmap,marimekko,${PTH}`;
 export const ONLY: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   w(
-    `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge forms:units size:scatter,constellation name:scatter,beeswarm,boxplot,units path:${DRL} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation xDomain:scatter drill:${DRL} drillOut:${DRL} depth:treemap minAngle:sunburst select:${CPA},waterfall,scatter,heatmap,dumbbell,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter,dumbbell frame:${CPA},scatter,dumbbell xScale:scatter yScale:line,scatter annotate:${CPA},scatter dash:line,area`,
+    `horizontal:bar,dumbbell y2:bar,orbit was:bar,kpi,gauge,heatmap forms:units size:scatter,beeswarm,constellation name:scatter,beeswarm,boxplot,units path:${DRL} totals:waterfall series:${CPA},scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,marimekko,radial,boxplot,weave,constellation xType:${CPA} sort:${CPA},heatmap,dumbbell,table,radial,waffle,orbit limit:${CPA},heatmap,dumbbell,table,waffle,radial,orbit stack:bar,area colorBy:${CPA},waterfall,scatter,dumbbell,kpi,gauge,treemap,sunburst,hexmap,units,orbit,constellation,weave xDomain:scatter drill:${DRL} drillOut:${DRL} depth:treemap minAngle:sunburst select:${CPA},waterfall,scatter,heatmap,dumbbell,ridgeline,beeswarm,parallel,table,marimekko,waffle,radial,treemap,sunburst,hexmap,boxplot,funnel,weave,units,orbit,constellation zoom:line,area,scatter endLabels:line,area rules:${CPA},scatter,dumbbell,beeswarm frame:${CPA},scatter,dumbbell xScale:scatter yScale:line,scatter,beeswarm annotate:${CPA},scatter dash:line,area,radial emphasis:line form:radial colorScale:heatmap,hexmap tint:${DRL},weave brush:parallel zero:dumbbell`,
   )
     .map((e) => e.split(":"))
     .map(([k, v]) => [k, v!.split(",")]),
@@ -117,7 +118,11 @@ const AGGS = w("sum mean count min max");
 const ANN = w("max min first last");
 const LEG = w("top bottom right");
 /** Types whose tooltip takes extra fields (tooltip: { fields }). */
-const TIPF = [...CART, "scatter"];
+const TIPF = [...CART, "scatter", "heatmap", "dumbbell", "beeswarm"];
+/** Types whose tooltip fields are a row's own values (any type), not combined numbers. */
+const TIPROW = ["scatter", "beeswarm"];
+const SCALES = w("linear rank quantile log");
+const NUMERIC = w("tabular proportional");
 const FORMS = w("waffle bars swarm");
 const PRESETS = w("auto integer decimal compact percent currency date month year time datetime");
 /** A format template: text, one `{value}` or `{value:preset}`, text. Braces elsewhere are not allowed. */
@@ -131,6 +136,9 @@ export const TOKENS = [
   ...w(
     "font fontSize fg fgMuted grid bg accent radius tooltipBg tooltipFg focus good warn bad line gridDash titleSize titleWeight axisSize",
   ),
+  ...w("subtitleSize labelSize legendSize heroSize heroWeight emptySize numeric"),
+  ...w("rampLow rampHigh rampMid rampMidValue up down total neutral"),
+  ...w("cellGap cellRadius labelInk labelInkOnFill lineEmphasis ghost"),
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => "series" + n),
 ];
 const HORIZ = "Use horizontal: true.";
@@ -170,6 +178,11 @@ const HINTS: Record<string, string> = {
   measures: 'Use aggregate: { ratio: ["<numerator>", "<denominator>"] }.',
   nested: "Use depth: 2.",
   legendPosition: 'Use legend: "bottom" or "right".',
+  radar: 'Use type: "radial" with form: "line".',
+  streamgraph: 'Use type: "area" with stack: "stream".',
+  ramp: "Use theme: { rampLow, rampHigh, rampMid? }.",
+  palette: 'Use colors: [...], or theme: "<name>" (registerTheme, mayacharts/themes).',
+  highlight: 'Use emphasis: ["<series value>"] (line).',
 };
 /** Foreign type names -> what to write instead. */
 const ALIAS: Record<string, string> = {
@@ -256,20 +269,74 @@ const bad = (k: string, v: unknown, want: string) =>
     own(HINTS, `${k}:${ty(v)}`) ?? "",
   );
 
-const css = (path: string, v: string, font: boolean) => {
+const css = (path: string, v: string, font: boolean, root = "spec.") => {
   const ok = font
     ? FONT.test(v)
     : /^[#\w\s.,%()+\-\/]*$/.test(v) &&
       [...v.matchAll(/([\w-]*)\s*\(/g)].every((m) => FN.includes(m[1]!.toLowerCase()));
   if (!v || !ok)
-    F(
+    fail(
       "unsafe-css-value",
       path,
-      `= ${show(v)} is not a safe CSS value.`,
+      `${root}${path} = ${show(v)} is not a safe CSS value.`,
       `Allowed: colours, lengths, numbers and ${FN.join("() ")}(); fonts are family names.`,
       "Not allowed: url(), image-set(), other functions, ; { } < > \\ and (outside fonts) quotes.",
     );
 };
+
+/** Theme tokens: known keys; CSS strings through the allowlist, rampMidValue a number, numeric a word.
+ * `root` heads the message ("spec." or `registerTheme("name"): `). */
+const tokens = (o: unknown, root = "spec.") => {
+  const no = (p: string, rest: string) => fail("invalid-option", p, `${root}${p} ${rest}`);
+  if (!isObj(o)) no("theme", `must be an object of theme tokens, received ${show(o)}.`);
+  for (const [k, v] of Object.entries(o as object)) {
+    const p = `theme.${k}`;
+    if (!TOKENS.includes(k))
+      fail(
+        "invalid-theme",
+        p,
+        `${root}${p} is not a theme token.`,
+        `Valid tokens: ${TOKENS.join(", ")}.`,
+        dym(k, TOKENS),
+      );
+    if (k === "rampMidValue" ? !fin(v, 1e300) : typeof v !== "string")
+      no(p, `must be ${k === "rampMidValue" ? "a number" : "a string"}, received ${show(v)}.`);
+    if (k === "numeric" && !NUMERIC.includes(v as string))
+      no(p, `must be "tabular" or "proportional", received ${show(v)}.`);
+    if (typeof v === "string") css(p, v, k === "font", root);
+  }
+};
+
+/** A theme name or [name, overrides] as [name, overrides]; tokens alone as [null, tokens]. */
+const themeParts = (th: unknown): [string | null, unknown] =>
+  typeof th === "string"
+    ? [th, {}]
+    : Array.isArray(th)
+      ? [typeof th[0] === "string" && th.length === 2 ? th[0] : "", th[1]]
+      : [null, th];
+
+/** spec.theme as tokens: a name (or [name, overrides]) resolved through the registry. */
+export const themeOf = (th: ChartSpec["theme"]): ThemeTokens => {
+  const [n, over] = themeParts(th ?? {});
+  return { ...(n === null ? {} : THEMES.get(n)), ...(over as ThemeTokens) };
+};
+
+/**
+ * Adds a named theme for `spec.theme: "name"` and `["name", overrides]`, shared by every bundle on
+ * the page (registry.ts). The tokens are checked now; a later call with the same name replaces it.
+ * Connected charts re-render.
+ * @example registerTheme("house", { font: "Geist, sans-serif", accent: "#1E1E24" })
+ */
+export function registerTheme(name: string, theme: ThemeTokens): void {
+  if (typeof name !== "string" || !/^[\w-]{1,40}$/.test(name))
+    fail(
+      "invalid-theme",
+      "name",
+      `registerTheme name must be 1 to 40 letters, digits, "_" or "-", received ${show(name)}.`,
+    );
+  tokens(theme, `registerTheme(${JSON.stringify(name)}): `);
+  addThemes({ [name]: Object.freeze({ ...theme }) });
+}
 
 /** One threshold object: kpi and gauge take any of target, warn, better; other types need target and take no warn. */
 const goal = (t: string, p: string, v: unknown) => {
@@ -363,15 +430,29 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ["legend", 'a boolean, "top", "bottom" or "right"', (v) => v === !!v || LEG.includes(v)],
   ["depth", "a positive integer", (v) => Number.isInteger(v) && v > 0],
   ["minAngle", "whole degrees from 0 to 360", (v) => Number.isInteger(v) && v >= 0 && v <= 360],
-  ["sort", '"asc" or "desc"', (v) => v === "asc" || v === "desc"],
+  ["sort", '"asc", "desc" or "change"', (v) => v === "asc" || v === "desc" || v === "change"],
   [
     "xType",
     '"auto", "category" or "time"',
     (v) => v === "auto" || v === "category" || v === "time",
   ],
   ["limit", "a positive integer", (v) => Number.isInteger(v) && v > 0],
-  ["select", 'true or "multi"', (v) => v === true || v === "multi"],
-  ["stack", 'a boolean or "percent"', (v) => v === !!v || v === "percent"],
+  [
+    "select",
+    'true, "multi" or { peers: field }',
+    (v) =>
+      v === true ||
+      v === "multi" ||
+      (isObj(v) && typeof v.peers === "string" && only(v, ["peers"])),
+  ],
+  [
+    "stack",
+    'a boolean, "percent" or "stream"',
+    (v) => v === !!v || v === "percent" || v === "stream",
+  ],
+  ["form", '"bars" or "line"', (v) => v === "bars" || v === "line"],
+  ["colorScale", `one of ${SCALES.join(", ")}`, (v) => SCALES.includes(v)],
+  ["emphasis", "an array of series values (strings)", (v) => strs(v)],
   [
     "was",
     "a field name, or { by: field, current?, previous? } for long data",
@@ -385,8 +466,21 @@ const CHECKS: [string, string, (v: any) => boolean][] = [
   ],
   [
     "tooltip",
-    "a boolean, or { fields: [field names] }",
-    (v) => v === !!v || (isObj(v) && strs(v.fields, 1) && only(v, ["fields"])),
+    "a boolean, or { fields: [field names or { field, ratio: [numerator, denominator] }] }",
+    (v) =>
+      v === !!v ||
+      (isObj(v) &&
+        Array.isArray(v.fields) &&
+        v.fields.length > 0 &&
+        only(v, ["fields"]) &&
+        v.fields.every(
+          (f: unknown) =>
+            typeof f === "string" ||
+            (isObj(f) &&
+              only(f, ["field", "ratio"]) &&
+              typeof f.field === "string" &&
+              oneAgg({ ratio: f.ratio })),
+        )),
   ],
   ["xScale", '"log"', (v) => v === "log"],
   ["yScale", '"log"', (v) => v === "log"],
@@ -585,8 +679,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (!Array.isArray(v) || v.length > 4) bad("rules", v, "an array of at most 4 rules");
     (v as unknown[]).forEach((e, i) => {
       const o = isObj(e) ? e : { y: e };
-      // One kind per item: { y }, { slope, intercept? } (scatter), { x } or { band: [lo, hi] }.
-      const k = ["slope", "x", "band"].find((q) => Object.hasOwn(o, q)) ?? "y";
+      // One kind per item: { y }, { y2 } (bar with y2), { slope, intercept? } (scatter), { x } or { band: [lo, hi] }.
+      const k = ["slope", "x", "band", "y2"].find((q) => Object.hasOwn(o, q)) ?? "y";
       // ponytail: |y| <= 1e15 keeps the widened axis span finite.
       const b = o.band as unknown[];
       const okY =
@@ -598,7 +692,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
             b[0] !== b[1]
           : k === "x"
             ? typeof o.x === "string" || Number.isFinite(o.x)
-            : o[k] === "mean" || fin(o[k], 1e15);
+            : (o[k] === "mean" && k !== "y2") || fin(o[k], 1e15);
       const okL = o.label === undefined || (typeof o.label === "string" && o.label.length <= 40);
       if (
         !okY ||
@@ -609,10 +703,12 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         bad(
           `rules[${i}]`,
           e,
-          'a number, "mean", { y }, { x }, { band: [lo, hi] } or { slope, intercept? }, each with label? (40 characters)',
+          'a number, "mean", { y }, { y2 }, { x }, { band: [lo, hi] } or { slope, intercept? }, each with label? (40 characters)',
         );
       if (k === "slope" && t !== "scatter")
         F("option-unsupported", `rules[${i}].slope`, "works with: scatter.");
+      if (k === "y2" && (t !== "bar" || s.y2 == null))
+        F("option-unsupported", `rules[${i}].y2`, "works with: bar with spec.y2.");
       if (
         s.yScale === "log" &&
         ((typeof o.y === "number" && o.y <= 0) ||
@@ -657,19 +753,21 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     for (const [p, c] of entries!) css(`colors${p}`, c as string, false);
   }
   if (theme !== undefined) {
-    if (!(isObj(theme) && Object.values(theme).every((c) => typeof c === "string")))
-      bad("theme", theme, "an object of string values");
-    for (const k of Object.keys(theme as object))
-      if (!TOKENS.includes(k))
-        F(
-          "invalid-theme",
-          `theme.${k}`,
-          `is not a theme token.`,
-          `Valid tokens: ${TOKENS.join(", ")}.`,
-          dym(k, TOKENS),
-        );
-    for (const [k, v] of Object.entries(theme as Record<string, string>))
-      css(`theme.${k}`, v, k === "font");
+    const [name, over] = themeParts(theme);
+    if (name === "") bad("theme", theme, "a theme name, [name, { tokens }] or { tokens }");
+    if (name !== null && !THEMES.has(name)) {
+      const have = [...THEMES.keys()];
+      F(
+        "invalid-theme",
+        "theme",
+        `= ${show(name)} is not a registered theme.`,
+        have.length
+          ? `Registered themes: ${have.join(", ")}.`
+          : 'No themes are registered: import "mayacharts/themes" (maya.global.js has them), or call registerTheme(name, tokens).',
+        dym(name, have),
+      );
+    }
+    tokens(over);
   }
 
   const NS = `is not supported with spec.type = "${t}".`;
@@ -687,8 +785,43 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
   const per = isObj(agg) && !strs(agg.ratio);
   const ratio = rs.length > 0;
   const CB = "cannot be combined with";
+  // tooltip.fields as [name, ratio fields or null].
+  const tips: [string, string[] | null][] = isObj(s.tooltip)
+    ? (s.tooltip.fields as unknown[]).map((f) =>
+        isObj(f) ? [f.field as string, f.ratio as string[]] : [f as string, null],
+      )
+    : [];
   const pairs: [unknown, string, string, string?][] = [
-    [colorBy != null && s.series != null && t !== "dumbbell", "colorBy", `${CB} spec.series.`],
+    [
+      colorBy != null && s.series != null && t !== "dumbbell" && t !== "weave",
+      "colorBy",
+      `${CB} spec.series.`,
+    ],
+    [
+      t === "weave" && colorBy != null && (colorBy === "sign" || isObj(colorBy)),
+      "colorBy",
+      'on "weave" must be a group field (one colour per group).',
+    ],
+    [s.stack === "stream" && t !== "area", "stack", `= "stream" ${NS}`, "It works with: area."],
+    [
+      s.sort === "change" && t !== "dumbbell",
+      "sort",
+      `= "change" ${NS}`,
+      "It works with: dumbbell.",
+    ],
+    [s.zero === false && t !== "dumbbell", "zero", NS, "spec.zero works with: dumbbell."],
+    [isObj(s.select) && t !== "beeswarm", "select", `.peers ${NS}`, "It works with: beeswarm."],
+    [
+      strs(s.dash, 1) && t === "radial" && s.form !== "line",
+      "dash",
+      'on "radial" needs form: "line".',
+    ],
+    [strs(s.emphasis, 1) && s.series === undefined, "emphasis", "needs spec.series."],
+    [
+      s.tint === true && (t === "weave" ? typeof colorBy !== "string" : !isPath && path == null),
+      "tint",
+      t === "weave" ? "needs a group spec.colorBy." : "needs spec.path.",
+    ],
     [s.yDomain != null && Array.isArray(y), "yDomain", `${CB} a y array.`],
     [PATHX.includes(t) && path != null && s.x != null, "x", `${CB} spec.path.`],
     [
@@ -796,7 +929,10 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         ["y2", s.y2],
         ["was", s.was],
         ["was.by", isObj(s.was) ? s.was.by : undefined],
-        ...arr("tooltip.fields", isObj(s.tooltip) ? (s.tooltip.fields as string[]) : []),
+        ...tips.flatMap(([f, r], i): [string, string][] =>
+          r ? arr(`tooltip.fields[${i}].ratio`, r) : [[`tooltip.fields[${i}]`, f]],
+        ),
+        ["select.peers", isObj(s.select) ? s.select.peers : undefined],
         ["size", s.size],
         ["name", s.name],
         ...arr("path", (path as string[] | undefined) ?? []),
@@ -807,7 +943,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       for (const opt of ["format", "titles"])
         if (isObj(s[opt]))
           for (const f of Object.keys(s[opt] as object))
-            if (!has(f) && !rm.has(f)) unk(`${opt}.${f}`, "", f);
+            if (!has(f) && !rm.has(f) && !tips.some(([n, r]) => r && n === f))
+              unk(`${opt}.${f}`, "", f);
       if (colorBy === "sign" && has("sign"))
         F(
           "invalid-option",
@@ -839,16 +976,16 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
       if (typeof s.size === "string") numeric(s.size, "non-numeric-field", "size");
       for (const k of ["y2", "was"])
         if (typeof s[k] === "string") numeric(s[k] as string, "non-numeric-field", k);
-      // Aggregated marks combine tooltip fields by spec.aggregate; scatter shows the row's value.
-      if (isObj(s.tooltip) && t !== "scatter")
-        for (const f of s.tooltip.fields as string[])
-          numeric(f, "non-numeric-field", "tooltip.fields");
+      // Aggregated marks combine tooltip fields by spec.aggregate; scatter and beeswarm show the row's value.
+      for (const [f, r] of tips)
+        for (const g of r ?? (TIPROW.includes(t) ? [] : [f]))
+          numeric(g, "non-numeric-field", "tooltip.fields");
       // Values matched as strings, as frame values are: a typo would draw nothing silently.
       const among = (p: string, f: string, vals: unknown[], what: string) => {
         const seen = new Set(rows.map((r) => (r[f] == null ? txt(s, "blank") : String(r[f]))));
         vals.forEach((v, i) => {
           if (v === undefined || seen.has(String(v))) return;
-          const pi = p === "dash" ? `${p}[${i}]` : p;
+          const pi = p === "dash" || p === "emphasis" ? `${p}[${i}]` : p;
           F(
             "invalid-option",
             pi,
@@ -863,7 +1000,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
         among("was.current", b, [s.was.current], "was.by");
         among("was.previous", b, [s.was.previous], "was.by");
       }
-      if (strs(s.dash) && typeof s.series === "string") among("dash", s.series, s.dash, "series");
+      for (const k of ["dash", "emphasis"])
+        if (strs(s[k]) && typeof s.series === "string") among(k, s.series, s[k], "series");
       if (t === "dumbbell" && typeof s.series === "string") {
         const n = new Set(rows.map((r) => String(r[s.series as string]))).size;
         if (n !== 2)
@@ -880,7 +1018,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
             `is ${show(v)}, but spec.xType = "time" needs ISO 8601 dates or epoch ms.`,
           );
         });
-      if (typeof colorBy === "string" && colorBy !== "sign")
+      // A weave's colorBy names a group (any values).
+      if (typeof colorBy === "string" && colorBy !== "sign" && t !== "weave")
         numeric(colorBy, "non-numeric-field", "colorBy");
       // Refuses values at or below 0 (below 0 when `zero` is allowed).
       const pos = (f: string, why: string, zero = false) =>
@@ -894,6 +1033,8 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
             );
         });
       if (s.yScale === "log") for (const f of ys) pos(f, 'yScale: "log"');
+      if (s.colorScale === "log") for (const f of ys) pos(f, 'colorScale: "log"');
+      if (s.stack === "stream") for (const f of ys) pos(f, 'stack: "stream"', true);
       if (s.xScale === "log" && typeof s.x === "string") pos(s.x, 'xScale: "log"');
       if (isPath || t === "funnel" || t === "ridgeline") for (const f of ys) pos(f, t, !isPath);
     });
@@ -930,9 +1071,26 @@ export function validateOptions(opts: unknown): asserts opts is RenderOptions {
   const { view: v, selected: sel, nonce } = o;
   if (v !== undefined) {
     if (!isObj(v)) inv("view", v, "an object");
-    const vk = w("measure drill window hidden sortBy frame form");
+    const vk = w("measure drill window hidden sortBy frame form brush peers");
     for (const k of Object.keys(v as object)) if (!vk.includes(k)) unknown("options.view", k, vk);
-    const { drill, window: win, hidden, sortBy } = v as Record<string, unknown>;
+    const { drill, window: win, hidden, sortBy, brush, peers } = v as Record<string, unknown>;
+    if (
+      brush !== undefined &&
+      !(
+        Array.isArray(brush) &&
+        brush.every(
+          (b) =>
+            Array.isArray(b) &&
+            b.length === 3 &&
+            typeof b[0] === "string" &&
+            fin(b[1], 1e300) &&
+            fin(b[2], 1e300) &&
+            b[1] <= b[2],
+        )
+      )
+    )
+      inv("view.brush", brush, "an array of [field, lo, hi] with lo <= hi");
+    if (peers !== undefined && typeof peers !== "string") inv("view.peers", peers, "a string");
     if (
       sortBy !== undefined &&
       !(
@@ -993,11 +1151,22 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
   const ag = aggOf(spec.aggregate, measures[measure]!);
   const ratio = typeof ag === "object" ? ag.ratio : null;
   // Path types: one palette slot per path value from all rows, so a name keeps its colour through drill.
-  const slots = PATH.includes(spec.type)
-    ? memo(spec.data, `slots${flow}${JSON.stringify(full)}`, () => {
+  // Also tint with path (the parent's slot) and a weave's group colorBy (one slot per group).
+  const group = spec.type === "weave" && typeof spec.colorBy === "string" ? spec.colorBy : null;
+  // A flow colours its second column (its first only in a branching tree): that one is numbered first.
+  const sf = PATH.includes(spec.type)
+    ? flow
+      ? [full[1]!, full[0]!, ...full.slice(2)]
+      : full
+    : group
+      ? [group]
+      : spec.tint && full.length
+        ? full
+        : [];
+  const slots = sf.length
+    ? memo(spec.data, `slots${JSON.stringify(sf)}`, () => {
         const m = new Map<string, number>();
-        // A flow colours its second column (its first only in a branching tree): that one is numbered first.
-        for (const f of flow ? [full[1]!, full[0]!, ...full.slice(2)] : full)
+        for (const f of sf)
           for (const r of spec.data) m.has(String(r[f])) || m.set(String(r[f]), m.size);
         return m;
       })
@@ -1026,23 +1195,6 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
           : frameRows,
       )
     : frameRows;
-  // spec.was long form: pivot the periods into the wide form the marks read (shape.ts).
-  const W = spec.was;
-  const str = (v: unknown) => (v === undefined ? null : String(v));
-  const wb =
-    typeof W === "object" ? { by: W.by, current: str(W.current), previous: str(W.previous) } : null;
-  const pv = wb
-    ? pivotWas(
-        rows,
-        x,
-        spec.series ?? null,
-        measures[measure]!,
-        wb,
-        (ag as Aggregate | undefined) ?? "sum",
-      )
-    : null;
-  const data = pv ? pv.rows : rows;
-  const forms = spec.forms ?? (spec.type === "units" ? (FORMS as ResolvedSpec["forms"]) : []);
   // Units: the group is the series (legend toggles, view.hidden and colors by group), unless colorBy colours the dots.
   // Heatmap: path levels are the rows (series); the drill advances them like x elsewhere.
   const series =
@@ -1052,6 +1204,16 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
       : spec.type === "heatmap" && path.length
         ? path[0]!
         : null);
+  // spec.was long form: pivot the periods into the wide form the marks read (shape.ts).
+  const W = spec.was;
+  const str = (v: unknown) => (v === undefined ? null : String(v));
+  const wb =
+    typeof W === "object" ? { by: W.by, current: str(W.current), previous: str(W.previous) } : null;
+  const pv = wb
+    ? pivotWas(rows, x, series, measures[measure]!, wb, (ag as Aggregate | undefined) ?? "sum")
+    : null;
+  const data = pv ? pv.rows : rows;
+  const forms = spec.forms ?? (spec.type === "units" ? (FORMS as ResolvedSpec["forms"]) : []);
   const entries = <T>(o: Readonly<Partial<Record<string, T>>> | undefined) =>
     Object.entries(o ?? {}).filter((e): e is [string, T] => e[1] !== undefined);
   const cb = spec.colorBy;
@@ -1069,6 +1231,11 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
         : entries<Goal>(cb as Record<string, Goal>).map(([k, v]) => [k, g(v)]),
   );
   const tip = spec.tooltip;
+  const tips = typeof tip === "object" ? tip.fields : [];
+  const sel = spec.select;
+  // A theme name (or [name, overrides]) resolves through the registry; validateSpec checked it.
+  const theme = themeOf(spec.theme);
+  const stream = spec.stack === "stream";
   // spec.rules split by kind, in object form, each with its label.
   const rule = <K extends string, T>(k: K, f: (e: Extract<Rule, Record<K, unknown>>) => T) =>
     (spec.rules ?? []).flatMap((e) => {
@@ -1101,7 +1268,21 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     was: typeof W === "string" ? W : (wb?.by ?? null),
     wasBy: wb,
     dash: new Set(spec.dash),
-    tipFields: typeof tip === "object" ? [...tip.fields] : [],
+    tipFields: tips.map((f) => (typeof f === "string" ? f : f.field)),
+    tipRatio: new Map(
+      tips.flatMap((f) => (typeof f === "string" ? [] : [[f.field, [f.ratio[0], f.ratio[1]]]])),
+    ),
+    emphasis: new Set(spec.emphasis),
+    colorScale: spec.colorScale ?? "linear",
+    radar: spec.form === "line",
+    tint: spec.tint ?? false,
+    zero: spec.zero ?? true,
+    brush:
+      spec.brush && spec.type === "parallel"
+        ? (view.brush ?? []).filter(([f]) => measures.includes(f))
+        : [],
+    peers: typeof sel === "object" ? { field: sel.peers, value: view.peers ?? null } : null,
+    rampMid: theme.rampMid === undefined ? null : (theme.rampMidValue ?? 0),
     xScale: spec.xScale ?? "linear",
     yScale: spec.yScale ?? "linear",
     annotate: (spec.annotate ?? []).filter((a): a is Annotate => typeof a === "string"),
@@ -1147,16 +1328,18 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
         spec.type === "hexmap"),
     tooltip: tip !== false,
     drill: spec.drill ?? false,
-    select: spec.select ?? false,
+    select: typeof sel === "object" ? true : (sel ?? false),
     zoom: spec.zoom ?? false,
-    grid: spec.grid ?? true,
+    // A stream's baseline wiggles: its value axis and grid say nothing, so they default off.
+    grid: spec.grid ?? !stream,
     xAxis: spec.xAxis ?? true,
-    yAxis: spec.yAxis ?? true,
+    yAxis: spec.yAxis ?? !stream,
     locale: spec.locale ?? "en-US",
     currency: spec.currency ?? "USD",
     yDomain: spec.yDomain ?? null,
     xDomain: spec.xDomain ?? null,
     rules: rule("y", (e) => ({ y: e.y })),
+    y2Rules: rule("y2", (e) => ({ y: e.y2 })),
     slopes: rule("slope", (e) => ({ k: e.slope, b: e.intercept ?? 0 })),
     xRules: rule("x", (e) => ({ x: e.x })),
     bands: rule("band", (e) => ({ lo: Math.min(...e.band), hi: Math.max(...e.band) })),
@@ -1169,7 +1352,7 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
         : null,
     colorBy: typeof cb === "object" ? (goals.get(measures[measure]!) ?? null) : (cb ?? null),
     goals,
-    theme: spec.theme ?? {},
+    theme,
   };
   // The ghosts are titled by the previous period (format[by]) unless titles names `by`.
   if (wb && pv?.previous != null && !titles.has(wb.by))

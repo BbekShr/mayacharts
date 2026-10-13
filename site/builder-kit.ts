@@ -349,6 +349,7 @@ export const SKIP = new Set([
   "forms", // units: an array of forms, set in the copied code
   "annotate", // arrays, set in the copied code
   "dash",
+  "emphasis", // series values, like dash
   ...ROLES,
 ]);
 

@@ -319,7 +319,7 @@ export const bar: Mark = {
     if (spec.labels && tags.length) {
       // The first and last bar (a waterfall's start and Total) claim their room first; a waterfall
       // step label must fit inside its own column or it is dropped.
-      // ponytail: no thinning to a subset of steps: a label wider than its column (the first and the Total too) is dropped.
+      // ponytail: a grouped label wider than its bar sits above it and is dropped only when it collides with another label; a waterfall step wider than its column is dropped (the first and the Total hug their edge).
       const first = tags[0]!;
       const last = tags.at(-1)!;
       // Horizontal bars label inside only when every label fits, else all outside (one rule per chart, not per bar).
@@ -327,21 +327,14 @@ export const bar: Mark = {
         hz &&
         !spec.stack &&
         tags.every(([c, , , w, h]) => tw(ctx.fmt(spec.y, c.v)) <= w && h >= 14);
-      // Grouped columns: a series keeps all its labels or none; one wider than the bar pitch would sit on its neighbour.
-      // ponytail: no thinning to some of a series' bars; widen the chart or label fewer series.
-      const off = new Set<number>();
-      if (!hz && !spec.stack && !wf && shaped.visible.length > 1)
-        for (const si of shaped.visible)
-          if (tags.some(([c]) => c.si === si && tw(ctx.fmt(spec.y, c.v)) > inner.step - 2))
-            off.add(si);
       for (const t of wf ? new Set([first, last, ...tags]) : tags) {
         const [c, x, y, w, h, d] = t;
         const dk = d["data-key"];
-        if (noted.has(dk) || off.has(c.si)) continue;
+        if (noted.has(dk)) continue;
         // Inside when it fits, else outside the bar end (collisions are dropped by ctx.label).
         const text = ctx.fmt(spec.y, c.v);
         const est = tw(text);
-        if (wf && est > cat.step) continue;
+        if (wf && est > cat.step && t !== first && t !== last) continue;
         const [cx, cy] = [x + w / 2, y + h / 2];
         const neg = c.v < 0;
         if (hz && !spec.stack ? all : est <= w && h >= (hz ? 14 : 16)) {

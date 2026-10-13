@@ -4,6 +4,7 @@ import { register } from "../src/core/registry.ts";
 import {
   fail,
   MayaSpecError,
+  registerTheme,
   resolve,
   validateOptions,
   validateSpec,
@@ -153,7 +154,7 @@ describe("one snapshot per error code", () => {
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.stacked is not a known option.
         Did you mean "stack"?
-        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, was, tooltip, xScale, yScale, annotate, dash, depth, minAngle, legend, colors, colorBy, theme, $schema, x, y2, series, size, name, title, subtitle, description, locale, currency, frame, horizontal, labels, endLabels, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate.
+        Known options: type, data, y, path, totals, aggregate, sort, limit, format, titles, text, yDomain, xDomain, rules, select, xType, stack, forms, was, tooltip, xScale, yScale, annotate, dash, depth, minAngle, legend, form, emphasis, colorScale, colors, colorBy, theme, $schema, x, y2, series, size, name, title, subtitle, description, locale, currency, frame, horizontal, labels, endLabels, drill, drillOut, zoom, grid, xAxis, yAxis, table, animate, tint, brush, zero.
         -> https://bbekshr.github.io/mayacharts/errors.html#unknown-option"
     `);
   });
@@ -215,7 +216,7 @@ describe("one snapshot per error code", () => {
     expect([e.code, e.path]).toEqual(["invalid-theme", "theme.acent"]);
     expect(e.message).toMatchInlineSnapshot(`
       "mayacharts: spec.theme.acent is not a theme token.
-        Valid tokens: font, fontSize, fg, fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, warn, bad, line, gridDash, titleSize, titleWeight, axisSize, series1, series2, series3, series4, series5, series6, series7, series8.
+        Valid tokens: font, fontSize, fg, fgMuted, grid, bg, accent, radius, tooltipBg, tooltipFg, focus, good, warn, bad, line, gridDash, titleSize, titleWeight, axisSize, subtitleSize, labelSize, legendSize, heroSize, heroWeight, emptySize, numeric, rampLow, rampHigh, rampMid, rampMidValue, up, down, total, neutral, cellGap, cellRadius, labelInk, labelInkOnFill, lineEmphasis, ghost, series1, series2, series3, series4, series5, series6, series7, series8.
         Did you mean "accent"?
         -> https://bbekshr.github.io/mayacharts/errors.html#invalid-theme"
     `);
@@ -932,7 +933,7 @@ describe("#59-#68 contracts: was long form, log scales, slope rules, dash, toolt
     ]);
     expect(code({ ...long, tooltip: { fields: [] } })).toEqual(["invalid-option", "tooltip"]);
     expect(code({ ...long, tooltip: "yes" })).toEqual(["invalid-option", "tooltip"]);
-    expect(code({ ...long, type: "heatmap", tooltip: { fields: ["units"] } })).toEqual([
+    expect(code({ ...long, type: "waterfall", tooltip: { fields: ["units"] } })).toEqual([
       "option-unsupported",
       "tooltip",
     ]);
@@ -1190,6 +1191,153 @@ describe("#76 aggregate keyed by y field", () => {
     expect(code({ ...base, aggregate: { ratio: ["s", "u"] } })).toEqual([
       "option-unsupported",
       "aggregate",
+    ]);
+  });
+});
+
+describe("#86-#88 contracts (M2)", () => {
+  const d = [
+    { m: "Jan", s: "A", g: "G1", v: 1, n: 2, u: 4 },
+    { m: "Feb", s: "B", g: "G2", v: 3, n: 6, u: 3 },
+  ];
+  const b = { type: "bar", x: "m", y: "v", data: d };
+  const ok = (spec: object) => expect(() => validateSpec(spec)).not.toThrow();
+
+  it("theme: a registered name, [name, overrides] or tokens; unknown names list the registered ones", () => {
+    expect(code({ ...b, theme: "m2house" })).toEqual(["invalid-theme", "theme"]);
+    registerTheme("m2house", { accent: "#123456", rampMidValue: 50, rampMid: "#eee" });
+    ok({ ...b, theme: "m2house" });
+    ok({ ...b, theme: ["m2house", { radius: "0px" }] });
+    expect(err({ ...b, theme: "m2hous" }).message).toContain("Registered themes: ");
+    expect(err({ ...b, theme: "m2hous" }).message).toContain('Did you mean "m2house"?');
+    expect(code({ ...b, theme: ["m2house"] })).toEqual(["invalid-option", "theme"]);
+    expect(code({ ...b, theme: ["m2house", { accent: "url(x)" }] })).toEqual([
+      "unsafe-css-value",
+      "theme.accent",
+    ]);
+    const r = resolve({ ...b, theme: ["m2house", { radius: "0px" }] } as ChartSpec);
+    expect(r.theme).toEqual({
+      accent: "#123456",
+      rampMidValue: 50,
+      rampMid: "#eee",
+      radius: "0px",
+    });
+    expect(r.rampMid).toBe(50);
+    expect(resolve(b as ChartSpec).rampMid).toBeNull();
+    expect(() => registerTheme("bad", { accent: "url(x)" })).toThrow(
+      'registerTheme("bad"): theme.accent',
+    );
+    expect(() => registerTheme("no name", {})).toThrow(MayaSpecError);
+  });
+
+  it("new tokens: numeric is a word, rampMidValue a number, the rest allowlisted strings", () => {
+    ok({ ...b, theme: { numeric: "tabular", up: "#0a0", cellGap: "2px", heroWeight: "700" } });
+    expect(code({ ...b, theme: { numeric: "mono" } })).toEqual(["invalid-option", "theme.numeric"]);
+    expect(code({ ...b, theme: { rampMidValue: "0" } })).toEqual([
+      "invalid-option",
+      "theme.rampMidValue",
+    ]);
+    expect(code({ ...b, theme: { ghost: "url(x)" } })).toEqual(["unsafe-css-value", "theme.ghost"]);
+  });
+
+  it("encodings: form, stack stream, emphasis, colorScale, brush, tint", () => {
+    ok({ type: "radial", x: "m", y: "v", series: "s", form: "line", dash: ["A"], data: d });
+    expect(code({ type: "radial", x: "m", y: "v", series: "s", dash: ["A"], data: d })).toEqual([
+      "option-unsupported",
+      "dash",
+    ]);
+    expect(code({ ...b, form: "line" })).toEqual(["option-unsupported", "form"]);
+    ok({ ...b, type: "area", series: "s", stack: "stream" });
+    expect(code({ ...b, stack: "stream" })).toEqual(["option-unsupported", "stack"]);
+    expect(code({ ...b, type: "area", stack: "stream", data: [{ m: "a", v: -1 }] })).toEqual([
+      "non-positive-value",
+      "data[0].v",
+    ]);
+    const st = resolve({ ...b, type: "area", series: "s", stack: "stream" } as ChartSpec);
+    expect([st.yAxis, st.grid]).toEqual([false, false]);
+    ok({ ...b, type: "line", series: "s", emphasis: ["B"] });
+    expect(code({ ...b, type: "line", emphasis: ["B"] })).toEqual([
+      "option-unsupported",
+      "emphasis",
+    ]);
+    expect(code({ ...b, type: "line", series: "s", emphasis: ["Z"] })).toEqual([
+      "invalid-option",
+      "emphasis[0]",
+    ]);
+    ok({ type: "heatmap", x: "m", y: "v", series: "s", colorScale: "rank", data: d });
+    expect(code({ ...b, colorScale: "rank" })).toEqual(["option-unsupported", "colorScale"]);
+    expect(
+      code({ type: "heatmap", x: "m", y: "v", colorScale: "log", data: [{ m: "a", v: 0 }] }),
+    ).toEqual(["non-positive-value", "data[0].v"]);
+    ok({ type: "parallel", x: "m", y: ["v", "n"], brush: true, data: d });
+    expect(code({ ...b, brush: true })).toEqual(["option-unsupported", "brush"]);
+    const p = resolve(
+      { type: "parallel", x: "m", y: ["v", "n"], brush: true, data: d } as ChartSpec,
+      {
+        brush: [
+          ["v", 0, 2],
+          ["zz", 0, 1],
+        ],
+      },
+    );
+    expect(p.brush).toEqual([["v", 0, 2]]);
+    expect(code({ view: { brush: [["v", 2, 0]] } }, true)).toEqual([
+      "invalid-option",
+      "options.view.brush",
+    ]);
+    ok({ ...b, path: ["g", "m"], x: undefined, drill: true, tint: true });
+    expect(code({ ...b, tint: true })).toEqual(["option-unsupported", "tint"]);
+    const w = { type: "weave", x: "m", y: "v", series: "s", colorBy: "g", tint: true, data: d };
+    ok(w);
+    expect(resolve(w as ChartSpec).slots).toEqual(
+      new Map([
+        ["G1", 0],
+        ["G2", 1],
+      ]),
+    );
+    expect(code({ ...w, colorBy: "sign" })).toEqual(["option-unsupported", "colorBy"]);
+    expect(code({ ...w, colorBy: undefined })).toEqual(["option-unsupported", "tint"]);
+  });
+
+  it("coverage: beeswarm, heatmap, dumbbell, ridgeline, y2 rules, tooltip ratio", () => {
+    const bs = { type: "beeswarm", x: "s", y: "v", data: d };
+    ok({
+      ...bs,
+      yScale: "log",
+      size: "n",
+      tooltip: { fields: ["g"] },
+      rules: [{ y: 2 }],
+      select: { peers: "g" },
+    });
+    expect(code({ ...b, select: { peers: "g" } })).toEqual(["option-unsupported", "select"]);
+    expect(code({ ...bs, select: { peers: "zz" } })).toEqual(["unknown-field", "select.peers"]);
+    const r = resolve({ ...bs, select: { peers: "g" } } as ChartSpec, { peers: "G1" });
+    expect([r.select, r.peers]).toEqual([true, { field: "g", value: "G1" }]);
+    const hm = { type: "heatmap", x: "m", y: "v", series: "s", data: d };
+    ok({ ...hm, tooltip: { fields: ["n"] }, was: "u" });
+    ok({ ...hm, was: { by: "g" } });
+    const db = { type: "dumbbell", x: "m", y: "v", series: "s", data: d };
+    ok({ ...db, zero: false, sort: "change", tooltip: { fields: ["n"] } });
+    expect(code({ ...b, zero: false })).toEqual(["option-unsupported", "zero"]);
+    expect(code({ ...b, sort: "change" })).toEqual(["option-unsupported", "sort"]);
+    ok({ type: "ridgeline", x: "m", y: "v", series: "s", select: true, data: d });
+    ok({ ...b, y2: "n", rules: [{ y2: 3, label: "Cap" }] });
+    expect(code({ ...b, rules: [{ y2: 3 }] })).toEqual(["option-unsupported", "rules[0].y2"]);
+    const tr = {
+      ...b,
+      tooltip: { fields: ["n", { field: "price", ratio: ["v", "u"] }] },
+      format: { price: "currency" },
+    };
+    ok(tr);
+    const rt = resolve(tr as ChartSpec);
+    expect([rt.tipFields, [...rt.tipRatio]]).toEqual([["n", "price"], [["price", ["v", "u"]]]]);
+    expect(code({ ...b, tooltip: { fields: [{ field: "p", ratio: ["v", "v"] }] } })).toEqual([
+      "invalid-option",
+      "tooltip",
+    ]);
+    expect(code({ ...b, tooltip: { fields: [{ field: "p", ratio: ["v", "zz"] }] } })).toEqual([
+      "unknown-field",
+      "tooltip.fields[0].ratio[1]",
     ]);
   });
 });

@@ -39,7 +39,8 @@ describe("heatmap", () => {
     const labels = (w: number) =>
       render(wide, { width: w, height: 200 }).match(/<text[^>]*data-in[^>]*>([^<]*)</g) ?? [];
     expect(labels(520).some((t) => /\d\.\d+M</.test(t))).toBe(true);
-    const tight = labels(200);
+    // Heatmap bands have no padding (M4), so the fallback starts below 200 px.
+    const tight = labels(170);
     expect(tight.length).toBeGreaterThan(0);
     expect(tight.every((t) => !/\d\.\d+M</.test(t))).toBe(true);
   });
@@ -71,8 +72,8 @@ describe("heatmap", () => {
     };
     expect(marks(render(tiny, { width: 200, height: 100 }))).toMatchInlineSnapshot(`
       [
-        "<rect data-maya="mark" data-hm="" data-key="r1~a" data-c="0" data-x="a" data-series="r1" data-y="1" data-f="1" data-q="0" x="41.18" y="17.6" width="60.24" height="50.8"/>",
-        "<rect data-maya="mark" data-hm="" data-key="r1~b" data-c="1" data-x="b" data-series="r1" data-y="3" data-f="3" data-q="9" x="118.98" y="17.6" width="60.24" height="50.8"/>",
+        "<rect data-maya="mark" data-hm="" data-key="r1~a" data-c="0" data-x="a" data-series="r1" data-y="1" data-f="1" data-q="0" x="33.4" y="11" width="75.8" height="64"/>",
+        "<rect data-maya="mark" data-hm="" data-key="r1~b" data-c="1" data-x="b" data-series="r1" data-y="3" data-f="3" data-q="9" x="111.2" y="11" width="75.8" height="64"/>",
       ]
     `);
   });

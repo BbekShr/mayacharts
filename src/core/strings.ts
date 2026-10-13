@@ -151,6 +151,12 @@ export const TEXT = {
   last: "Last",
   /** Description of annotate: {0} = the kinds joined with ", ". */
   labelled: "Labelled points: {0}",
+  /** Beeswarm select { peers }: label of the peers' average line, {0} = the peers' value. */
+  peerMean: "{0} average",
+  /** Live region after a parallel brush: {0} = lines kept, {1} = all lines. */
+  brushed: "{0} of {1} shown",
+  /** Live region after the parallel brush is cleared. */
+  brushCleared: "Filter cleared",
 } as const;
 
 export type TextKey = keyof typeof TEXT;

@@ -247,10 +247,12 @@ export const css =
     .join("") +
   // Nested treemap parent: a quiet frame of its branch colour behind its children.
   "rect[data-par]{fill:color-mix(in oklab,var(--c) 14%,var(--maya-bg))}" +
-  // Label ink from the mark's own fill (the label repeats the mark's colour attributes, so --c is the fill): the relative colour keeps its lightness only as a switch,
-  // dark ink (--maya-label-ink, an OKLab lightness) above L .565 and light ink (--maya-label-ink-on) below, where both reach 4.5:1 on greys.
-  // Where relative colours are missing the plain dark [data-ink] rule stands.
-  "@supports (color:oklch(from red l c h)){[data-maya=labels] [data-ink=a]{fill:oklch(from var(--c,var(--maya-series-1)) clamp(var(--maya-label-ink,.12),calc(var(--maya-label-ink,.12) + (.565 - l)*1000),var(--maya-label-ink-on,1)) 0 0)}}" +
+  // Label ink from the mark's own fill (the label repeats the mark's colour attributes, so --c is the fill): a neutral grey in CIE Lab, L* 1.5 (near-black) above L* 49.85
+  // (relative luminance .1831, where both inks reach 4.5:1) and 100 (white) below it. L* is a function of luminance, so this is WCAG luminance, not OKLab L.
+  // Only near-black and white are exact at the threshold, so the inks are constants, not tokens.
+  // Where relative colours are missing the dark [data-ink] rule stands, light on the fills known to be dark.
+  "@supports (color:lab(from red l a b)){[data-maya=labels] [data-ink=a]{fill:lab(from var(--c,var(--maya-series-1)) clamp(1.5,calc(1.5 + (49.85 - l)*1e3),100) 0 0)}}" +
+  "@supports not (color:lab(from red l a b)){[data-maya=labels] [data-ink=a]:is([data-other],[data-total],[data-tone]:not([data-tone=warn])){fill:var(--maya-bg)}}" +
   HEXMAP +
   SCATTER +
   ORBIT +

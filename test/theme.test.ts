@@ -221,7 +221,7 @@ describe("orbit and ghost rules", () => {
   });
   it("heatmap cells use the generic ramp and its legend and ink match", () => {
     expect(css).toContain(
-      "[data-maya=labels] [data-ink=a]{fill:oklch(from var(--c,var(--maya-series-1))",
+      "[data-maya=labels] [data-ink=a]{fill:lab(from var(--c,var(--maya-series-1))",
     );
     expect(css).toContain(
       "[data-maya=ramp] i{flex:none;width:80px;height:8px;background:linear-gradient(90deg,color-mix(in oklab,var(--maya-accent) 36%,var(--b))",

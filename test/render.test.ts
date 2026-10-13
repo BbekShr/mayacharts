@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { render, renderParts, renderShell } from "../src/index.ts";
+import { registerTheme, render, renderParts, renderShell } from "../src/index.ts";
+import "../src/radial.ts";
+import "../src/weave.ts";
+import "../src/geo.ts";
 import { tw } from "../src/core/layout.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
@@ -768,5 +771,159 @@ describe("#76 tokens, empty arrays, per-y aggregate", () => {
     expect(title(drill, { measure: 1, drill: ["A"] })).toBe("2 50");
     // The ratio fields reach the SSR JSON child.
     expect(renderShell(spec, { view: { measure: 1 } })).toContain('"u":4');
+  });
+});
+
+describe("#86-#88 core contracts (M2)", () => {
+  const d = ["Jan", "Feb", "Mar"].flatMap((m, i) =>
+    ["A", "B"].map((s, j) => ({ m, s, g: j ? "G2" : "G1", v: (i + 1) * (j + 2), n: i + 1 })),
+  );
+  const vars = (spec: object) => new Map(renderParts(spec as ChartSpec).vars);
+
+  it("a theme name and [name, overrides] become the same custom properties as tokens", () => {
+    registerTheme("m2render", { accent: "#123456", numeric: "proportional", rampMidValue: 0 });
+    const v = vars({ ...grouped, theme: ["m2render", { up: "#00aa00" }] });
+    expect(v.get("--maya-accent")).toBe("#123456");
+    expect(v.get("--maya-numeric")).toBe("proportional-nums");
+    expect(v.get("--maya-ramp-mid-value")).toBe("0");
+    expect(v.get("--maya-up")).toBe("#00aa00");
+  });
+
+  it('colorBy "sign" marks the svg and tone legend data-sign; a colors map key marks its slot data-mapped', () => {
+    const p = renderParts({ ...negative, colorBy: "sign" });
+    expect(p.svg).toMatch(/<svg[^>]* data-sign/);
+    expect(p.legend).toContain('data-maya="tone" data-sign');
+    const m = renderParts({ ...grouped, colors: { S: "#ff0000", Zed: "#000" } });
+    expect(m.svg).toMatch(/<svg[^>]* data-mapped="1"/);
+    expect(renderParts(grouped).svg).not.toContain("data-mapped");
+  });
+
+  it("emphasis series carry data-em on their legend button", () => {
+    const p = renderParts({
+      type: "line",
+      x: "m",
+      y: "v",
+      series: "s",
+      emphasis: ["B"],
+      legend: true,
+      data: d,
+    } as ChartSpec);
+    expect(p.legend).toMatch(/data-em[^>]*data-key="B"/);
+    expect(p.legend).not.toMatch(/data-em[^>]*data-key="A"/);
+  });
+
+  it("{ y2 } rules draw across the right axis and widen it", () => {
+    const svg = render({
+      ...simple,
+      data: simple.data.map((r) => ({ ...r, u: 0.5 })),
+      y2: "u",
+      rules: [{ y2: 0.8, label: "Cap" }],
+      format: { u: "percent" },
+    });
+    expect(svg).toMatch(/<line data-y2=""/);
+    expect(svg).toContain("Cap 80%");
+  });
+
+  it("every new option validates and renders before the fan-out draws it", () => {
+    const specs: object[] = [
+      { type: "radial", x: "m", y: "v", series: "s", form: "line", dash: ["A"], data: d },
+      { type: "area", x: "m", y: "v", series: "s", stack: "stream", data: d },
+      {
+        type: "weave",
+        x: "m",
+        y: "v",
+        series: "s",
+        colorBy: "g",
+        tint: true,
+        colors: { G1: "#f00" },
+        data: d,
+      },
+      {
+        type: "heatmap",
+        x: "m",
+        y: "v",
+        series: "s",
+        colorScale: "quantile",
+        tooltip: { fields: ["n"] },
+        was: "n",
+        data: d,
+      },
+      { type: "parallel", x: "m", y: ["v", "n"], brush: true, data: d },
+      { type: "line", x: "m", y: "v", series: "s", emphasis: ["B"], data: d },
+      {
+        type: "beeswarm",
+        x: "s",
+        y: "v",
+        yScale: "log",
+        size: "n",
+        tooltip: { fields: ["g"] },
+        rules: ["mean"],
+        select: { peers: "g" },
+        data: d,
+      },
+      {
+        type: "dumbbell",
+        x: "m",
+        y: "v",
+        series: "s",
+        zero: false,
+        sort: "change",
+        tooltip: { fields: ["n"] },
+        data: d,
+      },
+      { type: "ridgeline", x: "m", y: "v", series: "s", select: true, data: d },
+      {
+        type: "bar",
+        path: ["g", "m"],
+        y: "v",
+        drill: true,
+        tint: true,
+        tooltip: { fields: [{ field: "p", ratio: ["v", "n"] }] },
+        data: d,
+      },
+    ];
+    const view = { brush: [["v", 0, 4]] as const, peers: "G1" };
+    for (const spec of specs) expect(() => renderShell(spec as ChartSpec, { view })).not.toThrow();
+  });
+});
+
+describe("M1 design-critic follow-ups and SSR themes", () => {
+  it("M3: an x-rule label that fits on neither side still draws (shorter, or clamped inside the plot)", () => {
+    const data = [1e5, 3e5, 6e5, 1.2e6, 1.4e6].map((u, i) => ({ u, s: (i + 1) * 1e6 }));
+    const spec = {
+      type: "scatter",
+      x: "u",
+      y: "s",
+      rules: [{ x: 1e6, label: "Median units" }],
+      data,
+    } as ChartSpec;
+    const svg = render(spec, { width: 280, height: 300 });
+    const g = /<g data-maya="rules">(.*?)<\/g>/.exec(svg)![1]!;
+    expect(g).toMatch(/<text[^>]*>[^<]+<\/text>/);
+    const x = +/<text x="([\d.]+)"/.exec(g)![1]!;
+    const plot = /data-plot="([\d.]+) [\d.]+ ([\d.]+)/.exec(svg)!;
+    expect(x).toBeGreaterThanOrEqual(+plot[1]! - 1);
+  });
+
+  it("M4: heatmap bands have no padding, cells sit 1 to 2 px apart", () => {
+    const data = Array.from({ length: 15 * 5 }, (_, i) => ({
+      c: `c${i % 15}`,
+      r: `r${Math.floor(i / 15)}`,
+      v: i,
+    }));
+    const svg = render({ type: "heatmap", x: "c", y: "v", series: "r", data } as ChartSpec, {
+      width: 390,
+      height: 360,
+    });
+    const xs = [...svg.matchAll(/data-hm="" [^>]*?x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/g)]
+      .slice(0, 2)
+      .map((m) => [+m[1]!, +m[2]!] as const);
+    expect(xs[1]![0] - (xs[0]![0] + xs[0]![1])).toBeLessThanOrEqual(2.01);
+  });
+
+  it("a theme name is resolved into the SSR JSON child", () => {
+    registerTheme("m2ssr", { accent: "#abcdef" });
+    const html = renderShell({ ...simple, theme: ["m2ssr", { radius: "0px" }] });
+    expect(html).toContain('"theme":{"accent":"#abcdef","radius":"0px"}');
   });
 });

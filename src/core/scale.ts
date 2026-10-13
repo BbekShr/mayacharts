@@ -85,3 +85,39 @@ export function timeScale(
     of,
   };
 }
+
+/**
+ * spec.colorScale for a value ramp (heatmap, hexmap): q(v) is the data-q step 0..9 and `breaks` what
+ * the legend shows ([lo, hi]; quantile: [lo, four class breaks, hi]). linear: by value (with `mid`,
+ * diverging: mid at the centre, the farther end at its end, so equal distances get equal steps);
+ * log: by log10 (values above 0); rank: by position among the distinct values; quantile: five
+ * equal-count classes at steps 0, 2, 5, 7, 9. One distinct value: step 9.
+ */
+export function ramp(
+  values: readonly number[],
+  kind: "linear" | "rank" | "quantile" | "log" = "linear",
+  mid: number | null = null,
+): { q(v: number): number; breaks: number[] } {
+  const all = [...values].sort((a, b) => a - b);
+  const [lo, hi] = [all[0] ?? 0, all.at(-1) ?? 0];
+  const step = (p: number) => (hi > lo ? Math.min(9, Math.max(0, Math.floor(p * 10))) : 9);
+  if (kind === "rank") {
+    const u = [...new Set(all)];
+    const at = new Map(u.map((v, i) => [v, i / Math.max(1, u.length - 1)]));
+    return { q: (v) => step(at.get(v) ?? 0), breaks: [lo, hi] };
+  }
+  if (kind === "quantile") {
+    // ponytail: fixed five classes; more need a class count option.
+    const b = [1, 2, 3, 4].map((k) => all[Math.floor((k * all.length) / 5)]!);
+    return {
+      q: (v) => (hi > lo ? Math.round((b.filter((x) => v >= x).length * 9) / 4) : 9),
+      breaks: [lo, ...b, hi],
+    };
+  }
+  const f = kind === "log" ? Math.log10 : (v: number) => v;
+  const m = mid === null || kind === "log" ? null : Math.max(hi - mid, mid - lo) || 1;
+  return {
+    q: (v) => step(m === null ? (f(v) - f(lo)) / (f(hi) - f(lo)) : 0.5 + (v - mid!) / (2 * m)),
+    breaks: [lo, hi],
+  };
+}

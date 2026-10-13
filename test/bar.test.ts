@@ -57,8 +57,8 @@ describe("bar", () => {
     };
     const l = labels(renderParts(spec, { width: 1000, height: 300 }).svg);
     expect(l.length).toBeGreaterThan(1);
-    // Narrow: the Total's label wider than its column drops instead of running over the neighbouring step (#91.5).
-    expect(labels(renderParts(spec, { width: 260, height: 300 }).svg)).toHaveLength(0);
+    // Narrow: only the opening and the Total survive (edge-hugging); steps wider than their column drop.
+    expect(labels(renderParts(spec, { width: 260, height: 300 }).svg)).toHaveLength(2);
   });
 
   it("a waterfall opens at a leading total's own value; later totals keep the running sum (#92.4)", () => {

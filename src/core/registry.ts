@@ -4,9 +4,10 @@
  * so every bundle that includes it (index, element, each module, the IIFE) shares one
  * table through a version-keyed global symbol. First definer wins; the property is
  * non-writable and non-configurable so a later bundle cannot swap the table.
- * Core marks are NOT here: they live in render.ts's static CORE map.
+ * Core marks are NOT here: they live in render.ts's static CORE map. Named themes (THEMES) share
+ * a second version-keyed table the same way.
  */
-import type { Mark } from "./types.ts";
+import type { Mark, ThemeTokens } from "./types.ts";
 
 // ponytail: kept in sync with package.json by hand; test/registry.test.ts fails when it drifts.
 export const VERSION = "0.16.0";
@@ -54,6 +55,21 @@ export const MODULE_OF: Readonly<Record<string, string>> = {
   orbit: "orbit",
   constellation: "constellation",
 };
+
+const TK = Symbol.for("mayacharts.themes@" + MAJOR);
+if (!Object.hasOwn(globalThis, TK))
+  Object.defineProperty(globalThis, TK, { value: new Map<string, ThemeTokens>() });
+
+/** Named themes for `spec.theme: "name"` (shared across bundles like MODULES). */
+export const THEMES = (globalThis as unknown as Record<symbol, Map<string, ThemeTokens>>)[TK]!;
+
+/** Adds named themes (validate.ts registerTheme checks them first; themes.ts adds its own with
+ * keep, so a name the host registered first stays). Connected charts re-render. */
+export function addThemes(t: Readonly<Record<string, ThemeTokens>>, keep = false): void {
+  for (const [k, v] of Object.entries(t)) if (!keep || !THEMES.has(k)) THEMES.set(k, v);
+  if (typeof globalThis.dispatchEvent === "function")
+    globalThis.dispatchEvent(new Event("maya-register"));
+}
 
 /** Not exported from the public entry: modules call it on import. First wins. */
 export function register(type: string, mark: Mark): void {

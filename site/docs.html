@@ -660,11 +660,12 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><a class="spec-anchor" id="sort"></a><code>sort</code></td>
-              <td>asc / desc</td>
+              <td>asc / desc / change</td>
               <td>data order</td>
               <td>
-                Categories by total across all series (hidden ones too). bar line area heatmap
-                dumbbell table radial waffle orbit
+                Categories by total across all series (hidden ones too); "change" (dumbbell only) by
+                to minus from, largest gain first. bar line area heatmap dumbbell table radial
+                waffle orbit
               </td>
             </tr>
             <tr>
@@ -736,7 +737,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             <tr>
               <td><a class="spec-anchor" id="was"></a><code>was</code></td>
               <td>field / {by, current?, previous?}</td>
-              <td>bar kpi gauge</td>
+              <td>bar kpi gauge heatmap</td>
               <td>
                 Previous value field, or <code>{ by, current?, previous? }</code> for long data (one
                 row per item and period): the latest distinct value of <code>by</code> is current,
@@ -745,11 +746,12 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 and the ghosts are titled by the previous period formatted by
                 <code>format[by]</code>. <code>current</code> and <code>previous</code> pick
                 periods, matched as strings. kpi: a second comparison, such as the same period last
-                year. gauge: a marker at the old value. Each bar gets a dashed ghost bar at its old
-                value drawn over it (the value axis spans the ghosts), keyed in the legend by the
-                field's title, the tooltip says "was" and the value, the data table gains a column,
-                and the description names the 2 largest relative moves (text.since, "Since Last
-                week: North +12%, West -10%."). Not with stack or a y array
+                year. gauge: a marker at the old value. heatmap: a "was" tooltip row and table
+                column per cell. Each bar gets a dashed ghost bar at its old value drawn over it
+                (the value axis spans the ghosts), keyed in the legend by the field's title, the
+                tooltip says "was" and the value, the data table gains a column, and the description
+                names the 2 largest relative moves (text.since, "Since Last week: North +12%, West
+                -10%."). Not with stack or a y array
               </td>
             </tr>
             <tr>
@@ -760,6 +762,25 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 Forms a units chart switches between, first one shown (view.form picks another).
                 With 2 or more the chart shows a form control (text.forms, text.waffle, text.bars,
                 text.swarm). Default all three
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="form"></a><code>form</code></td>
+              <td>"bars" / "line"</td>
+              <td>radial</td>
+              <td>
+                "line" draws a radar: one closed line per series, angle = x, radius = y from zero;
+                <code>dash</code> draws series dashed, an open line where a series has gaps; hover
+                on a spoke lists every series. Default "bars"
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="zero"></a><code>zero</code></td>
+              <td>boolean</td>
+              <td>dumbbell</td>
+              <td>
+                false fits the value axis to the values, recomputed at each drill level, so small
+                changes between large values stay visible. Default true
               </td>
             </tr>
             <tr>
@@ -823,8 +844,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             <tr>
               <td><a class="spec-anchor" id="size"></a><code>size</code></td>
               <td>field</td>
-              <td>scatter constellation</td>
-              <td>Bubble or star area (sqrt scale)</td>
+              <td>scatter beeswarm constellation</td>
+              <td>Bubble, dot or star area (sqrt scale)</td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="name"></a><code>name</code></td>
@@ -845,15 +866,17 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><a class="spec-anchor" id="stack"></a><code>stack</code></td>
-              <td>boolean | "percent"</td>
+              <td>boolean | "percent" | "stream"</td>
               <td>bar area</td>
               <td>
                 Stack series instead of grouping. "percent" shows each category's visible values as
                 shares of its total: the axis runs 0 to 100%, hidden series renormalise, and y is
                 formatted as percent unless format sets it. Labels, tooltips and the table show the
                 share, not the raw value. Negative values are shares of the summed magnitudes and
-                stack below 0. A radial always stacks, so <code>stack: false</code> on it is
-                option-unsupported
+                stack below 0. "stream" (area only) centres the stack on a wiggle baseline, a
+                streamgraph: values must be 0 or more, the value axis and grid are off by default,
+                and the tooltip shows each value. A radial always stacks, so
+                <code>stack: false</code> on it is option-unsupported
               </td>
             </tr>
             <tr>
@@ -917,7 +940,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 target offBelow offAbove total shareOf sortedBy ascending descending fromTo reduced
                 points point range density perCell mean perX rule log play pause frameOf frame was
                 since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
-                median q1 min rows ofPrevious ofFirst first last labelled
+                median q1 min rows ofPrevious ofFirst first last labelled peerMean brushed
+                brushCleared
               </td>
             </tr>
             <tr>
@@ -982,8 +1006,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             <tr>
               <td><a class="spec-anchor" id="rules"></a><code>rules</code></td>
               <td>
-                (number | "mean" | {y, label?} | {x, label?} | {band: [lo, hi], label?} | {slope,
-                intercept?, label?})[]
+                (number | "mean" | {y, label?} | {y2, label?} | {x, label?} | {band: [lo, hi],
+                label?} | {slope, intercept?, label?})[]
               </td>
               <td>-</td>
               <td>
@@ -993,14 +1017,17 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 numerator over total denominator) and reads "Average" without a label. Numbers widen
                 the value axis; outside a yDomain they are not drawn. <code>{ x }</code> draws a
                 rule across the category axis at that category, date or scatter x; one that matches
-                nothing draws nothing. <code>{ band: [lo, hi] }</code> shades a value range. Scatter
-                only: <code>{ slope, intercept }</code> draws y = slope * x + intercept (intercept 0
-                by default), slope "mean" = sum of y / sum of x; its label shows the slope as y per
-                x ("Average price $38 per unit"; set <code>text.perX</code> to "{0} per unit" for a
-                singular unit) and sits clear of the points. A rule label takes the first free spot
-                along its line inside the plot, after value labels and annotations, and is dropped
-                when none is free (the description still names it). <code>[]</code> is the same as
-                unset. bar line area scatter dumbbell
+                nothing draws nothing. <code>{ band: [lo, hi] }</code> shades a value range.
+                <code>{ y2 }</code> (a bar with <code>y2</code>) runs across the right axis,
+                labelled by its format, and widens it. On beeswarm "mean" is the mean of the visible
+                rows. Scatter only: <code>{ slope, intercept }</code> draws y = slope * x +
+                intercept (intercept 0 by default), slope "mean" = sum of y / sum of x; its label
+                shows the slope as y per x ("Average price $38 per unit"; set
+                <code>text.perX</code> to "{0} per unit" for a singular unit) and sits clear of the
+                points. A rule label takes the first free spot along its line inside the plot, after
+                value labels and annotations, and is dropped when none is free (the description
+                still names it). <code>[]</code> is the same as unset. bar line area scatter
+                dumbbell beeswarm
               </td>
             </tr>
             <tr>
@@ -1009,8 +1036,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>linear</td>
               <td>
                 Log value axis, ticks at powers of 10 (and 2 and 5 when they are sparse). Every
-                plotted value must be above 0. line scatter. A bar encodes its value as length from
-                zero, so bars, waterfall and area refuse it
+                plotted value must be above 0. line scatter beeswarm. A bar encodes its value as
+                length from zero, so bars, waterfall and area refuse it
               </td>
             </tr>
             <tr>
@@ -1463,6 +1490,23 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>"Labelled points: {0}"</td>
               <td>Description of annotate: {0} = the kinds joined with ", ".</td>
             </tr>
+            <tr>
+              <td><code>peerMean</code></td>
+              <td>"{0} average"</td>
+              <td>
+                Beeswarm select { peers }: label of the peers' average line, {0} = the peers' value.
+              </td>
+            </tr>
+            <tr>
+              <td><code>brushed</code></td>
+              <td>"{0} of {1} shown"</td>
+              <td>Live region after a parallel brush: {0} = lines kept, {1} = all lines.</td>
+            </tr>
+            <tr>
+              <td><code>brushCleared</code></td>
+              <td>"Filter cleared"</td>
+              <td>Live region after the parallel brush is cleared.</td>
+            </tr>
           </tbody>
         </table>
       </section>
@@ -1484,8 +1528,11 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>
                 Hover/keyboard tooltip (default true). <code>{ "fields": ["pricePerUnit"] }</code>
                 adds those fields as tooltip rows and data table columns, formatted by format; bar,
-                line and area combine them by aggregate (numeric fields only), scatter shows the
-                row's value. fields: bar line area scatter
+                line, area, heatmap and dumbbell combine them by aggregate (numeric fields only),
+                scatter and beeswarm show the row's value. An item
+                <code>{ "field": "price", "ratio": ["sales", "units"] }</code> shows sum(sales) /
+                sum(units) under the name price wherever rows combine (titles and format key it; it
+                need not be in the rows). fields: bar line area scatter heatmap dumbbell beeswarm
               </td>
             </tr>
             <tr>
@@ -1530,12 +1577,23 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><a class="spec-anchor" id="select"></a><code>select</code></td>
-              <td>true / "multi"</td>
+              <td>true / "multi" / {peers}</td>
               <td>
                 Click/Enter/legend selects marks; Escape clears. With drill, double-click or
-                Shift+Enter drills. bar line area waterfall scatter heatmap dumbbell beeswarm
-                parallel table marimekko waffle radial treemap sunburst hexmap boxplot funnel weave
-                units orbit constellation
+                Shift+Enter drills. <code>{ "peers": "itemType" }</code> (beeswarm) also lights the
+                marks sharing the selected one's value of that field, with their average
+                (text.peerMean); view.peers holds the value. bar line area waterfall scatter heatmap
+                dumbbell ridgeline beeswarm parallel table marimekko waffle radial treemap sunburst
+                hexmap boxplot funnel weave units orbit constellation
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="brush"></a><code>brush</code></td>
+              <td>boolean</td>
+              <td>
+                Drag a range on an axis to keep the lines inside it; ranges on several axes combine
+                with AND and the other lines dim; a click on the axis clears it. State in view.brush
+                (<code>[field, lo, hi]</code> per axis), reported by maya-view. parallel
               </td>
             </tr>
             <tr>
@@ -1615,15 +1673,16 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>string[] or {[name]: color}</td>
               <td>
                 An array holds at most 8 distinct colours; a map takes any number of names (past 8
-                series they share slots). A map key wins over <code>theme.series1</code> to
-                <code>series8</code>, which win over the array, which wins over
-                <code>theme.accent</code>; colorBy tones and ramps paint over all of them. A map is
-                keyed by series value; treemap and sunburst by <code>path[0]</code> value; sankey
-                and chord by node name, with links and inner levels inheriting (a sankey root
-                missing from the map stays neutral at every drill level); waffle by category. Keys
-                that match nothing are ignored. Path types give every name a slot from all rows, so
-                a colour holds through drill; a host filter that drops names can move array slots, a
-                map never moves
+                series they share slots). A map key wins over colorBy tones, which win over
+                <code>theme.series1</code> to <code>series8</code>, which win over the array, which
+                wins over <code>theme.accent</code>; a value ramp (a colorBy field, heatmap, hexmap)
+                ignores the map. Weave with a group colorBy, and tint with path, key the map by
+                group or path value. A map is keyed by series value; treemap and sunburst by
+                <code>path[0]</code> value; sankey and chord by node name, with links and inner
+                levels inheriting (a sankey root missing from the map takes theme neutral at every
+                drill level); waffle by category. Keys that match nothing are ignored. Path types
+                give every name a slot from all rows, so a colour holds through drill; a host filter
+                that drops names can move array slots, a map never moves
               </td>
             </tr>
             <tr>
@@ -1631,32 +1690,68 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>string[]</td>
               <td>
                 Series values drawn dashed (the line, the area outline, the legend swatch and the
-                end label), such as last year against this year. Needs series; <code>[]</code> is
-                the same as unset. line area
+                end label, a radar line), such as last year against this year. Needs series;
+                <code>[]</code> is the same as unset. line area radial (with form "line")
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="emphasis"></a><code>emphasis</code></td>
+              <td>string[]</td>
+              <td>
+                Series values drawn with a heavier stroke (theme <code>lineEmphasis</code>), such as
+                this year against earlier years. Needs series; <code>[]</code> is the same as unset.
+                line
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="colorScale"></a><code>colorScale</code></td>
+              <td>"linear" / "rank" / "quantile" / "log"</td>
+              <td>
+                How values map to the colour ramp. rank: even steps by order, for skewed totals;
+                quantile: five equal-count classes, the legend shows the breaks; log: values above
+                0. Default linear. heatmap hexmap
+              </td>
+            </tr>
+            <tr>
+              <td><a class="spec-anchor" id="tint"></a><code>tint</code></td>
+              <td>boolean</td>
+              <td>
+                Children take evenly spaced tints of their parent's colour instead of their own
+                slots: the levels of a <code>path</code> below a drilled value, and weave threads
+                under a group <code>colorBy</code> (needed there). A <code>colors</code> map then
+                names path values or groups. bar line area dumbbell table heatmap marimekko treemap
+                sunburst sankey chord weave
               </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="colorBy"></a><code>colorBy</code></td>
               <td>"sign" / {target, warn, better} / {[y field]: {target, warn, better}} / field</td>
               <td>
-                Tone by sign of y, by a target value, or a ramp by a numeric field. Not with series.
-                At or past the target is good; <code>better: "lower"</code> flips it. Types other
-                than kpi and gauge need <code>target</code> and take no <code>warn</code>. kpi and
-                gauge take any of target, warn and better; warn needs target and sits on the bad
-                side of it, and values between them are "at risk" (status words On track, At risk,
-                Off track). A kpi with a y array may key the thresholds by y field, for example
+                Tone by sign of y (theme up and down), by a target value, or a ramp by a numeric
+                field. Not with series; weave takes a group field instead (one colour per group from
+                colors, up to 20 threads, tint for shades within a group). At or past the target is
+                good; <code>better: "lower"</code> flips it. Types other than kpi and gauge need
+                <code>target</code> and take no <code>warn</code>. kpi and gauge take any of target,
+                warn and better; warn needs target and sits on the bad side of it, and values
+                between them are "at risk" (status words On track, At risk, Off track). A kpi with a
+                y array may key the thresholds by y field, for example
                 <code>{ "revenue": { "target": 60000 }, "churn": { "better": "lower" } }</code>.
                 Works with: bar line area waterfall scatter dumbbell kpi gauge treemap sunburst
-                hexmap units orbit constellation.
+                hexmap units orbit constellation weave.
               </td>
             </tr>
             <tr>
               <td><a class="spec-anchor" id="theme"></a><code>theme</code></td>
-              <td>{[token]: css}</td>
+              <td>{[token]: css} / name / [name, {[token]: css}]</td>
               <td>
-                Theme token overrides (CSS values, allowlisted). <code>series1</code> to
-                <code>series8</code> colour the palette slots; a <code>colors</code> map key wins
-                over them. Ready-made sets: import { themes } from "mayacharts/themes"
+                Theme tokens (CSS values, allowlisted; see
+                <a href="#theme-tokens">Theme tokens</a>), a registered theme's name, or a name plus
+                overrides such as <code>["slate", { "accent": "#6A7891" }]</code>. Importing
+                <code>mayacharts/themes</code> (or loading maya.global.js, which has them as
+                <code>maya.themes</code>) registers the 18 ready-made names;
+                <code>registerTheme(name, tokens)</code> (<code>maya.registerTheme</code>) adds a
+                house theme once for every chart. An unknown name is invalid-theme, listing the
+                registered names
               </td>
             </tr>
             <tr>
@@ -1907,7 +2002,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><code>view</code></td>
               <td>property</td>
               <td>
-                <code>{ measure, drill, window, hidden, form, sortBy, frame }</code>;
+                <code>{ measure, drill, window, hidden, form, sortBy, frame, brush, peers }</code>;
                 <code>{}</code> resets; no events on set
               </td>
             </tr>
@@ -1956,10 +2051,11 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             </tr>
             <tr>
               <td><code>maya-view</code></td>
-              <td><code>{ measure, drill, window, hidden, form, sortBy }</code></td>
+              <td><code>{ measure, drill, window, hidden, form, sortBy, brush, peers }</code></td>
               <td>
-                Measure toggled, drilled, zoomed, a legend series hidden, a units form picked or a
-                table sorted (user actions only)
+                Measure toggled, drilled, zoomed, a legend series hidden, a units form picked, a
+                table sorted, a parallel axis brushed (brush: [field, lo, hi] per axis) or beeswarm
+                peers selected (user actions only)
               </td>
             </tr>
             <tr>
@@ -2247,6 +2343,153 @@ await chart.settled; // drawn and still</code></pre>
               <td>11px</td>
               <td>Axis tick label size</td>
             </tr>
+            <tr>
+              <td><code>subtitleSize</code></td>
+              <td><code>--maya-subtitle-size</code></td>
+              <td>fontSize</td>
+              <td>fontSize</td>
+              <td>Subtitle text size</td>
+            </tr>
+            <tr>
+              <td><code>labelSize</code></td>
+              <td><code>--maya-label-size</code></td>
+              <td>11px</td>
+              <td>11px</td>
+              <td>Value labels and annotations</td>
+            </tr>
+            <tr>
+              <td><code>legendSize</code></td>
+              <td><code>--maya-legend-size</code></td>
+              <td>fontSize</td>
+              <td>fontSize</td>
+              <td>Legend text size</td>
+            </tr>
+            <tr>
+              <td><code>heroSize</code></td>
+              <td><code>--maya-hero-size</code></td>
+              <td>fitted to the tile</td>
+              <td>fitted to the tile</td>
+              <td>The kpi and gauge number</td>
+            </tr>
+            <tr>
+              <td><code>heroWeight</code></td>
+              <td><code>--maya-hero-weight</code></td>
+              <td>600</td>
+              <td>600</td>
+              <td>The kpi and gauge number weight</td>
+            </tr>
+            <tr>
+              <td><code>emptySize</code></td>
+              <td><code>--maya-empty-size</code></td>
+              <td>fontSize</td>
+              <td>fontSize</td>
+              <td>The no-data text</td>
+            </tr>
+            <tr>
+              <td><code>numeric</code></td>
+              <td><code>--maya-numeric</code></td>
+              <td>tabular</td>
+              <td>tabular</td>
+              <td>"tabular" or "proportional" figures</td>
+            </tr>
+            <tr>
+              <td><code>rampLow</code></td>
+              <td><code>--maya-ramp-low</code></td>
+              <td>accent mixed into bg</td>
+              <td>same as light</td>
+              <td>Low end of the value ramp (heatmap, hexmap, calendar)</td>
+            </tr>
+            <tr>
+              <td><code>rampHigh</code></td>
+              <td><code>--maya-ramp-high</code></td>
+              <td>accent toward fg</td>
+              <td>same as light</td>
+              <td>High end of the value ramp</td>
+            </tr>
+            <tr>
+              <td><code>rampMid</code></td>
+              <td><code>--maya-ramp-mid</code></td>
+              <td>none</td>
+              <td>none</td>
+              <td>Centre of a diverging ramp (set it to diverge)</td>
+            </tr>
+            <tr>
+              <td><code>rampMidValue</code></td>
+              <td><code>--maya-ramp-mid-value</code></td>
+              <td>0</td>
+              <td>0</td>
+              <td>The value at rampMid (a number)</td>
+            </tr>
+            <tr>
+              <td><code>up</code></td>
+              <td><code>--maya-up</code></td>
+              <td>good</td>
+              <td>good</td>
+              <td>Increases: waterfall steps, colorBy "sign", dumbbell connectors</td>
+            </tr>
+            <tr>
+              <td><code>down</code></td>
+              <td><code>--maya-down</code></td>
+              <td>bad</td>
+              <td>bad</td>
+              <td>Decreases</td>
+            </tr>
+            <tr>
+              <td><code>total</code></td>
+              <td><code>--maya-total</code></td>
+              <td>fgMuted</td>
+              <td>fgMuted</td>
+              <td>Waterfall totals</td>
+            </tr>
+            <tr>
+              <td><code>neutral</code></td>
+              <td><code>--maya-neutral</code></td>
+              <td>fgMuted</td>
+              <td>fgMuted</td>
+              <td>Other, unmapped names, folded slices</td>
+            </tr>
+            <tr>
+              <td><code>cellGap</code></td>
+              <td><code>--maya-cell-gap</code></td>
+              <td>2px (1px under 12 px cells)</td>
+              <td>same as light</td>
+              <td>Gap between heatmap and waffle cells (px)</td>
+            </tr>
+            <tr>
+              <td><code>cellRadius</code></td>
+              <td><code>--maya-cell-radius</code></td>
+              <td>radius</td>
+              <td>radius</td>
+              <td>Heatmap and waffle cell corners</td>
+            </tr>
+            <tr>
+              <td><code>labelInk</code></td>
+              <td><code>--maya-label-ink</code></td>
+              <td>fg</td>
+              <td>fg</td>
+              <td>Labels on light fills</td>
+            </tr>
+            <tr>
+              <td><code>labelInkOnFill</code></td>
+              <td><code>--maya-label-ink-on-fill</code></td>
+              <td>bg</td>
+              <td>bg</td>
+              <td>Labels on dark fills</td>
+            </tr>
+            <tr>
+              <td><code>lineEmphasis</code></td>
+              <td><code>--maya-line-emphasis</code></td>
+              <td>line x 1.75</td>
+              <td>line x 1.75</td>
+              <td>Stroke width of emphasis series</td>
+            </tr>
+            <tr>
+              <td><code>ghost</code></td>
+              <td><code>--maya-ghost</code></td>
+              <td>fg</td>
+              <td>fg</td>
+              <td>was ghosts</td>
+            </tr>
           </tbody>
         </table>
       </section>
@@ -2264,8 +2507,8 @@ await chart.settled; // drawn and still</code></pre>
               <td><code>mayacharts</code></td>
               <td>
                 <code>render</code>, <code>renderShell</code>, <code>renderParts</code>,
-                <code>validateSpec</code>, <code>MayaSpecError</code>, <code>version</code> and all
-                types; pure, no DOM
+                <code>validateSpec</code>, <code>MayaSpecError</code>, <code>registerTheme</code>,
+                <code>version</code> and all types; pure, no DOM
               </td>
             </tr>
             <tr>
@@ -2290,7 +2533,10 @@ await chart.settled; // drawn and still</code></pre>
             </tr>
             <tr>
               <td><code>mayacharts/themes</code></td>
-              <td><code>themes</code>: 18 ready-made token sets, plain data, ESM only</td>
+              <td>
+                <code>themes</code>: 18 ready-made token sets, plain data; importing it registers
+                them by name (maya.global.js has them as <code>maya.themes</code>)
+              </td>
             </tr>
             <tr>
               <td><code>mayacharts/theme.css</code></td>

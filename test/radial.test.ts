@@ -219,3 +219,14 @@ describe("radial", () => {
     }
   });
 });
+
+describe("radial value labels", () => {
+  it("a value that cannot go outside moves inside the top segment instead of vanishing", () => {
+    // Bars reach the rim, so no value fits outside; tall single-segment bars have room inside.
+    const d = M.map((m) => ({ m, v: 100 }));
+    const s = svg(plain(d, { labels: true }));
+    expect(
+      tags(s, "text[^>]*data-in[^>]*").length + tags(s, "text[^>]*data-tip").length,
+    ).toBeGreaterThan(0);
+  });
+});

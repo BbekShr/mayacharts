@@ -157,7 +157,7 @@ export const radial: Mark = {
 
     // Stack total at each tip, beyond it when there is room, else inside it (names as above).
     const named = new Set<number>();
-    const outs: [string, number, number][] = [];
+    const outs: [string, number, number, boolean][] = [];
     totals.forEach((t, ci) => {
       const a = G / 2 + (ci + 0.5) * step;
       const [rt, f] = [rad(t), fv(t)];
@@ -171,15 +171,10 @@ export const radial: Mark = {
         named.add(ci);
         tipText += spoke(nm, R0 + 7, a, { "data-in": true, "data-dark": true, "data-name": "" });
       }
-      if (out) outs.push([f, rt + 6, a]);
-      else if (len >= w + (both ? nm.length * 6.6 + 8 : 0))
-        tipText += spoke(
-          f,
-          rt - 6,
-          a,
-          { "data-in": true, "data-dark": true, "data-name": "" },
-          true,
-        );
+      const inside = () =>
+        spoke(f, rt - 6, a, { "data-in": true, "data-dark": true, "data-name": "" }, true);
+      if (out) outs.push([f, rt + 6, a, len >= w]);
+      else if (len >= w + (both ? nm.length * 6.6 + 8 : 0)) tipText += inside();
     });
 
     // Disc and rings; the outermost ring always shows, every other one below it (at most 3).
@@ -276,7 +271,8 @@ export const radial: Mark = {
       );
     });
     // A value beyond its bar tip yields to a category label it would overprint (the spoke's box, 6 px each side).
-    for (const [f, rr, a] of outs) {
+    // Place outside, else relocate inside the top segment when it has room, else drop.
+    for (const [f, rr, a, room] of outs) {
       const [x0, y0] = [cx + rr * Math.sin(a), cy - rr * Math.cos(a)];
       const [x1, y1] = [x0 + f.length * 6.2 * Math.sin(a), y0 - f.length * 6.2 * Math.cos(a)];
       if (
@@ -289,6 +285,14 @@ export const radial: Mark = {
         )
       )
         labels += spoke(f, rr, a, { "data-tip": "" });
+      else if (room)
+        labels += spoke(
+          f,
+          rr - 12,
+          a,
+          { "data-in": true, "data-dark": true, "data-name": "" },
+          true,
+        );
     }
     return { marks, hits, labels, grid };
   },

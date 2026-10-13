@@ -181,8 +181,12 @@ export function shape(
         // Category totals and their sorted copy come once per row pass; a new limit (a resize
         // across a 40 px step) is then a selection and a merge, no row pass.
         // An auto roll-up ranks by magnitude, so a large negative bar is not hidden in Other.
-        const { tot, r, asc } = memo(base.cats, capped ? "ta" : "t", () => {
-          const tot = Float64Array.from(base.cats, total);
+        // sort "change" (dumbbell): to minus from, largest gain first.
+        const ch = s.sort === "change";
+        const { tot, r, asc } = memo(base.cats, `t${capped ? "a" : ""}${ch ? "c" : ""}`, () => {
+          const tot = Float64Array.from(base.cats, (c) =>
+            ch ? (c.vals[1] ?? 0) - (c.vals[0] ?? 0) : total(c),
+          );
           const r = capped ? tot.map(Math.abs) : tot;
           return { tot, r, asc: Float64Array.from(r).sort() };
         });
@@ -253,6 +257,7 @@ export function shape(
   const cells: Cell[] = [];
   let lo = 0;
   let hi = 0;
+  const g = s.stack === "stream" ? wiggle(cats, visible) : null;
   cats.forEach((c, i) => {
     let pos = 0;
     let neg = 0;
@@ -273,8 +278,8 @@ export function shape(
       let y0 = wf ? spans.get(c)![0] : 0,
         y1 = wf ? spans.get(c)![1] : v;
       if (s.stack) {
-        y0 = (v < 0 ? neg : pos) / k;
-        y1 = (v < 0 ? (neg += v) : (pos += v)) / k;
+        y0 = (v < 0 ? neg : pos) / k + (g ? g[i]! : 0);
+        y1 = (v < 0 ? (neg += v) : (pos += v)) / k + (g ? g[i]! : 0);
       }
       lo = Math.min(lo, y0, y1);
       hi = Math.max(hi, y0, y1);
@@ -294,6 +299,30 @@ export function shape(
     index: isTime ? cats.map((c) => c.i!) : index,
     capped,
   };
+}
+
+/**
+ * stack "stream": the baseline per category, Byron and Wattenberg's wiggle (as d3.stackOffsetWiggle:
+ * each step moves the baseline against the weighted slope of the layers) started centred on 0 at
+ * the first category. Values are 0 or more (validate.ts).
+ */
+function wiggle(cats: Cat[], on: number[]): number[] {
+  const v = (c: Cat, j: number) => c.vals[j] ?? 0;
+  const g = [-on.reduce((a, j) => a + v(cats[0]!, j), 0) / 2];
+  for (let i = 1; i < cats.length; i++) {
+    const [a, b] = [cats[i]!, cats[i - 1]!];
+    let s1 = 0;
+    let s2 = 0;
+    let below = 0;
+    for (const j of on) {
+      const d = v(a, j) - v(b, j);
+      s1 += v(a, j);
+      s2 += v(a, j) * (below + d / 2);
+      below += d;
+    }
+    g.push(g[i - 1]! - (s1 ? s2 / s1 : 0));
+  }
+  return g;
 }
 
 /** The Other bucket from the rolled-up categories' aggregates: values fold by the aggregate; a mean or ratio merges its reducers' sums. */
@@ -600,18 +629,20 @@ export function pivotWas(
   });
 }
 
-/** A field (default: the colorBy field; also spec.was) aggregated per (category, series) like the marks; null without one. */
+/** A field (default: the colorBy field; also spec.was and tooltip fields) aggregated per (category,
+ * series) like the marks; null without one. A tooltip ratio field (spec.tipRatio) is sum(num) / sum(den). */
 export function colorVals(
   s: ResolvedSpec,
   cb: string | null = cbField(s),
 ): (c: string, ser: string) => number | null {
   const m = new Map<string, ReturnType<typeof agg>>();
+  const rt = (cb && s.tipRatio.get(cb)) || null;
   if (cb)
     for (const row of s.data) {
-      const v = row[cb];
-      if (typeof v !== "number") continue;
+      const v = row[rt ? rt[0] : cb];
+      if (typeof v !== "number" && !rt) continue;
       const k = String(row[s.x]) + "\0" + (s.series === null ? "" : String(row[s.series]));
-      (m.get(k) ?? m.set(k, agg(s.aggregate)).get(k)!).add(v);
+      feed(m.get(k) ?? m.set(k, agg(rt ? "sum" : s.aggregate, !!rt)).get(k)!, row, cb, rt);
     }
   return (c, ser) => m.get(c + "\0" + ser)?.value() ?? null;
 }

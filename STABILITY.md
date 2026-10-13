@@ -16,8 +16,8 @@ The following are covered by semantic versioning:
 - Spec: chart types `boxplot`, `funnel`, `weave`, `units`, `orbit`, `constellation` and `gauge`, `stack: "percent"`, and `colorBy` thresholds `{ target, warn, better }`
 - `mayacharts/host` (`maya.host` in the global builds): the adapter function names and the spec they return
 - Class names: `.maya-*` available for host styling
-- Exported functions: `render`, `renderShell`, `renderParts`, `validateSpec`
-- `mayacharts/themes`: the `themes` object and its theme names (token values may be retuned in any minor version)
+- Exported functions: `render`, `renderShell`, `renderParts`, `validateSpec`, `registerTheme`
+- `mayacharts/themes`: the `themes` object and its theme names, registered on import and as `maya.themes` in `maya.global.js` (token values may be retuned in any minor version)
 - Data identity: the row pass is cached per `spec.data` array, so a host that edits a middle row in place must pass a new array to see the change; a different length, first row or last row is noticed. `Parts.warnings` lists what the chart did on its own (the bar roll-up into Other)
 
 ## Not public

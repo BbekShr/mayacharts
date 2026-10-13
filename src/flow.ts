@@ -454,7 +454,7 @@ export const chord: Mark = {
       const [lx, ly] = [cx + rad * sn, cy - rad * cs];
       const pole = Math.abs(sn) < 0.25;
       // Top and bottom labels grow away from the ring; side labels centre on the arc.
-      const cyy = pole ? ly + (cs > 0 ? -14 : 14) : ly;
+      const cyy = pole ? ly + (cs > 0 ? -20 : 18) : ly;
       const anchor = pole ? "middle" : sn > 0 ? "start" : "end";
       labels += lines(
         lx,

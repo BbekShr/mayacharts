@@ -37,9 +37,9 @@ describe("bar value labels over the bar", () => {
     });
     expect(q.every((t) => /data-q="\d"/.test(t))).toBe(true);
   });
-  it("ink rule: light ink below L .565 of the fill, dark above, tokens for the pair (theme.series1 #1E1E24)", () => {
-    expect(css).toContain("oklch(from var(--c,var(--maya-series-1))");
-    expect(css).toContain("--maya-label-ink-on");
+  it("ink rule: light ink below relative luminance .1831 of the fill, dark above (theme.series1 #1E1E24)", () => {
+    expect(css).toContain("lab(from var(--c,var(--maya-series-1))");
+    expect(css).toContain("49.85");
     const svg = render({ ...base, theme: { series1: "#1E1E24" } }, { width: 600, height: 300 });
     expect(svg).toContain('data-ink="a"');
   });
@@ -89,5 +89,32 @@ describe("stacked segment labels", () => {
       { width: 600, height: 300 },
     );
     expect(svg.slice(svg.indexOf('data-maya="labels"')).match(/<text/g)).toHaveLength(1);
+  });
+});
+
+describe("bar label placement under pressure", () => {
+  const wide = (type: "bar" | "waterfall", extra: Partial<ChartSpec> = {}): ChartSpec => ({
+    type,
+    x: "k",
+    y: "v",
+    labels: true,
+    data: ["a", "b", "c", "d"].map((k, i) => ({
+      k,
+      v: 1_234_567 + i * 90_000,
+      g: i % 2 ? "x" : "y",
+    })),
+    ...extra,
+  });
+  const texts = (s: ChartSpec, w: number) =>
+    (render(s, { width: w, height: 300 }).match(/<text[^>]*data-key[^>]*>/g) ?? []).length;
+  it("grouped labels wider than their bar still draw at 360 px", () => {
+    const g = wide("bar", { series: "g" });
+    expect(texts(g, 360)).toBeGreaterThan(0);
+  });
+  it("a waterfall keeps its opening and closing totals at 260 px", () => {
+    const w = render(wide("waterfall"), { width: 260, height: 300 });
+    const keys = (w.match(/<text[^>]*data-key="([^"]*)"/g) ?? []).join("");
+    expect(keys).toContain('"a"');
+    expect(keys).toContain('"d"');
   });
 });

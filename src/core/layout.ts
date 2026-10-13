@@ -199,16 +199,18 @@ export function frame(
     ),
     h: Math.max(1, H - top - bottom),
   };
+  // Heatmap bands touch: the mark leaves its own 1 to 2 px gap between cells (M4), not 20% padding.
+  const pad = spec.type === "heatmap" ? ([0, 0] as const) : ([0.2, 0.1] as const);
   const x: Scale | null = bx
     ? bx.kind === "band"
-      ? bandScale(bx.domain, [plot.x, plot.x + plot.w])
+      ? bandScale(bx.domain, [plot.x, plot.x + plot.w], ...pad)
       : bx.kind === "time"
         ? timeScale(bx.domain, bx.t, [plot.x, plot.x + plot.w])
         : linearScale(bt!.domain, [plot.x, plot.x + plot.w], bt!.log)
     : null;
   const y: Scale | null = ly
     ? ly.kind === "band"
-      ? bandScale(ly.domain, [plot.y, plot.y + plot.h])
+      ? bandScale(ly.domain, [plot.y, plot.y + plot.h], ...pad)
       : linearScale(lt!.domain, [plot.y + plot.h, plot.y], lt!.log)
     : null;
 
