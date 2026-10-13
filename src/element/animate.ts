@@ -719,7 +719,9 @@ function ui(o: Element, w: Element, om: Element, wm: Element): void {
   const out = [...o.children].filter((c) => c.hasAttribute("data-ghost"));
   // Facet panels (nested svgs) are diffed one by one, by their value.
   const isP = (c: Element) => c.matches("svg[data-maya=panel],svg[data-maya=expand]");
-  const pid = (c: Element) => c.getAttribute("data-maya")! + (c.getAttribute("data-facet") ?? "");
+  const pid = (c: Element) =>
+    c.getAttribute("data-maya")! +
+    (c.getAttribute("data-facet") ?? c.getAttribute("data-row") ?? "");
   const pool = new Map(
     [...o.children].filter((c) => c !== om && !out.includes(c) && !isP(c)).map((c) => [id(c), c]),
   );
