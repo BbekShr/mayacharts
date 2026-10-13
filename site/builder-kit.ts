@@ -182,30 +182,6 @@ export const SAMPLES: Readonly<Record<string, Omit<ChartSpec, "type">>> = {
     data: items,
   }),
   table: s({ title: "Item scorecard", x: "Item", y: ["Price", "Margin %", "Units"], data: items }),
-  list: s({
-    title: "Moves the numbers support",
-    y: "Value",
-    path: ["Move", "Evidence"],
-    body: "Note",
-    rowFormat: "Format",
-    bars: true,
-    data: [
-      {
-        Move: "Lead with outerwear",
-        Note: "Highest price per unit",
-        Value: 87,
-        Format: "currency",
-      },
-      { Move: "Lead with outerwear", Evidence: "Parka", Value: 87, Format: "currency" },
-      { Move: "Lead with outerwear", Evidence: "Tee", Value: 21, Format: "currency" },
-      {
-        Move: "Stock for the third quarter",
-        Note: "The peak quarter",
-        Value: 31,
-        Format: "{value}%",
-      },
-    ],
-  }),
   treemap: s({
     title: "Units by family and item",
     path: ["Family", "Item"],
@@ -320,7 +296,7 @@ export const label = (t: string): string =>
 
 /** Picker groups. A type missing here still shows, under "More". */
 export const GROUPS: readonly (readonly [string, readonly string[]])[] = [
-  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "gauge", "funnel", "table", "list", "orbit"]],
+  ["Compare", ["bar", "dumbbell", "waterfall", "kpi", "gauge", "funnel", "table", "orbit"]],
   ["Trend", ["line", "area", "ridgeline", "radial", "weave"]],
   ["Distribution", ["scatter", "beeswarm", "boxplot", "heatmap", "parallel", "constellation"]],
   ["Part to whole", ["treemap", "sunburst", "marimekko", "waffle", "units"]],
@@ -373,17 +349,6 @@ export const SKIP = new Set([
   "forms", // units: an array of forms, set in the copied code
   "annotate", // arrays, set in the copied code
   "dash",
-  "emphasis", // series values, like dash
-  "compare", // kpi: an array of change lines, set in the copied code
-  "back", // kpi: a whole second spec
-  "arc", // gauge: a number, set in the copied code
-  "seriesPath", // field arrays and sub-specs (#81, #84), set in the copied code
-  "xPath",
-  "expand",
-  "drillTo",
-  "columns",
-  "cells",
-  "bars",
   ...ROLES,
 ]);
 
@@ -405,7 +370,6 @@ export const TYPE_HELP: Readonly<Record<string, string>> = {
   beeswarm: "One dot per row along a value axis, spread out so none overlap.",
   parallel: "Each row is a line across several value axes, to compare many measures at once.",
   table: "The values in a sortable table.",
-  list: "Numbered moves, each with its key number, a sentence of evidence and bars that open on click.",
   treemap: "Nested rectangles sized by value, for parts of a whole with levels.",
   sunburst: "Rings of slices sized by value, for parts of a whole with levels.",
   sankey: "Flows between groups, with band widths sized by value.",
@@ -883,7 +847,8 @@ export const cutNote = (spec: ChartSpec): string =>
 
 /**
  * chart.js for ThoughtSpot: the spec without rows, and the host adapter. chart.html loads the
- * library, so chart.js stays light; it draws on window load when it runs before the library.
+ * library, so chart.js stays light. When it runs first it waits on that script's load: ThoughtSpot
+ * adds the HTML after the page has loaded, so window load never comes.
  * Rows, cell unwrapping and the settled signal come from maya.host.thoughtspot.
  */
 export function thoughtSpotJs(spec: ChartSpec): string {
@@ -891,7 +856,7 @@ export function thoughtSpotJs(spec: ChartSpec): string {
   return `// Column names match case-insensitively; a /regex/ works too (x: /item/i).
 const spec = ${flat(JSON.stringify(rest, null, 2)).replace(/</g, "\\u003c")};
 const draw = () => maya.host.thoughtspot(viz, spec);
-window.maya ? draw() : window.addEventListener("load", draw);
+window.maya ? draw() : document.querySelector("script[src*=mayacharts]").addEventListener("load", draw);
 `;
 }
 
