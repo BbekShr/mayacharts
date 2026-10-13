@@ -910,8 +910,7 @@ function build(spec: ChartSpec, opts: RenderOptions | undefined, sheet: string |
             ? { "data-band": true, x: r(p), y: y0, width: r(q - p), height: r(plot.h) }
             : { "data-band": true, x: r(plot.x), y: r(p), width: r(plot.w), height: r(q - p) },
         );
-        if (u.label)
-          tag(u.label, hz ? q - 4 : plot.x + plot.w, hz ? plot.y : p + 2, true);
+        if (u.label) tag(u.label, hz ? q - 4 : plot.x + plot.w, hz ? plot.y : p + 2, true);
       });
       s.rules.forEach((u) => {
         const at = u.y === "mean" ? average(s, shaped) : u.y;
