@@ -111,43 +111,34 @@ describe("snippets", () => {
     }
   });
 
-  it("ThoughtSpot gets the tile shape: bare chart element, light page, spec and the host adapter", () => {
+  it("ThoughtSpot gets the tile shape: library and chart element, light page, spec and the host adapter", () => {
     for (const t of TYPES) {
       const spec = sample(t);
       const [html, css, js] = snippets(spec).ThoughtSpot;
       expect([html!.name, css!.name, js!.name]).toEqual(["chart.html", "chart.css", "chart.js"]);
+      expect(html!.code).toContain(
+        `<script src="https://cdn.jsdelivr.net/npm/mayacharts@${pkg.version}/dist/maya.global.js"></script>`,
+      );
       expect(html!.code).toContain('<maya-chart id="chart"></maya-chart>');
-      expect(html!.code).not.toContain("<script");
       expect(css!.code).toContain("color-scheme: light;");
 
-      // Run chart.js with ThoughtSpot's globals stubbed.
-      let script: any;
-      let got: unknown;
-      let done = 0;
-      const chart = { textContent: "" };
-      const viz = { events: { emitRenderCompletedEvent: () => done++ } };
-      new Function("document", "viz", "Object", "maya", js!.code).call(
-        null,
-        {
-          createElement: () => ({}),
-          getElementById: () => chart,
-          head: { append: (s: unknown) => (script = s) },
-        },
-        viz,
-        Object,
-        { host: { thoughtspot: (_: unknown, s: unknown) => (got = s) } },
-      );
-      expect(script.src).toBe(
-        `https://cdn.jsdelivr.net/npm/mayacharts@${pkg.version}/dist/maya.global.js`,
-      );
-      script.onload();
+      // Run chart.js with ThoughtSpot's globals stubbed: the library is loaded, or loads later.
       const { data: _, ...rest } = spec;
-      expect(got, t).toEqual(rest);
-      // A failed load still reports render-complete.
-      expect(done).toBe(0);
-      script.onerror();
-      expect(done, t).toBe(1);
-      expect(chart.textContent).toContain("did not load");
+      for (const loaded of [true, false]) {
+        let got: unknown;
+        let onLoad: (() => void) | undefined;
+        const maya = { host: { thoughtspot: (_: unknown, s: unknown) => (got = s) } };
+        const window = {
+          maya: loaded ? maya : undefined,
+          addEventListener: (_: string, f: () => void) => (onLoad = f),
+        };
+        new Function("window", "viz", "maya", js!.code).call(null, window, {}, maya);
+        if (!loaded) {
+          expect(got).toBeUndefined();
+          onLoad!();
+        }
+        expect(got, t).toEqual(rest);
+      }
     }
   });
 
@@ -170,7 +161,7 @@ describe("snippets", () => {
       expect(code, t).not.toContain("<img");
       expect(code, t).not.toContain('"<!--');
       expect(code.toLowerCase().split("</script>").length - 1, t).toBe(
-        { HTML: 2, Vue: 1, Svelte: 1 }[t as string] ?? 0,
+        { HTML: 2, Vue: 1, Svelte: 1, ThoughtSpot: 1 }[t as string] ?? 0,
       );
     }
     expect(run(literal(spec))).toEqual(spec);
