@@ -804,7 +804,9 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 A second face: a chart spec of any type but kpi over the kpi's rows (frame applied).
                 A Details button (text.flip, aria-pressed) turns the card over; view.face is "front"
                 or "back", so renderShell renders either; Escape returns. Its errors name
-                spec.back.&lt;path&gt;
+                spec.back.&lt;path&gt;. It takes the kpi's format, titles, locale, currency and theme unless it
+                sets them, and with limit it keeps just those rows (other defaults to false): the
+                example shows the top three months.
               </td>
             </tr>
             <tr>
@@ -1059,7 +1061,7 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 points point range density perCell mean perX rule log play pause frameOf frame was
                 since forms waffle bars swarm perDot count rank speedBy gross alike nearest max q3
                 median q1 min rows ofPrevious ofFirst first last labelled peerMean brushed
-                brushCleared flip stacks unstacked stacked percent stream filter showMore crumbsX
+                brushCleared flip stacks unstacked stacked percent stream filter showMore noMatch moreMoves crumbsX
                 before after frames panelOf facets facetScales shared own params resetParams
               </td>
             </tr>
@@ -1673,6 +1675,16 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><code>showMore</code></td>
               <td>"Show {0} more"</td>
               <td>Table row that shows the next page (spec.page): {0} = rows it adds.</td>
+            </tr>
+            <tr>
+              <td><code>noMatch</code></td>
+              <td>"No rows match \"{0}\""</td>
+              <td>Table whose filter matches no row: {0} = the search text.</td>
+            </tr>
+            <tr>
+              <td><code>moreMoves</code></td>
+              <td>"+{0} more"</td>
+              <td>Overflow row of a list: {0} = the moves not shown.</td>
             </tr>
             <tr>
               <td><code>crumbsX</code></td>

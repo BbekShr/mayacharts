@@ -1442,7 +1442,7 @@ export function validateSpec(spec: unknown): asserts spec is ChartSpec {
     if (prev && !ONLY.was!.includes(b.type as string))
       F("option-unsupported", "drillTo.was", `${NS.replace("spec.type", "spec.drillTo.type")}`);
     try {
-      const sub = k === "back" ? b : subSpec(s as unknown as ChartSpec, b);
+      const sub = subSpec(s as unknown as ChartSpec, b, k === "back");
       validateSpec({ ...sub, ...(prev && { was: undefined }), data: rows });
     } catch (e) {
       if (!(e instanceof MayaSpecError)) throw e;
@@ -1462,12 +1462,20 @@ const needsX = (b: { type?: unknown; y?: unknown }) =>
   !w("kpi gauge beeswarm").includes(b.type) &&
   !(b.type === "funnel" && Array.isArray(b.y));
 
-/** A table expand or line drillTo sub-spec, with the parent's x when it names neither x nor path. */
-export const subSpec = <T extends object>(parent: ChartSpec, b: T): T => {
-  const o = b as { x?: unknown; path?: unknown; type?: unknown; y?: unknown };
-  return o.x !== undefined || o.path !== undefined || !needsX(o) || !parent.x
-    ? b
-    : { ...b, x: parent.x };
+/** The parent's presentation keys a sub-spec (back, expand, drillTo) takes unless it sets them. */
+const INHERIT = w("format titles locale currency theme") as (keyof ChartSpec)[];
+
+/** A sub-spec with the parent's format, titles, locale, currency and theme; a back face with a limit
+ * drops the rest instead of an Other bar; an expand or drillTo without x or path takes the parent's x. */
+export const subSpec = <T extends object>(parent: ChartSpec, b: T, back = false): T => {
+  const o = b as Record<string, unknown>;
+  const inh = Object.fromEntries(
+    INHERIT.filter((k) => parent[k] !== undefined && o[k] === undefined).map((k) => [k, parent[k]]),
+  );
+  if (back) {
+    if (o.limit != null && o.other === undefined) inh.other = false;
+  } else if (o.x === undefined && o.path === undefined && needsX(o) && parent.x) inh.x = parent.x;
+  return { ...b, ...inh };
 };
 
 /** How many drill values view.drill may hold (0: no drill). drillTo: one series; facet: one panel; seriesPath and
@@ -1992,10 +2000,14 @@ export function resolve(spec: ChartSpec, view: View = {}): ResolvedSpec {
     sort: spec.facet ? null : (spec.sort ?? (hexBars ? "desc" : null)),
     sortBy: view.sortBy ?? null,
     limit: spec.facet ? null : (spec.limit ?? null),
-    // stack "percent" shows shares: percent unless the spec formats the measure.
+    // stack "percent" shows shares: percent unless the spec formats the measure, and a
+    // currency format (a unit that is not a share) gives way to percent.
     format: new Map<string, FieldFormat>([
       ...measures.flatMap((m) => (stack === "percent" ? [[m, "percent"] as const] : [])),
-      ...(typeof f === "string" ? measures.map((m) => [m, f] as const) : entries<FieldFormat>(f)),
+      ...(typeof f === "string"
+        ? measures.map((m) => [m, f] as const)
+        : entries<FieldFormat>(f)
+      ).filter(([k, v]) => !(stack === "percent" && v === "currency" && measures.includes(k))),
     ]),
     titles,
     labels: spec.labels ?? null,

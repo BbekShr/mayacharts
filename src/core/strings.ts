@@ -173,6 +173,10 @@ export const TEXT = {
   filter: "Filter",
   /** Table row that shows the next page (spec.page): {0} = rows it adds. */
   showMore: "Show {0} more",
+  /** Table whose filter matches no row: {0} = the search text. */
+  noMatch: 'No rows match "{0}"',
+  /** Overflow row of a list: {0} = the moves not shown. */
+  moreMoves: "+{0} more",
   /** aria-label of the heatmap column breadcrumb (spec.xPath with drill). */
   crumbsX: "Column drill path",
   /** Drilled waterfall opening total: {0} = the drilled value. */

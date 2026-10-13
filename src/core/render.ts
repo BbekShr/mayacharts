@@ -33,7 +33,7 @@
  *   y0/y1 by the category's visible sum of magnitudes, so values are shares (axis 0..1, an
  *   all-positive stack tops out at exactly 1) and everything downstream (labels, data-f,
  *   data-y, table, rules) is in share units. resolve() formats each measure "percent" unless
- *   spec.format sets it. "mean" rules average the segment shares. The svg carries
+ *   spec.format sets it (a currency format gives way to percent). "mean" rules average the segment shares. The svg carries
  *   data-stack="percent".
  *
  * Time axis: line, area and vertical bar (not waterfall) whose categories are all ISO 8601
@@ -273,7 +273,8 @@
  *   series. heatmap xPath: x = xPath[view.xDrill.length], rows filtered by both drills; the svg
  *   carries data-xdrill while columns can drill (the element drills from a column header,
  *   [data-maya=axis-x] text[data-key], decoding its key); its breadcrumb is a second
- *   <nav class="maya-crumbs" data-axis="x" aria-label=text.crumbsX> after the rows' one, root
+ *   <nav class="maya-crumbs" data-axis="x" aria-label=text.crumbsX> after the rows' one (with
+ *   xPath the rows' root button is named by path[0]'s title, not text.back), root
  *   button named by xPath[0]'s title; maya-drill-leaf from a last-level column carries
  *   { path: xPath values, axis: "x" }. Escape pops columns first, then rows.
  *   waterfall start: the start x is a total (first of ResolvedSpec.totals) and its rows move to
@@ -302,7 +303,10 @@
  *   series' rows (frame applied) instead of the line, with the line's crumbs (text.back, value);
  *   was "previous" is pivoted in: the previous series' y summed per x under the field "\0was",
  *   titled by that series' name. A sub-spec (expand, drillTo) without x or path takes the
- *   parent's x (validate.ts subSpec); it may not set drill, zoom, frame, expand, drillTo, back,
+
+ *   parent's x (validate.ts subSpec). Every sub-spec, and the kpi back face, takes the parent's
+ *   format, titles, locale, currency and theme unless it sets them; a back face with a limit
+ *   defaults other to false. A sub-spec may not set drill, zoom, frame, expand, drillTo, back,
  *   page, scroll or filter; its errors name spec.expand.<path> / spec.drillTo.<path>.
  *   list (core Mark, marks/list.ts): x = spec.x or path[0]; ResolvedSpec.evidence = path[1],
  *   body, rowFormat, bars (y -> "bar" with bars: true), expanded (view.expanded, else spec.expand
@@ -456,7 +460,7 @@
  *     <g data-maya="cross">    crosshair (line/area), moved via CSSOM transform
  *     <g data-maya="hits">     invisible enlarged targets (see below)
  *   Empty: no row holds a number in any measure or y2. Grid/axes/groups
- *   omitted, `<text data-maya="empty">` (text.noData) centered; a "\n" or a line wider than the
+ *   omitted, `<text data-maya="empty">` (text.noData, or text.noMatch with the table filter text when a filter is set; the filter control stays) centered; a "\n" or a line wider than the
  *   svg (estimated) breaks it into <tspan x dy> lines, one line stays plain text. Judged on the data, not on what
  *   drew: a hidden series or a zoom window over nothing keeps its axes and legend.
  *   Marks group attributes are synced on patch.
@@ -513,7 +517,8 @@
  *                       entries (the line; the bar measure too when there is no series).
  *                       Ramp/tone legends are non-button <div data-maya="ramp|tone">.
  *                       spec.was on bar (unless legend:false) appends <div class="maya-legend">
- *                       <span data-past><i></i>WAS TITLE</span></div>, the ghosts' key.
+ *                       <span data-past><i></i>WAS TITLE</span></div>, the ghosts' key (data-tick on the
+ *                       span for grouped bars, whose ghosts are ticks).
  *                       A spec.dash series' button (and its end label) carries data-dash.
  *                       No legend at all (series, was key, tone, ramp) when the chart is empty.
  *   The tooltip reads its content from these attributes; the element never sees rows.
@@ -985,7 +990,11 @@ function build(
   // the flip button is the front's.
   if (spec.back && opts?.view?.face === "back") {
     const { face: _, ...view } = opts.view;
-    const p = build({ ...spec.back, data: s0.data } as ChartSpec, { ...opts, view }, sheet);
+    const p = build(
+      { ...subSpec(spec, spec.back, true), data: s0.data } as ChartSpec,
+      { ...opts, view },
+      sheet,
+    );
     return { ...p, controls: p.controls + flip(s0, true) };
   }
   // ponytail: plot width is only known after shape (tick labels set the margins); W - 56 is the
@@ -1325,23 +1334,21 @@ function build(
     // Wrapped to the box (#91.9): "\n" breaks, then words fill lines of n estimated characters;
     // a longer word is cut into n-character pieces. One line keeps the plain <text>.
     const n = Math.max(4, Math.floor((W - 16) / 7.2));
-    const lines = t(s, "noData")
-      .split("\n")
-      .flatMap((p) =>
-        p
-          .split(" ")
-          .flatMap((w) => w.match(new RegExp(`.{1,${n}}`, "gu")) ?? [])
-          .reduce(
-            (a: string[], w) => {
-              const l = a.at(-1)!;
-              if (l && [...l].length + 1 + [...w].length <= n) a[a.length - 1] = `${l} ${w}`;
-              else if (l) a.push(w);
-              else a[a.length - 1] = w;
-              return a;
-            },
-            [""],
-          ),
-      );
+    const lines = (s.filter ? t(s, "noMatch", s.filter) : t(s, "noData")).split("\n").flatMap((p) =>
+      p
+        .split(" ")
+        .flatMap((w) => w.match(new RegExp(`.{1,${n}}`, "gu")) ?? [])
+        .reduce(
+          (a: string[], w) => {
+            const l = a.at(-1)!;
+            if (l && [...l].length + 1 + [...w].length <= n) a[a.length - 1] = `${l} ${w}`;
+            else if (l) a.push(w);
+            else a[a.length - 1] = w;
+            return a;
+          },
+          [""],
+        ),
+    );
     body = el(
       "text",
       {
@@ -1718,7 +1725,7 @@ function build(
     legend = s.type === "scatter" ? legend + markLegend : markLegend;
   // spec.was: a dashed swatch named by the was title says what the ghosts are.
   if (s.was !== null && ["bar", "line", "area"].includes(s.type) && spec.legend !== false)
-    legend += `<div class="maya-legend"><span data-past><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
+    legend += `<div class="maya-legend"><span data-past${s.type === "bar" && s.series && !s.stack ? " data-tick" : ""}><i></i>${esc(s.titles.get(s.was) ?? s.was)}</span></div>`;
   return {
     svg,
     // Nothing to draw: the empty state stands alone (#64).
@@ -1785,7 +1792,14 @@ function build(
     // root: nothing reserved (#66.3). heatmap xPath columns get their own nav (data-axis="x"),
     // its root button named by the first column level.
     crumbs:
-      (s.drilled.length ? trail(t(s, "crumbs"), t(s, "back"), s.drilled) : "") +
+      (s.drilled.length
+        ? trail(
+            t(s, "crumbs"),
+            // Two trails (heatmap xPath): each starts with its level's title.
+            spec.xPath && spec.path ? (s.titles.get(spec.path[0]!) ?? spec.path[0]!) : t(s, "back"),
+            s.drilled,
+          )
+        : "") +
       (s.xDrilled.length
         ? trail(t(s, "crumbsX"), s.titles.get(spec.xPath![0]!) ?? spec.xPath![0]!, s.xDrilled, "x")
         : ""),

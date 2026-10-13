@@ -7,6 +7,7 @@ const PAD = 8;
 const IND = 28; // headline indent (the number's column)
 const LH = 16; // body line height
 const EV = 22; // evidence row
+const MORE = 22; // the "+n more" row
 
 /** Greedy word wrap by width estimate; the last allowed line ends in an ellipsis when text remains. */
 const wrap = (text: string, n: number, lines: number): string[] => {
@@ -32,7 +33,7 @@ const wrap = (text: string, n: number, lines: number): string[] => {
  * Insight list (#79). One row per move in data order: number and bold headline, its value in its
  * own format at the right, body text under it (two lines, one on a 300 px tile), and for an open
  * move its evidence as bars on a scale local to that move. Rows that do not fit the height are
- * not drawn: body lines give way first (two, one, none).
+ * not drawn, a "+n more" row says how many: body lines give way first (two, one, never none).
  */
 export const list: Mark = {
   noun: "List",
@@ -53,7 +54,17 @@ export const list: Mark = {
       return 36 + (n ? n * LH + 12 : 8) + (shows(m) ? 14 + m.evidence.length * EV : 0);
     };
     let L = W <= 300 ? 1 : 2;
-    while (L && all.reduce((a, m) => a + rowH(m, L), 0) > H) L--;
+    while (L > 1 && all.reduce((a, m) => a + rowH(m, L), 0) > H) L--;
+    // Rows that fit, leaving room for the "+n more" row when some are dropped.
+    let fit = all.length;
+    for (
+      let h = 0;
+      fit &&
+      (h = all.slice(0, fit).reduce((a, m) => a + rowH(m, L), 0)) + (fit < all.length ? MORE : 0) >
+        H;
+    )
+      fit--;
+    let ev = all.length; // evidence bars take categories after the headlines
 
     let marks = "";
     let hits = "";
@@ -61,8 +72,8 @@ export const list: Mark = {
     let y = 0;
     all.forEach((m, i) => {
       const h = rowH(m, L);
-      // ponytail: rows past the height are not drawn (no scroll for a list); widths are estimates (6.5 px a body character, 8 px a headline one), so a wide script can wrap early.
-      if (y + h > H) return;
+      // ponytail: rows past the height are not drawn (no scroll for a list, a "+n more" row counts them); widths are estimates (6.5 px a body character, 8 px a headline one), so a wide script can wrap early.
+      if (i >= fit) return;
       const top = y;
       y += h;
       const name = ctx.fmt(s.x, m.x);
@@ -140,15 +151,28 @@ export const list: Mark = {
         const fw = Math.max(...fs.map((t) => t.length)) * 7.5;
         const x0 = IND + nw + 8;
         const room = Math.max(0, W - PAD - fw - 8 - x0);
-        let mx = 0;
-        for (const e of m.evidence) mx = Math.max(mx, Math.abs(e.value ?? 0));
+        // Bars diverge from a zero line when any value is negative; a negative one takes the bad tone.
+        const vs = m.evidence.map((e) => e.value ?? 0);
+        const lo = Math.min(0, ...vs);
+        const sc = room / (Math.max(0, ...vs) - lo || 1);
+        const zx = x0 + -lo * sc;
+        if (lo < 0)
+          grid += el("line", {
+            "data-centre": true,
+            x1: r(zx),
+            x2: r(zx),
+            y1: r(ys),
+            y2: r(ys + m.evidence.length * EV),
+          });
         m.evidence.forEach((e, k) => {
           const cy = ys + k * EV + EV / 2;
-          const len = mx && e.value !== null ? (room * Math.abs(e.value)) / mx : 0;
+          const v = e.value ?? 0;
+          const len = Math.abs(v) * sc;
           const ed = {
             "data-key": key("e", m.x, e.name),
-            "data-c": k,
+            "data-c": ev++,
             "data-s": 0,
+            "data-way": lo < 0 ? (v < 0 ? "down" : "up") : null,
             "data-x": e.name,
             "data-y": e.value,
             "data-f": fs[k],
@@ -157,7 +181,7 @@ export const list: Mark = {
           marks += el("rect", {
             "data-maya": "mark",
             ...ed,
-            x: r(x0),
+            x: r(v < 0 ? zx - len : zx),
             y: r(cy - 4),
             width: r(len),
             height: 8,
@@ -178,7 +202,7 @@ export const list: Mark = {
             {
               "data-key": key("ef", m.x, e.name),
               "data-ev": "value",
-              x: r(x0 + len + 6),
+              x: r((v < 0 ? zx : zx + len) + 6),
               y: r(cy),
               "dominant-baseline": "middle",
             },
@@ -187,6 +211,18 @@ export const list: Mark = {
         });
       }
     });
+    if (fit < all.length)
+      marks += el(
+        "text",
+        {
+          "data-key": "more",
+          "data-more": true,
+          x: IND,
+          y: r(y + MORE / 2),
+          "dominant-baseline": "middle",
+        },
+        esc(ctx.t("showMore", all.length - fit)), // ponytail: reuses showMore until core adds a "+{0} more" string
+      );
     return {
       marks,
       hits,

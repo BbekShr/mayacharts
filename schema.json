@@ -196,7 +196,7 @@
     },
     "back": {
       "type": "object",
-      "description": "A second face: a chart spec over the kpi's rows (no data of its own, any type but kpi). A Details button turns the card over (view.face); Escape returns. kpi only."
+      "description": "A second face: a chart spec over the kpi's rows (no data of its own, any type but kpi). A Details button turns the card over (view.face); Escape returns. It takes the kpi's format, titles, locale, currency and theme unless it sets them, and with limit it keeps just those rows (other defaults to false). kpi only."
     },
     "expand": {
       "oneOf": [
@@ -575,6 +575,8 @@
           "stream",
           "filter",
           "showMore",
+          "noMatch",
+          "moreMoves",
           "crumbsX",
           "before",
           "after",

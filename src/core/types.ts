@@ -313,7 +313,7 @@ export interface ChartSpec<R extends object = Row> {
   /** How a kpi headline moves to a new number (element only; off under reduced motion): "count" counts up, "roll" rolls each digit like an odometer. Default "count". kpi only.
    * @example numberMotion: "roll" */
   numberMotion?: "count" | "roll";
-  /** A second face: a chart spec over the kpi's rows (no `data` of its own, any type but kpi). A Details button turns the card over (view.face); Escape returns. kpi only.
+  /** A second face: a chart spec over the kpi's rows (no `data` of its own, any type but kpi). A Details button turns the card over (view.face); Escape returns. It takes the kpi's format, titles, locale, currency and theme unless it sets them, and with `limit` it keeps just those rows (other defaults to false). kpi only.
    * @example back: { type: "bar", x: "month", y: "sales", horizontal: true, sort: "desc", limit: 3 } */
   back?: Omit<ChartSpec<R>, "data" | "back">;
   /** Sweep of the gauge dial in degrees: 180 (a half dial), 270 or 360 (a closed ring). Default 180. gauge only.

@@ -86,4 +86,28 @@ describe("list #79", () => {
     const { svg } = draw({}, { height: 120 });
     expect(keys(svg).filter((k) => k!.startsWith("m~")).length).toBeLessThan(4);
   });
+  it("evidence bars never share a category index with a headline", () => {
+    const { svg } = draw();
+    const cs = (re: RegExp) => [...svg.matchAll(re)].map((m) => m[1]);
+    const heads = cs(/data-key="m~[^"]+" data-c="(\d+)"/g);
+    const evs = cs(/data-key="e~[^"]+" data-c="(\d+)"/g);
+    expect(evs.length).toBe(2);
+    for (const c of evs) expect(heads).not.toContain(c);
+  });
+  it("a short tile keeps one body line and counts the rows it dropped", () => {
+    const { svg } = draw({}, { height: 190, width: 300 });
+    expect(svg).toContain('data-body=""');
+    expect(svg).toMatch(/data-more=""[^>]*>Show \d more</);
+  });
+  it("negative evidence diverges from a zero line in the down tone", () => {
+    const d = [...data, { Move: "Lead with Jackets", Evidence: "Coats", Value: -20 }];
+    const { svg } = draw({ data: d });
+    expect(svg).toContain("data-centre");
+    const rect = (n: string) => svg.match(new RegExp(`<rect[^>]*data-x="${n}"[^>]*>`))![0];
+    expect(rect("Coats")).toContain('data-way="down"');
+    expect(rect("Jackets")).toContain('data-way="up"');
+    const x = (t: string) => +t.match(/ x="([\d.]+)"/)![1]!;
+    const w = (t: string) => +t.match(/ width="([\d.]+)"/)![1]!;
+    expect(x(rect("Coats")) + w(rect("Coats"))).toBeCloseTo(x(rect("Jackets")), 0);
+  });
 });
