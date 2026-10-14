@@ -1017,7 +1017,7 @@ res.send(html);
 
 A host that snapshots charts (PDF export, scheduled screenshots, a render-complete hook) should wait for `maya-settled` or `await el.settled`, not `maya-render`, or set `animate: false`.
 
-Host adapters turn a columnar result into rows, unwrap `{ value() }` cells, match fields written as the exact column name or a RegExp (case-insensitive) against the columns, find or create `#chart`, set the spec and return the element. They live in `mayacharts/host` and in the global builds as `maya.host`.
+Host adapters turn a columnar result into rows, unwrap `{ value() }` cells, match fields written as the exact column name or a RegExp (case-insensitive) against the columns, find or create `#chart`, set the spec and return the element. They live in `mayacharts/host` and in the global builds as `maya.host`. `thoughtspot` tells ThoughtSpot the chart is done when it first draws, without waiting for the entrance animation, so a slow first load does not run past ThoughtSpot's wait.
 
 ```js
 // ThoughtSpot custom chart (three-file pattern):
@@ -1026,8 +1026,8 @@ Host adapters turn a columnar result into rows, unwrap `{ value() }` cells, matc
 // chart.css:  #chart { --maya-accent: ...; --maya-series-2: ...; }
 //             (theme tokens go on #chart itself; on :root, html or body they never reach the chart)
 // chart.js:   const draw = () => maya.host.thoughtspot(viz, { type: "bar", x: "item", y: "sales" });
-//             window.maya ? draw() : document.querySelector("script[src*=mayacharts]")
-//               .addEventListener("load", draw);
+//             const go = () => window.maya && (document.removeEventListener("load", go, true), draw());
+//             go() || document.addEventListener("load", go, true);
 
 // Any host that returns { schema, data: [[...]] }
 maya.host.columns(

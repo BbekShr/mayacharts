@@ -583,6 +583,9 @@ host.renderComplete();</code></pre>
           unmatched field fails with unknown-field listing the columns), find or create the
           <code>#chart</code> element, set its spec and return it. They are in
           <code>mayacharts/host</code>, and in the global builds as <code>maya.host</code>.
+          <code>thoughtspot</code> tells ThoughtSpot the chart is done when it first draws, without
+          waiting for the entrance animation, so a slow first load does not run past ThoughtSpot's
+          wait.
         </p>
         <pre><code>// ThoughtSpot custom chart (three files):
 // chart.html: &lt;script src="https://cdn.jsdelivr.net/npm/mayacharts/dist/maya.global.js"&gt;&lt;/script&gt;
@@ -590,8 +593,8 @@ host.renderComplete();</code></pre>
 // chart.css:  #chart { --maya-accent: ...; --maya-series-2: ...; }
 //             (theme tokens go on #chart itself; on :root, html or body they never reach the chart)
 // chart.js:   const draw = () =&gt; maya.host.thoughtspot(viz, spec);
-//             window.maya ? draw() : document.querySelector("script[src*=mayacharts]")
-//               .addEventListener("load", draw);
+//             const go = () =&gt; window.maya &amp;&amp; (document.removeEventListener("load", go, true), draw());
+//             go() || document.addEventListener("load", go, true);
 
 // Any host that returns { schema, data: [[...]] }
 maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },

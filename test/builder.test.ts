@@ -128,23 +128,32 @@ describe("snippets", () => {
       for (const loaded of [true, false]) {
         let got: unknown;
         let onLoad: (() => void) | undefined;
-        const maya = { host: { thoughtspot: (_: unknown, s: unknown) => (got = s) } };
-        const script = { addEventListener: (_: string, f: () => void) => (onLoad = f) };
+        let calls = 0;
+        const maya = { host: { thoughtspot: (_: unknown, s: unknown) => (calls++, (got = s)) } };
+        // No script tag lookup: loads are caught on the document, whatever loaded.
         const document = {
-          querySelector: (s: string) => (s.includes("mayacharts") ? script : null),
+          addEventListener: (type: string, f: () => void, capture: boolean) =>
+            type === "load" && capture && (onLoad = f),
+          removeEventListener: (_: string, f: () => void) => f === onLoad && (onLoad = undefined),
         };
+        const win: { maya?: unknown } = loaded ? { maya } : {};
         new Function("window", "document", "viz", "maya", js!.code).call(
           null,
-          { maya: loaded ? maya : undefined },
+          win,
           document,
           {},
           maya,
         );
         if (!loaded) {
           expect(got).toBeUndefined();
+          onLoad!(); // another resource loaded first: keep waiting
+          expect(got).toBeUndefined();
+          win.maya = maya;
           onLoad!();
+          expect(onLoad).toBeUndefined();
         }
         expect(got, t).toEqual(rest);
+        expect(calls).toBe(1);
       }
     }
   });
