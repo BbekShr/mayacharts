@@ -84,3 +84,15 @@ describe("table #84", () => {
     expect(narrow.svg).not.toContain('data-key="s~F');
   });
 });
+
+describe("table pager key", () => {
+  it("keeps one data-key whether or not a row is open", () => {
+    const s = { page: 2, expand: { type: "bar", x: "m", y: "ch" } } as Partial<ChartSpec>;
+    const k = (v = {}) =>
+      draw(s, { view: v }).svg.match(
+        /<text data-key="more" data-maya="more" role="button" tabindex="0"/,
+      )?.[0];
+    expect(k()).toBeTruthy();
+    expect(k({ expanded: "Yosemite jacket" })).toBe(k());
+  });
+});
