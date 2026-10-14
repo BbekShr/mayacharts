@@ -569,8 +569,9 @@
  *   or data-other never drill. Escape pops xDrill first, then drill. Table and list rows expand on
  *   click or Enter (with select: double click or Shift+Enter) through view.expanded;
  *   [data-maya=more] (the keyed focusable text and the full-row rect in hits) increments view.page;
- *   input[data-maya=filter] sets view.filter (debounced 150 ms) and resets the page. Under svg[data-scroll] the element holds [data-maya=thead] with a
- *   translateY(scrollTop) CSSOM transform; svg[data-maya=expand] crossfades whole.
+ *   input[data-maya=filter] sets view.filter (debounced 150 ms) and resets the page. Under
+ *   svg[data-scroll] the element holds [data-maya=thead] with a translateY(scrollTop) CSSOM
+ *   transform; svg[data-maya=expand] crossfades whole.
  *   Parallel axis strips ([data-maya=axis]) are focusable sliders the element sets after paint:
  *   Up/Down move the brush range a tenth of the axis (the first press starts a 20% range at that
  *   end), Shift+Up/Down grow or shrink it, Delete or Backspace clear that axis. A plain click on

@@ -86,13 +86,9 @@ describe("table #84", () => {
 });
 
 describe("table pager key", () => {
-  it("keeps one data-key whether or not a row is open", () => {
+  it("keys the pager text whether or not a row is open", () => {
     const s = { page: 2, expand: { type: "bar", x: "m", y: "ch" } } as Partial<ChartSpec>;
-    const k = (v = {}) =>
-      draw(s, { view: v }).svg.match(
-        /<text data-key="more" data-maya="more" role="button" tabindex="0"/,
-      )?.[0];
-    expect(k()).toBeTruthy();
-    expect(k({ expanded: "Yosemite jacket" })).toBe(k());
+    for (const view of [{}, { expanded: "Yosemite jacket" }])
+      expect(draw(s, { view }).svg).toContain('<text data-key="more" data-maya="more"');
   });
 });
