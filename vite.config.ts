@@ -41,7 +41,9 @@ export default defineConfig(({ mode }) => {
     build: {
       target: "es2022",
       minify: true,
-      sourcemap: true,
+      // Script-tag builds keep the .map file but drop the comment that makes DevTools fetch it
+      // (a host CSP without the CDN in connect-src logs an error for that fetch).
+      sourcemap: isGlobal ? "hidden" : true,
       emptyOutDir: isIndex,
       lib: {
         entry,

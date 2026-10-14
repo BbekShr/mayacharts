@@ -13,7 +13,9 @@
  *   The adapter sets `el.spec` and returns the element (so `el.data = ...` still works).
  * - thoughtspot: `viz.getDataFromSearchQuery().getData()` gives `{ schema: [{ name }], data: [[...]] }`
  *   (absent viz or data: no rows). `viz.events.emitRenderCompletedEvent()` is called once, on the
- *   first `maya-settled` (which also fires after `maya-error`).
+ *   first `maya-render` or `maya-settled` (which also fires after `maya-error`). Not on settled
+ *   alone: on a cold first load the library download plus the entrance animation can run past
+ *   ThoughtSpot's wait, which shows "Something went wrong".
  * Not core: it may touch `document`; it never imports render, validate, shape or format, and it
  * does not import the element (a `<maya-chart>` upgrades whenever the element script loads).
  */
@@ -103,20 +105,18 @@ export function columns(table: HostTable, spec: HostSpec, el?: MayaChart): MayaC
   return el;
 }
 
-/** ThoughtSpot custom chart: read the search data, render, emit render-complete once settled.
+/** ThoughtSpot custom chart: read the search data, render, emit render-complete once drawn.
  * @example maya.host.thoughtspot(viz, { type: "bar", x: /item/i, y: /sales/i }) */
 export function thoughtspot(
   viz: ThoughtSpotViz | undefined,
   spec: HostSpec,
   el?: MayaChart,
 ): MayaChart {
-  const e = columns(
-    viz?.getDataFromSearchQuery?.()?.getData() ?? { schema: [], data: [] },
-    spec,
-    el,
-  );
-  e.addEventListener("maya-settled", () => viz?.events?.emitRenderCompletedEvent?.(), {
-    once: true,
-  });
+  // columns reads a missing schema or data as empty.
+  const e = columns(viz?.getDataFromSearchQuery?.()?.getData() ?? ({} as HostTable), spec, el);
+  // The first draw completes (after maya-error only maya-settled fires); later events are ignored.
+  let n = 0;
+  for (const t of ["render", "settled"])
+    e.addEventListener("maya-" + t, () => n++ || viz?.events?.emitRenderCompletedEvent?.());
   return e;
 }

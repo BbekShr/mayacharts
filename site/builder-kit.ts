@@ -912,8 +912,10 @@ export function splitTheme(spec: ChartSpec): { vars: string; spec: ChartSpec } {
 
 /**
  * chart.js for ThoughtSpot: the spec without rows or CSS theme tokens, and the host adapter.
- * chart.html loads the library, so chart.js stays light. When it runs first it waits on that
- * script's load: ThoughtSpot adds the HTML after the page has loaded, so window load never comes.
+ * chart.html loads the library, so chart.js stays light. When it runs first it waits for any
+ * load on the document (captured; script loads do not bubble) until `maya` exists: ThoughtSpot
+ * adds the HTML after the page has loaded, so window load never comes, and the script tag may
+ * not be in the document yet when chart.js runs.
  * Rows, cell unwrapping and the settled signal come from maya.host.thoughtspot.
  */
 export function thoughtSpotJs(spec: ChartSpec): string {
@@ -921,7 +923,9 @@ export function thoughtSpotJs(spec: ChartSpec): string {
   return `// Column names match case-insensitively; a /regex/ works too (x: /item/i).
 const spec = ${flat(JSON.stringify(rest, null, 2)).replace(/</g, "\\u003c")};
 const draw = () => maya.host.thoughtspot(viz, spec);
-window.maya ? draw() : document.querySelector("script[src*=mayacharts]").addEventListener("load", draw);
+// Draw now, or once the library script has loaded (however and whenever the host added it).
+const go = () => window.maya && (document.removeEventListener("load", go, true), draw());
+go() || document.addEventListener("load", go, true);
 `;
 }
 

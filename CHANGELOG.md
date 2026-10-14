@@ -4,6 +4,14 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- `maya.host.thoughtspot` signals render-complete when the chart first draws, not after its entrance animation. On a cold first load the library download plus the animation could run past ThoughtSpot's wait, so the tile showed "Something went wrong" until a reload.
+- The builder's ThoughtSpot chart.js waits for `maya` to exist instead of looking up the library's script tag, which could be missing when chart.js ran first.
+- The global (script-tag) builds no longer point DevTools at their source map, so a host CSP that leaves the CDN out of `connect-src` logs no error for it. The `.map` files still ship.
+
 ## 0.18.0 - 2026-10-13
 
 ### Changed

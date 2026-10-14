@@ -57,7 +57,7 @@ describe("host adapters", () => {
     expect(columns(table, { type: "bar", y: "Total Sales" })).toBe(el);
   });
 
-  it("thoughtspot: live, wrapped cells, completion once on settled", () => {
+  it("thoughtspot: live, wrapped cells, completion once on the first draw or settle", () => {
     let done = 0;
     const viz = {
       getDataFromSearchQuery: () => ({
@@ -71,8 +71,10 @@ describe("host adapters", () => {
     const el = thoughtspot(viz, { type: "bar", x: "a", y: "b" }, fake());
     expect((el.spec as any).data).toEqual([{ A: "x", B: 3 }]);
     expect(done).toBe(0);
+    el.dispatchEvent(new CustomEvent("maya-render"));
+    expect(done).toBe(1); // drawn: no wait for the entrance animation
     settle(el);
-    settle(el);
+    el.dispatchEvent(new CustomEvent("maya-render"));
     expect(done).toBe(1);
   });
 
