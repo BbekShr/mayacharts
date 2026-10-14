@@ -203,6 +203,8 @@ test.describe("constellation", () => {
   }) => {
     test.skip(!!isMobile, "hover");
     const tile = await open(page, "constellation");
+    // The entrance animation still moves the star; read its box only once settled.
+    await page.evaluate(() => (document.getElementById("constellation") as any).settled);
     const b = (await tile.locator("circle[data-maya=mark]").nth(1).boundingBox())!;
     await page.mouse.move(b.x + b.width / 2 + 3, b.y + b.height / 2 + 3);
     await expect(tile.locator("[data-active]")).toHaveCount(1);
