@@ -1176,7 +1176,7 @@ test.describe("M4 drills, table paging and expand", () => {
 
   test("table: Show more pages, the filter keeps focus and caret", async ({ page }) => {
     await mount(page, "t", table);
-    await page.locator("#t [data-maya=more]").click();
+    await page.locator("#t rect[data-maya=more]").click(); // the full row; the text is the focus target
     await expect.poll(async () => (await view(page, "t")).page).toBe(1);
     const input = page.locator("#t .maya-filter");
     await input.click();
