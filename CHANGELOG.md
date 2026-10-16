@@ -4,6 +4,13 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- A `stack: "stream"` area no longer draws a y axis title while its value axis is off (the default), since there are no ticks for it to name.
+- A paged table's "Show n more" row glides with the rows when an open row closes or a page arrives, instead of jumping to its new place.
+
 ## 0.18.1 - 2026-10-14
 
 ### Fixed

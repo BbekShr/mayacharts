@@ -179,7 +179,9 @@ export function frame(
   const lLab = lt ? lt.labels : lFull.map((c) => clip(c, W * 0.4 - 8));
   const rt = ry && ry.kind === "linear" ? ticks(spec, ry, fmt, compact ? 3 : 5) : null;
   const rTitle = !compact && rt && ry && spec.titles.get(ry.field);
-  const yTitle = !compact && ly && spec.titles.get(ly.field);
+  // A stream with its value axis off (the default) has no ticks to title.
+  const yTitle =
+    !compact && ly && (spec.yAxis || spec.stack !== "stream") && spec.titles.get(ly.field);
   const xTitle = !compact && bx && spec.titles.get(bx.field);
   // Without a left axis, still leave room for half of the first bottom tick label.
   const left = Math.max(

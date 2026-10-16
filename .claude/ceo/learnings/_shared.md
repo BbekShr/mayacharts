@@ -32,6 +32,8 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 **Motion**
 
 - Key a rolling window (trails, sparkline tails) by the time each piece covers, never by its age or slot, or history moves on every step.
+- animate.ts glides only what it can measure: a keyed text, or a rect, line or circle (alone or as the [data-maya=mark] in a g). A keyed g of plain shapes snaps; split the visual text from its hit rect (2026-10-14).
+- Before giving two nodes one `data-maya`, grep e2e and docs for that selector: strict Playwright locators and host `querySelector` assume one.
 - Keys are identity: a key that changes between views re-enters instead of morphing. Keep keys absolute across drills (sankey level in the whole path, hierarchy keys hold the full path).
 - Omit opacity in an end keyframe so it lands on the CSS value; animating to 1 flashes translucent marks.
 - A coherent zoom has no stagger, clips to the plot, and fades value labels in only after the marks land; axes swap at once.

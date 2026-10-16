@@ -814,6 +814,20 @@ describe("#86-#88 core contracts (M2)", () => {
     expect(p.legend).not.toMatch(/data-em[^>]*data-key="A"/);
   });
 
+  it("a stream area draws no y title while its value axis is off; a plain stack keeps it", () => {
+    const base: ChartSpec = {
+      type: "area",
+      x: "m",
+      y: "v",
+      series: "s",
+      titles: { v: "Volume" },
+      data: months.flatMap((m, i) => ["A", "B"].map((s, j) => ({ m, s, v: i + j + 1 }))),
+    };
+    expect(render({ ...base, stack: "stream" })).not.toContain(">Volume</text>");
+    expect(render({ ...base, stack: "stream", yAxis: true })).toContain(">Volume</text>");
+    expect(render({ ...base, stack: true })).toContain(">Volume</text>");
+  });
+
   it("{ y2 } rules draw across the right axis and widen it", () => {
     const svg = render({
       ...simple,

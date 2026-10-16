@@ -9,7 +9,7 @@
  */
 import type { Mark, ThemeTokens } from "./types.ts";
 
-// ponytail: kept in sync with package.json by hand; test/registry.test.ts fails when it drifts.
+// ponytail: kept in sync with package.json by hand; test/core-fixes.test.ts and test/builder.test.ts fail when it drifts.
 export const VERSION = "0.18.1";
 // ponytail: keyed by major; pre-1.0 Mark-contract breaks must bump this by hand.
 export const MAJOR = "0";

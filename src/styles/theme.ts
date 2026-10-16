@@ -313,7 +313,7 @@ export const css =
   "[data-maya=marks] text[data-chev]{fill:var(--maya-fg-muted);font-size:10px}[data-maya=grid] line[data-centre]{stroke:var(--maya-fg-muted);stroke-opacity:.5}" +
   "[data-way=zero]{--c:var(--maya-fg-muted)}rect[data-way][data-maya=mark]:not([data-s]){rx:2px}rect[data-nil]{fill:none;stroke:var(--maya-fg-muted);stroke-opacity:.4;rx:2px}" +
   // Table: the Show more row.
-  "[data-maya=more]{cursor:pointer}[data-maya=more] text{fill:color-mix(in oklab,var(--maya-accent),var(--maya-fg) 30%);font-weight:600}[data-maya=more]:is(:hover,:focus-visible) text{text-decoration:underline}" +
+  "[data-maya=more]{cursor:pointer}text[data-maya=more]{fill:color-mix(in oklab,var(--maya-accent),var(--maya-fg) 30%);font-weight:600}text[data-maya=more]:focus-visible,svg:has(rect[data-maya=more]:hover) text[data-maya=more]{text-decoration:underline}" +
   // List: bold headline over muted body, the value in its own weight, evidence names muted.
   "[data-maya=marks] text tspan[data-num]{fill:var(--maya-fg-muted)}[data-maya=marks] text tspan[data-hd]{font-size:14px;font-weight:600}" +
   "[data-maya=marks] text[data-v]{font-size:14px;font-weight:600}[data-maya=marks] text[data-body],[data-maya=marks] text[data-ev=name]{fill:var(--maya-fg-muted)}" +
