@@ -1,0 +1,231 @@
+{
+  "agent_org_version": "0.1.0",
+  "generated": "2026-10-25",
+  "adopted": true,
+  "project": "mayaCharts",
+  "slug": "maya",
+  "size": "standard",
+  "ceo_skill": "maya-ceo",
+  "base_branch": "main",
+  "branch_prefix": "ceo/",
+  "autonomy_level": "L1",
+  "autonomy_target": "L1",
+  "models": { "top": "opus", "mid": "sonnet", "small": "haiku" },
+  "gates": [
+    { "name": "typecheck", "cmd": "npm run typecheck", "when": "always", "cheap": true },
+    { "name": "format", "cmd": "npx prettier --check .", "when": "always", "cheap": true },
+    { "name": "unit", "cmd": "npm test", "when": "always", "cheap": true },
+    {
+      "name": "build",
+      "cmd": "npm run build",
+      "when": "always",
+      "note": "writes dist/: one build per tree at a time"
+    },
+    {
+      "name": "size",
+      "cmd": "npm run size",
+      "when": "always",
+      "note": "after build; budgets in package.json mayaSize"
+    },
+    {
+      "name": "e2e",
+      "cmd": "npm run e2e",
+      "when": "src/**, site/** or e2e/** changed",
+      "note": "chromium, firefox, webkit, mobile-webkit; binds a port"
+    },
+    {
+      "name": "feature-check",
+      "cmd": "",
+      "when": "always",
+      "note": "supplied by the CEO's brief per item"
+    }
+  ],
+  "gate_files": [],
+  "gate_files_note": "Guarded by the existing .claude/hooks/guard.mjs (gates mode): tsconfig.json, vitest.config.ts, playwright.config.ts, size.mjs, theme.test.ts, .prettierrc, .prettierignore and the mayaSize budgets in package.json. Kept there so two hooks never do the same job.",
+  "protected_paths": [
+    "CLAUDE.md",
+    "LICENSE",
+    "STABILITY.md",
+    "package.json",
+    ".github/workflows/**",
+    ".githooks/**",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "scripts/size.mjs",
+    "test/theme.test.ts",
+    ".prettierrc",
+    ".prettierignore",
+    ".claude/ceo/org.json",
+    ".claude/ceo/AUTONOMY.md",
+    ".claude/settings.json",
+    ".claude/hooks/**",
+    ".claude/skills/maya-release/**",
+    ".claude/skills/maya-deploy/**"
+  ],
+  "user_data_paths": [],
+  "shipped_paths_note": "npm publishes only dist, schema.json and llms.txt (package.json files); site/ deploys to GitHub Pages. Neither ships CLAUDE.md or .claude/.",
+  "agents": [
+    {
+      "name": "maya-core-engineer",
+      "access": "editor",
+      "role": "core-engineer",
+      "perimeter": [
+        "src/core/**",
+        "src/index.ts",
+        "src/global*.ts",
+        "src/host.ts",
+        "schema.json",
+        "llms.txt",
+        "README.md",
+        "docs/**",
+        "site/docs.html",
+        "site/errors.html",
+        "CHANGELOG.md",
+        "NON-FEATURES.md",
+        "bench/**",
+        "scripts/**",
+        "test/**"
+      ],
+      "except": ["src/core/marks/**", "scripts/size.mjs", "test/theme.test.ts"]
+    },
+    {
+      "name": "maya-chart-designer",
+      "access": "editor",
+      "role": "frontend-engineer",
+      "perimeter": [
+        "src/core/marks/**",
+        "src/hierarchy.ts",
+        "src/flow.ts",
+        "src/geo.ts",
+        "src/radial.ts",
+        "src/stats.ts",
+        "src/weave.ts",
+        "src/units.ts",
+        "src/orbit.ts",
+        "src/constellation.ts",
+        "src/themes.ts",
+        "src/styles/**",
+        "site/**",
+        "e2e/__screenshots__/**"
+      ],
+      "except": ["site/docs.html", "site/errors.html"]
+    },
+    {
+      "name": "maya-element-engineer",
+      "access": "editor",
+      "role": "element-engineer",
+      "perimeter": ["src/element/**", "src/element.ts", "e2e/*.spec.ts", "e2e/specs.ts"],
+      "except": []
+    },
+    {
+      "name": "maya-design-critic",
+      "access": "report-only",
+      "role": "design-critic",
+      "perimeter": [],
+      "except": []
+    },
+    {
+      "name": "maya-motion-critic",
+      "access": "report-only",
+      "role": "motion-critic",
+      "perimeter": [],
+      "except": []
+    },
+    {
+      "name": "maya-security-engineer",
+      "access": "report-only",
+      "role": "security-engineer",
+      "perimeter": [],
+      "except": []
+    },
+    {
+      "name": "maya-reviewer",
+      "access": "report-only",
+      "role": "reviewer",
+      "perimeter": [],
+      "except": []
+    },
+    {
+      "name": "maya-repro",
+      "access": "report-only",
+      "role": "repro",
+      "perimeter": [],
+      "except": []
+    },
+    {
+      "name": "maya-release-manager",
+      "access": "report-only",
+      "role": "release-manager",
+      "perimeter": [],
+      "except": []
+    }
+  ],
+  "skills": {
+    "ponytail": {
+      "agents": ["maya-core-engineer", "maya-chart-designer", "maya-element-engineer"],
+      "when": "before writing any code, level full",
+      "fallback": "say so in the report and apply the ponytail rules in CLAUDE.md"
+    },
+    "anthropic-skills:taste-skill": {
+      "agents": ["maya-chart-designer", "maya-design-critic", "maya-motion-critic"],
+      "when": "before any visual or motion change, and as the critics' grading bar",
+      "fallback": "say so in the report and grade against the comparison set and the Bar lessons in learnings/_shared.md"
+    },
+    "dataviz": {
+      "agents": ["maya-chart-designer", "maya-design-critic"],
+      "when": "before choosing a form, colours, marks or labels",
+      "fallback": "say so and work from the chart rules in learnings/_shared.md"
+    },
+    "design:accessibility-review": {
+      "agents": ["maya-design-critic"],
+      "when": "WCAG 2.2 AA pass on changed charts",
+      "fallback": "say so and run e2e/a11y.spec.ts plus the manual contrast checks in the agent's method"
+    },
+    "anthropic-skills:built-in-browser": {
+      "agents": ["maya-repro"],
+      "when": "driving the gallery to reproduce a report",
+      "fallback": "use a throwaway Playwright script as /maya-verify describes"
+    },
+    "ponytail-review": {
+      "agents": [],
+      "ceo": true,
+      "when": "full diff before the final gate, every apply run",
+      "fallback": "review the diff for deletions yourself and say so"
+    },
+    "ponytail-audit": {
+      "agents": [],
+      "ceo": true,
+      "when": "deep mode",
+      "fallback": "skip and say so"
+    },
+    "ponytail-debt": {
+      "agents": [],
+      "ceo": true,
+      "when": "every apply run, against NON-FEATURES.md Known ceilings",
+      "fallback": "grep ponytail: comments yourself"
+    },
+    "code-review": {
+      "agents": [],
+      "ceo": true,
+      "when": "Review and QA, alongside the board",
+      "fallback": "rely on the review board"
+    },
+    "security-review": {
+      "agents": [],
+      "ceo": true,
+      "when": "Review and QA when the diff touches esc(), html(), validate.ts or the element",
+      "fallback": "rely on the security lens"
+    }
+  },
+  "playbooks": ".claude/ceo/playbooks",
+  "feedback": { "enabled": false, "upstream": "BbekShr/agent-org" },
+  "default_owner": "maya-core-engineer",
+  "kind": "library",
+  "modes": ["audit", "light", "deep", "id", "request", "triage", "gallery"],
+  "guard": {
+    "block_stash": true,
+    "stop_check": { "cmd": "", "watch": ["src", "test"], "extensions": [".ts"] },
+    "stop_check_note": "The typecheck Stop hook stays in .claude/hooks/guard.mjs (typecheck mode)."
+  }
+}
