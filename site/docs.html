@@ -775,18 +775,18 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
                 and the ghosts are titled by the previous period formatted by
                 <code>format[by]</code>. <code>current</code> and <code>previous</code> pick
                 periods, matched as strings. kpi: a second comparison, such as the same period last
-                year. gauge: a marker at the old value. heatmap: a "was" tooltip row and table
-                column per cell. Each bar gets a dashed ghost bar at its old value drawn over it
-                (the value axis spans the ghosts), keyed in the legend by the field's title, the
-                tooltip says "was" and the value, the data table gains a column, and the description
-                names the 2 largest relative moves (text.since, "Since Last week: North +12%, West
-                -10%."). With a y array, key it by y field (<code>{ "sales": "salesLY" }</code>):
-                the ghosts follow the measure toggle (kpi tiles: one each), unlisted measures have
-                none; an object with a string <code>by</code> is the long form. With series (bar):
-                one ghost per grouped bar. Heatmap calendar form:
-                <code>{ "by": "year" }</code> equal to <code>series</code> compares each cell with
-                the same x under the previous series value, and the first series value has none. Not
-                with stack
+                year. gauge: a marker at the old value and a change line, in points on a percent
+                measure. heatmap: a "was" tooltip row and table column per cell. Each bar gets a
+                dashed ghost bar at its old value drawn over it (the value axis spans the ghosts),
+                keyed in the legend by the field's title, the tooltip says "was" and the value, the
+                data table gains a column, and the description names the 2 largest relative moves
+                (text.since, "Since Last week: North +12%, West -10%."). With a y array, key it by y
+                field (<code>{ "sales": "salesLY" }</code>): the ghosts follow the measure toggle
+                (kpi tiles: one each), unlisted measures have none; an object with a string
+                <code>by</code> is the long form. With series (bar): one ghost per grouped bar.
+                Heatmap calendar form: <code>{ "by": "year" }</code> equal to
+                <code>series</code> compares each cell with the same x under the previous series
+                value, and the first series value has none. Not with stack
               </td>
             </tr>
             <tr>
