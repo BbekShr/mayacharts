@@ -61,7 +61,7 @@ describe("gauge", () => {
     expect(svg(base({ was: "w", colorBy: { better: "lower" } }))).toContain('data-tone="bad"');
     expect(svg(base())).not.toContain(" vs ");
   });
-  it("percent y states the change in points", () => {
+  it("percent y states the change in points, no relative percent", () => {
     const s = svg({
       type: "gauge",
       y: "v",
@@ -69,7 +69,8 @@ describe("gauge", () => {
       format: "percent",
       data: [{ v: 0.353, w: 0.325 }],
     });
-    expect(s).toContain("▲ +2.8 pts (+8.6%) vs w");
+    expect(s).toContain("▲ +2.8 pts vs w");
+    expect(s).not.toContain("(+8.6%)");
   });
   it("the status word never vanishes: it leads the row under a small dial", () => {
     const c = { target: 70, warn: 50 };

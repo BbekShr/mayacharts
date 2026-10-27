@@ -240,7 +240,6 @@ export function decide({ FACTS }: Pick<Dataset, "FACTS">): Record<string, ChartS
     title: "State growth against the nation",
     x: "stateName",
     y: ["sales", "change"],
-    columns: ["region"],
     page: 5,
     filter: true,
     bars: { sales: "bar", change: "diverging" },
@@ -249,9 +248,8 @@ export function decide({ FACTS }: Pick<Dataset, "FACTS">): Record<string, ChartS
     format: { sales: "compact", change: "percent" },
     titles: {
       stateName: "State",
-      region: "Region",
       sales: "Average month",
-      change: "Against the nation",
+      change: "vs nation",
     },
     data: (
       rollup(

@@ -718,20 +718,23 @@ export const gauge: Mark = {
       notation: "compact",
     });
     const minus = (s: string) => s.replace("-", "\u2212");
-    const chg =
+    const isPts = fv(1).includes("%");
+    let chg =
       wasV === null
         ? ""
         : ctx.t(
             "change",
             dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u2192",
             minus(
-              fv(1).includes("%")
+              isPts
                 ? ctx.t("pts", (dv > 0 ? "+" : "") + fv(dv).replace("%", "").trim())
                 : (dv > 0 ? "+" : "") + fv(dv),
             ),
             minus(pct.format(wasV ? dv / Math.abs(wasV) : 0)),
             spec.titles.get(spec.was!) ?? spec.was!,
           );
+    // ponytail: a points move already says it all; the relative percent is cut from the line (it clips "vs ..." inside a ring).
+    if (isPts) chg = chg.replace(/ \(.*?\)/, "");
     if ((status && !above) || chg) {
       const lead = status && !above ? status + (chg ? ", " : "") : "";
       // ponytail: inside a ring the row is cut to the chord at its height (5.8 px a character), not measured.

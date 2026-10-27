@@ -53,7 +53,7 @@ export const TEXT = {
   offTrack: "Off track",
   /** kpi delta: {0} = signed change, {1} = previous period. */
   vs: "{0} vs {1}",
-  /** kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what it is compared with. */
+  /** kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what it is compared with. A gauge on a percent measure drops the first " (...)". */
   change: "{0} {1} ({2}) vs {3}",
   /** kpi and gauge change on a percent measure: {0} = signed difference in points. */
   pts: "{0} pts",

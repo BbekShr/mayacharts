@@ -436,7 +436,7 @@ export interface ChartSpec<R extends object = Row> {
   /** With `drill`: a click on empty chart space goes back up one level. Default true.
    * @example drillOut: false */
   drillOut?: boolean;
-  /** Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. `{ peers: field }` (beeswarm) selects one mark and also lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points; list: a move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
+  /** Click/Enter/legend selects marks, others dim; Escape or a click anywhere outside the chart clears. With `drill`, double-click/Shift+Enter drills. `{ peers: field }` (beeswarm) selects one mark and also lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points; list: a move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation.
    * @example select: "multi" or select: { peers: "itemType" } */
   select?: true | "multi" | { readonly peers: Field<R> };
   /** Drag to zoom. line, area, scatter. Reset chip, double-click and Escape restore.

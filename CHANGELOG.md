@@ -10,6 +10,8 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 - A `stack: "stream"` area no longer draws a y axis title while its value axis is off (the default), since there are no ticks for it to name.
 - A paged table's "Show n more" row glides with the rows when an open row closes or a page arrives, instead of jumping to its new place.
+- A gauge on a percent measure with `was` states its change in points only ("▲ +2.8 pts vs last year"), so the line fits inside the ring at 360 px.
+- The `select` docs say that a click anywhere outside the chart clears the selection, a host's own button included.
 
 ## 0.18.1 - 2026-10-14
 
