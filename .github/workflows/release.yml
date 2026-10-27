@@ -64,3 +64,20 @@ jobs:
           for f in dist/*.global.js; do
             echo "$f sha384-$(openssl dgst -sha384 -binary "$f" | openssl base64 -A)" >> $GITHUB_STEP_SUMMARY
           done
+
+  # Separate job so the npm token and the repo write permission never share a runner.
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: create GitHub Release from the CHANGELOG section
+        run: |
+          awk -v h="## ${GITHUB_REF_NAME#v} " 'index($0, h) == 1 {f = 1; next} /^## / {f = 0} f' CHANGELOG.md > notes.md
+          test -s notes.md
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --latest --notes-file notes.md --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
