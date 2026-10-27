@@ -22,7 +22,6 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 - **Lazy validate error path** (2026-10-12, BibekTS #78-#93): `validate.ts` is about 18 KB gzip of index.js, mostly error and hint code that only runs on a bad spec. A lazily loaded chunk could save 8 to 12 KB on index and element; it changes the bundle layout. Owner: human, then core engineer.
 
-
 ## Open
 
 - **README gauge picture**: the README gallery grid has no gauge (needs `scripts/readme-shots.mjs`). Owner: chart designer.
