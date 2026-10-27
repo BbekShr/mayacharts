@@ -22,7 +22,6 @@ Single tracker for open work the CEO can pick up. One bullet per item: what, whe
 
 - **Lazy validate error path** (2026-10-12, BibekTS #78-#93): `validate.ts` is about 18 KB gzip of index.js, mostly error and hint code that only runs on a bad spec. A lazily loaded chunk could save 8 to 12 KB on index and element; it changes the bundle layout. Owner: human, then core engineer.
 
-- **org_guard.py lets an agent create the unlock marker** (security MEDIUM, 2026-10-26): `check_edit` returns 0 for any file that does not exist (`.claude/hooks/org_guard.py:116`), so a Write of `.claude/ceo/ALLOW_GATE_EDITS` passes and then unlocks org.json, settings.json and hooks. Block creating that marker in `check_edit` and `check_bash`. Hooks are control files. Owner: human.
 
 ## Open
 
