@@ -929,7 +929,7 @@
           "additionalProperties": false
         }
       ],
-      "description": "Click/Enter/legend selects marks, others dim; Escape clears. With `drill`, double-click/Shift+Enter drills. { peers: field } (beeswarm) selects one mark and lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points; list: a move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
+      "description": "Click/Enter/legend selects marks, others dim; Escape or a click anywhere outside the chart clears. With `drill`, double-click/Shift+Enter drills. { peers: field } (beeswarm) selects one mark and lights every mark sharing its value of that field, with their average (view.peers). kpi: the sparkline points; list: a move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit constellation."
     },
     "zoom": {
       "type": "boolean",

@@ -1362,7 +1362,8 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td>"{0} {1} ({2}) vs {3}"</td>
               <td>
                 kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what
-                it is compared with.
+                it is compared with. A gauge on a percent measure drops the first " (...)", since
+                {1} is already in points.
               </td>
             </tr>
             <tr>
@@ -1951,13 +1952,14 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
               <td><a class="spec-anchor" id="select"></a><code>select</code></td>
               <td>true / "multi" / {peers}</td>
               <td>
-                Click/Enter/legend selects marks; Escape clears. With drill, double-click or
-                Shift+Enter drills. <code>{ "peers": "itemType" }</code> (beeswarm) also lights the
-                marks sharing the selected one's value of that field, with their average
-                (text.peerMean); view.peers holds the value. kpi: the sparkline points. list: a
-                move. bar line area waterfall scatter heatmap kpi dumbbell ridgeline beeswarm
-                parallel table list marimekko waffle radial treemap sunburst hexmap boxplot funnel
-                weave units orbit constellation
+                Click/Enter/legend selects marks; Escape or a click anywhere outside the chart
+                clears, including a host's own button. With drill, double-click or Shift+Enter
+                drills. <code>{ "peers": "itemType" }</code> (beeswarm) also lights the marks
+                sharing the selected one's value of that field, with their average (text.peerMean);
+                view.peers holds the value. kpi: the sparkline points. list: a move. bar line area
+                waterfall scatter heatmap kpi dumbbell ridgeline beeswarm parallel table list
+                marimekko waffle radial treemap sunburst hexmap boxplot funnel weave units orbit
+                constellation
               </td>
             </tr>
             <tr>
