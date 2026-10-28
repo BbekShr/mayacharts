@@ -378,8 +378,8 @@ export const table: Mark = {
     if (exBox) grid += el("line", { x1: 0, x2: W, y1: exBox.y, y2: exBox.y, "data-rule": true });
     if (more) {
       const step = Math.min(left, spec.page ?? left);
-      // The button is a keyed text in the marks group so it glides with the rows (animate.ts glides keyed
-      // text, not a keyed g); the full-row target stays in hits, where a click anywhere on the row lands.
+      // The button is a keyed text in the marks group (animate.ts glides keyed text, not a keyed g;
+      // the pager fades in after the rows); the full-row target stays in hits, where a click anywhere on the row lands.
       marks += el(
         "text",
         {
