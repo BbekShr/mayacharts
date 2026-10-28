@@ -112,7 +112,10 @@ export const mount = (host: Host): Handlers => {
       if (again)
         root
           .querySelector(".maya-box")
-          ?.scrollTo({ top: 1e9, behavior: still() ? "instant" : "smooth" });
+          ?.scrollTo({
+            top: 1e9,
+            behavior: still() || host.spec()?.animate === false ? "instant" : "smooth",
+          });
       stick();
       if (again) {
         again = false;
