@@ -701,12 +701,7 @@ export const gauge: Mark = {
     }
     if (bands) {
       labels += tick(warn, R + 2, R + 7, { stroke: "var(--maya-fg-muted)" });
-      const wt = tag(
-        warn,
-        ctx.t(g!.better === "lower" ? "offAbove" : "offBelow", fv(warn)),
-        R + ex + 7,
-        { fill: "var(--maya-fg-muted)" },
-      );
+      const wt = tag(warn, fv(warn), R + ex + 7, { fill: "var(--maya-fg-muted)" });
       // ponytail: a warn value that touches the target label or leaves the svg is dropped, its tick stays (the description names it).
       const touch =
         tg!.x0 < wt.x0 + wt.w + 4 && wt.x0 < tg!.x0 + tg!.w + 4 && Math.abs(tg!.y - wt.y) < 12;
