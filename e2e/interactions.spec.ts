@@ -1098,9 +1098,11 @@ test.describe("stack toggle, card flip, kpi toggle and select", () => {
     await expect.poll(async () => (await view(page, "fl")).face).toBeUndefined();
     await settle(page);
     await expect(page.locator("#fl [data-key=v]")).toHaveCount(1);
-    await page.locator("#fl .maya-flip").focus();
+    await expect(page.locator("#fl .maya-flip")).toBeFocused(); // the swap kept the keyboard's place
     await page.keyboard.press("Enter");
     await expect.poll(async () => (await view(page, "fl")).face).toBe("back");
+    await settle(page);
+    await expect(page.locator("#fl .maya-flip")).toBeFocused();
   });
 });
 

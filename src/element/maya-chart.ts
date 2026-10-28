@@ -543,7 +543,7 @@ export class MayaChart extends HTMLElement {
     // A new face shares no keys with the old one: turn the card instead of diffing.
     if (turning) {
       this.#tip?.hide();
-      this.#turn = turn(box, () => ((this.#face = face), fit(), go(false)));
+      this.#turn = turn(box, () => ((this.#face = face), fit(), go(false), this.#restore(focus)));
     } else {
       this.#face = face;
       go((this.#drawn || !!intro) && !still);
