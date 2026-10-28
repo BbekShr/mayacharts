@@ -292,7 +292,9 @@
  *   content through MarkOut.height and adds data-scroll (the box scrolls; the element holds the
  *   header group at the top with a CSSOM transform). The controls slot gains, before Play,
  *   <input type="search" class="maya-filter" data-maya="filter" aria-label placeholder=text.filter
- *   value=view.filter>. bars (per measure), columns and cells (shape.ts strips(): per strip title
+ *   value=view.filter>. Controls order: params, then one <div class="maya-ctls"> row (a lone control stands
+ *   without the wrapper) of the measure, form, stack and facetScale radiogroups, the filter, the frame
+ *   control and the kpi flip button. bars (per measure), columns and cells (shape.ts strips(): per strip title
  *   the kept by labels and per row label the values) are the mark's to draw. expand (a spec):
  *   the mark returns MarkOut.expand, the box under the open row; build() renders
  *   { ...subSpec(expand), data: rows whose x is the open row } at that size as a nested
@@ -1755,7 +1757,7 @@ function build(
     // params first: the levers sit above the other controls.
     controls:
       paramCtl(s, W) +
-      // Two or more radiogroups share a row (.maya-ctls); one stands alone.
+      // Two or more controls (radiogroups, frame control, flip) share a row (.maya-ctls); one stands alone.
       ((g) => (g.length > 1 ? `<div class="maya-ctls">${g.join("")}</div>` : g.join("")))(
         [
           s.measures.length > 1 && (!ALL_Y.includes(s.type) || s.toggle)
@@ -1791,26 +1793,27 @@ function build(
                 s.facet.scales.indexOf(s.facet.scale),
               )
             : "",
+          s.filter !== null
+            ? el("input", {
+                type: "search",
+                class: "maya-filter",
+                "data-maya": "filter",
+                "aria-label": t(s, "filter"),
+                placeholder: t(s, "filter"),
+                value: s.filter,
+              })
+            : "",
+          // The filter, the frame control and the kpi flip button share the row with the toggles.
+          fr && fr[1].length > 1
+            ? frameCtl(
+                s,
+                fr[1].map((v) => fmt(fr[0], v)),
+                W,
+              )
+            : "",
+          spec.back ? flip(s, false) : "",
         ].filter(Boolean),
-      ) +
-      (s.filter !== null
-        ? el("input", {
-            type: "search",
-            class: "maya-filter",
-            "data-maya": "filter",
-            "aria-label": t(s, "filter"),
-            placeholder: t(s, "filter"),
-            value: s.filter,
-          })
-        : "") +
-      (fr && fr[1].length > 1
-        ? frameCtl(
-            s,
-            fr[1].map((v) => fmt(fr[0], v)),
-            W,
-          )
-        : "") +
-      (spec.back ? flip(s, false) : ""),
+      ),
     // root: nothing reserved (#66.3). heatmap xPath columns get their own nav (data-axis="x"),
     // its root button named by the first column level.
     crumbs:

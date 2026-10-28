@@ -89,8 +89,27 @@ describe("frame", () => {
   it("puts Play after the measure toggle", () => {
     const rows = data.map((r) => ({ ...r, w: 1 }));
     const c = renderParts(race({ data: rows, y: ["v", "w"] })).controls;
-    expect(c.startsWith('<div class="maya-ctl"')).toBe(true);
-    expect(c.endsWith(PLAY)).toBe(true);
+    expect(c.startsWith('<div class="maya-ctls"><div class="maya-ctl"')).toBe(true);
+    expect(c.endsWith(PLAY + "</div>")).toBe(true);
+  });
+
+  it("a kpi with a measure toggle, frame tabs and a flip button has one control row", () => {
+    const rows = data.map((r) => ({ ...r, w: 1 }));
+    const c = renderParts({
+      type: "kpi",
+      data: rows,
+      x: "k",
+      y: ["v", "w"],
+      toggle: true,
+      frame: "y",
+      frameControl: "tabs",
+      back: { type: "bar", x: "k", y: "v" },
+    } as ChartSpec).controls;
+    expect(c.match(/<div class="maya-ctls">/g)).toHaveLength(1);
+    expect(c.startsWith('<div class="maya-ctls">')).toBe(true);
+    for (const m of ['data-maya="frame"', 'class="maya-flip"', 'role="radiogroup"'])
+      expect(c).toContain(m);
+    expect(c.endsWith("</button></div>")).toBe(true);
   });
 
   it("skips rows whose frame value is null", () => {
