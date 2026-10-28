@@ -122,12 +122,12 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
       : (d > 0 ? "+" : "") + ctx.fmt(f, d).replace("-", "−");
     let s = ref
       ? ctx.t("change", arrow, amount, p, label)
-      : ctx.t("vs", `${arrow} ${amount}`, label);
-    // A narrow tile keeps one number and the label, then cuts to fit (12px text is about 6.6px a character).
+      : `${arrow} ${ctx.t("vs", amount, label)}`;
+    // A narrow tile keeps one number and the label, then cuts to fit (12px text is about 6.0px a character in Chromium).
     // A percent measure keeps the points: a relative percent there reads as points.
-    // ponytail: text fit is a fixed 6.6 px per character estimate, not measured; wide glyphs can still overflow a tile.
-    if (s.length * 6.6 > iw)
-      s = clip(`${arrow} ${ctx.t("vs", isPct || !ref ? amount : p, short)}`, Math.floor(iw / 6.6));
+    // ponytail: text fit is a fixed 6.2 px per character estimate (measured about 6.0 px in Chromium at 12 px); wide glyphs can still overflow a tile.
+    if (s.length * 6.2 > iw)
+      s = clip(`${arrow} ${ctx.t("vs", isPct || !ref ? amount : p, short)}`, Math.floor(iw / 6.2));
     lines.push({
       s,
       tone: tone === undefined ? (d * dir > 0 ? "good" : d * dir < 0 ? "bad" : null) : tone,
