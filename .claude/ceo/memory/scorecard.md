@@ -18,17 +18,19 @@ records them. Promotion to L2 also needs `/org-eval` scores, which start with th
 
 ## Per PR
 
-| date       | run            | PR   | outcome | human edits? | board CONFIRMED | escaped? | cost    |
-| ---------- | -------------- | ---- | ------- | ------------ | --------------- | -------- | ------- |
-| 2026-10-06 | gallery        | #19  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-06 | light (edges)  | #22  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-06 | showcase       | #23  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-07 | deep           | #28  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-08 | deep           | #47  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-09 | gallery        | #49  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-09 | light (docs)   | #55  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-10 | deep           | #56  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-10 | deep follow-up | #57  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-12 | light          | #74  | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-13 | light          | #102 | landed  | unknown      | see report      | unknown  | unknown |
-| 2026-10-14 | light          | #105 | landed  | unknown      | see report      | unknown  | unknown |
+| date       | run            | PR   | outcome | human edits? | board CONFIRMED            | escaped? | cost    |
+| ---------- | -------------- | ---- | ------- | ------------ | -------------------------- | -------- | ------- |
+| 2026-10-06 | gallery        | #19  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-06 | light (edges)  | #22  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-06 | showcase       | #23  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-07 | deep           | #28  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-08 | deep           | #47  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-09 | gallery        | #49  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-09 | light (docs)   | #55  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-10 | deep           | #56  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-10 | deep follow-up | #57  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-12 | light          | #74  | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-13 | light          | #102 | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-14 | light          | #105 | landed  | unknown      | see report                 | unknown  | unknown |
+| 2026-10-26 | light          | #107 | landed  | unknown      | see report                 | no       | unknown |
+| 2026-10-27 | deep           | TBD  | open    |              | 2 rounds, 2 reverts in run |          |         |
