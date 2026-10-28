@@ -247,7 +247,12 @@ export function decide({ FACTS }: Pick<Dataset, "FACTS">): Record<string, ChartS
     expand: { type: "bar", x: "month", y: "sales" },
     format: {
       sales: "compact",
-      change: { minimumFractionDigits: 1, maximumFractionDigits: 1, suffix: " pts" },
+      change: {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+        signDisplay: "exceptZero",
+        suffix: " pts",
+      },
     },
     titles: {
       stateName: "State",
