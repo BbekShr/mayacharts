@@ -215,8 +215,15 @@ function seed(e: Element, g: Box, origin?: Box): Box {
 
 function fade(e: Element, out: boolean, then?: () => void, o = DATA): void {
   // The open end is implicit: it is the CSS opacity (translucent links rest at .45, not 1).
-  const k = [{}, { opacity: 0, ...(ring(e) && { transform: sh(out ? -1 : 1) }) }];
+  const k = [{}, { opacity: 0 }];
+  const hub = ring(e) && (cs[0] || cs[1]);
+  if (hub && out) stop(e.getAnimations?.()); // an entrance still shifting it would add to the exit
   run(e, out ? k : k.reverse(), out ? { ...o, fill: "forwards" } : o, then);
+  // The hub's shift to the common centre rides the rings' clock, not its own fade's.
+  if (hub) {
+    const t = [{}, { transform: sh(out ? -1 : 1) }];
+    run(e, out ? t : t.reverse(), { ...ZOOM, fill: "both" });
+  }
 }
 
 /** Paths (arcs, hexes, ribbons): grow from their own centre while fading in. */
@@ -483,7 +490,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
       ? undefined
       : ((kw && at(kw)) ?? [...w.children].find((e) => ko && e.getAttribute("data-key") === ko));
   zoom = slice && ring(slice) ? span(slice) : undefined;
-  cs = ho && hw ? [n(ho, "cx") - n(hw, "cx"), n(ho, "cy") - n(hw, "cy")] : [0, 0];
+  cs = zoom && ho && hw ? [n(ho, "cx") - n(hw, "cx"), n(ho, "cy") - n(hw, "cy")] : [0, 0];
   // A mark's geometry lives on the mark, or on the planet nested in an orbit's `g`.
   const nest = (m: Element) => m.querySelector("[data-maya=mark]") ?? m;
   // Read pass: every animation list and on-screen box before the first write, so the writes below
