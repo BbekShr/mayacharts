@@ -5,7 +5,8 @@ const clean = (n: number) => parseFloat(n.toPrecision(12));
 export function niceTicks(min: number, max: number, target = 5): Ticks {
   const b = () => 10 ** Math.floor(Math.log10((max - min) / target));
   let base = max === min ? 0 : b();
-  if (!(base > 0)) {
+  // A span under 1e-15 of the magnitude is degenerate too: past 2^53 the loop's i++ never moves.
+  if (!(base > 0) || Math.max(Math.abs(min), Math.abs(max)) / base > 1e15) {
     // Padded relative to magnitude: min - 1 is min itself above 2^53, which made the step 0.
     // A span that underflows (denormals) gives base 0 too and takes the same path.
     const p = Math.max(1, Math.abs(min) / 1e15);

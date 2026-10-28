@@ -149,3 +149,30 @@ describe("engine-independent ISO and denormals", () => {
     }
   });
 });
+
+describe("niceTicks at a magnitude where the step underflows the spacing", () => {
+  it.each([
+    [9e14, 9e14 + 0.25],
+    [9e15, 9e15 + 2],
+    [-9e14, -9e14 + 0.25],
+    [2 ** 53, 2 ** 53],
+    [9e14, 9e14],
+  ])("returns finite ticks for %d..%d", (a, b) => {
+    const t = niceTicks(a, b);
+    expect(t.values.length).toBeGreaterThan(0);
+    expect(t.values.length).toBeLessThan(100);
+    expect(t.values.every(Number.isFinite)).toBe(true);
+  });
+});
+
+describe("rendering a narrow range at 9e14", () => {
+  it("scatter and line with yDomain finish with finite coordinates", () => {
+    const data = [
+      { a: 1, b: 9e14 },
+      { a: 2, b: 9e14 + 0.25 },
+    ];
+    const sc = render({ type: "scatter", x: "a", y: "b", data });
+    const ln = render({ type: "line", x: "a", y: "b", yDomain: [9e14, 9e14 + 0.25], data });
+    for (const s of [sc, ln]) expect(s).not.toMatch(/NaN|Infinity/);
+  });
+});
