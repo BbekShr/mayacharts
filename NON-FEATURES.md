@@ -124,6 +124,8 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Bar width**: bars stop growing at 72 px and sit centred in their slot.
 - **Flow node labels**: node labels that would collide with a larger node's label are dropped (the tooltip still names them).
 - **Radial tip values**: a bar's total shows at its tip only when it fits (wedge arc of 11 px or more, 40 categories or fewer); otherwise it is in the tooltip.
+- **Marimekko thin columns**: a column too thin for any name (under 12 px) gets a six-character label beside it, and a neighbour's label can touch it.
+- **Gauge percent change**: a percent-measure gauge with `was` shows the change in points only; the relative percent is left out because it clips "vs ..." inside the ring.
 - **Sunburst hairlines**: an arc under 2 px along its middle is not drawn, nor its children; its rows stay in the data table.
 - **Sunburst slivers**: once a slice would be under 4 px across, it and its smaller siblings draw as one grey "Other (n)" slice that does not drill; its rows are only in the data table. Slices under 2 px of outer arc are not drawn, nor their children. Rotated names skip the label overlap scan; each is fitted to its own ring instead. `minAngle` sets the fold threshold in degrees instead (0 folds nothing, though arcs under 2 px stay undrawn).
 - **Entrance**: the first draw animates once; server-rendered charts never replay it.
@@ -131,9 +133,9 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **kpi text fit is estimated**: tile titles and comparison lines are cut using about 6.6 px per character of 12 px text, not measured, so wide glyphs or CJK text can still overflow a narrow tile.
 - **kpi in a short box**: the sparkline needs about 28 px of free height; with a target bullet and too little room, the bullet stays and the sparkline is dropped.
 - **kpi comparisons are fixed**: the change lines compare with the previous period, with `was` (for example the same period last year) and with the `colorBy` target. Other baselines are not supported.
-- **Box plot scope**: vertical boxes only; no notches, violins or mean marker; every row is drawn as a dot only when a box holds 30 rows or fewer (outliers always); quartiles use linear interpolation (R-7, Excel QUARTILE.INC); median labels sit beside a lone series' box when they fit, else above each upper cap.
+- **Box plot scope**: vertical boxes only; no notches, violins or mean marker; every row is drawn as a dot only when a box holds 30 rows or fewer (outliers always); quartiles use linear interpolation (R-7, Excel QUARTILE.INC).
 - **Funnel scope**: one measure, so no period compare (use dumbbell for two periods); stages keep data order, with no sort or limit; stages enter with a 0.6 scale pop from their centre, not from zero width.
-- **Box median label**: the median value beside a box shows only with one visible series, and moves above the upper cap, then above the median inside the box, when the side placement would reach the next box (the tooltip and table still carry it).
+- **Box median label**: one placement for every box, never mixed: right of the box when every label fits before the next box, else above the median inside the box, else below it, when every box is tall enough, else none (the tooltip and table still carry it). Never above the upper cap, which would read as the maximum. `labels: false` drops them.
 - **Funnel step labels**: the step % between bands is dropped when the gap between bands is under 12 px (the tooltip still carries it).
 - **One y2 line**: `y2` takes one field, aggregated per category across every series, on a 0-anchored right axis.
 - **Dumbbell sort**: `sort` orders categories by the total of both values, not by the gap between them.
@@ -144,7 +146,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Chord layout**: from-nodes on the left half, to-nodes on the right (label cuts are under Chord labels).
 - **Marimekko values**: null and negative values count as 0; there is no percentage axis.
 - **Waffle resolution**: 100 cells, so a share under 0.5% gets no cell (it still shows in the legend).
-- **Radial labels**: no value labels on bars; category labels are cut at 11 characters and thinned when they collide.
+- **Radial labels**: category labels are cut at `max(4, floor(plot width * 0.2 / 7.2))` characters, about a fifth of the plot width, and thinned when they collide; a bar's value shows only at its tip, under the conditions of Radial tip values.
 - **Parallel and limit**: the Other row that `limit` rolls up has no single line in a parallel chart, so it is not drawn.
 - **Treemap slivers**: leaves under about 2 px a side are not drawn; their rows stay in the data table.
 - **Flow label length**: sankey labels are cut at 20 characters, and one that would overlap its neighbour on the same side is dropped after a one-line try.
@@ -153,7 +155,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Formatter cache**: formatters are cached per locale and options for the page, and the cache is emptied when it passes 200 entries, not trimmed by use.
 - **Label overlap scan**: in-chart value labels are checked against each other by 64 px column buckets (plain bars) or a full scan (a waterfall's two edge tags), which the 10000-mark cap bounds.
 - **Legend for many series**: a multi-series legend needs the data, so the first paint of such a chart draws twice.
-- **Version constant**: `version` is written by hand in `registry.ts` and a test fails when it differs from `package.json`.
+- **Version constant**: `version` is written by hand in `registry.ts` and a test fails when it differs from `package.json`. `MAJOR` keys the registry (`mayacharts.marks@0`); a pre-1.0 break of the Mark contract must bump it by hand, or two copies would share one table.
 - **Beeswarm dodge**: each point checks only the 50 most recently placed neighbours, so a very dense tie cluster can overlap a little; the swarm is clamped to its row past about 25 points anyway.
 - **Sunburst names**: a name runs straight along its arc, upright, cut so its chord stays inside the ring; it is never curved, and a slice too short for 4 characters has no name (the tooltip names it).
 - **Drilled treemap tints**: a drilled treemap spreads its tiles' tints over the lightness range in size order, so neighbours in size differ only slightly when a branch holds many tiles.
@@ -172,14 +174,13 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Sunburst ring names are cut with an ellipsis when the ring is too thin; the tooltip carries the full name.
 - **Weave density**: under 32 px a period, only the first and last dots of a thread are full size (the rest are pinpricks); under 32 px a rank, dots are not labelled and the legend and tooltip name the threads.
 - **Heatmap ink cuts**: heatmap and hexmap value ink switches at fixed ramp steps tuned for the default accent; a `colors` accent of a very different lightness can put a step under 4.5 to 1.
-- **Weave caps at 8 series**: a weave throws `too-many-marks` above 8 threads (one per palette slot); `limit` rolls up categories, never series, so filter the rows or fold the tail into one series first. Ranks are among the series present in a period, and tied values share a rank but keep separate rows in series order. A thread is named on the left axis (in first-period order, clipped to 16 characters), at the end, and above its first dot when it starts late or after a gap; that start name and `labels` values need rows 32 px apart. Below 32 px a step the middle dots shrink to pinpricks, and below 48 px the crossing halos are dropped. With no end gutter the last value sits right of its dot, and is dropped (the tooltip carries it) when it does not fit or rows are under 16 px apart.
+- **Weave caps at 8 series**: a weave throws `too-many-marks` above 8 threads, or 20 with a group `colorBy` (one per palette slot, groups share slots and `tint` tells threads apart); `limit` rolls up categories, never series, so filter the rows or fold the tail into one series first. Ranks are among the series present in a period, and tied values share a rank but keep separate rows in series order. A thread is named on the left axis (in first-period order, clipped to 16 characters), at the end, and above its first dot when it starts late or after a gap; that start name and `labels` values need rows 32 px apart. Below 32 px a step the middle dots shrink to pinpricks, and below 48 px the crossing halos are dropped. With no end gutter the last value sits right of its dot, and is dropped (the tooltip carries it) when it does not fit or rows are under 16 px apart.
 - **Chord labels**: a label is cut to 36% of the plot width (20 characters at most) and dropped when its neighbour on the same side leaves no 16 px of height, so a narrow chart with many nodes names only the largest; the tooltip names the rest.
 - **Ratio aggregate scope**: `aggregate: { ratio }` defines one measure (with a `y` array, keyed by y field, on types that toggle the measure, kpi only with `toggle`) on types whose values sit side by side; part-to-whole types (treemap, sunburst, sankey, chord, marimekko, waffle, funnel), stacks and `was` refuse it because ratios do not add up. Other fields (y2, tooltip fields, a colorBy field) sum.
 - **Per-series style is dash and emphasis only**: `dash` names series drawn dashed and `emphasis` (line) series drawn heavier at one theme width (`lineEmphasis`); there is no per-series width or opacity map.
 - **colorScale quantile**: five equal-count classes at fixed ramp steps; there is no class count option.
 - **Diverging ramp from the spec only**: `rampMid` diverges the ramp when the spec's theme (tokens or a registered name) sets it; a `--maya-ramp-mid` set only in page CSS colours the middle but the steps stay sequential, since core places the values. `colorScale` other than linear keeps `rampMid` at the ramp's middle step, not at `rampMidValue`.
 - **Stream offset**: `stack: "stream"` uses the wiggle baseline in series order (no inside-out reordering), takes values of 0 or more, and starts centred on 0 at the first category.
-- **Weave threads**: at most 8 threads, or 20 with a group `colorBy` (each group one colour, `tint` shades within it).
 - **Theme geometry tokens**: `cellGap` and `cellRadius` are px read by the marks from the spec's theme, so a page-level `--maya-cell-gap` does not move cells.
 - **Log scale on bars**: refused on purpose. A bar encodes its value as length from zero, and a log axis has no zero.
 - **Sankey drill**: the drill starts from the first column, then continues one column at a time through any non-final node; a deeper middle node cannot be the entry point at the root, because its upstream is not one branch. The drilled node stays as the first column.

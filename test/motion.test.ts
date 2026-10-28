@@ -602,7 +602,7 @@ describe("motion", () => {
     s.done();
     const first = (k: string) => s.calls.find((c) => c.e.getAttribute("data-key") === k);
     expect(first("b")!.k[0]!.transform).toBe("translate(0px,10px)");
-    expect(first("b")!.k.at(-1)!.transform).toBe("none");
+    expect(first("b")!.k.at(-1)!.transform).toBeUndefined(); // lands on the CSS value
   });
   it("a keyed label whose mark left fades at once with it; an unkeyed one waits for the new text", () => {
     const box = document.createElement("div");
