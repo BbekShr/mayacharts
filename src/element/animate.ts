@@ -588,7 +588,10 @@ function marks(o: Element, w: Element, origin?: Box): void {
     // Keyed text (table cells on a re-sort) glides from where it stood.
     const [dx, dy] = [x0 - n(m, "x"), y0 - n(m, "y")];
     if (m.localName === "text" && (dx || dy))
-      run(m, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
+      // The pager would glide through the rows entering where it stood: it fades in after them.
+      m.matches("[data-maya=more]")
+        ? fade(m, false, undefined, { ...DATA, delay: 120 })
+        : run(m, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
     if (morphed) morph(m, from, d1, dl);
     mend(m, e);
     const t1 = nest(m);
