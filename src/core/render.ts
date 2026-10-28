@@ -401,15 +401,18 @@
  *   <style>CSS</style>
  *   <div class="maya">
  *     TITLE  CONTROLS  LEGEND  CRUMBS
- *     CONTROLS = the measure radiogroup (.maya-ctl; not on ALL_Y types unless spec.toggle), then for units with 2+ forms the form
+ *     CONTROLS = params (paramCtl), then one <div class="maya-ctls"> row (a lone control has no wrapper) of: the measure
+ *       radiogroup (.maya-ctl; not on ALL_Y types unless spec.toggle), for units with 2+ forms the form
  *       radiogroup (.maya-ctl data-maya="form", aria-label text.forms, options text.waffle /
- *       bars / swarm, data-i = view.form; measure handlers must skip it), then with a spec.stack
+ *       bars / swarm, data-i = view.form; measure handlers must skip it), with a spec.stack
  *       array the stack radiogroup (.maya-ctl data-maya="stack", aria-label text.stacks, options
- *       text.unstacked / stacked / percent / stream, data-i = view.stack), then with spec.frame and 2+ frames
- *       <button type="button" class="maya-play" data-maya="play">text.play</button>
- *       (the same for every frame, so the element can relabel it text.pause while playing),
+ *       text.unstacked / stacked / percent / stream, data-i = view.stack), the facetScale radiogroup, the table
+ *       filter input, with spec.frame and 2+ frames the frame control (a Play
+ *       <button type="button" class="maya-play" data-maya="play">text.play</button>,
+ *       the same for every frame, so the element can relabel it text.pause while playing),
  *       then with kpi spec.back <button type="button" class="maya-flip" data-maya="flip"
- *       aria-pressed="false|true">text.flip</button> (pressed: the back face shows).
+ *       aria-pressed="false|true">text.flip</button> (pressed: the back face shows). The back
+ *       face's flip button sits outside the row, after its own controls.
  *       Parts.frame = [index shown, frame count] with spec.frame, absent otherwise.
  *     <div class="maya-box">SVG</div>
  *     TABLE
@@ -570,11 +573,12 @@
  *   marks group, and legend hover through `--d` and `--h<slot>` on `.maya`.
  *
  * Keyboard (one keydown dispatcher in maya-chart.ts; handlers return "handled"):
- *   Escape priority: pinned tooltip -> brush in progress (zoom or parallel axis drag) -> card back
+ *   Escape typed in an input or select is not handled (the filter keeps it). Escape priority: pinned tooltip -> brush in progress (zoom or parallel axis drag) -> card back
  *   face (flip.ts) -> selection (and view.peers) -> parallel brush ranges -> zoom window -> drill
  *   pop. While view.face is "back", the element's host.spec() is { ...spec.back, data }, so select,
  *   tooltip, drill and play read the back's options; a face change skips the key diff and turns the
  *   card (old svg rotateY 0 to 90deg 160 ms, swap, new -90 to 0 280 ms; reduced motion crossfades).
+ *   The title and controls swap with the face at the turn's midpoint, and the box is refitted once there.
  *   Heatmap column headers ([data-maya=axis-x] text[data-key], tabindex 0, role button, set after
  *   paint when spec.drill and spec.xPath) push view.xDrill on click, Enter or Space. A row, tick or
  *   series push is gated on drillDepth and reads the svg's data-drill; marks with data-way="total"
@@ -631,6 +635,8 @@
  *             stroke-dashoffset, which sweeps in angle space (exception 3). On a drill the
  *             centre disk carries the drilled branch's key, so the clicked slice grows into
  *             it; slices outside that branch fold to its nearer edge, entering ones unfold.
+ *             The marks group is clipped to the union of the old and new plot meanwhile, and rings start
+ *             offset by the centre shift a changed crumb row causes.
  *     first draw (no server-rendered svg): grid and axes fade in; marks enter by kind:
  *             "wipe" (clip-path inset on the marks group: line, area, sankey, ridgeline,
  *             parallel), "bloom" (rotate + scale of the marks group about the plot centre:

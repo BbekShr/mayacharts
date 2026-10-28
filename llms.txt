@@ -132,8 +132,8 @@ near = "at risk". Tone word for the warn band, colorBy { target, warn } (tooltip
 onTrack = "On track". kpi and gauge status word for the good tone (the kpi tooltip too).
 atRisk = "At risk". kpi and gauge status word for the warn tone (the kpi tooltip too).
 offTrack = "Off track". kpi and gauge status word for the bad tone (the kpi tooltip too).
-vs = "{0} vs {1}". kpi delta: {0} = signed change, {1} = previous period.
-change = "{0} {1} ({2}) vs {3}". kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what it is compared with.
+vs = "{0} vs {1}". kpi and gauge comparison without a percent: {0} = signed change, {1} = what it is compared with. The arrow is prefixed outside the template. Used when the baseline is 0, on a narrow kpi tile, and for a gauge change on a percent measure.
+change = "{0} {1} ({2}) vs {3}". kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what it is compared with. A zero baseline, a narrow tile and a gauge on a percent measure use `vs` instead.
 pts = "{0} pts". kpi and gauge change on a percent measure: {0} = signed difference in points.
 target = "target". kpi and gauge label of colorBy.target (the {3} of change, the gauge's target label) and the description's target.
 sortedBy = "Sorted by {0}, {1}". Live region after a table header click: {0} = column title, {1} = ascending/descending.
