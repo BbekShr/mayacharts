@@ -651,7 +651,8 @@ function marks(o: Element, w: Element, origin?: Box): void {
         });
     } else if (shaped && !morphed && !m.matches("[data-maya=area]"))
       fade(m, false, undefined, { ...DATA, delay: dl });
-    if (m.localName === "text" && m.textContent !== was) numeric(m, was, DATA);
+    if (m.localName === "text" && m.textContent !== was && !m.matches("[data-maya=more]"))
+      numeric(m, was, DATA); // the pager is a control: no count-up
     const tg = pick();
     if (tg && !instant && sig(tg) !== s0)
       fade(tg, false, undefined, { ...UI, delay: glided || tg === m ? 120 : 0 });
@@ -1055,7 +1056,13 @@ export function patch(
       if (P[2] > 1 && P[3] > 1 && F.length === 4 && F[2]! > 0 && F[3]! > 0) {
         // The old plot too: ghosts keep their old frame while the crumb row moves it.
         const G = (o.getAttribute("data-plot")?.split(" ").map(Number) ?? F) as Box;
-        zm = { P, F, G, out: !("in" in z), d: w.querySelector("[data-maya^=axis]") ? F[1] + F[3] - G[1] - G[3] : 0 };
+        zm = {
+          P,
+          F,
+          G,
+          out: !("in" in z),
+          d: w.querySelector("[data-maya^=axis]") ? F[1] + F[3] - G[1] - G[3] : 0,
+        };
         // Zoomed marks may grow past the plot; keep them inside it while they move.
         const [vw, vh] = (w.getAttribute("viewBox") ?? "").split(" ").slice(2).map(Number);
         const [l, t, r, b] = [
