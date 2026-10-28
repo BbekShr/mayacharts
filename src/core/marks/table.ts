@@ -363,25 +363,16 @@ export const table: Mark = {
           height: 4,
         });
         hits += hit(d, bx, by0, len, 4);
-      });
-    });
-    // A diverging column's centre line.
-    kept.forEach((c, ci) => {
-      if (c.k === "m" && spec.bars.get(c.f) === "diverging")
-        // Not through the open row's sub-chart box.
-        for (const [y1, y2] of exBox
-          ? [
-              [HEAD, exBox.y],
-              [exBox.y + exBox.h, y],
-            ]
-          : [[HEAD, y]])
+        // A diverging column's centre line, only through each row's bar band: the value text sits above it.
+        if (kind === "diverging")
           grid += el("line", {
-            x1: r(at[ci]! + wd[ci]! / 2),
-            x2: r(at[ci]! + wd[ci]! / 2),
-            y1: r(y1!),
-            y2: r(y2!),
+            x1: r(x0 + w / 2),
+            x2: r(x0 + w / 2),
+            y1: by0 - 3,
+            y2: by0 + 7,
             "data-centre": true,
           });
+      });
     });
     // The open row's rule above its sub-chart (the nested svg cannot draw its own border); like the header rule.
     if (exBox) grid += el("line", { x1: 0, x2: W, y1: exBox.y, y2: exBox.y, "data-rule": true });
