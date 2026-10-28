@@ -31,7 +31,7 @@ let cs = [0, 0]; // sunburst: old centre minus new (a drill adds or removes the 
 // start inside P, everything else is pushed out. Out is the reverse.
 let moved = false; // the patch moved, morphed, entered or exited a mark: labels and axes wait for it
 let plot = ""; // the outgoing svg's data-plot, read before sync copies the new one
-let zm: { P: Box; F: Box; G: Box; out: boolean; d: number } | undefined; // G old plot, d its drop (axes only: tiles have none to meet)
+let zm: { P: Box; F: Box; out: boolean } | undefined;
 let drill = false; // this patch is a drill (opts.zoom): no stagger, marks seed from their centre, labels wait
 /** `r` in the frame `a` re-expressed in the frame `b`. */
 const map = (r: Box, a: Box, b: Box): Box => [
@@ -45,9 +45,7 @@ const map = (r: Box, a: Box, b: Box): Box => [
  * connectors) map their ends. Undefined when not zooming. */
 const zoomed = (e: Element, g: Box | undefined, leaving: boolean): string | undefined => {
   if (!zm) return;
-  const [a, c] = zm.out === leaving ? [leaving ? zm.G : zm.F, zm.P] : [zm.P, zm.F];
-  // The box glides by the crumb row: what enters on a drill in starts where the new axes do.
-  const b: Box = !zm.out && !leaving ? [c[0], c[1] + zm.d, c[2], c[3]] : c;
+  const [a, b] = zm.out === leaving ? [zm.F, zm.P] : [zm.P, zm.F];
   if (e.localName === "line") {
     // Axis-aligned: scale along the line only, so the stroke keeps its width.
     const ax = (p: number, q: number, i: 0 | 1): [number, number] => {
@@ -285,14 +283,7 @@ function exit(e: Element, origin?: Box, from?: Keyframe): void {
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, true);
   if (f) run(e, [from!, { ...f, transform: sh(-1) }], { ...ZOOM, fill: "forwards" }, done);
-  else if (z)
-    // Leaving, it starts level with the new axes too (a zero d is the identity).
-    run(
-      e,
-      [{ transform: `matrix(1,0,0,1,0,${zm!.d})` }, { transform: z, opacity: 0 }],
-      { ...ZOOM, fill: "forwards" },
-      done,
-    );
+  else if (z) run(e, [{}, { transform: z, opacity: 0 }], { ...ZOOM, fill: "forwards" }, done);
   else if (g)
     run(e, [{ transform: "none" }, { transform: tf(g, seed(e, g, origin)), opacity: 0 }], o, done);
   else if (e.localName === "path" && !e.matches("[data-maya=line],[data-maya=area]"))
@@ -1054,17 +1045,11 @@ export function patch(
         ];
       const P: Box = [x0, y0, x1 - x0, y1 - y0];
       if (P[2] > 1 && P[3] > 1 && F.length === 4 && F[2]! > 0 && F[3]! > 0) {
-        // The old plot too: ghosts keep their old frame while the crumb row moves it.
-        const G = (o.getAttribute("data-plot")?.split(" ").map(Number) ?? F) as Box;
-        zm = {
-          P,
-          F,
-          G,
-          out: !("in" in z),
-          d: w.querySelector("[data-maya^=axis]") ? F[1] + F[3] - G[1] - G[3] : 0,
-        };
+        zm = { P, F, out: !("in" in z) };
         // Zoomed marks may grow past the plot; keep them inside it while they move.
         const [vw, vh] = (w.getAttribute("viewBox") ?? "").split(" ").slice(2).map(Number);
+        // The old plot too: ghosts keep their old frame while the crumb row moves it.
+        const G = (o.getAttribute("data-plot")?.split(" ").map(Number) ?? F) as Box;
         const [l, t, r, b] = [
           Math.min(F[0], G[0]),
           Math.min(F[1], G[1]),
