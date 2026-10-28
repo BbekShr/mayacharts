@@ -730,9 +730,9 @@ export const gauge: Mark = {
     const chg =
       wasV === null
         ? ""
-        : isPts
-          ? ctx.t("vs", `${arrow} ${amount}`, name)
-          : ctx.t("change", arrow, amount, minus(pct.format(wasV ? dv / Math.abs(wasV) : 0)), name);
+        : isPts || !wasV
+          ? `${arrow} ${ctx.t("vs", amount, name)}`
+          : ctx.t("change", arrow, amount, minus(pct.format(dv / Math.abs(wasV))), name);
     if ((status && !above) || chg) {
       const lead = status && !above ? status + (chg ? ", " : "") : "";
       // ponytail: inside a ring the row is cut to the chord at its height (5.8 px a character), not measured.

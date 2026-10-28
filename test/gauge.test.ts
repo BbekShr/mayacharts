@@ -84,6 +84,12 @@ describe("gauge", () => {
     expect(s).toContain("▲ +2.8 pts vs w");
     expect(s).not.toContain("8.6%");
   });
+  it("a zero was prints the amount only, and a reordered text.vs keeps the arrow first", () => {
+    const z = (o = {}) => svg({ type: "gauge", y: "v", was: "w", data: [{ v: 5, w: 0 }], ...o });
+    expect(z()).toContain("▲ +5 vs w");
+    expect(z()).not.toContain("(0%)");
+    expect(z({ text: { vs: "{1}: {0}" } })).toContain("▲ w: +5");
+  });
   it("the status word never vanishes: it leads the row under a small dial", () => {
     const c = { target: 70, warn: 50 };
     const big = svg(base({ colorBy: c, was: "w" }, 80));
