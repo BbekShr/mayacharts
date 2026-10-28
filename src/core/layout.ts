@@ -187,6 +187,9 @@ export function frame(
   const left = Math.max(
     (spec.yAxis && ly ? maxW(lLab) + 10 : 8) + (yTitle ? 18 : 0),
     edge ? (tw(edge.labels[0] ?? "") * k) / 2 + 2 : 0,
+    // A thinned band axis centres its first label on band 0, half a step in: keep it whole
+    // (the step is estimated, the plot width is not known yet; at most a sixth of the width).
+    spec.xAxis && bLab.length ? Math.min(W / 6, w(bLab[0]!) / 2 - (W - 20) / bLab.length / 2) : 0,
   );
   const bottom = (spec.xAxis && bx ? 24 : 8) + (xTitle ? 18 : 0);
   // An annotation above a point at the plot top needs a label row of headroom (#91.8).

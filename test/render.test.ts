@@ -635,7 +635,20 @@ describe("narrow bar labels", () => {
     for (const s of t) expect(s).not.toContain("…");
   });
   it("still cuts to the slot when 3 or more characters survive", () => {
-    expect(texts(render(spec(5, "Category number "), { width: 360 })).join()).toContain("…");
+    // (At 360 the thinned labels fit whole: the first is no longer clipped at the left edge.)
+    expect(texts(render(spec(5, "Category number "), { width: 260 })).join()).toContain("…");
+  });
+  it("keeps the first thinned label whole on a stream with its value axis off", () => {
+    const data = Array.from({ length: 36 }, (_, i) => ({
+      m: Date.UTC(2025, Math.floor(i / 3), 1),
+      v: 10 + i,
+      f: "ABC"[i % 3],
+    }));
+    const svg = render(
+      { type: "area", x: "m", y: "v", series: "f", stack: "stream", format: { m: "month" }, data },
+      { width: 286, height: 300 },
+    );
+    expect(texts(svg)).toContain("Jan 2025");
   });
 });
 
