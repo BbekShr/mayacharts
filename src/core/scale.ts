@@ -26,12 +26,11 @@ export function linearScale(
   const f = (v: number) => (log ? Math.log10(Math.max(v, domain[0])) : v);
   const [d0, d1] = domain.map(f) as [number, number];
   const [r0, r1] = range;
-  const k = d1 === d0 ? 0 : (r1 - r0) / (d1 - d0);
   return {
     domain,
     range,
     ...(log ? { log } : {}),
-    of: (v) => (d1 === d0 ? (r0 + r1) / 2 : r0 + (f(v) - d0) * k),
+    of: (v) => (d1 === d0 ? (r0 + r1) / 2 : r0 + ((f(v) - d0) / (d1 - d0)) * (r1 - r0)), // not * k: (r1 - r0) / 1e-307 is Infinity
   };
 }
 

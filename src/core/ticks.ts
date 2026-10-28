@@ -3,12 +3,15 @@ import type { Ticks, TimeTicks, TimeUnit } from "./types.ts";
 const clean = (n: number) => parseFloat(n.toPrecision(12));
 
 export function niceTicks(min: number, max: number, target = 5): Ticks {
-  if (max === min) {
+  const b = () => 10 ** Math.floor(Math.log10((max - min) / target));
+  let base = max === min ? 0 : b();
+  if (!(base > 0)) {
     // Padded relative to magnitude: min - 1 is min itself above 2^53, which made the step 0.
+    // A span that underflows (denormals) gives base 0 too and takes the same path.
     const p = Math.max(1, Math.abs(min) / 1e15);
     [min, max] = min === 0 ? [0, 1] : [min - p, max + p];
+    base = b();
   }
-  const base = 10 ** Math.floor(Math.log10((max - min) / target));
   let step = base;
   let best = Infinity;
   // Crossing zero, a coarse step pads the short side by a whole step (stacked negatives
@@ -108,6 +111,9 @@ export function toTime(v: unknown, ms = true): number | null {
   const q = plainIso(v);
   if (q === q) return q;
   if (!ISO.test(v)) return null;
+  // V8 rolls Feb 30 and T24:00 over; Firefox and Safari give NaN. Reject both so SSR and the browser agree.
+  const d = new Date(0).setUTCFullYear(+v.slice(0, 4), +v.slice(5, 7), 0);
+  if (+v.slice(8, 10) > new Date(d).getUTCDate() || +v.slice(11, 13) > 23) return null;
   // A date-time without an offset is UTC. ISO matched, so a sign six from the end is an offset.
   const c = v.charCodeAt(v.length - 6);
   const t = Date.parse(
