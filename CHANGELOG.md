@@ -4,6 +4,33 @@ All notable changes to mayaCharts are documented here.
 
 The format is based on Keep a Changelog and adheres to semantic versioning. Breaking changes are called out explicitly pre-1.0.
 
+## Unreleased
+
+### Fixed
+
+- Values near the floating point floor (1e-307, 5e-324) no longer draw NaN coordinates or lose ticks.
+- A narrow value range at a large magnitude (9e14 with a spread of 0.25) no longer hangs the tick loop.
+- "2024-02-30" and "2024-02-10T24:00" are not dates in any engine, so the server and the browser agree.
+- `host.columns` reads the first of two same-named columns.
+- A narrow stream or area chart with thinned labels keeps its first label whole.
+- A kpi tile with a zero target or zero baseline states the amount alone instead of dropping the line.
+- A narrow kpi tile on a percent measure keeps the change in points.
+- A diverging table column draws its zero rule only through each row's bar band.
+- A click outside a chart clears only charts with `select`, so a linked chart keeps a selection set from code.
+- Show more and sort headers no longer count as empty chart space (no selection clear, no drill out).
+- One page per double click on Show more.
+- Escape typed in the table filter stays in the field.
+- Focus stays in the chart after the last Show more page.
+- A failed draw no longer leaves a drill zoom for the next update.
+- After Show more the table box scrolls to the new bottom and the pager fades in after the rows.
+- The sunburst drill no longer tears when the breadcrumb row appears or leaves, and drilled bars stay on the axis.
+- A kpi card turn no longer jumps before it turns.
+- A gauge with a zero `was` states the amount alone.
+
+### Changed
+
+- The frame control and the kpi flip button share the `.maya-ctls` row with the toggles. Hosts that styled them as direct children of the chart should use descendant selectors.
+
 ## 0.18.2 - 2026-10-27
 
 ### Fixed
