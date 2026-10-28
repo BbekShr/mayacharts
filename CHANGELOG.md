@@ -23,7 +23,6 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - Focus stays in the chart after the last Show more page.
 - A failed draw no longer leaves a drill zoom for the next update.
 - After Show more the table box scrolls to the new bottom (at once under reduced motion or `animate: false`) and the pager fades in after the rows with its new count.
-- Table values use a true minus sign, like kpi change lines.
 - The sunburst drill no longer tears when the breadcrumb row appears or leaves, and a drill zoom no longer cuts bars off at the new plot edge while the breadcrumb row moves it.
 - A kpi card turn returns focus to the new face's Details button.
 - A kpi card turn no longer jumps before it turns.

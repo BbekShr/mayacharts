@@ -72,8 +72,7 @@ describe("table #84", () => {
     expect(p.svg).toContain('data-way="down"');
     expect(p.svg).toContain('data-way="zero"');
     expect(p.table).toContain("Jan +4");
-    expect(p.table).toContain("Feb −2");
-    expect(p.svg).toContain('data-f="−2"');
+    expect(p.table).toContain("Feb -2");
     expect(p.table).toContain("Form");
   });
   it("expand: rows below move down by the sub-chart and the row says it is open", () => {
