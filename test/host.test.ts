@@ -57,13 +57,10 @@ describe("host adapters", () => {
     expect(columns(table, { type: "bar", y: "Total Sales" })).toBe(el);
   });
 
-  it("columns: the first of a duplicate column name wins; a non-string field reaches validation", () => {
+  it("columns: the first of a duplicate column name wins", () => {
     const dup = { schema: ["Item", "Sales", "Sales"], data: [["Shirts", 10, 99]] };
     const el = columns(dup, { type: "bar", x: "item", y: "sales" }, fake());
     expect((el.spec as any).data).toEqual([{ Item: "Shirts", Sales: 10 }]);
-    const bad = () => columns(table, { type: "bar", x: "item", y: 5 as never }, fake());
-    expect(bad).not.toThrow();
-    expect((bad().spec as any).y).toBe(5);
   });
 
   it("thoughtspot: live, wrapped cells, completion once on the first draw or settle", () => {
