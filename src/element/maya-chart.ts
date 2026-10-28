@@ -336,7 +336,7 @@ export class MayaChart extends HTMLElement {
     if (e.defaultPrevented) return; // the tooltip consumed it (pinned Escape)
     const k = (e as KeyboardEvent).key;
     let done: boolean | undefined;
-    if (k === "Escape")
+    if (k === "Escape" && !(e.target as Element).closest?.("input,select"))
       done =
         ix.zoom.cancel?.() ||
         ix.brush.cancel?.() ||
@@ -467,6 +467,7 @@ export class MayaChart extends HTMLElement {
       if (this.#slots(root, parts) && (box.clientWidth !== w || box.clientHeight !== h))
         parts = draw();
     } catch (e) {
+      this.#zoom = undefined; // a failed draw must not leave its drill zoom for the next update
       this.#tip?.hide();
       // The old table would describe data the box no longer shows; cancel a pending idle insert.
       this.#idle?.();

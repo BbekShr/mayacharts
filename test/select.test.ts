@@ -148,6 +148,16 @@ describe("<maya-chart select>", () => {
     expect(n).toBe(6);
   });
 
+  it("a click on chart one does not clear a selection another chart was handed", async () => {
+    const one = await mount(spec({ select: true }));
+    const two = await mount(spec());
+    one.addEventListener("maya-select", () => (two.selected = [{ x: "Feb" }]));
+    await click(mk(one)[0]!);
+    expect(on(two)).toEqual(["Feb"]);
+    await click(document.body);
+    expect(on(two)).toEqual(["Feb"]);
+  });
+
   it("multi toggles two; Escape clears and announces", async () => {
     const el = await mount(spec({ select: "multi" }, rows.slice(0, 2)));
     await click(mk(el)[0]!);
