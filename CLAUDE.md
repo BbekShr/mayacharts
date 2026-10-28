@@ -57,4 +57,4 @@ The standing team lives in `.claude/agents/` (chart designer, core engineer, ele
 
 ## Release
 
-Tags `v*` trigger `.github/workflows/release.yml`: typecheck, test, build, size, `npm publish --provenance`, SRI hash of `dist/maya.global.js` in the step summary. Published to npm as `mayacharts` (provenance on). Deploy of `site/` to GitHub Pages happens on every push to main.
+Tags `v*` trigger `.github/workflows/release.yml`: typecheck, test, build, size, `npm publish --provenance`, SRI hash of `dist/maya.global.js` in the step summary, then a GitHub Release whose notes are the version's CHANGELOG section plus generated PR notes. Published to npm as `mayacharts` (provenance on). Deploy of `site/` to GitHub Pages happens on every push to main.

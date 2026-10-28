@@ -5,7 +5,7 @@ description: Cut a mayaCharts release to npm. Version bump, CHANGELOG date, gate
 
 # mayaCharts release
 
-A pushed `v*` tag runs `.github/workflows/release.yml`: typecheck, test, build, size, `npm publish --provenance --access public`, and the SRI hash of `dist/maya.global.js` in the step summary. A published version can be deprecated but never replaced, so every step before the tag is a gate, not a formality.
+A pushed `v*` tag runs `.github/workflows/release.yml`: typecheck, test, build, size, `npm publish --provenance --access public`, and the SRI hash of `dist/maya.global.js` in the step summary, then a GitHub Release from the CHANGELOG section. A published version can be deprecated but never replaced, so every step before the tag is a gate, not a formality.
 
 ## Preconditions (stop and report if any fails)
 
@@ -21,7 +21,7 @@ A pushed `v*` tag runs `.github/workflows/release.yml`: typecheck, test, build, 
 3. Commit (`Release <version>: <one-line summary>`), push, open a PR, wait for CI, merge it (the human asked for the release, which covers this merge).
 4. Tag the merge commit on `main`: `git tag v<version> && git push origin v<version>`.
 5. Watch the run: `gh run watch $(gh run list --workflow release.yml --limit 1 --json databaseId -q '.[0].databaseId')`. If it fails before `npm publish`, fix forward on a new patch version; do not move the tag.
-6. Verify: `npm view mayacharts@<version> version dist.integrity`, and that the package page shows provenance. Copy the SRI line from the run summary into the report.
+6. Verify: `npm view mayacharts@<version> version dist.integrity`, that the package page shows provenance, and that `gh release view v<version>` shows the release as Latest. Copy the SRI line from the run summary into the report.
 
 ## Never
 
