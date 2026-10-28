@@ -110,12 +110,10 @@ export const mount = (host: Host): Handlers => {
     painted() {
       // The box holds its height while the rows grow: follow them, so the pager (or the last row) stays in view.
       if (again)
-        root
-          .querySelector(".maya-box")
-          ?.scrollTo({
-            top: 1e9,
-            behavior: still() || host.spec()?.animate === false ? "instant" : "smooth",
-          });
+        root.querySelector(".maya-box")?.scrollTo({
+          top: 1e9,
+          behavior: still() || host.spec()?.animate === false ? "instant" : "smooth",
+        });
       stick();
       if (again) {
         again = false;
