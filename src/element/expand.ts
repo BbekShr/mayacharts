@@ -8,6 +8,7 @@
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
 import { decode } from "./drill.ts";
 import { listen } from "./listen.ts";
+import { still } from "./tooltip.ts";
 
 export type ExpandEvent =
   | { type: "expand"; value: string; open: string }
@@ -107,6 +108,11 @@ export const mount = (host: Host): Handlers => {
   return {
     enter: toggle,
     painted() {
+      // The box holds its height while the rows grow: follow them, so the pager (or the last row) stays in view.
+      if (again)
+        root
+          .querySelector(".maya-box")
+          ?.scrollTo({ top: 1e9, behavior: still() ? "instant" : "smooth" });
       stick();
       if (again) {
         again = false;
