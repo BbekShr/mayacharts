@@ -551,8 +551,18 @@
  *   .maya-crumbs[data-axis=x]  [data-tone]  [data-q]  [data-other]  [data-dir=h]  [data-maya=line|area] (path marks)
  *   Theme-only hooks (set by a mark or module, styled in theme.ts, never read by the element):
  *   data-ink data-hm data-nm data-ring data-arc data-disc data-ridge data-kpi data-polar data-radar
- *   data-hex data-last data-below data-brk data-way data-lt (tint step: the colour mixed toward the ink; 0 = the parent colour, siblings and
+ *   data-hex data-last data-below data-brk data-way data-ax (in-chart axis label) data-bg (table
+ *   header backing) data-body (list row body) data-centre (centred table or list cell) data-chev
+ *   (drill chevron) data-d (density ramp legend) data-ev (list event name or value) data-h (label
+ *   halo) data-hd (list heading) data-hero (headline number) data-hollow (open dumbbell dot) data-nil
+ *   (null table cell) data-num (list row number) data-peer-mean (peer average rule) data-peer-on
+ *   (selected peer) data-range (parallel axis brush span) data-sum (heatmap total cell)
+ *   data-lt (tint step: the colour mixed toward the ink; 0 = the parent colour, siblings and
  *   sunburst rings use 1..7, so a child never equals its parent).
+ *   Read outside the writing file: data-g (x|y cross guide; tooltip.ts skips it) data-label (series
+ *   name, tooltip.ts) data-peer (peer mark, select.ts) data-to (drill depth of a nested treemap child,
+ *   drill.ts) data-trail (trail path, animate.ts); the element writes data-off (brushed-out line) and
+ *   data-still (animate false) for theme.ts.
  *   .maya-ctl carries data-n (option count, 2..4) and data-i (checked index) for the sliding
  *   indicator; line point circles are hidden until active under `svg[data-pt]`, scatter styles
  *   key on `svg[data-xd]` (both axes linear). Rules whose subject is a mark avoid a `:has()` on
