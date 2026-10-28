@@ -1355,15 +1355,19 @@ maya.host.columns({ schema: ["Item", "Sales"], data: [["Shirts", 10]] },
             <tr>
               <td><code>vs</code></td>
               <td>"{0} vs {1}"</td>
-              <td>kpi delta: {0} = signed change, {1} = previous period.</td>
+              <td>
+                kpi and gauge comparison without a percent: {0} = signed change, {1} = what it is
+                compared with. The arrow is prefixed outside the template. Used when the baseline is
+                0, on a narrow kpi tile, and for a gauge change on a percent measure.
+              </td>
             </tr>
             <tr>
               <td><code>change</code></td>
               <td>"{0} {1} ({2}) vs {3}"</td>
               <td>
                 kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what
-                it is compared with. A gauge on a percent measure drops the first " (...)", since
-                {1} is already in points.
+                it is compared with. A zero baseline, a narrow tile and a gauge on a percent measure
+                use <code>vs</code> instead.
               </td>
             </tr>
             <tr>

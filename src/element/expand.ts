@@ -8,6 +8,7 @@
 import type { Handlers, Host, SpecEvent, State } from "../core/types.ts";
 import { decode } from "./drill.ts";
 import { listen } from "./listen.ts";
+import { still } from "./tooltip.ts";
 
 export type ExpandEvent =
   | { type: "expand"; value: string; open: string }
@@ -41,7 +42,7 @@ export const mount = (host: Host): Handlers => {
   let tm: ReturnType<typeof setTimeout> | undefined;
   let caret: [number | null, number | null] | undefined;
   let again = false; // refocus the "more" row after the repaint
-  const svg = () => root.querySelector(".maya-svg");
+  const svg = () => root.querySelector<SVGElement>(".maya-svg");
 
   const open = () => {
     const v = host.state().view.expanded;
@@ -70,7 +71,7 @@ export const mount = (host: Host): Handlers => {
     const { detail } = e as MouseEvent;
     const both = host.spec()?.select; // a click selects then; the double click expands
     if (detail > (both ? 2 : 1)) return;
-    if (el.closest("[data-maya=more]")) return more();
+    if (el.closest("[data-maya=more]")) return detail < 2 && more();
     if (both && detail === 1) return;
     const m = host.mark(e) ?? el.closest("[data-key]");
     if (m && !el.closest(CTL)) toggle(m);
@@ -107,10 +108,18 @@ export const mount = (host: Host): Handlers => {
   return {
     enter: toggle,
     painted() {
+      // The box holds its height while the rows grow: follow them, so the pager (or the last row) stays in view.
+      if (again)
+        root.querySelector(".maya-box")?.scrollTo({
+          top: 1e9,
+          behavior: still() || host.spec()?.animate === false ? "instant" : "smooth",
+        });
       stick();
       if (again) {
         again = false;
-        root.querySelector<HTMLElement>("[data-maya=more]")?.focus({ preventScroll: true });
+        (root.querySelector<HTMLElement>("[data-maya=more]") ?? svg())?.focus({
+          preventScroll: true,
+        });
       }
       const i = root.querySelector<HTMLInputElement>("[data-maya=filter]");
       if (caret && i) {

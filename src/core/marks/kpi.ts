@@ -111,18 +111,23 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
     tone?: string | null,
     short = label,
   ) => {
-    if (!ref) return; // no baseline, or a zero one: a percent of nothing
+    if (ref == null) return;
     const d = value - ref;
     const arrow = d > 0 ? "▲" : d < 0 ? "▼" : "→";
-    const p = pct.format(d / Math.abs(ref)).replace("-", "−");
+    // A zero baseline has no relative move: state the amount alone.
+    const p = ref ? pct.format(d / Math.abs(ref)).replace("-", "−") : "";
     // A percent measure states the absolute move in points, the relative one in brackets.
     const amount = isPct
       ? ctx.t("pts", pts.format(d * 100).replace("-", "−"))
       : (d > 0 ? "+" : "") + ctx.fmt(f, d).replace("-", "−");
-    let s = ctx.t("change", arrow, amount, p, label);
-    // A narrow tile keeps the percent and the label, then cuts to fit (12px text is about 6.6px a character).
-    // ponytail: text fit is a fixed 6.6 px per character estimate, not measured; wide glyphs can still overflow a tile.
-    if (s.length * 6.6 > iw) s = clip(`${arrow} ${ctx.t("vs", p, short)}`, Math.floor(iw / 6.6));
+    let s = ref
+      ? ctx.t("change", arrow, amount, p, label)
+      : `${arrow} ${ctx.t("vs", amount, label)}`;
+    // A narrow tile keeps one number and the label, then cuts to fit (12px text is about 6.6px a character).
+    // A percent measure keeps the points: a relative percent there reads as points.
+    // ponytail: text fit is a fixed 6.6 px per character estimate at 12 px; digit-heavy lines can still clip or overflow, a glyph-weighted estimate would fix it.
+    if (s.length * 6.6 > iw)
+      s = clip(`${arrow} ${ctx.t("vs", isPct || !ref ? amount : p, short)}`, Math.floor(iw / 6.6));
     lines.push({
       s,
       tone: tone === undefined ? (d * dir > 0 ? "good" : d * dir < 0 ? "bad" : null) : tone,

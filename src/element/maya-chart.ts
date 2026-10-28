@@ -336,7 +336,7 @@ export class MayaChart extends HTMLElement {
     if (e.defaultPrevented) return; // the tooltip consumed it (pinned Escape)
     const k = (e as KeyboardEvent).key;
     let done: boolean | undefined;
-    if (k === "Escape")
+    if (k === "Escape" && !(e.target as Element).closest?.("input,select"))
       done =
         ix.zoom.cancel?.() ||
         ix.brush.cancel?.() ||
@@ -446,7 +446,17 @@ export class MayaChart extends HTMLElement {
     // A drill adds or removes the breadcrumb row, which shifts the plot: measure to glide it.
     const top0 = this.#fl ? box.getBoundingClientRect().top : NaN;
     this.#fl = false;
-    let parts;
+    const face = this.#state.view.face ?? "front";
+    const still = spec.animate === false || reduced();
+    // A card turn swaps title and controls with the face, not before it (the old face would jump).
+    const turning = this.#drawn && face !== this.#face && !still && !!box.firstElementChild;
+    let parts: Parts;
+    // A title, legend or control that just appeared shrinks the box: fit it in this frame.
+    const fit = () => {
+      const [w, h] = this.#size;
+      if (this.#slots(root, parts) && (box.clientWidth !== w || box.clientHeight !== h))
+        parts = draw();
+    };
     try {
       if (!this.#drawn && !box.querySelector("svg"))
         try {
@@ -462,11 +472,9 @@ export class MayaChart extends HTMLElement {
         } catch {} // the real draw reports the error
       parts = draw();
       // ponytail: a multi-series legend needs the data, so it still costs a second draw.
-      // A title, legend or control that just appeared shrinks the box: fit it in this frame.
-      const [w, h] = this.#size;
-      if (this.#slots(root, parts) && (box.clientWidth !== w || box.clientHeight !== h))
-        parts = draw();
+      turning || fit();
     } catch (e) {
+      this.#zoom = undefined; // a failed draw must not leave its drill zoom for the next update
       this.#tip?.hide();
       // The old table would describe data the box no longer shows; cancel a pending idle insert.
       this.#idle?.();
@@ -511,7 +519,6 @@ export class MayaChart extends HTMLElement {
       if (!parts.vars.some(([n]) => n === k)) maya.style.removeProperty(k);
     this.#vars = new Set(parts.vars.map(([k]) => k));
     // Nothing animates on resize: geometry must track the container immediately.
-    const still = spec.animate === false || reduced();
     maya.toggleAttribute("data-still", spec.animate === false); // CSS transitions off too
     maya.setAttribute("data-legend", parts.legendAt ?? ""); // absent: top
     // A microtask render beside a pending resize frame is not the resize's own: it animates.
@@ -522,8 +529,6 @@ export class MayaChart extends HTMLElement {
       this.#drawn || box.querySelector("svg") ? undefined : (INTRO[spec.type] ?? "marks");
     // A drill zoom moves marks under the pointer: no hover mark (its stroke would scale with the zoom) until it lands.
     if (this.#zoom) this.#tip?.hide();
-    const face = this.#state.view.face ?? "front";
-    const flipped = this.#drawn && face !== this.#face && spec.animate !== false;
     // Turned back before the swap: the card reverses out instead of snapping flat.
     this.#turn?.(face === this.#face);
     this.#turn = undefined;
@@ -536,9 +541,9 @@ export class MayaChart extends HTMLElement {
         roll: spec.numberMotion === "roll",
       });
     // A new face shares no keys with the old one: turn the card instead of diffing.
-    if (flipped && box.firstElementChild && !still) {
+    if (turning) {
       this.#tip?.hide();
-      this.#turn = turn(box, () => ((this.#face = face), go(false)));
+      this.#turn = turn(box, () => ((this.#face = face), fit(), go(false), this.#restore(focus)));
     } else {
       this.#face = face;
       go((this.#drawn || !!intro) && !still);
@@ -614,7 +619,8 @@ export class MayaChart extends HTMLElement {
 
   #restore(id: string | undefined): void {
     const root = this.shadowRoot!;
-    if (!id || root.activeElement) return;
+    const a = document.activeElement; // focus the user moved to the page meanwhile is theirs
+    if (!id || root.activeElement || (a && a !== document.body && a !== this)) return;
     const [k, i] = id.split(":");
     const sel = FOCUS.find(([n]) => n === k)![1];
     root.querySelectorAll<HTMLElement>(sel)[+i!]?.focus({ preventScroll: true });

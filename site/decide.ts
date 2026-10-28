@@ -245,7 +245,15 @@ export function decide({ FACTS }: Pick<Dataset, "FACTS">): Record<string, ChartS
     bars: { sales: "bar", change: "diverging" },
     aggregate: "mean",
     expand: { type: "bar", x: "month", y: "sales" },
-    format: { sales: "compact", change: "percent" },
+    format: {
+      sales: "compact",
+      change: {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+        signDisplay: "exceptZero",
+        suffix: " pts",
+      },
+    },
     titles: {
       stateName: "State",
       sales: "Average month",
@@ -260,7 +268,8 @@ export function decide({ FACTS }: Pick<Dataset, "FACTS">): Record<string, ChartS
     ).map((r) => ({
       ...r,
       month: mon(r.monthMs),
-      change: R(half.get(r.stateName)![1]! / half.get(r.stateName)![0]! - nation, 3),
+      // A difference of two growth rates is in points, not a percent.
+      change: R(100 * (half.get(r.stateName)![1]! / half.get(r.stateName)![0]! - nation), 1),
     })),
   });
 

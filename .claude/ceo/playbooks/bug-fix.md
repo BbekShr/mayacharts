@@ -18,3 +18,5 @@
 - happy-dom runs no real animation or layout. A motion, focus, hover or tooltip bug is proven in `e2e/interactions.spec.ts` or `e2e/interactions-drill.spec.ts` (Playwright), in chromium AND webkit.
 - Fixtures are synthetic: `site/data.ts` and the inline specs in tests. Never copy data from anywhere else.
 - Hostile cases (`__proto__`, empty data, one row, nulls, 1e300, huge epoch ms) are where this library has broken before: try them while looking for siblings. `test/hostile.test.ts` and `test/fuzz.test.ts` are the shared nets.
+- An existing assertion that your fix makes fail is evidence, not an obstacle. Never flip "shown" to "absent", move a test to another size, or loosen a number to pass; stop and report it, and the CEO decides (2026-10-27: a gauge label and a band-margin test were flipped and both hid regressions).
+- A motion fix states two checks: the frame at t=0 equals the frame before the action, and the per-frame alignment the fix is about. One without the other has shipped a jump (2026-10-27, efc8b08).

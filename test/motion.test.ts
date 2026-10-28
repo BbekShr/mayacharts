@@ -590,6 +590,41 @@ describe("motion", () => {
     expect(log.indexOf("w")).toBeGreaterThan(-1);
     expect(log.lastIndexOf("c")).toBeLessThan(log.indexOf("w"));
   });
+  it("a drill that moves the sunburst centre (crumb row) starts kept and folding rings at the old centre", () => {
+    const box = document.createElement("div");
+    const ring = (k: string, i: number, d: number, cy: number) =>
+      `<circle data-maya="mark" data-key="${k}" data-depth="${d}" cx="50" cy="${cy}" r="20" pathLength="360" stroke-width="5" stroke-dasharray="90 270" stroke-dashoffset="${90 - i * 90}"/>`;
+    const svg = (m: string) =>
+      `<svg viewBox="0 0 100 100" data-plot="0 0 100 100"><g data-maya="marks">${m}</g></svg>`;
+    patch(box, svg(ring("h", 0, 0, 50) + ring("a", 0, 1, 50) + ring("b", 1, 1, 50)), false);
+    const s = spy();
+    patch(box, svg(ring("a", 0, 0, 40) + ring("b", 1, 1, 40)), true);
+    s.done();
+    const first = (k: string) => s.calls.find((c) => c.e.getAttribute("data-key") === k);
+    expect(first("b")!.k[0]!.transform).toBe("translate(0px,10px)");
+    expect(first("b")!.k.at(-1)!.transform).toBeUndefined(); // lands on the CSS value
+  });
+  it("a card turn keeps the old face's title and controls until the swap", async () => {
+    const el = document.createElement("maya-chart") as MayaChart;
+    document.body.append(el);
+    el.spec = {
+      type: "kpi",
+      title: "Sales",
+      x: "m",
+      y: "v",
+      data: [
+        { m: "a", v: 1 },
+        { m: "b", v: 2 },
+      ],
+      back: { type: "bar", x: "m", y: "v" },
+    } as ChartSpec;
+    await frame();
+    expect(root(el).querySelector(".maya-title")).not.toBeNull();
+    el.view = { ...el.view, face: "back" };
+    await frame();
+    expect(root(el).querySelector(".maya-title")).not.toBeNull(); // the stubbed turn never swaps
+    el.remove();
+  });
   it("a keyed label whose mark left fades at once with it; an unkeyed one waits for the new text", () => {
     const box = document.createElement("div");
     const svg = (t: string) =>

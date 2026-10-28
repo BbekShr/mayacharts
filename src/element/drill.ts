@@ -105,7 +105,7 @@ export const branchOf = (key: string, depth: number, type = "", levels = 0): str
 
 /** Not a target of its own: a click here means "go back up" (drillOut). */
 export const BUSY =
-  "[data-maya=mark],[data-maya=hit],[data-maya=link],[data-maya=legend],button,a,input,select,.maya-ctl,.maya-tip,.maya-table";
+  "[data-maya=mark],[data-maya=hit],[data-maya=link],[data-maya=legend],button,a,input,select,.maya-ctl,.maya-tip,.maya-table,[data-maya=more],[data-maya=sort],[data-maya=axis]";
 
 const PANEL = "svg[data-maya=panel]";
 const TICK = "[data-maya=axis-x] text[data-key]";

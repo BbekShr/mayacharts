@@ -26,6 +26,7 @@ let rolling = false;
 let instant = false;
 let lag = 0; // ms per category step of the current patch's stagger
 let zoom: [number, number] | undefined; // sunburst: span of the branch the patch zooms into/out of
+let cs = [0, 0]; // sunburst: old centre minus new (a drill adds or removes the crumb row)
 // Drill on rect marks: P is the branch's box, F the plot. In, the view maps P onto F: children
 // start inside P, everything else is pushed out. Out is the reverse.
 let moved = false; // the patch moved, morphed, entered or exited a mark: labels and axes wait for it
@@ -124,6 +125,9 @@ const folded = (e: Element): Keyframe | undefined => {
     return { ...arc(e), strokeDasharray: "0 360", strokeDashoffset: `${90 - at}` };
 };
 
+/** A ring's offset from the new centre, `k` = 1: where it starts; -1: where an exiting one ends. */
+const sh = (k: number) => `translate(${k * cs[0]!}px,${k * cs[1]!}px)`;
+
 /** Geometry of a rect or circle (circle = its bounding square); undefined for paths etc. */
 const geo = (e: Element): Box | undefined => {
   if (ring(e)) return;
@@ -212,7 +216,14 @@ function seed(e: Element, g: Box, origin?: Box): Box {
 function fade(e: Element, out: boolean, then?: () => void, o = DATA): void {
   // The open end is implicit: it is the CSS opacity (translucent links rest at .45, not 1).
   const k = [{}, { opacity: 0 }];
+  const hub = ring(e) && (cs[0] || cs[1]);
+  if (hub && out) stop(e.getAnimations?.()); // an entrance still shifting it would add to the exit
   run(e, out ? k : k.reverse(), out ? { ...o, fill: "forwards" } : o, then);
+  // The hub's shift to the common centre rides the rings' clock, not its own fade's.
+  if (hub) {
+    const t = [{}, { transform: sh(out ? -1 : 1) }];
+    run(e, out ? t : t.reverse(), { ...ZOOM, fill: out ? "forwards" : "none" });
+  }
 }
 
 /** Paths (arcs, hexes, ribbons): grow from their own centre while fading in. */
@@ -232,7 +243,7 @@ function enter(e: Element, origin?: Box, o = DATA): void {
   const at = { ...o, delay: e.matches("path[data-total]") ? Number(o.duration) * 0.6 : delay(e) };
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, false);
-  if (f) run(e, [f, arc(e)], ZOOM);
+  if (f) run(e, [{ ...f, transform: sh(1) }, arc(e)], ZOOM);
   else if (ring(e) && e.getAttribute("data-key") === "v" && o === INTRO)
     // The gauge arc sweeps from empty in step with the centre count-up.
     run(
@@ -271,7 +282,7 @@ function exit(e: Element, origin?: Box, from?: Keyframe): void {
   const o = { ...DATA, fill: "forwards" as const };
   const f = ring(e) && folded(e);
   const z = zoomed(e, g, true);
-  if (f) run(e, [from!, f], { ...ZOOM, fill: "forwards" }, done);
+  if (f) run(e, [from!, { ...f, transform: sh(-1) }], { ...ZOOM, fill: "forwards" }, done);
   else if (z) run(e, [{}, { transform: z, opacity: 0 }], { ...ZOOM, fill: "forwards" }, done);
   else if (g)
     run(e, [{ transform: "none" }, { transform: tf(g, seed(e, g, origin)), opacity: 0 }], o, done);
@@ -479,6 +490,7 @@ function marks(o: Element, w: Element, origin?: Box): void {
       ? undefined
       : ((kw && at(kw)) ?? [...w.children].find((e) => ko && e.getAttribute("data-key") === ko));
   zoom = slice && ring(slice) ? span(slice) : undefined;
+  cs = zoom && ho && hw ? [n(ho, "cx") - n(hw, "cx"), n(ho, "cy") - n(hw, "cy")] : [0, 0];
   // A mark's geometry lives on the mark, or on the planet nested in an orbit's `g`.
   const nest = (m: Element) => m.querySelector("[data-maya=mark]") ?? m;
   // Read pass: every animation list and on-screen box before the first write, so the writes below
@@ -535,7 +547,12 @@ function marks(o: Element, w: Element, origin?: Box): void {
       const from = arcs.get(m)!;
       stop(as);
       sync(m, e);
-      if (!instant) run(m, [from, arc(m)], m.getAttribute("data-key") === "v" ? tally(DATA) : ZOOM);
+      if (!instant)
+        run(
+          m,
+          [{ ...from, transform: sh(1) }, arc(m)],
+          m.getAttribute("data-key") === "v" ? tally(DATA) : ZOOM,
+        );
       order.push(m);
       continue;
     }
@@ -578,7 +595,10 @@ function marks(o: Element, w: Element, origin?: Box): void {
     // Keyed text (table cells on a re-sort) glides from where it stood.
     const [dx, dy] = [x0 - n(m, "x"), y0 - n(m, "y")];
     if (m.localName === "text" && (dx || dy))
-      run(m, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
+      // The pager would glide through the rows entering where it stood: it fades in after them.
+      m.matches("[data-maya=more]")
+        ? fade(m, false, undefined, { ...DATA, delay: 120 })
+        : run(m, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], DATA);
     if (morphed) morph(m, from, d1, dl);
     mend(m, e);
     const t1 = nest(m);
@@ -622,7 +642,8 @@ function marks(o: Element, w: Element, origin?: Box): void {
         });
     } else if (shaped && !morphed && !m.matches("[data-maya=area]"))
       fade(m, false, undefined, { ...DATA, delay: dl });
-    if (m.localName === "text" && m.textContent !== was) numeric(m, was, DATA);
+    if (m.localName === "text" && m.textContent !== was && !m.matches("[data-maya=more]"))
+      numeric(m, was, DATA); // the pager is a control: no count-up
     const tg = pick();
     if (tg && !instant && sig(tg) !== s0)
       fade(tg, false, undefined, { ...UI, delay: glided || tg === m ? 120 : 0 });
@@ -1027,7 +1048,15 @@ export function patch(
         zm = { P, F, out: !("in" in z) };
         // Zoomed marks may grow past the plot; keep them inside it while they move.
         const [vw, vh] = (w.getAttribute("viewBox") ?? "").split(" ").slice(2).map(Number);
-        const clip = `inset(${F[1]}px ${vw! - F[0] - F[2]}px ${vh! - F[1] - F[3]}px ${F[0]}px) view-box`;
+        // The old plot too: ghosts keep their old frame while the crumb row moves it.
+        const G = (o.getAttribute("data-plot")?.split(" ").map(Number) ?? F) as Box;
+        const [l, t, r, b] = [
+          Math.min(F[0], G[0]),
+          Math.min(F[1], G[1]),
+          Math.max(F[0] + F[2], G[0] + G[2]),
+          Math.max(F[1] + F[3], G[1] + G[3]),
+        ];
+        const clip = `inset(${t}px ${vw! - r}px ${vh! - b}px ${l}px) view-box`;
         run(om, [{ clipPath: clip }, { clipPath: clip }], ZOOM);
       }
     }

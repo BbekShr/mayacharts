@@ -41,19 +41,31 @@ describe("kpi", () => {
     expect(down[0]).toContain('data-tone="bad"');
     expect(down[1]).toBe("▼ \u221220 (\u221220%) vs Jan");
   });
-  it("no delta for a single category or a zero previous", () => {
+  it("no delta for a single category; a zero previous states the amount only", () => {
     expect(delta(svg({ ...base, data: base.data.slice(0, 1) }))).toBeNull();
-    expect(
-      delta(
-        svg({
-          ...base,
-          data: [
-            { m: "a", v: 0 },
-            { m: "b", v: 5 },
-          ],
-        }),
-      ),
-    ).toBeNull();
+    const zero = [
+      { m: "a", v: 0 },
+      { m: "b", v: 5 },
+    ];
+    expect(delta(svg({ ...base, data: zero }))![1]).toBe("▲ +5 vs a");
+    // the arrow stays the first glyph whatever order text.vs puts the words in
+    const re = delta(svg({ ...base, text: { vs: "{1}: {0}" }, data: zero }))!;
+    expect(re[1]).toBe("▲ a: +5");
+  });
+  it("a narrow percent tile states pts, no relative percent, and fits 6.6 px a character", () => {
+    const pct = [
+      { m: "Oct", v: 0.049 },
+      { m: "Nov", v: 0.057 },
+    ];
+    const spec = { ...base, format: "percent", colorBy: { target: 0.05 }, data: pct } as ChartSpec;
+    const out = svg(spec, { width: 150 });
+    expect(out).toContain("+0.7 pts");
+    expect(out).not.toMatch(/\(\+?\d+(\.\d+)?%\)/);
+    const budget = 150; // generous: the tile is narrower than the svg
+    for (const m of out.matchAll(
+      /<text[^>]*>(?:<tspan[^>]*>[^<]*<\/tspan>)?([^<]*pts[^<]*)<\/text>/g,
+    ))
+      expect(m[1]!.length * 6.6).toBeLessThanOrEqual(budget);
   });
   it("the hit covers the sparkline band only and the dots come before the headline", () => {
     const s = svg(base);
@@ -162,6 +174,38 @@ describe("kpi", () => {
       data: base.data.map((r, i) => ({ ...r, w: [0.3, 0.32, 0.31, 0.34][i]! })),
     });
     expect(p).toContain(" +3 pts (+9.7%) vs Mar");
+  });
+  it("a narrow percent kpi keeps the points, not the relative percent", () => {
+    const p = svg(
+      {
+        type: "kpi",
+        y: "v",
+        format: "percent",
+        colorBy: { target: 0.035, better: "lower" },
+        data: [{ t: "a", v: 0.043 }],
+      },
+      { width: 150, height: 160 },
+    );
+    const d = delta(p)![1]!;
+    expect(d).toContain("pts");
+    expect(d).not.toContain("%");
+  });
+  it("a zero target or baseline still compares, in amount only", () => {
+    const t = svg({
+      type: "kpi",
+      y: "v",
+      colorBy: { target: 0, better: "lower" },
+      data: [{ t: "a", v: 3 }],
+    });
+    expect(delta(t)![1]).toBe("▲ +3 vs target 0");
+    const w = svg({
+      type: "kpi",
+      y: "v",
+      was: "ly",
+      compare: ["was"],
+      data: [{ t: "a", v: 2, ly: 0 }],
+    });
+    expect(delta(w)![1]).toBe("▲ +2 vs ly");
   });
   it("only the arrow of a change line is toned", () => {
     const d = delta(svg(base))![0]!;

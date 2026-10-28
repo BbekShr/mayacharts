@@ -57,6 +57,12 @@ describe("host adapters", () => {
     expect(columns(table, { type: "bar", y: "Total Sales" })).toBe(el);
   });
 
+  it("columns: the first of a duplicate column name wins", () => {
+    const dup = { schema: ["Item", "Sales", "Sales"], data: [["Shirts", 10, 99]] };
+    const el = columns(dup, { type: "bar", x: "item", y: "sales" }, fake());
+    expect((el.spec as any).data).toEqual([{ Item: "Shirts", Sales: 10 }]);
+  });
+
   it("thoughtspot: live, wrapped cells, completion once on the first draw or settle", () => {
     let done = 0;
     const viz = {

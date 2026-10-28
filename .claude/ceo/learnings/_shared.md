@@ -1,6 +1,12 @@
 # mayaCharts CEO, shared learnings
 
-Durable lessons every specialist applies without relearning them. `## Active` is read into every brief: short imperative bullets, about 40 lines at most. Long stories go under `## Archive`. Demote, do not delete.
+Durable lessons every specialist applies without relearning them. `## Active` is read into every brief: short imperative bullets, about 40 lines at most. Long stories go under `## Archive
+
+- `isolation: "worktree"` branches from `main`, not the run branch: tell a worktree editor to `git reset --hard <run branch>` as its first step when the run branch has commits.
+- A worktree editor runs `npm ci`, never a node_modules symlink: `.gitignore` used to match directories only, a symlink got committed, and merging it replaced the main tree's node_modules with a self-loop (2026-10-09).
+- Fetch and rebase the run branch on origin/main before reading an e2e baseline: a fix merged mid-run showed as a 4 in 10 failure on the stale base (2026-10-13).
+- Regenerate baselines with `--update-snapshots=all`; plain `--update-snapshots` rewrote 1 of 20 changed images.
+- A release that adds a type or moves a budget changes every quoted count and KB in README, site/index.html and CLAUDE.md: grep them in the release run, not later.`. Demote, do not delete.
 
 ## Active
 
@@ -42,20 +48,24 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - The auto-mode classifier blocks budget and tsconfig edits even from the shell; ask the owner once with the measured numbers, never retry the edit.
 
 - Haiku docs drafts invent plausible facts (0.4: claimed a bare year "2024" is a date, labelled `data-t` as tone, added a second CHANGELOG section). Diff every Haiku doc against the source before committing.
-- A worktree editor runs `npm ci`, never a node_modules symlink: `.gitignore` used to match directories only, a symlink got committed, and merging it replaced the main tree's node_modules with a self-loop (2026-10-09).
 - Repeat a timing-sensitive e2e 15 times with 6 workers on the branch and on main before calling a failure a flake: the clamped-tooltip fix failed 3 of 30 there and 0 of 60 on main.
 - A fade that ends early on one side of a crossfade needs the other side on the same clock, or the frame washes out (zoomed exits at 0.35, 2026-10-09).
-- `isolation: "worktree"` branches from `main`, not the run branch: tell a worktree editor to `git reset --hard <run branch>` as its first step when the run branch has commits.
-- Fetch and rebase the run branch on origin/main before reading an e2e baseline: a fix merged mid-run showed as a 4 in 10 failure on the stale base (2026-10-13).
 - Before any e2e run, free port 4173 (`lsof -i :4173`): Playwright reuses a running preview server, so a stale one silently tests an old build.
 
 **Process**
 
-- Regenerate baselines with `--update-snapshots=all`; plain `--update-snapshots` rewrote 1 of 20 changed images.
-
 - The builder's ThoughtSpot code tab was built from public ThoughtSpot docs only (owner, 2026-10-06). Do not re-flag it as employer knowledge; flag only new host-specific content.
 
-- A release that adds a type or moves a budget changes every quoted count and KB in README, site/index.html and CLAUDE.md: grep them in the release run, not later.
+**2026-10-27 deep**
+
+- Compare main and the branch in separate node processes (or `git archive` copies): the mark registry is a `Symbol.for` global, so two trees in one process render with whichever loaded last.
+- Gate on content, not presence: every svg emits empty `axis-x`/`axis-y` groups, so `querySelector("[data-maya^=axis]")` is true for treemaps too (efc8b08, reverted).
+- Check a motion's first frame against the frame before the click on its own; an "A matches B every frame" metric passes when A and B jump together at t=0.
+- A box glide holds the box top; any start offset for marks must be worked out in that held frame, or the glide and the offset add up.
+- When a label gets longer, find where its room is reserved (gauge `wl`) and rerender at the sizes old tests named; never flip a "shown" assertion to "absent" to pass.
+- Check a text-fit constant with digit-heavy strings and a width sweep, not the one string that motivated it.
+- Never `git commit --amend` or `git add -A` in a shared tree: HEAD may be another agent's commit. Use `git commit -- <paths>`.
+- A loop stuck past 2^53 cannot be stopped by a vitest timeout; prove a hang with an outer process `timeout`.
 
 ## Archive
 

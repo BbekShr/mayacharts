@@ -569,6 +569,49 @@ describe("M4 interactions in <maya-chart>", () => {
     expect(el.view.page).toBe(2);
   });
 
+  const pages = (extra: object = {}) =>
+    table({
+      expand: undefined,
+      data: [1, 2, 3, 4, 5, 6].map((i) => ({ n: "r" + i, a: i })),
+      ...extra,
+    });
+
+  it("table: a selection survives a click on Show more and on a sort header", async () => {
+    const el = await mount(pages({ select: true }));
+    el.selected = [{ x: "r1" }];
+    await frame();
+    click(q(el, "[data-maya=more]"));
+    await frame();
+    click(q(el, "[data-maya=sort]"));
+    await frame();
+    expect(el.selected).toEqual([{ x: "r1" }]);
+  });
+
+  it("table: a double click on Show more with select pages once", async () => {
+    const el = await mount(pages({ select: true }));
+    click(q(el, "[data-maya=more]"), 1);
+    click(q(el, "[data-maya=more]"), 2);
+    await frame();
+    expect(el.view.page).toBe(1);
+  });
+
+  it("table: Escape typed in the filter does not clear the selection", async () => {
+    const el = await mount(pages({ select: true }));
+    el.selected = [{ x: "r1" }];
+    await frame();
+    keydown(q(el, "[data-maya=filter]"), "Escape");
+    await frame();
+    expect(el.selected).toEqual([{ x: "r1" }]);
+  });
+
+  it("table: focus lands on the chart after the last page", async () => {
+    const el = await mount(pages({ page: 5 }));
+    click(q(el, "[data-maya=more]"));
+    await frame();
+    expect(q(el, "[data-maya=more]")).toBeNull();
+    expect(el.shadowRoot!.activeElement).toBe(q(el, ".maya-svg"));
+  });
+
   it("table: the filter debounces, resets the page, and keeps focus and caret", async () => {
     const el = await mount(table({ expand: undefined }));
     el.view = { page: 1 };

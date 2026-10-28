@@ -1098,9 +1098,11 @@ test.describe("stack toggle, card flip, kpi toggle and select", () => {
     await expect.poll(async () => (await view(page, "fl")).face).toBeUndefined();
     await settle(page);
     await expect(page.locator("#fl [data-key=v]")).toHaveCount(1);
-    await page.locator("#fl .maya-flip").focus();
+    await expect(page.locator("#fl .maya-flip")).toBeFocused(); // the swap kept the keyboard's place
     await page.keyboard.press("Enter");
     await expect.poll(async () => (await view(page, "fl")).face).toBe("back");
+    await settle(page);
+    await expect(page.locator("#fl .maya-flip")).toBeFocused();
   });
 });
 
@@ -1185,6 +1187,18 @@ test.describe("M4 drills, table paging and expand", () => {
     await expect(input).toBeFocused();
     await page.keyboard.type("1");
     await expect.poll(async () => (await view(page, "t")).filter).toBe("Store 11");
+  });
+
+  test("table: after Show more the pager stays inside the scrolled box", async ({ page }) => {
+    const data = Array.from({ length: 60 }, (_, i) => ({ s: "Store " + i, ytd: 100 - i }));
+    await mount(page, "t", { ...table, filter: false, page: 12, data });
+    await page.locator("#t rect[data-maya=more]").click();
+    const inside = () =>
+      page.locator("#t text[data-maya=more]").evaluate((e) => {
+        const [m, b] = [e, e.closest(".maya-box")!].map((n) => n.getBoundingClientRect());
+        return m!.bottom <= b!.bottom + 1;
+      });
+    await expect.poll(inside).toBe(true);
   });
 
   test("table: a row opens its sub-chart, another row closes it", async ({ page }) => {

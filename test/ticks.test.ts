@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { logTicks, niceTicks, toTime } from "../src/core/ticks.ts";
+import { render } from "../src/core/render.ts";
 
 const cases: [number, number][] = [
   [0, 0],
@@ -41,7 +42,12 @@ describe("toTime plain shapes", () => {
     /^\d{4}-\d{2}(?:-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?)?)?$/;
   const ref = (v: string) => {
     const m = ISO.exec(v);
-    const t = m ? Date.parse(v.length > 10 && m[1] === undefined ? v + "Z" : v) : NaN;
+    let t = m ? Date.parse(v.length > 10 && m[1] === undefined ? v + "Z" : v) : NaN;
+    // Engines disagree on rollover (Feb 30, T24:00): the contract says not a date.
+    const dim = new Date(
+      new Date(0).setUTCFullYear(+v.slice(0, 4), +v.slice(5, 7), 0),
+    ).getUTCDate();
+    if (+v.slice(8, 10) > dim || +v.slice(11, 13) > 23) t = NaN;
     return Number.isNaN(t) ? null : t;
   };
   const p = (n: number, k: number) => String(n).padStart(k, "0");
@@ -93,5 +99,80 @@ describe("logTicks on a short span", () => {
   });
   it("a wide span stays on whole decades", () => {
     expect(logTicks(2, 5000).values).toEqual([1, 10, 100, 1000, 10000]);
+  });
+});
+
+describe("engine-independent ISO and denormals", () => {
+  it("an impossible day or hour 24 is not a date (V8 rolls over, Firefox and Safari do not)", () => {
+    for (const v of [
+      "2024-02-30",
+      "2023-02-29",
+      "2024-04-31",
+      "2024-02-10T24:00",
+      "2024-02-10T24:00:00Z",
+    ])
+      expect(toTime(v)).toBeNull();
+    expect(toTime("2024-02-29")).toBe(Date.UTC(2024, 1, 29));
+    expect(toTime("2024-02-10T23:59")).toBe(Date.UTC(2024, 1, 10, 23, 59));
+  });
+  it("denormal spans draw no NaN", () => {
+    const cases: number[][] = [
+      [1e-307, 2e-307],
+      [0, 5e-324],
+      [5e-324, 1e-323],
+      [-5e-324, 5e-324],
+    ];
+    for (const [a, b] of cases) {
+      const t = niceTicks(a!, b!);
+      expect(t.values.length).toBeGreaterThan(1);
+      expect(t.domain.every(Number.isFinite)).toBe(true);
+      const svg = render({
+        type: "bar",
+        x: "c",
+        y: "v",
+        data: [
+          { c: "a", v: a },
+          { c: "b", v: b },
+        ],
+      } as never);
+      expect(svg).not.toContain("NaN");
+      const sc = render({
+        type: "scatter",
+        x: "c",
+        y: "v",
+        data: [
+          { c: a, v: a },
+          { c: b, v: b },
+        ],
+      } as never);
+      expect(sc).not.toContain("NaN");
+    }
+  });
+});
+
+describe("niceTicks at a magnitude where the step underflows the spacing", () => {
+  it.each([
+    [9e14, 9e14 + 0.25],
+    [9e15, 9e15 + 2],
+    [-9e14, -9e14 + 0.25],
+    [2 ** 53, 2 ** 53],
+    [9e14, 9e14],
+  ])("returns finite ticks for %d..%d", (a, b) => {
+    const t = niceTicks(a, b);
+    expect(t.values.length).toBeGreaterThan(0);
+    expect(t.values.length).toBeLessThan(100);
+    expect(t.values.every(Number.isFinite)).toBe(true);
+  });
+});
+
+describe("rendering a narrow range at 9e14", () => {
+  it("scatter and line with yDomain finish with finite coordinates", () => {
+    const data = [
+      { a: 1, b: 9e14 },
+      { a: 2, b: 9e14 + 0.25 },
+    ];
+    const sc = render({ type: "scatter", x: "a", y: "b", data });
+    const ln = render({ type: "line", x: "a", y: "b", yDomain: [9e14, 9e14 + 0.25], data });
+    for (const s of [sc, ln]) expect(s).not.toMatch(/NaN|Infinity/);
   });
 });

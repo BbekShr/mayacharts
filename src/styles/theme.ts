@@ -162,7 +162,7 @@ export const css =
   // Ramp stops: tokens rampLow, rampMid, rampHigh; unset, the accent from 35% (--fl) over --b, the 50% mix of the two ends.
   ".maya,.maya-root{--b:light-dark(var(--maya-bg),color-mix(in oklab,var(--maya-accent) 15%,var(--maya-bg)));--rl:var(--maya-ramp-low,color-mix(in oklab,var(--maya-accent) var(--fl,35%),var(--b)));--rh:var(--maya-ramp-high,var(--maya-accent));--rm:var(--maya-ramp-mid,color-mix(in oklab,var(--rh),var(--rl)))}" +
   ".maya-reset,.maya-play,.maya-flip,.maya-params-btn,.maya-params-reset{border:1px solid var(--maya-grid);border-radius:99px;padding:3px 12px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a}.maya-reset{position:absolute;top:4px;right:4px}" +
-  ".maya-ctl,.maya-play,.maya-flip,.maya-params-btn{margin:0 0 8px;align-self:flex-start}.maya-play,.maya-flip{min-height:24px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
+  ".maya-ctl,.maya-play,.maya-flip,.maya-params-btn{margin:0 0 8px;align-self:flex-start}.maya-play,.maya-flip{min-height:27px}.maya-ctl{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:2px;border-radius:8px;background:var(--maya-grid)}" +
   ".maya-ctl::before{content:'';position:absolute;inset:2px auto 2px 2px;width:calc(100% - 4px);border-radius:6px;background:var(--maya-bg);box-shadow:0 1px 3px #0000001a;transition:transform .3s var(--maya-ease)}" +
   C +
   `.maya-ctl [role=radio]{${B};color:color-mix(in oklab,var(--maya-fg-muted),var(--maya-fg) 20%);position:relative;padding:4px 12px;border-radius:6px;transition:color .2s}` +

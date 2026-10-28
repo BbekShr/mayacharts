@@ -719,22 +719,20 @@ export const gauge: Mark = {
     });
     const minus = (s: string) => s.replace("-", "\u2212");
     const isPts = fv(1).includes("%");
-    let chg =
+    const arrow = dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u2192";
+    const name = spec.titles.get(spec.was!) ?? spec.was!;
+    const amount = minus(
+      isPts
+        ? ctx.t("pts", (dv > 0 ? "+" : "") + fv(dv).replace("%", "").trim())
+        : (dv > 0 ? "+" : "") + fv(dv),
+    );
+    // ponytail: a points move already says it all; the relative percent is left out (it clips "vs ..." inside a ring).
+    const chg =
       wasV === null
         ? ""
-        : ctx.t(
-            "change",
-            dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u2192",
-            minus(
-              isPts
-                ? ctx.t("pts", (dv > 0 ? "+" : "") + fv(dv).replace("%", "").trim())
-                : (dv > 0 ? "+" : "") + fv(dv),
-            ),
-            minus(pct.format(wasV ? dv / Math.abs(wasV) : 0)),
-            spec.titles.get(spec.was!) ?? spec.was!,
-          );
-    // ponytail: a points move already says it all; the relative percent is cut from the line (it clips "vs ..." inside a ring).
-    if (isPts) chg = chg.replace(/ \(.*?\)/, "");
+        : isPts || !wasV
+          ? `${arrow} ${ctx.t("vs", amount, name)}`
+          : ctx.t("change", arrow, amount, minus(pct.format(dv / Math.abs(wasV))), name);
     if ((status && !above) || chg) {
       const lead = status && !above ? status + (chg ? ", " : "") : "";
       // ponytail: inside a ring the row is cut to the chord at its height (5.8 px a character), not measured.

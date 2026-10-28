@@ -51,9 +51,9 @@ export const TEXT = {
   atRisk: "At risk",
   /** kpi and gauge status word for the bad tone (the kpi tooltip too). */
   offTrack: "Off track",
-  /** kpi delta: {0} = signed change, {1} = previous period. */
+  /** kpi and gauge comparison without a percent: {0} = signed change, {1} = what it is compared with. The arrow is prefixed outside the template. Used when the baseline is 0, on a narrow kpi tile, and for a gauge change on a percent measure. */
   vs: "{0} vs {1}",
-  /** kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what it is compared with. A gauge on a percent measure drops the first " (...)". */
+  /** kpi comparison: {0} = arrow, {1} = absolute change, {2} = percent change, {3} = what it is compared with. A zero baseline, a narrow tile and a gauge on a percent measure use `vs` instead. */
   change: "{0} {1} ({2}) vs {3}",
   /** kpi and gauge change on a percent measure: {0} = signed difference in points. */
   pts: "{0} pts",

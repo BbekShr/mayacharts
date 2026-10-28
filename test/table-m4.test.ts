@@ -50,6 +50,21 @@ describe("table #84", () => {
     expect(p.svg).not.toContain('data-maya="mark" data-key="sales~');
     expect(count(p.svg, /data-maya="mark" data-key="vs~/g)).toBe(4);
   });
+  it("the centre line runs only through each bar band, never through the value text", () => {
+    const p = draw({ bars: { vs: "diverging", sales: "none" } });
+    const lines = [...p.svg.matchAll(/<line [^>]*data-centre[^>]*>/g)].map((m) => m[0]);
+    expect(lines).toHaveLength(4);
+    const ys = (l: string) => [+l.match(/y1="([\d.]+)"/)![1]!, +l.match(/y2="([\d.]+)"/)![1]!];
+    const texts = [...p.svg.matchAll(/<text data-key="v~vs~[^>]* y="([\d.]+)"/g)].map(
+      (m) => +m[1]!,
+    );
+    expect(texts).toHaveLength(4);
+    lines.forEach((l, i) => {
+      const [a, b] = ys(l);
+      expect(b! - a!).toBeLessThan(14);
+      expect(texts[i]!).toBeLessThan(a!); // the text baseline-centre sits above the segment
+    });
+  });
   it("strips: one toned square per month, spoken in the data table", () => {
     const p = draw({ cells: { Form: { type: "strip", field: "ch", by: "m", last: 2 } } });
     expect(count(p.svg, /data-key="s~Form~Yosemite%20jacket/g)).toBe(2);

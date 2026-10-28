@@ -158,7 +158,10 @@ export function mount(host: Host): Handlers {
     off: (() => {
       const a = listen(root, ["click", onClick]);
       // A click anywhere else on the page deselects too.
-      const b = listen(document, ["click", (e) => e.composedPath().includes(root.host) || clear()]);
+      const b = listen(document, [
+        "click",
+        (e) => e.composedPath().includes(root.host) || !host.spec()?.select || clear(),
+      ]);
       return () => ((later = undefined), a(), b());
     })(),
   };
