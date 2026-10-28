@@ -619,7 +619,8 @@ export class MayaChart extends HTMLElement {
 
   #restore(id: string | undefined): void {
     const root = this.shadowRoot!;
-    if (!id || root.activeElement) return;
+    const a = document.activeElement; // focus the user moved to the page meanwhile is theirs
+    if (!id || root.activeElement || (a && a !== document.body && a !== this)) return;
     const [k, i] = id.split(":");
     const sel = FOCUS.find(([n]) => n === k)![1];
     root.querySelectorAll<HTMLElement>(sel)[+i!]?.focus({ preventScroll: true });
