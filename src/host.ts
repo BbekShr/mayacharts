@@ -71,10 +71,13 @@ export interface ThoughtSpotViz {
 export function columns(table: HostTable, spec: HostSpec, el?: MayaChart): MayaChart {
   const names = (table.schema ?? []).map((c) => (typeof c === "string" ? c : c.name));
   // First match wins; no match leaves the name so validation lists the columns.
+  // A non-string, non-RegExp field (y: 5) passes through for validation to report.
   const hit = (f: HostField): string =>
     typeof f === "string"
       ? (names.find((n) => n.toLowerCase() === f.toLowerCase()) ?? f)
-      : (names.find((n) => n.search(f) >= 0) ?? f.source);
+      : f instanceof RegExp
+        ? (names.find((n) => n.search(f) >= 0) ?? f.source)
+        : f;
   const one = (f: any) => (Array.isArray(f) ? f.map(hit) : hit(f));
   // Keyed maps (format, titles) rename keys that match a column.
   const keyed = (o: any) =>
@@ -97,7 +100,10 @@ export function columns(table: HostTable, spec: HostSpec, el?: MayaChart): MayaC
   for (const k of ["format", "titles", "colorBy"]) s[k] ?? delete s[k];
   // A ThoughtSpot cell is a value, or { value() } / { value }.
   const cell = (v: any) => (typeof v?.value === "function" ? v.value() : (v?.value ?? v?.v ?? v));
-  s.data = (table.data ?? []).map((r) => Object.fromEntries(names.map((n, i) => [n, cell(r[i])])));
+  // A duplicate column name: the first wins, as hit() resolves to it.
+  s.data = (table.data ?? []).map((r) =>
+    Object.fromEntries(names.flatMap((n, i) => (names.indexOf(n) === i ? [[n, cell(r[i])]] : []))),
+  );
   el ??=
     (document.getElementById("chart") as MayaChart | null) ??
     document.body.appendChild(Object.assign(document.createElement("maya-chart"), { id: "chart" }));
