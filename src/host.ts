@@ -97,9 +97,10 @@ export function columns(table: HostTable, spec: HostSpec, el?: MayaChart): MayaC
   for (const k of ["format", "titles", "colorBy"]) s[k] ?? delete s[k];
   // A ThoughtSpot cell is a value, or { value() } / { value }.
   const cell = (v: any) => (typeof v?.value === "function" ? v.value() : (v?.value ?? v?.v ?? v));
-  // A duplicate column name reads the first such column, as hit() resolves to it.
+  // A duplicate column name reads the first such column, as hit() resolves to it: entries go in
+  // reversed so the first sets last. ponytail: host.js sits at its 810 B budget; keys come out reversed.
   s.data = (table.data ?? []).map((r) =>
-    Object.fromEntries(names.map((n) => [n, cell(r[names.indexOf(n)])])),
+    Object.fromEntries(names.map((n, i) => [n, cell(r[i])]).reverse()),
   );
   el ??=
     (document.getElementById("chart") as MayaChart | null) ??

@@ -155,6 +155,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 - **Formatter cache**: formatters are cached per locale and options for the page, and the cache is emptied when it passes 200 entries, not trimmed by use.
 - **Label overlap scan**: in-chart value labels are checked against each other by 64 px column buckets (plain bars) or a full scan (a waterfall's two edge tags), which the 10000-mark cap bounds.
 - **Legend for many series**: a multi-series legend needs the data, so the first paint of such a chart draws twice.
+- **Host duplicate columns**: `columns()` reads the first of two same-named columns; each row's keys come out in reverse column order, which only shows in the unknown-field hint. `host.js` sits at its 810 B budget.
 - **Version constant**: `version` is written by hand in `registry.ts` and a test fails when it differs from `package.json`. `MAJOR` keys the registry (`mayacharts.marks@0`); a pre-1.0 break of the Mark contract must bump it by hand, or two copies would share one table.
 - **Beeswarm dodge**: each point checks only the 50 most recently placed neighbours, so a very dense tie cluster can overlap a little; the swarm is clamped to its row past about 25 points anyway.
 - **Sunburst names**: a name runs straight along its arc, upright, cut so its chord stays inside the ring; it is never curved, and a slice too short for 4 characters has no name (the tooltip names it).
