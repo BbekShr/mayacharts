@@ -52,13 +52,20 @@ describe("kpi", () => {
     const re = delta(svg({ ...base, text: { vs: "{1}: {0}" }, data: zero }))!;
     expect(re[1]).toBe("▲ a: +5");
   });
-  it("a narrow tile keeps 'vs target' whole (about 6.0 px a character)", () => {
+  it("a narrow percent tile states pts, no relative percent, and fits 6.6 px a character", () => {
     const pct = [
       { m: "Oct", v: 0.049 },
       { m: "Nov", v: 0.057 },
     ];
     const spec = { ...base, format: "percent", colorBy: { target: 0.05 }, data: pct } as ChartSpec;
-    expect(svg(spec, { width: 150 })).toContain("</tspan> +0.7 pts vs target</text>");
+    const out = svg(spec, { width: 150 });
+    expect(out).toContain("+0.7 pts");
+    expect(out).not.toMatch(/\(\+?\d+(\.\d+)?%\)/);
+    const budget = 150; // generous: the tile is narrower than the svg
+    for (const m of out.matchAll(
+      /<text[^>]*>(?:<tspan[^>]*>[^<]*<\/tspan>)?([^<]*pts[^<]*)<\/text>/g,
+    ))
+      expect(m[1]!.length * 6.6).toBeLessThanOrEqual(budget);
   });
   it("the hit covers the sparkline band only and the dots come before the headline", () => {
     const s = svg(base);
