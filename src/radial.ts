@@ -701,7 +701,12 @@ export const gauge: Mark = {
     }
     if (bands) {
       labels += tick(warn, R + 2, R + 7, { stroke: "var(--maya-fg-muted)" });
-      const wt = tag(warn, fv(warn), R + ex + 7, { fill: "var(--maya-fg-muted)" });
+      const wt = tag(
+        warn,
+        ctx.t(g!.better === "lower" ? "offAbove" : "offBelow", fv(warn)),
+        R + ex + 7,
+        { fill: "var(--maya-fg-muted)" },
+      );
       // ponytail: a warn value that touches the target label or leaves the svg is dropped, its tick stays (the description names it).
       const touch =
         tg!.x0 < wt.x0 + wt.w + 4 && wt.x0 < tg!.x0 + tg!.w + 4 && Math.abs(tg!.y - wt.y) < 12;
@@ -719,22 +724,20 @@ export const gauge: Mark = {
     });
     const minus = (s: string) => s.replace("-", "\u2212");
     const isPts = fv(1).includes("%");
-    let chg =
+    const arrow = dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u2192";
+    const name = spec.titles.get(spec.was!) ?? spec.was!;
+    const amount = minus(
+      isPts
+        ? ctx.t("pts", (dv > 0 ? "+" : "") + fv(dv).replace("%", "").trim())
+        : (dv > 0 ? "+" : "") + fv(dv),
+    );
+    // ponytail: a points move already says it all; the relative percent is left out (it clips "vs ..." inside a ring).
+    const chg =
       wasV === null
         ? ""
-        : ctx.t(
-            "change",
-            dv > 0 ? "\u25B2" : dv < 0 ? "\u25BC" : "\u2192",
-            minus(
-              isPts
-                ? ctx.t("pts", (dv > 0 ? "+" : "") + fv(dv).replace("%", "").trim())
-                : (dv > 0 ? "+" : "") + fv(dv),
-            ),
-            minus(pct.format(wasV ? dv / Math.abs(wasV) : 0)),
-            spec.titles.get(spec.was!) ?? spec.was!,
-          );
-    // ponytail: a points move already says it all; the relative percent is cut from the line (it clips "vs ..." inside a ring).
-    if (isPts) chg = chg.replace(/ \(.*?\)/, "");
+        : isPts
+          ? ctx.t("vs", `${arrow} ${amount}`, name)
+          : ctx.t("change", arrow, amount, minus(pct.format(wasV ? dv / Math.abs(wasV) : 0)), name);
     if ((status && !above) || chg) {
       const lead = status && !above ? status + (chg ? ", " : "") : "";
       // ponytail: inside a ring the row is cut to the chord at its height (5.8 px a character), not measured.

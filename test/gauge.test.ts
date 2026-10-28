@@ -72,6 +72,18 @@ describe("gauge", () => {
     expect(s).toContain("▲ +2.8 pts vs w");
     expect(s).not.toContain("(+8.6%)");
   });
+  it("a text.change override with the percent first still loses only the percent", () => {
+    const s = svg({
+      type: "gauge",
+      y: "v",
+      was: "w",
+      format: "percent",
+      text: { change: "({2}) {0} {1} against {3}" },
+      data: [{ v: 0.353, w: 0.325 }],
+    });
+    expect(s).toContain("▲ +2.8 pts vs w");
+    expect(s).not.toContain("8.6%");
+  });
   it("the status word never vanishes: it leads the row under a small dial", () => {
     const c = { target: 70, warn: 50 };
     const big = svg(base({ colorBy: c, was: "w" }, 80));
@@ -89,14 +101,15 @@ describe("gauge", () => {
   it("prints the warn value beside its tick, dropped when it would touch the target label", () => {
     const warnText = (c: object) =>
       labels(svg(base({ colorBy: c, yDomain: [0, 100] }, 40), { width: 640, height: 320 }));
-    expect(warnText({ target: 70, warn: 40 })).toMatch(/<text[^>]*>40<\/text>/);
-    expect(warnText({ target: 70, warn: 69 })).not.toMatch(/<text[^>]*>69<\/text>/);
+    expect(warnText({ target: 70, warn: 40 })).toContain(">off track below 40<");
+    expect(warnText({ target: 70, warn: 69 })).not.toContain("off track below 69");
     expect(warnText({ target: 70, warn: 69 })).toContain("target 70");
     // warn near an end of a narrow dial would leave the svg
     const c = { colorBy: { target: 70, warn: 1 }, format: "currency" } as const;
-    expect(labels(svg(base(c, 40), { width: 360 }))).toContain(">$1.00<");
-    // the dial leaves room for the text, so a small tile still shows it
-    expect(labels(svg(base(c, 40), { width: 110, height: 100 }))).toContain(">$1.00<");
+    expect(labels(svg(base(c, 40), { width: 360 }))).not.toContain("$1.00");
+    // the label names what the tick marks; a tile too small for it keeps the tick only
+    expect(labels(svg(base(c, 40), { width: 110, height: 100 }))).not.toContain("$1.00");
+    expect(warnText({ target: 30, warn: 60, better: "lower" })).toContain(">off track above 60<");
   });
   it("a value of zero draws no round cap", () => {
     expect(arc(svg(base({}, 0)))).toContain('stroke-linecap="butt"');
