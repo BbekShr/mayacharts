@@ -300,7 +300,9 @@ export const table: Mark = {
           st.labels.forEach((lb, li) => {
             const v = vs[li] ?? null;
             const f =
-              v === null ? "–" : (v > 0 ? "+" : "") + ctx.fmt(spec.cells.get(c.f)!.field, v);
+              v === null
+                ? "–"
+                : (v > 0 ? "+" : "") + ctx.fmt(spec.cells.get(c.f)!.field, v).replace("-", "−");
             const sq = {
               "data-key": key("s", c.f, rw.name, lb),
               "data-c": ri,
@@ -417,7 +419,7 @@ export const table: Mark = {
                   const v = c.values.get(rw.name)?.[i] ?? null;
                   return v === null
                     ? ""
-                    : `${ctx.fmt(spec.cells.get(t)!.by, lb)} ${v > 0 ? "+" : ""}${ctx.fmt(spec.cells.get(t)!.field, v)}`;
+                    : `${ctx.fmt(spec.cells.get(t)!.by, lb)} ${v > 0 ? "+" : ""}${ctx.fmt(spec.cells.get(t)!.field, v).replace("-", "−")}`;
                 })
                 .filter(Boolean)
                 .join(", "),
