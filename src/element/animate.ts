@@ -222,7 +222,7 @@ function fade(e: Element, out: boolean, then?: () => void, o = DATA): void {
   // The hub's shift to the common centre rides the rings' clock, not its own fade's.
   if (hub) {
     const t = [{}, { transform: sh(out ? -1 : 1) }];
-    run(e, out ? t : t.reverse(), { ...ZOOM, fill: "both" });
+    run(e, out ? t : t.reverse(), { ...ZOOM, fill: out ? "forwards" : "none" });
   }
 }
 
