@@ -1299,3 +1299,5 @@ mayaCharts follows semantic versioning. Public API: spec keys and semantics, sch
 ## License
 
 MIT, and the core library will stay MIT. Any paid offerings will be things outside the core, such as support contracts, hosted services and separate add-ons. Nothing in the library will move behind a paywall. See [LICENSE](LICENSE).
+
+Built by [Bibek Shrestha](https://bibek-shrestha.com).

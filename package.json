@@ -25,7 +25,10 @@
     "json-schema"
   ],
   "license": "MIT",
-  "author": "Bibek Shrestha",
+  "author": {
+    "name": "Bibek Shrestha",
+    "url": "https://bibek-shrestha.com"
+  },
   "homepage": "https://bbekshr.github.io/mayacharts/",
   "repository": {
     "type": "git",
