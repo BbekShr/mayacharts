@@ -265,10 +265,10 @@ function draw(ctx: MarkCtx, fill: boolean): MarkOut {
         end += el("line", {
           "data-lead": true,
           "data-s": si % 8,
-          x1: x + 3,
-          y1: ey,
-          x2: x + 7,
-          y2: ys[i],
+          x1: r(x + 3),
+          y1: r(ey),
+          x2: r(x + 7),
+          y2: r(ys[i]!),
         });
       end += el(
         "text",

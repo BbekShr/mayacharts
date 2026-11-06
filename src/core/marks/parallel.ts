@@ -186,7 +186,13 @@ export const parallel: Mark = {
     else
       for (const e of ends) {
         if (Math.abs(e.y - e.ey) > 2)
-          grid += el("line", { "data-s": e.si % 8, x1: ex + 2, x2: ex + 7, y1: e.ey, y2: r(e.y) });
+          grid += el("line", {
+            "data-s": e.si % 8,
+            x1: r(ex + 2),
+            x2: r(ex + 7),
+            y1: r(e.ey),
+            y2: r(e.y),
+          });
         labels += el(
           "text",
           {
