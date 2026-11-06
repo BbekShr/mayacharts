@@ -27,6 +27,8 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 - A kpi card turn returns focus to the new face's Details button.
 - A kpi card turn no longer jumps before it turns.
 - A gauge with a zero `was` states the amount alone.
+- A kpi `text.change` override that moves `{0}` colours the arrow where it falls, and one that drops `{0}` prints the line plain.
+- Line and parallel end-label leaders round their coordinates like the label beside them, so server output stays stable.
 
 ### Changed
 
