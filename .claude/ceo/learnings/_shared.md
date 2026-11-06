@@ -2,6 +2,10 @@
 
 Durable lessons every specialist applies without relearning them. `## Active` is read into every brief: short imperative bullets, about 40 lines at most. Long stories go under `## Archive
 
+- Run the e2e baseline in apply runs and open every failing diff: a Firefox-only duplicate title from the late data table hid behind CI retries (2026-10-05). (demoted 2026-11-05: stated in the CEO skill and RULES)
+- The auto-mode classifier blocks budget and tsconfig edits even from the shell; ask the owner once with the measured numbers, never retry the edit. (demoted 2026-11-05: stated in the CEO skill and RULES)
+- Haiku docs drafts invent plausible facts (0.4: claimed a bare year "2024" is a date, labelled `data-t` as tone, added a second CHANGELOG section). Diff every Haiku doc against the source before committing. (demoted 2026-11-05: stated in the CEO skill and RULES)
+
 - `isolation: "worktree"` branches from `main`, not the run branch: tell a worktree editor to `git reset --hard <run branch>` as its first step when the run branch has commits.
 - A worktree editor runs `npm ci`, never a node_modules symlink: `.gitignore` used to match directories only, a symlink got committed, and merging it replaced the main tree's node_modules with a self-loop (2026-10-09).
 - Fetch and rebase the run branch on origin/main before reading an e2e baseline: a fix merged mid-run showed as a 4 in 10 failure on the stale base (2026-10-13).
@@ -29,8 +33,6 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - An edge probe (every type times empty, one row, all null, zeros, negatives, 1e-300, 1e300, a yDomain that excludes data) found three bugs 947 tests missed; rerun it after any mark or format change. Check rendered text and coordinates, not just throws.
 - Feed every new numeric input the extremes (0, 8.64e15, 1e300, NaN-producing dates) before shipping; a loop guarded by `t > max` never ends on NaN.
 
-- Run the e2e baseline in apply runs and open every failing diff: a Firefox-only duplicate title from the late data table hid behind CI retries (2026-10-05).
-
 **Motion**
 
 - Key a rolling window (trails, sparkline tails) by the time each piece covers, never by its age or slot, or history moves on every step.
@@ -45,9 +47,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 **Fan-out**
 
 - A theme change lands in index and global too (the core bundle embeds the stylesheet): price theme bytes three times.
-- The auto-mode classifier blocks budget and tsconfig edits even from the shell; ask the owner once with the measured numbers, never retry the edit.
 
-- Haiku docs drafts invent plausible facts (0.4: claimed a bare year "2024" is a date, labelled `data-t` as tone, added a second CHANGELOG section). Diff every Haiku doc against the source before committing.
 - Repeat a timing-sensitive e2e 15 times with 6 workers on the branch and on main before calling a failure a flake: the clamped-tooltip fix failed 3 of 30 there and 0 of 60 on main.
 - A fade that ends early on one side of a crossfade needs the other side on the same clock, or the frame washes out (zoomed exits at 0.35, 2026-10-09).
 - Before any e2e run, free port 4173 (`lsof -i :4173`): Playwright reuses a running preview server, so a stale one silently tests an old build.
@@ -66,6 +66,11 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Check a text-fit constant with digit-heavy strings and a width sweep, not the one string that motivated it.
 - Never `git commit --amend` or `git add -A` in a shared tree: HEAD may be another agent's commit. Use `git commit -- <paths>`.
 - A loop stuck past 2^53 cannot be stopped by a vitest timeout; prove a hang with an outer process `timeout`.
+
+**2026-11-05 light**
+
+- Never slice a formatted, localisable string by position to find a token: carry the token and `indexOf` it (kpi arrow, `{0}` of `text.change`).
+- A red unit gate under load is cleared only by full-suite reruns on the branch alternated with main in the same minutes; check `uptime` and `ps -Ao pcpu,comm -r` for another project's browsers first.
 
 ## Archive
 
