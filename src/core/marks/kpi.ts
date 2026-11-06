@@ -104,7 +104,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
     maximumFractionDigits: 1,
     signDisplay: "exceptZero",
   });
-  const lines: { s: string; tone: string | null }[] = [];
+  const lines: { s: string; a: string; tone: string | null }[] = [];
   const compare = (
     ref: number | null | undefined,
     label: string,
@@ -130,6 +130,7 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
       s = clip(`${arrow} ${ctx.t("vs", isPct || !ref ? amount : p, short)}`, Math.floor(iw / 6.6));
     lines.push({
       s,
+      a: arrow,
       tone: tone === undefined ? (d * dir > 0 ? "good" : d * dir < 0 ? "bad" : null) : tone,
     });
   };
@@ -170,16 +171,19 @@ function tile(ctx: MarkCtx, f: string, si: number, multi: boolean, B: number[]) 
   top += fs + 4;
   lines.slice(0, k).forEach((c, i) => {
     // The arrow carries the tone; the words stay quiet.
-    const arrow = c.s.slice(0, 1);
+    // The template may put {0} anywhere (or drop it): wrap it where it falls.
+    const at = c.tone ? c.s.indexOf(c.a) : -1;
     labels += text(
       {
         "data-kpi": i ? "of" : "delta",
         y: r(top),
         "font-size": 12,
       },
-      (c.tone
-        ? `<tspan data-tone="${c.tone}" aria-hidden="true" dominant-baseline="hanging">${arrow}</tspan>`
-        : esc(arrow)) + esc(c.s.slice(1)),
+      at < 0
+        ? esc(c.s)
+        : esc(c.s.slice(0, at)) +
+            `<tspan data-tone="${c.tone}" aria-hidden="true" dominant-baseline="hanging">${c.a}</tspan>` +
+            esc(c.s.slice(at + 1)),
     );
     top += 16;
   });
