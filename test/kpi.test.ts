@@ -452,7 +452,7 @@ describe("heroSize is a cap (M2 H5)", () => {
   });
   it("tones the arrow where a text.change override puts it, and prints plain when it is dropped", () => {
     const d = (change: string) => delta(svg({ ...base, compare: ["previous"], text: { change } }))!;
-    const tone = (change: string) => d(change)[0].match(/<tspan[^>]*>(.*?)<\/tspan>/)?.[1];
+    const tone = (change: string) => d(change)[0]!.match(/<tspan[^>]*>(.*?)<\/tspan>/)?.[1];
     expect(tone("{1} ({2}) {0} vs {3}")).toBe("▲");
     expect(tone("{1} ({2}) vs {3}")).toBeUndefined();
     expect(d("{1} ({2}) vs {3}")[1]).toContain("vs");
