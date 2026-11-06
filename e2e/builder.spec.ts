@@ -219,7 +219,7 @@ test("the category gets a format too: date styles for dates, words around text",
 test("paste limits: over each limit nothing changes, at each limit it works", async ({ page }) => {
   await myData(page, "Region,Sales\nNorth,1\nSouth,2\n");
   // drawn() alone passes on the sample chart; wait until the paste is in the spec.
-  await expect.poll(async () => JSON.stringify(await spec(page))).toContain("South");
+  await expect.poll(async () => ((await spec(page)) as { x: string }).x).toBe("Region");
   await drawn(page);
   const before = JSON.stringify(await spec(page));
   const err = page.locator("#paste-err");
