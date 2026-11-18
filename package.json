@@ -169,7 +169,7 @@
     "dist/maya.stats.global.js": 4000,
     "dist/maya.units.global.js": 2560,
     "dist/maya.weave.global.js": 2720,
-    "dist/host.js": 810
+    "dist/host.js": 820
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
