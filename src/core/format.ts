@@ -79,20 +79,23 @@ export const dtf = (locale: string, o: Intl.DateTimeFormatOptions) =>
   intl(Intl.DateTimeFormat, locale, o);
 // Dates before year 1 carry their era ("5001 BC"). Intl rejects era beside dateStyle/timeStyle, so
 // those expand to medium-style fields (ponytail: long/full BC dates print as medium); the BC
-// formatter is built on first use. AD dates and formats without a year are untouched.
+// formatter is built on first use. AD dates, formats without a year and a host era are untouched.
+// ponytail: BC is decided by the UTC year, so a host timeZone that moves the local date across the
+// year 1 boundary prints the wrong era.
 export const dateFmt = (locale: string, o: Intl.DateTimeFormatOptions) => {
   const f = dtf(locale, o);
-  if (!o.year && !o.dateStyle) return f;
+  if ((!o.year && !o.dateStyle) || o.era) return f;
   const { dateStyle: d, timeStyle: t, ...r } = o;
+  let b: typeof f | undefined;
   return {
     format: (v: number | Date) =>
       new Date(v).getUTCFullYear() < 1
-        ? dtf(locale, {
+        ? (b ??= dtf(locale, {
             ...r,
             era: "short",
             ...(d && { month: "short", day: "numeric", year: "numeric" }),
             ...(t && { hour: "numeric", minute: "2-digit" }),
-          }).format(v)
+          })).format(v)
         : f.format(v),
   };
 };

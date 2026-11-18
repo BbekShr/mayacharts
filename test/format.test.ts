@@ -97,6 +97,15 @@ describe("dates before year 1 carry their era", () => {
     expect(f({ v: { dateStyle: "long" } })(bc)).toContain("BC");
     expect(f({ v: { month: "long" } })(bc)).toBe("March");
   });
+  it("a host era is left alone for BC and AD", () => {
+    for (const era of ["long", "narrow"] as const) {
+      const o = { year: "numeric", era } as const;
+      for (const v of [bc, ad])
+        expect(f({ v: o })(v)).toBe(
+          new Intl.DateTimeFormat("en", { timeZone: "UTC", ...o }).format(v),
+        );
+    }
+  });
   it("auto time ticks", () => {
     const d = [-5e12 * 1000, -2e14, Date.UTC(2000, 0, 1)].map((d, v) => ({ d, v }));
     const svg = render({ type: "line", data: d, x: "d", y: "v", xType: "time" });
