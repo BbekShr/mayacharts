@@ -22,9 +22,13 @@ export const table: Mark = {
     const ms = spec.measures;
     const dims = spec.columns;
     const title = (f: string) => spec.titles.get(f) ?? f;
-    // Every number drawn in the svg (cell, delta, tooltip) takes U+2212, as kpi does. Only a negative
-    // value has a sign to swap, so a hyphen in a suffix stays; the data table keeps "-" like every mark's.
-    const num = (f: string, v: number) => (v < 0 ? ctx.fmt(f, v).replace("-", "−") : ctx.fmt(f, v));
+    // Every number drawn in the svg (cell, delta, tooltip) takes U+2212, as kpi does. The sign is the first
+    // hyphen that reaches a digit before another hyphen, so a hyphen in an affix stays; the data table keeps "-".
+    // ponytail: an affix hyphen followed by a digit ("Q-1 {value}") is taken for the sign.
+    const num = (f: string, v: number) => {
+      const s = ctx.fmt(f, v);
+      return v < 0 ? s.replace(/-(?=[^-]*\d)/, "−") : s;
+    };
     // One reducer per (category, measure), once per data array: a resize or re-sort reuses it.
     const all = memo(
       spec.data,

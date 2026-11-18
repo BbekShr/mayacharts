@@ -175,4 +175,24 @@ describe("sort reducer", () => {
       "aee578caab709687600db2279bd17b8fc04b99ca",
     );
   });
+
+  it("swaps only the sign hyphen for U+2212, never one in an affix", () => {
+    const cell = (v: number, format: ChartSpec["format"], locale?: string) =>
+      renderParts(
+        {
+          type: "table",
+          x: "item",
+          y: ["rev"],
+          data: [{ item: "A", rev: v }],
+          format,
+          ...(locale ? { locale } : {}),
+        } as ChartSpec,
+        { width: 480, height: 300 },
+      ).svg;
+    expect(cell(-5, { rev: "Net-{value}" })).toContain(">Net-−5<");
+    expect(cell(-5, { rev: { prefix: "USD-" } })).toContain(">USD-−5<");
+    expect(cell(-5, { rev: "{value:integer} e-x" }, "sv")).toContain(">−5 e-x<");
+    expect(cell(-0.0001, { rev: "{value} per-unit" })).toContain(">−0.0001 per-unit<");
+    expect(cell(-5, { rev: "-${value}" })).not.toContain(">--");
+  });
 });
