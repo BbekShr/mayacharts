@@ -1138,7 +1138,8 @@ describe("M5 controls (#78 #80 #85)", () => {
     expect(el.view.frame).toBe(0);
     expect(qs(el, "input[data-maya=frame]").getAttribute("aria-valuetext")).toBe("2021");
     qs(el, ".maya-play").click();
-    await expect.poll(() => el.view.frame, { timeout: 5000 }).toBe(2);
+    await new Promise((r) => setTimeout(r, 330));
+    expect(el.view.frame).toBe(2);
     el.spec = fr({ frameControl: "select" });
     await frame();
     const sel = qs(el, "select[data-maya=frame]") as unknown as HTMLSelectElement;
