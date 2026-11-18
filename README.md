@@ -4,7 +4,7 @@
 
 **The browser is the chart engine.**
 
-Twenty-eight chart types from one JSON spec. About 87 KB, zero dependencies,<br>accessible and server-rendered by default.
+Twenty-eight chart types from one JSON spec. About 88 KB, zero dependencies,<br>accessible and server-rendered by default.
 
 [![npm](https://img.shields.io/npm/v/mayacharts?color=1d4ed8&label=npm)](https://www.npmjs.com/package/mayacharts) [![gzip](https://img.shields.io/bundlejs/size/mayacharts?color=1d4ed8)](https://bundlejs.com/?q=mayacharts) [![dependencies](https://img.shields.io/badge/dependencies-0-1d4ed8)](package.json) [![license](https://img.shields.io/npm/l/mayacharts?color=1d4ed8)](LICENSE) [![support](https://img.shields.io/badge/support-mayaCharts-635bff?logo=githubsponsors&logoColor=ff6b81)](https://bbekshr.github.io/mayacharts/support/)
 
@@ -42,7 +42,7 @@ One dot per customer, and the same dots fly between a waffle, bars and a spend s
 
 ## Why mayaCharts
 
-- **Small.** Thirteen chart types with tooltips, drill, zoom, selection and animation in about 87 KB gzip, with no runtime dependencies. Fifteen more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, gauge, hexmap, boxplot, funnel, weave, units, orbit, constellation) are optional modules of 2.5 to 6.1 KB each.
+- **Small.** Thirteen chart types with tooltips, drill, zoom, selection and animation in about 88 KB gzip, with no runtime dependencies. Fifteen more types (treemap, sunburst, sankey, chord, marimekko, waffle, radial, gauge, hexmap, boxplot, funnel, weave, units, orbit, constellation) are optional modules of 2.5 to 6.1 KB each.
 - **Passes the enterprise checklist.** Works under a strict CSP with Trusted Types, meets WCAG 2.2 AA (axe-clean in light and dark), supports RTL, and every user-visible string is localisable.
 - **Renders on the server.** `render(spec)` is a pure function that returns an SVG string in Node or any runtime without a DOM. `renderShell` returns a full chart that works before any JavaScript loads.
 - **One JSON spec.** No callbacks in the config, so a spec can be stored in a database, sent over the wire, or written by an LLM. A [JSON Schema](schema.json) and [llms.txt](llms.txt) ship with the package.
