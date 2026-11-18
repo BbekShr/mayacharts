@@ -155,6 +155,17 @@ describe("line end labels", () => {
     expect(ends({ type: "line", x: "m", y: "v", data: one })).toEqual(["30"]);
     expect(ends({ ...spec, data: one }, 360)).toEqual(["30"]); // narrow: the value alone
   });
+  it("leader coordinates are rounded like the label beside them", () => {
+    const close = ["a", "b", "c"].flatMap((s, k) =>
+      [1, 2, 3].map((m) => ({ m: `m${m}`, s, v: m * 10 + k * 0.37 })),
+    );
+    const g = renderParts({ ...spec, data: close }, { width: 640, height: 313 }).svg;
+    const leads = [...g.matchAll(/<line data-lead[^>]*>/g)].map((m) => m[0]);
+    expect(leads.length).toBeGreaterThan(0);
+    for (const l of leads)
+      for (const a of ["x1", "y1", "x2", "y2"])
+        expect(l.match(new RegExp(` ${a}="([^"]*)"`))![1]).toMatch(/^-?\d+(\.\d{1,2})?$/);
+  });
   it("reserve a right gutter and drop the legend", () => {
     const p = renderParts(spec, { width: 640 });
     expect(p.legend).toBe("");
