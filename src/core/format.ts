@@ -77,6 +77,25 @@ export const nf = (locale: string, o: Intl.NumberFormatOptions = {}) =>
   intl(Intl.NumberFormat, locale, o);
 export const dtf = (locale: string, o: Intl.DateTimeFormatOptions) =>
   intl(Intl.DateTimeFormat, locale, o);
+// Dates before year 1 carry their era ("5001 BC"). Intl rejects era beside dateStyle/timeStyle, so
+// those expand to medium-style fields (ponytail: long/full BC dates print as medium); the BC
+// formatter is built on first use. AD dates and formats without a year are untouched.
+export const dateFmt = (locale: string, o: Intl.DateTimeFormatOptions) => {
+  const f = dtf(locale, o);
+  if (!o.year && !o.dateStyle) return f;
+  const { dateStyle: d, timeStyle: t, ...r } = o;
+  return {
+    format: (v: number | Date) =>
+      new Date(v).getUTCFullYear() < 1
+        ? dtf(locale, {
+            ...r,
+            era: "short",
+            ...(d && { month: "short", day: "numeric", year: "numeric" }),
+            ...(t && { hour: "numeric", minute: "2-digit" }),
+          }).format(v)
+        : f.format(v),
+  };
+};
 
 const decimals = (s: number) => {
   for (let d = 0; d < 8; d++) if (Math.abs(s * 10 ** d - Math.round(s * 10 ** d)) < 1e-9) return d;
@@ -116,12 +135,12 @@ export function formatter(
   let auto = false; // the auto preset on a number: tiny and huge values go scientific
   const preset = typeof e === "string" ? e : "auto";
   if (typeof e === "string" && Object.hasOwn(DATE_PRESETS, e)) {
-    date = dtf(locale, { timeZone: "UTC", ...DATE_PRESETS[e] });
+    date = dateFmt(locale, { timeZone: "UTC", ...DATE_PRESETS[e] });
   } else if (typeof e === "object" && e !== null) {
     const { prefix: p = "", suffix: x = "", ...opts } = e as Record<string, unknown>;
     [prefix, suffix] = [String(p), String(x)];
     if (isDateOpts(opts))
-      date = dtf(locale, { timeZone: "UTC", ...opts } as Intl.DateTimeFormatOptions);
+      date = dateFmt(locale, { timeZone: "UTC", ...opts } as Intl.DateTimeFormatOptions);
     else
       num = nf(
         locale,

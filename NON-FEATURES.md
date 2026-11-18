@@ -16,6 +16,7 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 ## Known ceilings
 
+- **BC dates**: a date before year 1 under a `dateStyle` of long or full prints in the medium style with its era, because Intl rejects an era beside `dateStyle`.
 - **List rows**: moves past the tile height are not drawn; body wrap and clip widths are estimates (about 6.5 px a body character, 8 px a headline character), right for Latin text at 12 to 14 px.
 - **List evidence format**: evidence values use the move's own format unless the evidence row sets one; the evidence scale is local to each move and never compares across moves.
 - **Table strips**: each strip square is a mark, so a row adds `last` keyboard stops.
