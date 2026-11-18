@@ -34,4 +34,5 @@ records them. Promotion to L2 also needs `/org-eval` scores, which start with th
 | 2026-10-14 | light          | #105 | landed  | unknown      | see report                 | unknown  | unknown |
 | 2026-10-26 | light          | #107 | landed  | unknown      | see report                 | no       | unknown |
 | 2026-10-27 | deep           | #111 | landed  | unknown      | 2 rounds, 2 reverts in run | no       | unknown |
-| 2026-11-05 | light          | TBD  | open    |              | 1 round, 0 reverts         |          |         |
+| 2026-11-05 | light          | #112 | landed  | unknown      | 1 round, 0 reverts         | no       | unknown |
+| 2026-11-18 | light          | TBD  | open    |              | 2 rounds, 0 reverts        |          |         |

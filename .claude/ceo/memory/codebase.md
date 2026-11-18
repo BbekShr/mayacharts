@@ -24,7 +24,6 @@ and that agents keep needing get promoted into CLAUDE.md (human-approved).
 - 2026-10-27 (deep): `host.js` sits at its 810 B budget and `radial.js` within 10 B of 6340; any edit there needs a cut or the owner's budget call. package.json mayaSize
 - 2026-10-27 (deep): firefox fails to launch on the owner's machine ("Could not find profile folder"); CI firefox is green. Local e2e verdicts cover chromium, webkit and mobile-webkit only until fixed.
 - 2026-10-27 (deep): `npm run e2e -- --project=X` does not restrict projects (the script names all four); use `npx playwright test --project=X`. package.json
-- 2026-10-27 (deep): `npm test` at this commit is 74 files, about 1847 tests; perf.test.ts and beeswarm.test.ts wall-clock budgets fail under host load above about 100 and pass alone.
 
 ## Light run 2026-11-05 (ceo/auto-2026-11-05)
 
@@ -33,12 +32,23 @@ and that agents keep needing get promoted into CLAUDE.md (human-approved).
 - 2026-11-05 (light): `builderSpec()` returns the live spec; the builder sample bar has `x: "Family"` (`site/builder-kit.ts:105`) and its data already has "South", so after a paste poll a spec field the sample does not share (`e2e/builder.spec.ts:221`).
 - 2026-11-05 (light): the Trusted Types policy `mayacharts` (`src/element/html.ts:16`) guards all five element sinks (`maya-chart.ts:169,510,582,592`, `animate.ts:1000`).
 
+## Light run 2026-11-18 (ceo/auto-2026-11-18)
+
+- 2026-11-18 (light): `npm test` is 74 files, 1857 tests, about 20 s on a quiet host. The beeswarm tie test is a 4x ratio (5000 against 1250 ties, bound 9, measured 3.4 to 4.8; a quadratic dodge gives about 15); `perf.test.ts` budgets are still wall-clock. test/beeswarm.test.ts:113
+- 2026-11-18 (light): `dtf` is the raw date primitive that `test/format.test.ts` "en-US fast path equals Intl" pins against Intl, BC values included. Label behaviour goes in `dateFmt`, which wraps it and is the only thing `formatter()` and the time axis (`layout.ts:118`) call. src/core/format.ts:78-99
+- 2026-11-18 (light): `Intl.DateTimeFormat` throws when `era` sits beside `dateStyle` or `timeStyle`, so `dateFmt` expands them to explicit fields for BC values. src/core/format.ts:~90
+- 2026-11-18 (light): the table's screen reader data table is built in `table.ts` (about 411-424) and keeps "-", like every mark's; only svg text and `data-f` take U+2212. `test/table-m4.test.ts:75` pins "Feb -2".
+- 2026-11-18 (light): count-up already reads U+2212 as a sign (`SG`, `neg` in `src/element/animate.ts:359-360`); nothing parses `data-f` or cell text back to a number.
+- 2026-11-18 (light): among tests only `test/theme.test.ts` is a guarded gate file. .claude/hooks/guard.mjs:11-18
+- 2026-11-18 (light): no e2e screenshot holds a table or a BC date (baselines: boxplot, funnel, grouped, heatmap, hexmap, sankey, scale-beeswarm, scale-scatter, simple, stacked, sunburst, treemap, waterfall).
+- 2026-11-18 (light): when `gh` returns 403 (rate limit), https://github.com/BbekShr/mayacharts/actions?query=branch%3Amain is readable without auth.
+
 ## Recurring classes (a second occurrence becomes a P item at a stronger layer)
 
 - WebKit differs from Chromium on motion and SVG (stale `url(#id)` binding, CSS interpolation, 8x timing). Seen 2026-10-07, 2026-10-10, 2026-10-13. Enforced today by review and e2e on four projects.
 - Screenshot baselines hide colour changes under per-pixel tolerance. Seen 2026-10-06 and 2026-10-09. Enforced today by the release manager's baseline check (review layer).
 - A fix that edits a test from "shown" to "absent" or moves it to another size to pass hides a regression. Seen 2026-10-27 twice (gauge warn label, band margin test). Enforced today by the regression and correctness lenses; candidate for a guard check on assertion flips (review layer, process item).
 - A layout or motion shift gated on a presence check that is always true. Seen 2026-10-27 (efc8b08). Review layer.
-- Wall-clock unit tests (perf budgets, fixed sleeps) fail when another process loads the host. Seen 2026-10-27 (load above 100) and 2026-11-05 (load about 10, another project's Playwright). Today the CEO reruns and compares against main; process item filed to poll or use ratios (test layer).
+- Wall-clock unit tests (perf budgets, fixed sleeps) fail when another process loads the host. Seen 2026-10-27 (load above 100) and 2026-11-05 (load about 10, another project's Playwright). Third sighting 2026-11-18, self-inflicted: 48 stress loops an editor was told to start outlived its run (load 289). Moved down a layer on 2026-11-18: the element waits poll and the beeswarm test is a ratio; `perf.test.ts` is still wall-clock.
 
 ## Clean audits (so discovery skips these grounds)

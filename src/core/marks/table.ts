@@ -22,6 +22,13 @@ export const table: Mark = {
     const ms = spec.measures;
     const dims = spec.columns;
     const title = (f: string) => spec.titles.get(f) ?? f;
+    // Every number drawn in the svg (cell, delta, tooltip) takes U+2212, as kpi does. The sign is the first
+    // hyphen that reaches a digit before another hyphen, so a hyphen in an affix stays; the data table keeps "-".
+    // ponytail: an affix hyphen followed by a digit ("Q-1 {value}") is taken for the sign.
+    const num = (f: string, v: number) => {
+      const s = ctx.fmt(f, v);
+      return v < 0 ? s.replace(/-(?=[^-]*\d)/, "−") : s;
+    };
     // One reducer per (category, measure), once per data array: a resize or re-sort reuses it.
     const all = memo(
       spec.data,
@@ -121,9 +128,7 @@ export const table: Mark = {
         f,
         i,
         min: Math.max(
-          ...drawn.map(({ rw }) =>
-            tw(rw.vals[i] === null ? "–" : ctx.fmt(f, rw.vals[i]!), 2 * PAD),
-          ),
+          ...drawn.map(({ rw }) => tw(rw.vals[i] === null ? "–" : num(f, rw.vals[i]!), 2 * PAD)),
           2 * PAD,
         ),
       })),
@@ -265,7 +270,7 @@ export const table: Mark = {
         "data-s": 0,
         "data-x": name,
         "data-series": title(ms[0]!),
-        "data-f": rw.vals[0] === null ? "–" : ctx.fmt(ms[0]!, rw.vals[0]!),
+        "data-f": rw.vals[0] === null ? "–" : num(ms[0]!, rw.vals[0]!),
         "data-y": rw.vals[0],
       };
       hits += el("rect", {
@@ -299,8 +304,7 @@ export const table: Mark = {
           const vs = st.values.get(rw.name) ?? [];
           st.labels.forEach((lb, li) => {
             const v = vs[li] ?? null;
-            const f =
-              v === null ? "–" : (v > 0 ? "+" : "") + ctx.fmt(spec.cells.get(c.f)!.field, v);
+            const f = v === null ? "–" : (v > 0 ? "+" : "") + num(spec.cells.get(c.f)!.field, v);
             const sq = {
               "data-key": key("s", c.f, rw.name, lb),
               "data-c": ri,
@@ -324,7 +328,7 @@ export const table: Mark = {
         }
         const m = c.f;
         const v = rw.vals[c.i] ?? null;
-        const text = v === null ? "–" : ctx.fmt(m, v);
+        const text = v === null ? "–" : num(m, v);
         marks += el(
           "text",
           {

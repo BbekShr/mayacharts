@@ -14,7 +14,6 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 
 ## Active
 
-- Tween any arc that changes angle as a pathLength circle dash, never a `d` morph: CSS moves A endpoints along the chord and the arc leaves its track (gauge, 2026-10-09).
 - Make banded zones lightness steps, not hues at equal alpha (they land near 1:1 against each other); add a 1 px edge tick.
 - Never let a ghost or clone carry ids (gradients, clipPaths, markers): WebKit binds `url(#id)` at style recompute and keeps the stale one after the old node goes (2026-10-10).
 - Pad a degenerate range relative to its magnitude (`|v| / 1e15`), never by a constant: above 2^53, `v - 1 === v` and a tick loop never ends.
@@ -49,7 +48,6 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - A theme change lands in index and global too (the core bundle embeds the stylesheet): price theme bytes three times.
 
 - Repeat a timing-sensitive e2e 15 times with 6 workers on the branch and on main before calling a failure a flake: the clamped-tooltip fix failed 3 of 30 there and 0 of 60 on main.
-- A fade that ends early on one side of a crossfade needs the other side on the same clock, or the frame washes out (zoomed exits at 0.35, 2026-10-09).
 - Before any e2e run, free port 4173 (`lsof -i :4173`): Playwright reuses a running preview server, so a stale one silently tests an old build.
 
 **Process**
@@ -59,11 +57,7 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 **2026-10-27 deep**
 
 - Compare main and the branch in separate node processes (or `git archive` copies): the mark registry is a `Symbol.for` global, so two trees in one process render with whichever loaded last.
-- Gate on content, not presence: every svg emits empty `axis-x`/`axis-y` groups, so `querySelector("[data-maya^=axis]")` is true for treemaps too (efc8b08, reverted).
 - Check a motion's first frame against the frame before the click on its own; an "A matches B every frame" metric passes when A and B jump together at t=0.
-- A box glide holds the box top; any start offset for marks must be worked out in that held frame, or the glide and the offset add up.
-- When a label gets longer, find where its room is reserved (gauge `wl`) and rerender at the sizes old tests named; never flip a "shown" assertion to "absent" to pass.
-- Check a text-fit constant with digit-heavy strings and a width sweep, not the one string that motivated it.
 - Never `git commit --amend` or `git add -A` in a shared tree: HEAD may be another agent's commit. Use `git commit -- <paths>`.
 - A loop stuck past 2^53 cannot be stopped by a vitest timeout; prove a hang with an outer process `timeout`.
 
@@ -72,7 +66,19 @@ Durable lessons every specialist applies without relearning them. `## Active` is
 - Never slice a formatted, localisable string by position to find a token: carry the token and `indexOf` it (kpi arrow, `{0}` of `text.change`).
 - A red unit gate under load is cleared only by full-suite reruns on the branch alternated with main in the same minutes; check `uptime` and `ps -Ao pcpu,comm -r` for another project's browsers first.
 
+**2026-11-18 light**
+
+- Never brief an agent to start CPU stress loops: 48 `node -e "for(;;){}"` outlived the editor that started them, its report said pgrep was clean, and the next unit run failed at load 289. Prove load tolerance by design (poll, ratio), and run `pgrep -f 'for\(;;\)'` yourself before any timing gate.
+- When an existing test pins a primitive (`dtf` equals Intl), put a behaviour change in a wrapper above it and leave the primitive and its test alone; a brief that names the primitive as the place to change is the CEO's error.
+- Swap a character in a formatted string by anchoring on what it belongs to (the sign is the hyphen that reaches a digit), and only when the value says it is there (`v < 0`): affixes are part of the string.
+- A ratio bound must not scale with `CI`: 9 times 2 is above the 16x a quadratic gives, so the test would pass what it exists to catch.
+- Poll an "eventually true" state; keep the fixed wait (or fake timers) for "exactly this and nothing more". Converting the second kind weakens the test without failing anything.
+
 ## Archive
+
+- A box glide holds the box top; any start offset for marks must be worked out in that held frame, or the glide and the offset add up. (demoted 2026-11-18 for room; still true)
+- When a label gets longer, find where its room is reserved (gauge `wl`) and rerender at the sizes old tests named; never flip a "shown" assertion to "absent" to pass. (demoted 2026-11-18 for room; still true)
+- Check a text-fit constant with digit-heavy strings and a width sweep, not the one string that motivated it. (demoted 2026-11-18 for room; still true)
 
 - 2026-10-04, sunburst drill rebuild: slices became stroked circles with `pathLength` 360 so `r`, `stroke-width` and the dash tween as CSS properties through WAAPI. Dash gaps are not hit-testable in any engine, so the stroke itself is the hit target. Exiting slices fold to the nearer edge of the zoomed span; the centre disk carries the drilled branch's key so the clicked slice grows into it.
 - 2026-10-04, other drillable charts: sankey drilled into its level number (keys `n~lv~name` read as the branch), line and area clicks hit keyless band hits, and the treemap showed no names in drill mode. All were invisible to the unit suite and found by clicking every chart in a browser.
@@ -108,3 +114,6 @@ Durable lessons every specialist applies without relearning them. `## Active` is
   - Probe a browser assumption in all three engines with a 10-line Playwright script before building on it (stroke-dash hit testing and CSS `r` animation were probed this way).
   - Defaults that vary by chart type go in `resolve()` (`validate.ts`), not as type checks in `render.ts`.
   - Changing a spec default is a docs change too: `types.ts`, README, `schema.json` if described, `llms.txt`, `site/docs.html`, CHANGELOG.
+- Tween any arc that changes angle as a pathLength circle dash, never a `d` morph: CSS moves A endpoints along the chord and the arc leaves its track (gauge, 2026-10-09). (demoted 2026-11-18 for room; still true)
+- A fade that ends early on one side of a crossfade needs the other side on the same clock, or the frame washes out (zoomed exits at 0.35, 2026-10-09). (demoted 2026-11-18 for room; still true)
+- Gate on content, not presence: every svg emits empty `axis-x`/`axis-y` groups, so `querySelector("[data-maya^=axis]")` is true for treemaps too (efc8b08, reverted). (demoted 2026-11-18 for room; still true)

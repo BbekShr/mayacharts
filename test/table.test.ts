@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { renderParts } from "../src/index.ts";
 import { reduce } from "../src/element/sort.ts";
@@ -129,5 +130,69 @@ describe("sort reducer", () => {
     expect(
       reduce(a, { type: "spec", prev: base, next: { ...base, x: "units" } }).view.sortBy,
     ).toBeUndefined();
+  });
+  it("prints negatives with U+2212 in every drawn cell, delta and tooltip; names and the data table keep their hyphen", () => {
+    const rows = [
+      { item: "A-B", m: "Jan", rev: -40.5, units: -7, ch: -2 },
+      { item: "A-B", m: "Feb", rev: -40.5, units: -7, ch: 4 },
+      { item: "Dairy", m: "Jan", rev: 60, units: 9, ch: 1 },
+      { item: "Dairy", m: "Feb", rev: 60, units: 9, ch: 3 },
+    ];
+    const spec = {
+      type: "table",
+      x: "item",
+      y: ["rev", "units"],
+      bars: { rev: "diverging" },
+      cells: { Form: { type: "strip", field: "ch", by: "m" } },
+      data: rows,
+    } as ChartSpec;
+    const out = renderParts(spec, { width: 640, height: 300 });
+    const printed = [...out.svg.matchAll(/data-f="([^"]*)"|data-key="v~[^>]*>([^<]*)</g)].map(
+      (m) => m[1] ?? m[2],
+    );
+    expect(printed.length).toBeGreaterThan(8);
+    expect(out.svg).toContain(">−81<");
+    expect(out.svg).toContain(">−14<");
+    expect(out.svg).toContain('data-f="−2"');
+    expect(printed.join("|")).not.toMatch(/-\d/);
+    expect(out.svg).not.toMatch(/data-f="-\d/);
+    expect(out.table).toContain("-81"); // the data table keeps "-", like every other mark's
+    expect(out.svg).toContain(">A-B<");
+    // positive-only output is unchanged (sha1 of the render before the fix)
+    const pos = renderParts(
+      {
+        type: "table",
+        x: "item",
+        y: ["rev", "units"],
+        data: [
+          { item: "A-B", rev: 40, units: 7 },
+          { item: "Snacks", rev: 90, units: 3 },
+        ],
+      },
+      { width: 480, height: 300 },
+    ).svg;
+    expect(createHash("sha1").update(pos).digest("hex")).toBe(
+      "aee578caab709687600db2279bd17b8fc04b99ca",
+    );
+  });
+
+  it("swaps only the sign hyphen for U+2212, never one in an affix", () => {
+    const cell = (v: number, format: ChartSpec["format"], locale?: string) =>
+      renderParts(
+        {
+          type: "table",
+          x: "item",
+          y: ["rev"],
+          data: [{ item: "A", rev: v }],
+          format,
+          ...(locale ? { locale } : {}),
+        } as ChartSpec,
+        { width: 480, height: 300 },
+      ).svg;
+    expect(cell(-5, { rev: "Net-{value}" })).toContain(">Net-−5<");
+    expect(cell(-5, { rev: { prefix: "USD-" } })).toContain(">USD-−5<");
+    expect(cell(-5, { rev: "{value:integer} e-x" }, "sv")).toContain(">−5 e-x<");
+    expect(cell(-0.0001, { rev: "{value} per-unit" })).toContain(">−0.0001 per-unit<");
+    expect(cell(-5, { rev: "-${value}" })).not.toContain(">--");
   });
 });

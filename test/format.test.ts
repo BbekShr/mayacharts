@@ -70,6 +70,49 @@ describe("formatter dates", () => {
   });
 });
 
+describe("dates before year 1 carry their era", () => {
+  const bc = Date.UTC(-44, 2, 15); // 45 BC
+  const ad = Date.UTC(2000, 0, 1);
+  it("each date preset", () => {
+    expect(f({ v: "date" })(bc)).toBe("Mar 15, 45 BC");
+    expect(f({ v: "month" })(bc)).toBe("Mar 45 BC");
+    expect(f({ v: "year" })(Date.UTC(-5000, 0, 1))).toBe("5001 BC");
+    expect(f({ v: "datetime" })(bc)).toMatch(/^Mar 15, 45 BC, 12:00 AM$/);
+    expect(f({ v: "time" })(bc)).toBe("12:00 AM");
+  });
+  it("AD dates stay as they were", () => {
+    expect(f({ v: "date" })(ad)).toBe("Jan 1, 2000");
+    expect(f({ v: "year" })(Date.UTC(1, 0, 1) + 0)).not.toContain("BC");
+    expect(f({ v: "datetime" })(ad)).toBe("Jan 1, 2000, 12:00 AM");
+  });
+  it("extremes: year 0 is 1 BC, the Date minimum, an invalid date", () => {
+    const y0 = new Date(0);
+    y0.setUTCFullYear(0);
+    expect(f({ v: "year" })(y0)).toBe("1 BC");
+    expect(f({ v: "year" })(new Date(-864e13))).toBe("271822 BC");
+    expect(f({ v: "year" })("nope")).toBe("nope");
+  });
+  it("localised and with host options", () => {
+    expect(f({ v: "year" }, "v", undefined, { locale: "de" })(bc)).toBe("45 v. Chr.");
+    expect(f({ v: { dateStyle: "long" } })(bc)).toContain("BC");
+    expect(f({ v: { month: "long" } })(bc)).toBe("March");
+  });
+  it("a host era is left alone for BC and AD", () => {
+    for (const era of ["long", "narrow"] as const) {
+      const o = { year: "numeric", era } as const;
+      for (const v of [bc, ad])
+        expect(f({ v: o })(v)).toBe(
+          new Intl.DateTimeFormat("en", { timeZone: "UTC", ...o }).format(v),
+        );
+    }
+  });
+  it("auto time ticks", () => {
+    const d = [-5e12 * 1000, -2e14, Date.UTC(2000, 0, 1)].map((d, v) => ({ d, v }));
+    const svg = render({ type: "line", data: d, x: "d", y: "v", xType: "time" });
+    expect(svg).toContain("BC");
+  });
+});
+
 describe("formatter fallbacks", () => {
   it("non-numbers become strings, null becomes empty, never throws", () => {
     const g = f("integer");

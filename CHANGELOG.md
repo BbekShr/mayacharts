@@ -8,6 +8,8 @@ The format is based on Keep a Changelog and adheres to semantic versioning. Brea
 
 ### Fixed
 
+- Dates before year 1 print their era under the date, month, year and datetime formats ("5001 BC"), also on time axis ticks.
+- Table cells, deltas and tooltips print negative numbers with a true minus sign (U+2212), matching kpi and gauge. The screen reader data table keeps the hyphen, like every other chart.
 - Values near the floating point floor (1e-307, 5e-324) no longer draw NaN coordinates or lose ticks.
 - A narrow value range at a large magnitude (9e14 with a spread of 0.25) no longer hangs the tick loop.
 - "2024-02-30" and "2024-02-10T24:00" are not dates in any engine, so the server and the browser agree.
