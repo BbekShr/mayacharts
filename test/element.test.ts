@@ -664,17 +664,18 @@ describe("review fixes", () => {
       .dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, composed: true }),
       );
-    await new Promise((r) => setTimeout(r, 340));
-    expect(live(el).querySelector("[data-maya=live]")!.textContent).toMatch(/^a b, c: /);
+    await expect
+      .poll(() => live(el).querySelector("[data-maya=live]")!.textContent, { timeout: 5000 })
+      .toMatch(/^a b, c: /);
   });
 
   it("a spec error removes the stale data table", async () => {
     const el = await mount((e) => (e.spec = spec()));
-    await new Promise((r) => setTimeout(r, 1700));
-    expect(live(el).querySelector("table.maya-sr")).toBeTruthy();
+    await expect
+      .poll(() => live(el).querySelector("table.maya-sr"), { timeout: 5000 })
+      .toBeTruthy();
     el.spec = { type: "bar" } as never;
-    await new Promise((r) => setTimeout(r, 50));
-    expect(live(el).querySelector(".maya-err")).toBeTruthy();
+    await expect.poll(() => live(el).querySelector(".maya-err"), { timeout: 5000 }).toBeTruthy();
     expect(live(el).querySelector("table.maya-sr")).toBeNull();
   });
   it("a view set before the first spec survives it", async () => {
@@ -1022,8 +1023,9 @@ describe("parallel brush and select peers (issues #86.5, #87)", () => {
       .dispatchEvent(
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
       );
-    await new Promise((r) => setTimeout(r, 350));
-    expect(root.querySelector("[data-maya=live]")!.textContent).toBe(TEXT.brushCleared);
+    await expect
+      .poll(() => root.querySelector("[data-maya=live]")!.textContent, { timeout: 5000 })
+      .toBe(TEXT.brushCleared);
     expect(lines.length).toBeGreaterThan(0);
     expect(ev).toHaveLength(2);
   });
@@ -1136,8 +1138,7 @@ describe("M5 controls (#78 #80 #85)", () => {
     expect(el.view.frame).toBe(0);
     expect(qs(el, "input[data-maya=frame]").getAttribute("aria-valuetext")).toBe("2021");
     qs(el, ".maya-play").click();
-    await new Promise((r) => setTimeout(r, 330));
-    expect(el.view.frame).toBe(2);
+    await expect.poll(() => el.view.frame, { timeout: 5000 }).toBe(2);
     el.spec = fr({ frameControl: "select" });
     await frame();
     const sel = qs(el, "select[data-maya=frame]") as unknown as HTMLSelectElement;

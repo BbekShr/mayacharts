@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { render, renderParts } from "../src/index.ts";
 import type { ChartSpec } from "../src/core/types.ts";
 
-const CI = process.env.CI ? 2 : 1; // shared runners are slower than a laptop
-
 const regions = ["East", "West", "North"];
 const data = Array.from({ length: 60 }, (_, i) => ({
   region: regions[i % 3]!,
@@ -110,19 +108,28 @@ describe("beeswarm", () => {
     expect(() => render({ type: "beeswarm", x: "region", data } as unknown as ChartSpec)).toThrow();
     expect(() => render({ ...spec, horizontal: true })).toThrow();
   });
-  it("5000 tied values stay fast (dodge checks the 50 most recent neighbours)", () => {
-    const ties = Array.from({ length: 5000 }, (_, i) => ({ item: `i${i}`, sales: 0 }));
-    const run = () => render({ type: "beeswarm", y: "sales", name: "item", data: ties });
-    run();
-    const ms = Math.min(
-      ...Array.from({ length: 4 }, () => {
-        const t = performance.now();
-        run();
-        return performance.now() - t;
-      }),
-    );
-    expect(ms).toBeLessThan(200 * CI);
-  });
+  it("tied values stay near-linear (dodge checks the 50 most recent neighbours)", () => {
+    // A ratio, not a wall clock: host load scales both sides. 4x the ties costs about 4x when linear, about 16x when quadratic.
+    const mk = (n: number) => {
+      const ties = Array.from({ length: n }, (_, i) => ({ item: `i${i}`, sales: 0 }));
+      return () => render({ type: "beeswarm", y: "sales", name: "item", data: ties });
+    };
+    const [small, big] = [mk(1250), mk(5000)];
+    const time = (f: () => unknown) => {
+      const t = performance.now();
+      f();
+      return performance.now() - t;
+    };
+    small();
+    big();
+    // Interleaved, so a load spike hits both sides; the best of each is the least disturbed run.
+    let [a, b] = [Infinity, Infinity];
+    for (let i = 0; i < 5; i++) {
+      a = Math.min(a, time(small));
+      b = Math.min(b, time(big));
+    }
+    expect(b / a).toBeLessThan(9);
+  }, 30_000);
 
   it("past MAX_MARKS draws a violin of cells per band whose counts sum to the rows", () => {
     const big = Array.from({ length: 30000 }, (_, i) => ({
