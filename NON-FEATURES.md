@@ -16,7 +16,8 @@ mayaCharts stays small so it stays maintained. These are deliberate, permanent (
 
 ## Known ceilings
 
-- **BC dates**: a date before year 1 under a `dateStyle` of long or full prints in the medium style with its era, because Intl rejects an era beside `dateStyle`.
+- **BC dates**: a date before year 1 under a `dateStyle` of long or full prints in the medium style with its era, because Intl rejects an era beside `dateStyle`. BC is decided by the UTC year, so a host `timeZone` that moves the local date across the year 1 boundary prints the wrong era.
+- **Table minus sign**: a negative table value swaps the first hyphen that reaches a digit for U+2212, so a format prefix that holds a hyphen followed by a digit ("Q-1 {value}") takes the swap in place of the sign.
 - **List rows**: moves past the tile height are not drawn; body wrap and clip widths are estimates (about 6.5 px a body character, 8 px a headline character), right for Latin text at 12 to 14 px.
 - **List evidence format**: evidence values use the move's own format unless the evidence row sets one; the evidence scale is local to each move and never compares across moves.
 - **Table strips**: each strip square is a mark, so a row adds `last` keyboard stops.
